@@ -1,168 +1,171 @@
 <script lang="ts">
-	import { debounce } from '$lib/utils/debounce.ts';
+	import CopyToClipboard from 'svelte-copy-to-clipboard';
+	import { debounce } from '$lib/utils/debounce';
 
+	// --- Component State ---
+	let stage = $state<'input' | 'select' | 'result'>('input');
 	let sourceTerm = $state('');
-	let convertedTerm = $state('');
 	let direction = $state<'ko-to-en' | 'en-to-ko'>('ko-to-en');
-	let loading = $state(false);
-	let copied = $state(false);
+	let segmentsList = $state<string[]>([]);
+	let selectedSegment = $state('');
+	let finalResult = $state('');
+	let error = $state<string | null>(null);
+	let isLoadingCombinations = $state(false);
+	let isLoadingResult = $state(false);
 
-	const convertTerm = async () => {
+	// --- Effects ---
+	$effect(() => {
+		// Reset logic when sourceTerm or direction changes
+		const term = sourceTerm; // to trigger effect
+		const dir = direction; // to trigger effect
+		stage = 'input';
+		segmentsList = [];
+		selectedSegment = '';
+		finalResult = '';
+		error = null;
+		debouncedFindCombinations();
+	});
+
+	// --- Functions ---
+	const findCombinations = async () => {
 		if (!sourceTerm.trim()) {
-			convertedTerm = '';
+			segmentsList = [];
+			selectedSegment = '';
+			finalResult = '';
 			return;
 		}
-		loading = true;
+		isLoadingCombinations = true;
+		error = null;
+
 		try {
-			const response = await fetch('/api/generator', {
+			const response = await fetch('/api/generator/segment', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ term: sourceTerm, direction })
 			});
 			const result = await response.json();
 			if (result.success) {
-				convertedTerm = result.data.convertedTerm;
+				segmentsList = result.data;
+				if (segmentsList.length === 0) {
+					error = '유효한 조합을 찾지 못했습니다.';
+				}
 			} else {
-				convertedTerm = '오류 발생';
+				throw new Error(result.error || '분석 중 오류 발생');
 			}
-		} catch (error) {
-			console.error('변환 오류:', error);
-			convertedTerm = '서버 통신 오류';
+		} catch (e: any) {
+			error = e.message;
 		} finally {
-			loading = false;
+			isLoadingCombinations = false;
 		}
 	};
 
-	const debouncedConvert = debounce(convertTerm, 300);
+	async function selectCombination(segment: string) {
+		selectedSegment = segment;
+		if (!selectedSegment) return;
+		isLoadingResult = true;
+		error = null;
 
-	$effect(() => {
-		const term = sourceTerm;
-		const dir = direction;
-		debouncedConvert();
-	});
-
-	async function copyToClipboard() {
-		if (!convertedTerm) return;
 		try {
-			await navigator.clipboard.writeText(convertedTerm);
-			copied = true;
-			setTimeout(() => {
-				copied = false;
-			}, 2000);
-		} catch (err) {
-			console.error('클립보드 복사 실패:', err);
-			alert('클립보드 복사에 실패했습니다.');
+			const response = await fetch('/api/generator', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ term: selectedSegment, direction })
+			});
+			const result = await response.json();
+			if (result.success) {
+				finalResult = result.data.convertedTerm;
+			} else {
+				throw new Error(result.error || '최종 변환 중 오류 발생');
+			}
+		} catch (e: any) {
+			error = e.message;
+		} finally {
+			isLoadingResult = false;
 		}
 	}
 
-	function swapDirection() {
-		const temp = sourceTerm;
-		sourceTerm = convertedTerm;
-		convertedTerm = temp;
-		direction = direction === 'ko-to-en' ? 'en-to-ko' : 'ko-to-en';
-	}
+	const debouncedFindCombinations = debounce(findCombinations, 300);
 </script>
 
-<div class="mx-auto w-full max-w-2xl rounded-xl bg-white p-6 shadow-lg">
-	<h2 class="mb-6 text-2xl font-bold text-gray-800">용어 변환기</h2>
-
-	<div class="mb-6 flex items-center justify-start space-x-4">
-		<label class="flex cursor-pointer items-center">
-			<input
-				type="radio"
-				name="direction"
-				bind:group={direction}
-				value="ko-to-en"
-				class="radio radio-primary"
-			/>
-			<span class="ml-2">한글 → 영문</span>
-		</label>
-		<label class="flex cursor-pointer items-center">
-			<input
-				type="radio"
-				name="direction"
-				bind:group={direction}
-				value="en-to-ko"
-				class="radio radio-primary"
-			/>
-			<span class="ml-2">영문 → 한글</span>
-		</label>
-	</div>
-
-	<div class="grid grid-cols-1 items-center gap-4 md:grid-cols-[1fr,auto,1fr]">
+<div class="container mx-auto space-y-6 p-4">
+	<!-- Input Section -->
+	<div class="rounded-lg border p-6 shadow-md">
+		<h2 class="mb-4 text-2xl font-bold">용어 변환기</h2>
 		<textarea
 			bind:value={sourceTerm}
-			placeholder={direction === 'ko-to-en' ? '도로명_주소' : 'RDNM_ADDR'}
-			class="textarea textarea-bordered h-32 w-full rounded-xl border p-2"
+			class="w-full rounded border p-2"
+			rows="3"
+			placeholder="변환할 용어를 입력하세요 (예: 도로명주소)"
 		></textarea>
-
-		<button onclick={swapDirection} class="btn btn-circle btn-ghost">
-			<!-- Swap Icon -->
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				class="h-6 w-6"
-				fill="none"
-				viewBox="0 0 24 24"
-				stroke="currentColor"
+		<div class="mt-4 flex items-center space-x-4">
+			<label
+				><input type="radio" bind:group={direction} value="ko-to-en" name="direction" /> 한영</label
 			>
-				<path
-					stroke-linecap="round"
-					stroke-linejoin="round"
-					stroke-width="2"
-					d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
-				/>
-			</svg>
-		</button>
-
-		<div class="relative h-full w-full">
-			<textarea
-				bind:value={convertedTerm}
-				placeholder={direction === 'ko-to-en' ? 'RDNM_ADDR' : '도로명_주소'}
-				class="textarea textarea-bordered h-32 w-full rounded-xl border bg-gray-50 p-2"
-				readonly
-			></textarea>
-			<button
-				title="결과 복사"
-				onclick={copyToClipboard}
-				class="absolute right-2 top-2 rounded-full bg-gray-200/50 p-2 text-gray-600 transition hover:bg-gray-300/50 disabled:cursor-not-allowed disabled:opacity-50"
-				disabled={!convertedTerm || loading}
+			<label
+				><input type="radio" bind:group={direction} value="en-to-ko" name="direction" /> 영한</label
 			>
-				{#if copied}
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						class="h-5 w-5 text-green-500"
-						viewBox="0 0 20 20"
-						fill="currentColor"
-					>
-						<path
-							fill-rule="evenodd"
-							d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-							clip-rule="evenodd"
-						/>
-					</svg>
-				{:else}
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						class="h-5 w-5"
-						fill="none"
-						viewBox="0 0 24 24"
-						stroke="currentColor"
-						stroke-width="2"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-						/>
-					</svg>
-				{/if}
-			</button>
 		</div>
 	</div>
 
-	{#if loading}
-		<div class="mt-4 text-center">
-			<span class="loading loading-dots loading-md"></span>
+	<!-- Combinations & Result Section -->
+	<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+		<!-- Combinations -->
+		<div class="rounded-lg border p-6 shadow-md">
+			<h3 class="mb-4 text-xl font-bold">단어 조합</h3>
+			{#if isLoadingCombinations}
+				<p>조합을 찾는 중...</p>
+			{:else if segmentsList.length > 0}
+				<div class="space-y-2">
+					{#each segmentsList as segment}
+						<button
+							onclick={() => selectCombination(segment)}
+							class="w-full rounded-lg border p-3 text-left hover:bg-gray-100"
+							class:!bg-blue-100={selectedSegment === segment}
+						>
+							{segment}
+						</button>
+					{/each}
+				</div>
+			{/if}
 		</div>
-	{/if}
+
+		<!-- Result -->
+		<div class="rounded-lg border p-6 shadow-md">
+			<h3 class="mb-4 text-xl font-bold">변환 결과</h3>
+			<div class="relative">
+				<textarea
+					bind:value={finalResult}
+					class="w-full rounded border bg-gray-50 p-2"
+					rows="3"
+					readonly
+					placeholder="단어 조합을 선택하세요"
+				></textarea>
+				{#if finalResult}
+					<div class="absolute right-2 top-2">
+						<CopyToClipboard text={finalResult} let:copy>
+							<button onclick={copy} class="rounded-full p-2 hover:bg-gray-200" title="결과 복사">
+								<svg
+									class="h-6 w-6 text-gray-600"
+									fill="none"
+									viewBox="0 0 24 24"
+									stroke="currentColor"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+									/>
+								</svg>
+							</button>
+						</CopyToClipboard>
+					</div>
+				{/if}
+			</div>
+			{#if isLoadingResult}
+				<p class="mt-2">결과를 변환하는 중...</p>
+			{/if}
+		</div>
+	</div>
+	{#if error}<p class="mt-4 text-center text-red-500">{error}</p>{/if}
 </div>

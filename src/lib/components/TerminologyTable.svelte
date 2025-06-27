@@ -221,7 +221,7 @@
 </script>
 
 <!-- 용어집 테이블 컴포넌트 -->
-<div class="w-full rounded-lg border border-gray-200 bg-white shadow-sm">
+<div class="overflow-x-auto rounded-lg border border-gray-300 shadow-md">
 	<!-- 테이블 헤더 -->
 	<div class="border-b border-gray-200 px-6 py-4">
 		<div class="flex items-center justify-between">
@@ -246,15 +246,15 @@
 	<div class="overflow-x-auto">
 		<table class="min-w-full divide-y divide-gray-200">
 			<!-- 테이블 헤더 -->
-			<thead class="bg-gray-50">
+			<thead class="bg-gray-100">
 				<tr>
 					{#each columns as column}
 						<th
 							scope="col"
-							class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500 {column.width} {column.sortable
-								? 'cursor-pointer hover:bg-gray-100'
+							class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 {column.width} {column.sortable
+								? 'cursor-pointer hover:bg-gray-200'
 								: ''}"
-							class:bg-gray-100={sortColumn === column.key}
+							class:bg-gray-200={sortColumn === column.key}
 							onclick={() => column.sortable && handleSort(column.key)}
 							onkeydown={(e) => {
 								if ((e.key === 'Enter' || e.key === ' ') && column.sortable) {
@@ -362,7 +362,11 @@
 					{#each entries as entry (entry.id)}
 						{@const isEditing = editingId === entry.id}
 						{@const isDuplicate = duplicates.has(entry.id)}
-						<tr class:bg-red-50={isDuplicate && !isEditing} class:bg-blue-50={isEditing}>
+						<tr
+							class:bg-red-50={isDuplicate && !isEditing}
+							class:bg-blue-50={isEditing}
+							class="border-t border-gray-300"
+						>
 							{#each columns as column}
 								<td class="whitespace-nowrap px-6 py-4 text-sm text-gray-700">
 									{#if column.key === 'actions'}

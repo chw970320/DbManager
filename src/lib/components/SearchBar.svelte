@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { debounce } from '../utils/debounce.js';
+	import { debounce } from '$lib/utils/debounce.ts';
 
 	type SearchEvent = {
 		query: string;
@@ -7,25 +7,26 @@
 		exact: boolean;
 	};
 
-	// 컴포넌트 속성
 	let {
 		placeholder = '용어를 검색하세요...',
 		disabled = false,
 		loading = false,
+		query = $bindable(''),
+		field = $bindable('all'),
+		exact = $bindable(false),
 		onsearch,
 		onclear
 	}: {
 		placeholder?: string;
 		disabled?: boolean;
 		loading?: boolean;
+		query?: string;
+		field?: string;
+		exact?: boolean;
 		onsearch: (detail: SearchEvent) => void;
 		onclear: () => void;
 	} = $props();
 
-	// 상태 변수
-	let searchQuery = $state('');
-	let searchField = $state('all');
-	let exactMatch = $state(false);
 	let showAdvanced = $state(false);
 
 	// 검색 필드 옵션
@@ -37,9 +38,9 @@
 	];
 
 	// 디바운스된 검색 함수
-	const debouncedSearch = debounce((query: string, field: string, exact: boolean) => {
-		if (query.trim().length > 0) {
-			onsearch({ query: query.trim(), field, exact });
+	const debouncedSearch = debounce((q: string, f: string, e: boolean) => {
+		if (q.trim().length > 0) {
+			onsearch({ query: q.trim(), field: f, exact: e });
 		} else {
 			onclear();
 		}
@@ -49,15 +50,15 @@
 	 * 검색어 입력 처리
 	 */
 	function handleInput() {
-		debouncedSearch(searchQuery, searchField, exactMatch);
+		debouncedSearch(query, field, exact);
 	}
 
 	/**
 	 * 검색 필드 변경 처리
 	 */
 	function handleFieldChange() {
-		if (searchQuery.trim().length > 0) {
-			debouncedSearch(searchQuery, searchField, exactMatch);
+		if (query.trim().length > 0) {
+			debouncedSearch(query, field, exact);
 		}
 	}
 
@@ -65,8 +66,8 @@
 	 * 정확 일치 옵션 변경 처리
 	 */
 	function handleExactChange() {
-		if (searchQuery.trim().length > 0) {
-			debouncedSearch(searchQuery, searchField, exactMatch);
+		if (query.trim().length > 0) {
+			debouncedSearch(query, field, exact);
 		}
 	}
 
@@ -74,9 +75,9 @@
 	 * 검색어 초기화
 	 */
 	function clearSearch() {
-		searchQuery = '';
-		searchField = 'all';
-		exactMatch = false;
+		query = '';
+		field = 'all';
+		exact = false;
 		onclear();
 	}
 
@@ -86,7 +87,7 @@
 	function handleKeydown(event: KeyboardEvent) {
 		if (event.key === 'Enter') {
 			event.preventDefault();
-			debouncedSearch(searchQuery, searchField, exactMatch);
+			debouncedSearch(query, field, exact);
 		} else if (event.key === 'Escape') {
 			clearSearch();
 		}
@@ -118,12 +119,12 @@
 
 			<input
 				type="text"
-				bind:value={searchQuery}
+				bind:value={query}
 				oninput={handleInput}
 				onkeydown={handleKeydown}
 				{placeholder}
 				{disabled}
-				class="block w-full rounded-md border border-gray-300 bg-white py-2 pr-10 pl-10 leading-5 placeholder-gray-500 focus:border-blue-500 focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:outline-none disabled:bg-gray-50 disabled:text-gray-500"
+				class="block w-full rounded-md border border-gray-300 bg-white py-2 pl-10 pr-10 leading-5 placeholder-gray-500 focus:border-blue-500 focus:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
 			/>
 
 			<!-- 로딩 스피너 / 클리어 버튼 -->
@@ -143,7 +144,7 @@
 							d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 						></path>
 					</svg>
-				{:else if searchQuery}
+				{:else if query}
 					<button
 						type="button"
 						onclick={clearSearch}
@@ -166,7 +167,7 @@
 		<button
 			type="button"
 			onclick={() => (showAdvanced = !showAdvanced)}
-			class="flex items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+			class="flex items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
 		>
 			<svg
 				class="mr-2 h-4 w-4 transition-transform {showAdvanced ? 'rotate-180' : ''}"
@@ -191,10 +192,10 @@
 					</label>
 					<select
 						id="search-field"
-						bind:value={searchField}
+						bind:value={field}
 						onchange={handleFieldChange}
 						{disabled}
-						class="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 focus:outline-none disabled:bg-gray-50 disabled:text-gray-500"
+						class="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
 					>
 						{#each searchFields as field}
 							<option value={field.value}>{field.label}</option>
@@ -204,10 +205,10 @@
 
 				<!-- 검색 옵션 -->
 				<div class="flex items-end">
-					<label class="flex items-center space-x-2">
+					<label class="flex cursor-pointer items-center space-x-2">
 						<input
 							type="checkbox"
-							bind:checked={exactMatch}
+							bind:checked={exact}
 							onchange={handleExactChange}
 							{disabled}
 							class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
@@ -218,13 +219,11 @@
 			</div>
 
 			<!-- 검색 통계 정보 -->
-			{#if searchQuery}
+			{#if query}
 				<div class="mt-3 text-sm text-gray-500">
-					<span class="font-medium">"{searchQuery}"</span>
-					{searchField !== 'all'
-						? `(${searchFields.find((f) => f.value === searchField)?.label})`
-						: ''}
-					{exactMatch ? '(정확 일치)' : ''}로 검색 중...
+					<span class="font-medium">"{query}"</span>
+					{field !== 'all' ? `(${searchFields.find((f) => f.value === field)?.label})` : ''}
+					{exact ? '(정확 일치)' : ''}로 검색 중...
 				</div>
 			{/if}
 		</div>

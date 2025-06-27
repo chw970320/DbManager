@@ -1,5 +1,6 @@
 <script lang="ts">
-	import type { TerminologyEntry } from '../types/terminology.js';
+	import type { TerminologyEntry } from '$lib/types/terminology';
+	import { onMount } from 'svelte';
 
 	type SortEvent = {
 		column: string;
@@ -23,7 +24,8 @@
 		sortDirection = 'asc' as 'asc' | 'desc',
 		searchField = 'all',
 		onsort,
-		onpagechange
+		onpagechange,
+		onrefresh
 	}: {
 		entries?: TerminologyEntry[];
 		loading?: boolean;
@@ -37,14 +39,89 @@
 		searchField?: string;
 		onsort: (detail: SortEvent) => void;
 		onpagechange: (detail: PageChangeEvent) => void;
+		onrefresh: () => void;
 	} = $props();
+
+	// 상태 변수
+	let editingId = $state<string | null>(null);
+	let editedEntry = $state<Partial<TerminologyEntry>>({});
+	let duplicates = $state<Set<string>>(new Set());
+
+	onMount(() => {
+		fetchDuplicates();
+	});
+
+	async function fetchDuplicates() {
+		try {
+			const response = await fetch('/api/terminology/duplicates');
+			const result = await response.json();
+			if (result.success) {
+				const duplicateIds = new Set<string>();
+				for (const group of result.data.duplicates) {
+					for (const entry of group) {
+						duplicateIds.add(entry.id);
+					}
+				}
+				duplicates = duplicateIds;
+			}
+		} catch (error) {
+			console.error('중복 데이터 로드 실패:', error);
+		}
+	}
+
+	function handleEdit(entry: TerminologyEntry) {
+		editingId = entry.id;
+		editedEntry = { ...entry };
+	}
+
+	function cancelEdit() {
+		editingId = null;
+		editedEntry = {};
+	}
+
+	async function handleSave(id: string) {
+		if (!editedEntry) return;
+		try {
+			const response = await fetch(`/api/terminology`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ ...editedEntry, id })
+			});
+			if (response.ok) {
+				cancelEdit();
+				onrefresh(); // 데이터 새로고침
+				fetchDuplicates(); // 중복 데이터 다시 확인
+			} else {
+				alert('수정에 실패했습니다.');
+			}
+		} catch (error) {
+			console.error('수정 오류:', error);
+		}
+	}
+
+	async function handleDelete(id: string) {
+		if (confirm('정말로 이 항목을 삭제하시겠습니까?')) {
+			try {
+				const response = await fetch(`/api/terminology?id=${id}`, { method: 'DELETE' });
+				if (response.ok) {
+					onrefresh();
+					fetchDuplicates();
+				} else {
+					alert('삭제에 실패했습니다.');
+				}
+			} catch (error) {
+				console.error('삭제 오류:', error);
+			}
+		}
+	}
 
 	// 테이블 컬럼 정의
 	const columns = [
-		{ key: 'standardName', label: '표준단어명', sortable: true, width: 'w-1/3' },
-		{ key: 'abbreviation', label: '영문약어', sortable: true, width: 'w-1/4' },
-		{ key: 'englishName', label: '영문명', sortable: true, width: 'w-1/3' },
-		{ key: 'createdAt', label: '등록일', sortable: true, width: 'w-1/6' }
+		{ key: 'standardName', label: '표준단어명', sortable: true, width: 'w-1/4' },
+		{ key: 'abbreviation', label: '영문약어', sortable: true, width: 'w-1/5' },
+		{ key: 'englishName', label: '영문명', sortable: true, width: 'w-1/4' },
+		{ key: 'description', label: '설명', sortable: false, width: 'w-1/3' },
+		{ key: 'actions', label: '관리', sortable: false, width: 'w-auto' }
 	];
 
 	// 파생 상태 (페이지네이션)
@@ -54,7 +131,7 @@
 	 * 컬럼 정렬 처리
 	 */
 	function handleSort(column: string) {
-		if (!loading) {
+		if (!loading && !editingId) {
 			const newDirection = sortColumn === column && sortDirection === 'asc' ? 'desc' : 'asc';
 			onsort({ column, direction: newDirection });
 		}
@@ -64,7 +141,7 @@
 	 * 페이지 변경 처리
 	 */
 	function handlePageChange(page: number) {
-		if (!loading && page !== currentPage && page >= 1 && page <= totalPages) {
+		if (!loading && !editingId && page !== currentPage && page >= 1 && page <= totalPages) {
 			onpagechange({ page });
 		}
 	}
@@ -283,19 +360,47 @@
 				{:else}
 					<!-- 데이터 행 -->
 					{#each entries as entry (entry.id)}
-						<tr>
-							<td class="whitespace-nowrap px-6 py-4 text-sm text-gray-800">
-								{@html highlightSearchTerm(entry.standardName, searchQuery, 'standardName')}
-							</td>
-							<td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-								{@html highlightSearchTerm(entry.abbreviation, searchQuery, 'abbreviation')}
-							</td>
-							<td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-								{@html highlightSearchTerm(entry.englishName, searchQuery, 'englishName')}
-							</td>
-							<td class="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-								{formatDate(entry.createdAt)}
-							</td>
+						{@const isEditing = editingId === entry.id}
+						{@const isDuplicate = duplicates.has(entry.id)}
+						<tr class:bg-red-50={isDuplicate && !isEditing} class:bg-blue-50={isEditing}>
+							{#each columns as column}
+								<td class="whitespace-nowrap px-6 py-4 text-sm text-gray-700">
+									{#if column.key === 'actions'}
+										<div class="flex items-center space-x-2">
+											{#if isEditing}
+												<button
+													onclick={() => handleSave(entry.id)}
+													class="text-blue-600 hover:text-blue-900">저장</button
+												>
+												<button onclick={cancelEdit} class="text-gray-600 hover:text-gray-900"
+													>취소</button
+												>
+											{:else}
+												<button
+													onclick={() => handleEdit(entry)}
+													class="text-indigo-600 hover:text-indigo-900">편집</button
+												>
+												<button
+													onclick={() => handleDelete(entry.id)}
+													class="text-red-600 hover:text-red-900">삭제</button
+												>
+											{/if}
+										</div>
+									{:else if isEditing}
+										<input
+											type="text"
+											bind:value={editedEntry[column.key as keyof TerminologyEntry]}
+											class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+										/>
+									{:else}
+										{@html highlightSearchTerm(
+											(entry[column.key as keyof TerminologyEntry] as string) || '',
+											searchQuery,
+											column.key
+										)}
+									{/if}
+								</td>
+							{/each}
 						</tr>
 					{/each}
 				{/if}

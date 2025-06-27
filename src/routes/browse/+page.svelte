@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import SearchBar from '$lib/components/SearchBar.svelte';
 	import TerminologyTable from '$lib/components/TerminologyTable.svelte';
+	import TermGenerator from '$lib/components/TermGenerator.svelte';
 	import type { TerminologyEntry, ApiResponse } from '$lib/types/terminology.js';
 
 	// 상태 변수
@@ -36,7 +37,6 @@
 	 */
 	onMount(async () => {
 		await loadTerminologyData();
-		await loadStatistics();
 	});
 
 	/**
@@ -70,26 +70,6 @@
 			errorMessage = '서버 연결 오류가 발생했습니다.';
 		} finally {
 			loading = false;
-		}
-	}
-
-	/**
-	 * 통계 정보 로드
-	 */
-	async function loadStatistics() {
-		try {
-			const response = await fetch('/api/terminology');
-			const result: ApiResponse = await response.json();
-
-			if (result.success && result.data) {
-				statistics = {
-					totalEntries: result.data.pagination?.totalCount || 0,
-					lastUpdate: result.data.lastUpdated || '',
-					mostSearched: result.data.mostSearched || []
-				};
-			}
-		} catch (error) {
-			console.error('통계 정보 로드 오류:', error);
 		}
 	}
 
@@ -183,7 +163,6 @@
 	 */
 	async function refreshData() {
 		await loadTerminologyData();
-		await loadStatistics();
 	}
 
 	/**
@@ -248,94 +227,14 @@
 							d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
 						/>
 					</svg>
-					<span>{loading ? '새로고침 중...' : '새로고침'}</span>
+					<span>{loading ? '로딩 중' : '새로고침'}</span>
 				</button>
 			</div>
 		</div>
 
 		<!-- 통계 카드 섹션 -->
-		<div class="mb-8 grid gap-6 md:grid-cols-2">
-			<!-- 총 용어 수 -->
-			<div
-				class="group relative overflow-hidden rounded-2xl border border-gray-200/50 bg-white/80 p-6 shadow-sm backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:shadow-lg"
-			>
-				<div
-					class="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-50 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-				></div>
-				<div class="relative">
-					<div class="flex items-center">
-						<div
-							class="rounded-lg bg-blue-100 p-3 transition-colors duration-300 group-hover:bg-blue-600"
-						>
-							<svg
-								class="h-6 w-6 text-blue-600 transition-colors duration-300 group-hover:text-white"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-								/>
-							</svg>
-						</div>
-						<div class="ml-4">
-							<p class="text-sm font-medium text-gray-600">총 용어</p>
-							<p class="text-2xl font-bold text-gray-900">
-								{#if loading && statistics.totalEntries === 0}
-									<span class="animate-pulse text-gray-300">...</span>
-								{:else}
-									{statistics.totalEntries.toLocaleString()}
-								{/if}
-							</p>
-						</div>
-					</div>
-				</div>
-			</div>
-
-			<!-- 마지막 업데이트 -->
-			<div
-				class="group relative overflow-hidden rounded-2xl border border-gray-200/50 bg-white/80 p-6 shadow-sm backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:shadow-lg"
-			>
-				<div
-					class="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-50 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-				></div>
-				<div class="relative">
-					<div class="flex items-center">
-						<div
-							class="rounded-lg bg-green-100 p-3 transition-colors duration-300 group-hover:bg-green-600"
-						>
-							<svg
-								class="h-6 w-6 text-green-600 transition-colors duration-300 group-hover:text-white"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-								/>
-							</svg>
-						</div>
-						<div class="ml-4">
-							<p class="text-sm font-medium text-gray-600">마지막 업데이트</p>
-							<p class="text-sm font-semibold text-gray-900">
-								{#if loading && !statistics.lastUpdate}
-									<span class="animate-pulse text-gray-300">...</span>
-								{:else if statistics.lastUpdate}
-									{formatDate(statistics.lastUpdate)}
-								{:else}
-									N/A
-								{/if}
-							</p>
-						</div>
-					</div>
-				</div>
-			</div>
+		<div class="my-8">
+			<TermGenerator />
 		</div>
 
 		<!-- 에러 메시지 -->
@@ -369,7 +268,15 @@
 				<p class="mt-2 text-gray-600">표준단어명, 영문약어, 영문명으로 용어를 검색하세요</p>
 			</div>
 
-			<SearchBar {loading} onsearch={handleSearch} onclear={handleSearchClear} />
+			<div class="mb-8">
+				<SearchBar
+					bind:query={searchQuery}
+					bind:field={searchField}
+					bind:exact={searchExact}
+					onsearch={handleSearch}
+					onclear={handleSearchClear}
+				/>
+			</div>
 		</div>
 
 		<!-- 결과 테이블 영역 -->
@@ -406,15 +313,16 @@
 					{entries}
 					{loading}
 					{searchQuery}
-					{searchField}
 					{totalCount}
 					{currentPage}
 					{totalPages}
 					{pageSize}
 					{sortColumn}
 					{sortDirection}
+					{searchField}
 					onsort={handleSort}
 					onpagechange={handlePageChange}
+					onrefresh={refreshData}
 				/>
 			</div>
 		</div>

@@ -8,7 +8,9 @@ export interface TerminologyEntry {
     standardName: string;  // 표준단어명 (한국어)
     abbreviation: string;  // 영문약어
     englishName: string;   // 영문명
+    description: string;    // 설명
     createdAt: string;     // ISO 8601 날짜 문자열
+    updatedAt: string;     // ISO 8601 날짜 문자열
 }
 
 // 전체 용어집 데이터 구조

@@ -8,10 +8,10 @@
 	let mobileMenuOpen = $state(false);
 
 	// 네비게이션 메뉴 아이템
-	const navItems = [
+	const menuItems = [
 		{ href: '/', label: '홈', icon: 'home' },
-		{ href: '/browse', label: '조회', icon: 'search' },
-		{ href: '/upload', label: '업로드', icon: 'upload' }
+		{ href: '/browse', label: '용어집 조회', icon: 'list' },
+		{ href: '/upload', label: '파일 업로드', icon: 'upload' }
 	];
 
 	// 모바일 메뉴 토글
@@ -74,7 +74,7 @@
 
 					<!-- 데스크탑 네비게이션 -->
 					<nav class="hidden items-center space-x-2 md:flex">
-						{#each navItems as item}
+						{#each menuItems as item}
 							<a
 								href={item.href}
 								class="flex items-center space-x-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 {isCurrentPage(
@@ -134,7 +134,7 @@
 		{#if mobileMenuOpen}
 			<div class="border-t border-gray-200 bg-white/95 backdrop-blur-sm md:hidden" id="mobile-menu">
 				<div class="space-y-1 px-4 py-3">
-					{#each navItems as item}
+					{#each menuItems as item}
 						<a
 							href={item.href}
 							class="flex items-center space-x-3 rounded-lg px-3 py-2 text-base font-medium transition-colors {isCurrentPage(
@@ -172,8 +172,8 @@
 					© {new Date().getFullYear()}
 					<span
 						class="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text font-medium text-transparent"
-						>AI Glossary Manager</span
-					>. 모든 권리 보유.
+						>DataBase Manager</span
+					>
 				</p>
 			</div>
 		</div>

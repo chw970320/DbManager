@@ -242,7 +242,7 @@
 
 		<!-- 검색 영역 -->
 		<div
-			class="mb-8 rounded-2xl border border-gray-200/50 bg-white/80 p-8 shadow-sm backdrop-blur-sm"
+			class="mb-8 rounded-2xl border border-gray-200/50 bg-white/80 p-4 shadow-sm backdrop-blur-sm"
 		>
 			<div class="mb-6">
 				<h2 class="text-2xl font-bold text-gray-900">통합검색</h2>

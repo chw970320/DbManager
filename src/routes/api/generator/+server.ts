@@ -58,18 +58,10 @@ export async function POST({ request }: RequestEvent) {
         const convertedTerms = terms.map((t) => sourceMap.get(t.toLowerCase()) || '##');
         const result = convertedTerms.join('_');
 
-        return json(
-            {
-                success: true,
-                data: {
-                    originalTerm: term,
-                    convertedTerm: result,
-                    direction
-                },
-                message: '용어 변환이 완료되었습니다.'
-            } as ApiResponse,
-            { status: 200 }
-        );
+        return json({
+            success: true,
+            result: result
+        });
     } catch (error) {
         console.error('용어 변환 중 오류:', error);
         return json(

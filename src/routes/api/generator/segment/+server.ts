@@ -85,7 +85,7 @@ export async function POST({ request }: RequestEvent) {
 
         // 한 부분이라도 유효한 조합이 없으면 빈 배열 반환
         if (segmentedParts.some(p => p.length === 0)) {
-            return json({ success: true, data: [] } as ApiResponse);
+            return json({ success: true, segments: [] });
         }
 
         // 분해된 조합들의 모든 경우의 수를 계산 (Cartesian Product)
@@ -103,8 +103,8 @@ export async function POST({ request }: RequestEvent) {
 
         return json({
             success: true,
-            data: finalResult
-        } as ApiResponse);
+            segments: finalResult
+        });
 
     } catch (error) {
         console.error('단어 조합 분석 중 오류:', error);

@@ -164,24 +164,6 @@
 	async function refreshData() {
 		await loadTerminologyData();
 	}
-
-	/**
-	 * 날짜 포맷팅
-	 */
-	function formatDate(dateString: string): string {
-		try {
-			const date = new Date(dateString);
-			return date.toLocaleString('ko-KR', {
-				year: 'numeric',
-				month: '2-digit',
-				day: '2-digit',
-				hour: '2-digit',
-				minute: '2-digit'
-			});
-		} catch {
-			return dateString;
-		}
-	}
 </script>
 
 <svelte:head>

@@ -166,22 +166,6 @@
 	}
 
 	/**
-	 * 날짜 포맷팅
-	 */
-	function formatDate(dateString: string): string {
-		try {
-			const date = new Date(dateString);
-			return date.toLocaleDateString('ko-KR', {
-				year: 'numeric',
-				month: '2-digit',
-				day: '2-digit'
-			});
-		} catch {
-			return dateString;
-		}
-	}
-
-	/**
 	 * 페이지네이션 번호 생성
 	 */
 	function getPageNumbers(): (number | string)[] {

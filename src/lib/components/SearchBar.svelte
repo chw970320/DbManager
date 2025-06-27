@@ -1,0 +1,232 @@
+<script lang="ts">
+	import { debounce } from '../utils/debounce.js';
+
+	type SearchEvent = {
+		query: string;
+		field: string;
+		exact: boolean;
+	};
+
+	// 컴포넌트 속성
+	let {
+		placeholder = '용어를 검색하세요...',
+		disabled = false,
+		loading = false,
+		onsearch,
+		onclear
+	}: {
+		placeholder?: string;
+		disabled?: boolean;
+		loading?: boolean;
+		onsearch: (detail: SearchEvent) => void;
+		onclear: () => void;
+	} = $props();
+
+	// 상태 변수
+	let searchQuery = $state('');
+	let searchField = $state('all');
+	let exactMatch = $state(false);
+	let showAdvanced = $state(false);
+
+	// 검색 필드 옵션
+	const searchFields = [
+		{ value: 'all', label: '전체' },
+		{ value: 'standardName', label: '표준단어명' },
+		{ value: 'abbreviation', label: '영문약어' },
+		{ value: 'englishName', label: '영문명' }
+	];
+
+	// 디바운스된 검색 함수
+	const debouncedSearch = debounce((query: string, field: string, exact: boolean) => {
+		if (query.trim().length > 0) {
+			onsearch({ query: query.trim(), field, exact });
+		} else {
+			onclear();
+		}
+	}, 300);
+
+	/**
+	 * 검색어 입력 처리
+	 */
+	function handleInput() {
+		debouncedSearch(searchQuery, searchField, exactMatch);
+	}
+
+	/**
+	 * 검색 필드 변경 처리
+	 */
+	function handleFieldChange() {
+		if (searchQuery.trim().length > 0) {
+			debouncedSearch(searchQuery, searchField, exactMatch);
+		}
+	}
+
+	/**
+	 * 정확 일치 옵션 변경 처리
+	 */
+	function handleExactChange() {
+		if (searchQuery.trim().length > 0) {
+			debouncedSearch(searchQuery, searchField, exactMatch);
+		}
+	}
+
+	/**
+	 * 검색어 초기화
+	 */
+	function clearSearch() {
+		searchQuery = '';
+		searchField = 'all';
+		exactMatch = false;
+		onclear();
+	}
+
+	/**
+	 * Enter 키 처리
+	 */
+	function handleKeydown(event: KeyboardEvent) {
+		if (event.key === 'Enter') {
+			event.preventDefault();
+			debouncedSearch(searchQuery, searchField, exactMatch);
+		} else if (event.key === 'Escape') {
+			clearSearch();
+		}
+	}
+</script>
+
+<!-- 검색바 컴포넌트 -->
+<div class="w-full rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+	<!-- 메인 검색 영역 -->
+	<div class="flex flex-col gap-4 lg:flex-row lg:items-center">
+		<!-- 검색 입력 -->
+		<div class="relative flex-1">
+			<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+				<!-- 검색 아이콘 -->
+				<svg
+					class="h-5 w-5 text-gray-400"
+					xmlns="http://www.w3.org/2000/svg"
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					aria-hidden="true"
+				>
+					<path
+						fill-rule="evenodd"
+						d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+						clip-rule="evenodd"
+					/>
+				</svg>
+			</div>
+
+			<input
+				type="text"
+				bind:value={searchQuery}
+				oninput={handleInput}
+				onkeydown={handleKeydown}
+				{placeholder}
+				{disabled}
+				class="block w-full rounded-md border border-gray-300 bg-white py-2 pr-10 pl-10 leading-5 placeholder-gray-500 focus:border-blue-500 focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:outline-none disabled:bg-gray-50 disabled:text-gray-500"
+			/>
+
+			<!-- 로딩 스피너 / 클리어 버튼 -->
+			<div class="absolute inset-y-0 right-0 flex items-center pr-3">
+				{#if loading}
+					<svg
+						class="h-4 w-4 animate-spin text-gray-400"
+						xmlns="http://www.w3.org/2000/svg"
+						fill="none"
+						viewBox="0 0 24 24"
+					>
+						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
+						></circle>
+						<path
+							class="opacity-75"
+							fill="currentColor"
+							d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+						></path>
+					</svg>
+				{:else if searchQuery}
+					<button
+						type="button"
+						onclick={clearSearch}
+						class="text-gray-400 transition-colors hover:text-gray-500 focus:text-gray-500 focus:outline-none"
+						aria-label="검색어 지우기"
+					>
+						<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+							<path
+								fill-rule="evenodd"
+								d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+					</button>
+				{/if}
+			</div>
+		</div>
+
+		<!-- 고급 검색 토글 -->
+		<button
+			type="button"
+			onclick={() => (showAdvanced = !showAdvanced)}
+			class="flex items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-800 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+		>
+			<svg
+				class="mr-2 h-4 w-4 transition-transform {showAdvanced ? 'rotate-180' : ''}"
+				fill="none"
+				stroke="currentColor"
+				viewBox="0 0 24 24"
+			>
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+			</svg>
+			고급 검색
+		</button>
+	</div>
+
+	<!-- 고급 검색 옵션 -->
+	{#if showAdvanced}
+		<div class="mt-4 border-t border-gray-200 pt-4">
+			<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+				<!-- 검색 필드 선택 -->
+				<div>
+					<label for="search-field" class="mb-1 block text-sm font-medium text-gray-700">
+						검색 범위
+					</label>
+					<select
+						id="search-field"
+						bind:value={searchField}
+						onchange={handleFieldChange}
+						{disabled}
+						class="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500 focus:outline-none disabled:bg-gray-50 disabled:text-gray-500"
+					>
+						{#each searchFields as field}
+							<option value={field.value}>{field.label}</option>
+						{/each}
+					</select>
+				</div>
+
+				<!-- 검색 옵션 -->
+				<div class="flex items-end">
+					<label class="flex items-center space-x-2">
+						<input
+							type="checkbox"
+							bind:checked={exactMatch}
+							onchange={handleExactChange}
+							{disabled}
+							class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+						/>
+						<span class="text-sm text-gray-700">정확히 일치</span>
+					</label>
+				</div>
+			</div>
+
+			<!-- 검색 통계 정보 -->
+			{#if searchQuery}
+				<div class="mt-3 text-sm text-gray-500">
+					<span class="font-medium">"{searchQuery}"</span>
+					{searchField !== 'all'
+						? `(${searchFields.find((f) => f.value === searchField)?.label})`
+						: ''}
+					{exactMatch ? '(정확 일치)' : ''}로 검색 중...
+				</div>
+			{/if}
+		</div>
+	{/if}
+</div>

@@ -9,7 +9,7 @@
   }
   
   body {
-    @apply bg-gray-50 text-gray-800 font-sans;
+    @apply bg-gray-50 text-gray-900 font-sans;
     margin: 0;
     padding: 0;
   }
@@ -18,20 +18,118 @@
   *, *::before, *::after {
     box-sizing: border-box;
   }
+
+  /* 접근성 개선: 포커스 스타일 */
+  :focus {
+    @apply outline-none ring-2 ring-blue-600 ring-offset-2;
+  }
+
+  :focus:not(:focus-visible) {
+    @apply ring-0 ring-offset-0;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-blue-600 ring-offset-2;
+  }
 }
 
 /* 커스텀 컴포넌트 스타일 */
 @layer components {
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
+  }
+
   .btn-primary {
-    @apply bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors;
+    @apply bg-blue-700 hover:bg-blue-800 focus:ring-blue-600 text-white;
+  }
+
+  .btn-secondary {
+    @apply bg-gray-100 hover:bg-gray-200 focus:ring-gray-500 text-gray-900 border border-gray-300;
+  }
+
+  .btn-outline {
+    @apply bg-white hover:bg-gray-50 focus:ring-blue-600 text-gray-700 border border-gray-400 hover:border-gray-500;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent hover:bg-gray-100 focus:ring-gray-500 text-gray-700;
+  }
+
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+
+  .btn-lg {
+    @apply px-6 py-3 text-base;
   }
   
   .card {
-    @apply bg-white rounded-lg shadow-sm border border-gray-200;
+    @apply bg-white rounded-lg shadow-sm border border-gray-300;
   }
   
   .gradient-text {
-    @apply bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-blue-700 to-purple-700 bg-clip-text text-transparent;
+  }
+
+  /* 텍스트 색상 개선 */
+  .text-muted {
+    @apply text-gray-700;
+  }
+
+  .text-secondary {
+    @apply text-gray-800;
+  }
+
+  /* 상태별 색상 개선 */
+  .text-success {
+    @apply text-green-800;
+  }
+
+  .text-error {
+    @apply text-red-800;
+  }
+
+  .text-warning {
+    @apply text-orange-800;
+  }
+
+  .text-info {
+    @apply text-blue-800;
+  }
+
+  /* 배경 색상 개선 */
+  .bg-success {
+    @apply bg-green-100 border-green-300;
+  }
+
+  .bg-error {
+    @apply bg-red-100 border-red-300;
+  }
+
+  .bg-warning {
+    @apply bg-orange-100 border-orange-300;
+  }
+
+  .bg-info {
+    @apply bg-blue-100 border-blue-300;
+  }
+
+  /* 입력 필드 개선 */
+  .input {
+    @apply block w-full px-3 py-2 border border-gray-400 rounded-md text-gray-900 placeholder-gray-600 bg-white focus:border-blue-600 focus:ring-blue-600 focus:ring-1 focus:outline-none;
+  }
+
+  .input:disabled {
+    @apply bg-gray-100 text-gray-600 cursor-not-allowed;
+  }
+
+  .input-error {
+    @apply border-red-500 focus:border-red-600 focus:ring-red-600;
+  }
+
+  /* 링크 개선 */
+  .link {
+    @apply text-blue-700 hover:text-blue-800 underline focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-1 rounded;
   }
 }
 
@@ -39,5 +137,14 @@
 @layer utilities {
   .text-shadow {
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  /* 고대비 유틸리티 */
+  .high-contrast {
+    @apply text-gray-900 bg-white border-gray-400;
+  }
+
+  .high-contrast-reverse {
+    @apply text-white bg-gray-900 border-gray-600;
   }
 }

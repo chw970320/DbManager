@@ -114,7 +114,7 @@
 </script>
 
 <div class="space-y-4 rounded-lg border bg-gray-50 p-4">
-	<h2 class="text-xl font-bold text-gray-800">용어 변환기</h2>
+	<h2 class="text-xl font-bold text-gray-900">용어 변환기</h2>
 
 	<!-- Input Section -->
 	<div class="relative">
@@ -123,7 +123,7 @@
 				<!-- Search Icon -->
 				<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
 					<svg
-						class="h-5 w-5 text-gray-400"
+						class="h-5 w-5 text-gray-600"
 						xmlns="http://www.w3.org/2000/svg"
 						viewBox="0 0 20 20"
 						fill="currentColor"
@@ -142,7 +142,7 @@
 					type="text"
 					bind:value={sourceTerm}
 					placeholder={direction === 'ko-to-en' ? '한글 약어 입력...' : '영문 전체 단어 입력...'}
-					class="block w-full rounded-md border border-gray-300 bg-white py-2 pl-10 pr-10 leading-5 placeholder-gray-500 focus:border-blue-500 focus:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+					class="input pl-10 pr-10"
 				/>
 
 				<!-- X 버튼 -->
@@ -150,7 +150,7 @@
 					<button
 						type="button"
 						onclick={clearSearch}
-						class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 transition-colors hover:text-gray-500 focus:text-gray-500 focus:outline-none"
+						class="absolute inset-y-0 right-0 flex items-center rounded pr-3 text-gray-600 transition-colors hover:text-gray-800 focus:text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-1"
 						aria-label="검색어 지우기"
 					>
 						<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
@@ -163,11 +163,7 @@
 					</button>
 				{/if}
 			</div>
-			<button
-				onclick={handleDirectionChange}
-				class="btn btn-outline flex w-36 items-center justify-center space-x-2"
-				title="방향 전환"
-			>
+			<button onclick={handleDirectionChange} class="btn btn-outline w-36" title="방향 전환">
 				{#if direction === 'ko-to-en'}
 					<span class="font-bold">한</span>
 					<span>→</span>
@@ -207,7 +203,7 @@
 	<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 		<!-- Combinations -->
 		<div class="space-y-2">
-			<h3 class="font-semibold">단어 조합</h3>
+			<h3 class="font-semibold text-gray-900">단어 조합</h3>
 			<div class="min-h-24 rounded-md border bg-white p-2">
 				{#if segmentsList.length > 0}
 					<ul class="space-y-1">
@@ -224,14 +220,14 @@
 						{/each}
 					</ul>
 				{:else if !isLoadingCombinations && sourceTerm}
-					<p class="p-2 text-gray-500">결과를 찾을 수 없습니다.</p>
+					<p class="p-2 text-gray-700">결과를 찾을 수 없습니다.</p>
 				{/if}
 			</div>
 		</div>
 
 		<!-- Final Result -->
 		<div class="space-y-2">
-			<h3 class="font-semibold">변환 결과</h3>
+			<h3 class="font-semibold text-gray-900">변환 결과</h3>
 			<div class="relative min-h-24 rounded-md border bg-white p-2">
 				{#if isLoadingResult}
 					<p class="text-center">생성 중...</p>

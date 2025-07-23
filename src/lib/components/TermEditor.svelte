@@ -138,16 +138,16 @@
 		class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
 		onclick={(e) => e.stopPropagation()}
 	>
-		<h2 class="mb-4 text-xl font-bold text-gray-800">
+		<h2 class="mb-4 text-xl font-bold text-gray-900">
 			{isEditMode ? '용어 수정' : '새 용어 추가'}
 		</h2>
 
 		<!-- 서버 에러 메시지 -->
 		{#if serverError}
-			<div class="mb-4 rounded-md border border-red-300 bg-red-50 p-3">
+			<div class="bg-error mb-4 rounded-md p-3">
 				<div class="flex items-center">
 					<svg
-						class="mr-2 h-5 w-5 text-red-400"
+						class="mr-2 h-5 w-5 text-red-700"
 						fill="none"
 						stroke="currentColor"
 						viewBox="0 0 24 24"
@@ -159,7 +159,7 @@
 							d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
 						/>
 					</svg>
-					<p class="text-sm font-medium text-red-800">{serverError}</p>
+					<p class="text-error text-sm font-medium">{serverError}</p>
 				</div>
 			</div>
 		{/if}
@@ -173,27 +173,27 @@
 		>
 			<!-- 표준단어명 -->
 			<div>
-				<label for="standardName" class="mb-1 block text-sm font-medium text-gray-700">
-					표준단어명 <span class="text-red-500">*</span>
+				<label for="standardName" class="mb-1 block text-sm font-medium text-gray-900">
+					표준단어명 <span class="text-red-700">*</span>
 				</label>
 				<input
 					id="standardName"
 					type="text"
 					bind:value={formData.standardName}
 					placeholder="예: 데이터베이스"
-					class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-					class:border-red-500={errors.standardName}
+					class="input"
+					class:input-error={errors.standardName}
 					disabled={isSubmitting}
 				/>
 				{#if errors.standardName}
-					<p class="mt-1 text-sm text-red-500">{errors.standardName}</p>
+					<p class="text-error mt-1 text-sm">{errors.standardName}</p>
 				{/if}
 			</div>
 
 			<!-- 영문약어 -->
 			<div>
-				<label for="abbreviation" class="mb-1 block text-sm font-medium text-gray-700">
-					영문약어 <span class="text-red-500">*</span>
+				<label for="abbreviation" class="mb-1 block text-sm font-medium text-gray-900">
+					영문약어 <span class="text-red-700">*</span>
 				</label>
 				<input
 					id="abbreviation"
@@ -201,43 +201,43 @@
 					value={formData.abbreviation}
 					oninput={handleAbbreviationInput}
 					placeholder="예: DB"
-					class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-					class:border-red-500={errors.abbreviation}
+					class="input"
+					class:input-error={errors.abbreviation}
 					disabled={isSubmitting}
 				/>
 				{#if errors.abbreviation}
-					<p class="mt-1 text-sm text-red-500">{errors.abbreviation}</p>
+					<p class="text-error mt-1 text-sm">{errors.abbreviation}</p>
 				{/if}
 			</div>
 
 			<!-- 영문명 -->
 			<div>
-				<label for="englishName" class="mb-1 block text-sm font-medium text-gray-700">
-					영문명 <span class="text-red-500">*</span>
+				<label for="englishName" class="mb-1 block text-sm font-medium text-gray-900">
+					영문명 <span class="text-red-700">*</span>
 				</label>
 				<input
 					id="englishName"
 					type="text"
 					bind:value={formData.englishName}
 					placeholder="예: Database"
-					class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-					class:border-red-500={errors.englishName}
+					class="input"
+					class:input-error={errors.englishName}
 					disabled={isSubmitting}
 				/>
 				{#if errors.englishName}
-					<p class="mt-1 text-sm text-red-500">{errors.englishName}</p>
+					<p class="text-error mt-1 text-sm">{errors.englishName}</p>
 				{/if}
 			</div>
 
 			<!-- 설명 -->
 			<div>
-				<label for="description" class="mb-1 block text-sm font-medium text-gray-700"> 설명 </label>
+				<label for="description" class="mb-1 block text-sm font-medium text-gray-900"> 설명 </label>
 				<textarea
 					id="description"
 					bind:value={formData.description}
 					placeholder="용어에 대한 상세 설명을 입력하세요 (선택사항)"
 					rows="3"
-					class="w-full resize-none rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+					class="input resize-none"
 					disabled={isSubmitting}
 				></textarea>
 			</div>
@@ -247,14 +247,14 @@
 				<button
 					type="button"
 					onclick={handleCancel}
-					class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+					class="btn btn-secondary"
 					disabled={isSubmitting}
 				>
 					취소
 				</button>
 				<button
 					type="submit"
-					class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+					class="btn btn-primary disabled:cursor-not-allowed disabled:opacity-50"
 					disabled={!isFormValid() || isSubmitting}
 				>
 					{#if isSubmitting}

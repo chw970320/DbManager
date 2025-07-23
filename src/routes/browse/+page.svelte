@@ -390,7 +390,7 @@
 			>
 				<div>
 					<h1
-						class="bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-4xl font-bold text-transparent"
+						class="bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-4xl font-bold text-transparent"
 					>
 						용어집 관리
 					</h1>
@@ -406,7 +406,7 @@
 							showEditor = true;
 						}}
 						disabled={loading}
-						class="group inline-flex items-center space-x-2 rounded-xl border border-blue-200/50 bg-blue-50/80 px-6 py-3 text-sm font-medium text-blue-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-blue-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+						class="btn btn-primary group space-x-2 rounded-xl px-6 py-3 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						<svg
 							class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
@@ -452,7 +452,7 @@
 						type="button"
 						onclick={refreshData}
 						disabled={loading}
-						class="group inline-flex items-center space-x-2 rounded-xl border border-gray-200/50 bg-white/80 px-6 py-3 text-sm font-medium text-gray-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+						class="btn btn-secondary group space-x-2 rounded-xl px-6 py-3 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						<svg
 							class="h-5 w-5 transition-transform duration-200 {loading
@@ -495,10 +495,10 @@
 
 		<!-- 에러 메시지 -->
 		{#if errorMessage}
-			<div class="mb-8 rounded-2xl border border-red-200 bg-red-50 p-4">
+			<div class="bg-error mb-8 rounded-2xl p-4">
 				<div class="flex items-center">
 					<svg
-						class="mr-3 h-5 w-5 text-red-400"
+						class="mr-3 h-5 w-5 text-red-700"
 						fill="none"
 						stroke="currentColor"
 						viewBox="0 0 24 24"
@@ -510,7 +510,7 @@
 							d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
 						/>
 					</svg>
-					<p class="text-sm font-medium text-red-800">{errorMessage}</p>
+					<p class="text-error text-sm font-medium">{errorMessage}</p>
 				</div>
 			</div>
 		{/if}

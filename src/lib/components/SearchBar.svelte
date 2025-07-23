@@ -110,7 +110,7 @@
 			<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
 				<!-- 검색 아이콘 -->
 				<svg
-					class="h-5 w-5 text-gray-400"
+					class="h-5 w-5 text-gray-600"
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 20 20"
 					fill="currentColor"
@@ -132,14 +132,14 @@
 				onkeydown={handleKeydown}
 				{placeholder}
 				{disabled}
-				class="block w-full rounded-md border border-gray-300 bg-white py-2 pl-10 pr-10 leading-5 placeholder-gray-500 focus:border-blue-500 focus:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+				class="input pl-10 pr-10"
 			/>
 
 			<!-- 로딩 스피너 / 클리어 버튼 -->
 			<div class="absolute inset-y-0 right-0 flex items-center pr-3">
 				{#if loading}
 					<svg
-						class="h-4 w-4 animate-spin text-gray-400"
+						class="h-4 w-4 animate-spin text-gray-600"
 						xmlns="http://www.w3.org/2000/svg"
 						fill="none"
 						viewBox="0 0 24 24"
@@ -156,7 +156,7 @@
 					<button
 						type="button"
 						onclick={clearSearch}
-						class="text-gray-400 transition-colors hover:text-gray-500 focus:text-gray-500 focus:outline-none"
+						class="rounded text-gray-600 transition-colors hover:text-gray-800 focus:text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-1"
 						aria-label="검색어 지우기"
 					>
 						<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
@@ -175,7 +175,7 @@
 		<button
 			type="button"
 			onclick={() => (showAdvanced = !showAdvanced)}
-			class="flex items-center rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-600 transition-colors hover:bg-gray-50 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+			class="btn btn-outline text-sm"
 		>
 			<svg
 				class="mr-2 h-4 w-4 transition-transform {showAdvanced ? 'rotate-180' : ''}"
@@ -195,7 +195,7 @@
 			<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 				<!-- 검색 필드 선택 -->
 				<div>
-					<label for="search-field" class="mb-1 block text-sm font-medium text-gray-700">
+					<label for="search-field" class="mb-1 block text-sm font-medium text-gray-900">
 						검색 범위
 					</label>
 					<select
@@ -203,7 +203,7 @@
 						bind:value={field}
 						onchange={handleFieldChange}
 						{disabled}
-						class="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-500"
+						class="input"
 					>
 						{#each searchFields as field}
 							<option value={field.value}>{field.label}</option>
@@ -219,9 +219,9 @@
 							bind:checked={exact}
 							onchange={handleExactChange}
 							{disabled}
-							class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+							class="h-4 w-4 rounded border-gray-400 text-blue-700 focus:ring-blue-600"
 						/>
-						<span class="text-sm text-gray-700">정확히 일치</span>
+						<span class="text-sm text-gray-900">정확히 일치</span>
 					</label>
 				</div>
 			</div>

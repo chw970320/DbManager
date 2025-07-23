@@ -121,6 +121,17 @@
 			return;
 		}
 
+		// 교체 모드일 때 확인 메시지
+		if (selectedMode === 'replace') {
+			const confirmed = confirm(
+				'교체 모드를 선택하셨습니다.\n\n기존 단어집이 완전히 삭제되고 새로운 데이터로 교체됩니다.\n히스토리도 초기화됩니다.\n\n정말로 교체하시겠습니까?'
+			);
+
+			if (!confirmed) {
+				return; // 사용자가 취소한 경우 업로드 중단
+			}
+		}
+
 		const file = files[0];
 		uploading = true;
 		uploadProgress = 0;

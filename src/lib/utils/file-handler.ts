@@ -175,10 +175,22 @@ export async function mergeTerminologyData(
                 const compositeKey = `${entry.standardName.toLowerCase()}|${entry.abbreviation.toLowerCase()}|${entry.englishName.toLowerCase()}`;
 
                 if (mergedMap.has(compositeKey)) {
-                    // 완전히 동일한 엔트리 - 업데이트
-                    console.log(`중복 엔트리 업데이트: ${entry.standardName} (${entry.abbreviation})`);
+                    // 완전히 동일한 엔트리 - 기존 설명 보존하면서 업데이트
+                    const existingEntry = mergedMap.get(compositeKey)!;
+                    const mergedEntry: TerminologyEntry = {
+                        ...entry,
+                        // 기존 설명이 있고 새 설명이 없으면 기존 설명 유지
+                        description: entry.description || existingEntry.description,
+                        // 생성일은 기존 것 유지, 수정일은 현재 시간으로 업데이트
+                        createdAt: existingEntry.createdAt,
+                        updatedAt: new Date().toISOString()
+                    };
+
+                    console.log(`중복 엔트리 업데이트: ${entry.standardName} (${entry.abbreviation}) - 설명 보존: ${existingEntry.description ? '있음' : '없음'} → ${mergedEntry.description ? '있음' : '없음'}`);
+                    mergedMap.set(compositeKey, mergedEntry);
                     updatedCount++;
                 } else {
+                    // 새 항목 추가
                     // 부분 중복 검사 (같은 약어나 표준명이 있는지 확인)
                     const hasAbbreviationConflict = Array.from(mergedMap.values()).some(existing =>
                         existing.abbreviation.toLowerCase() === entry.abbreviation.toLowerCase() &&
@@ -197,9 +209,17 @@ export async function mergeTerminologyData(
                     if (hasStandardNameConflict) {
                         console.warn(`표준명 중복 발견: ${entry.standardName} - 기존과 다른 약어 "${entry.abbreviation}"`);
                     }
-                }
 
-                mergedMap.set(compositeKey, entry);
+                    // 새 항목 추가 - 설명이 없으면 빈 문자열로 설정
+                    const newEntry: TerminologyEntry = {
+                        ...entry,
+                        description: entry.description || '',
+                        createdAt: entry.createdAt || new Date().toISOString(),
+                        updatedAt: entry.updatedAt || new Date().toISOString()
+                    };
+
+                    mergedMap.set(compositeKey, newEntry);
+                }
             });
 
             finalEntries = Array.from(mergedMap.values());

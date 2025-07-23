@@ -1,6 +1,7 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse, TerminologyData, TerminologyEntry } from '../../../lib/types/terminology.js';
 import { loadTerminologyData, saveTerminologyData } from '../../../lib/utils/file-handler.js';
+import { getDuplicateIds } from '../../../lib/utils/duplicate-handler.js';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -14,6 +15,7 @@ export async function GET({ url }: RequestEvent) {
         const limit = parseInt(url.searchParams.get('limit') || '100');
         const sortBy = url.searchParams.get('sortBy') || 'standardName';
         const sortOrder = url.searchParams.get('sortOrder') || 'asc';
+        const filter = url.searchParams.get('filter'); // 중복 필터링 파라미터 추가
 
         // 페이지네이션 유효성 검증
         if (page < 1 || limit < 1 || limit > 1000) {
@@ -46,8 +48,15 @@ export async function GET({ url }: RequestEvent) {
             } as ApiResponse, { status: 500 });
         }
 
+        // 중복 필터링 적용
+        let filteredEntries = terminologyData.entries;
+        if (filter === 'duplicates') {
+            const duplicateIds = getDuplicateIds(terminologyData.entries);
+            filteredEntries = terminologyData.entries.filter(entry => duplicateIds.has(entry.id));
+        }
+
         // 정렬 적용
-        const sortedEntries = [...terminologyData.entries].sort((a, b) => {
+        const sortedEntries = [...filteredEntries].sort((a, b) => {
             let valueA = a[sortBy as keyof typeof a];
             let valueB = b[sortBy as keyof typeof b];
 
@@ -67,8 +76,9 @@ export async function GET({ url }: RequestEvent) {
         const endIndex = startIndex + limit;
         const paginatedEntries = sortedEntries.slice(startIndex, endIndex);
 
-        // 페이지네이션 메타 정보
-        const totalPages = Math.ceil(terminologyData.totalCount / limit);
+        // 페이지네이션 메타 정보 (필터링된 결과 기준으로 계산)
+        const filteredCount = filteredEntries.length;
+        const totalPages = Math.ceil(filteredCount / limit);
         const hasNextPage = page < totalPages;
         const hasPrevPage = page > 1;
 
@@ -78,7 +88,7 @@ export async function GET({ url }: RequestEvent) {
             pagination: {
                 currentPage: page,
                 totalPages,
-                totalCount: terminologyData.totalCount,
+                totalCount: filteredCount, // 필터링된 결과의 총 개수
                 limit,
                 hasNextPage,
                 hasPrevPage
@@ -87,10 +97,14 @@ export async function GET({ url }: RequestEvent) {
                 sortBy,
                 sortOrder
             },
+            filtering: {
+                filter: filter || 'none',
+                isFiltered: filter === 'duplicates'
+            },
             lastUpdated: terminologyData.lastUpdated
         };
 
-        console.log(`용어집 조회 성공: ${paginatedEntries.length}개 항목 (페이지 ${page}/${totalPages})`);
+        console.log(`용어집 조회 성공: ${paginatedEntries.length}개 항목 (페이지 ${page}/${totalPages})${filter === 'duplicates' ? ' - 중복 필터링 적용' : ''}`);
 
         return json({
             success: true,

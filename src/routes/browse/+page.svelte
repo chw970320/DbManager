@@ -19,6 +19,7 @@
 	let sortDirection = $state<'asc' | 'desc'>('asc');
 	let lastUpdated = $state('');
 	let errorMessage = $state('');
+	let showOnlyDuplicates = $state(false); // 중복 항목만 보기 필터 상태
 
 	// 통계 정보
 	let statistics = $state({
@@ -54,6 +55,11 @@
 				sortOrder: sortDirection
 			});
 
+			// 중복 필터링 파라미터 추가
+			if (showOnlyDuplicates) {
+				params.set('filter', 'duplicates');
+			}
+
 			const response = await fetch(`/api/terminology?${params}`);
 			const result: ApiResponse = await response.json();
 
@@ -81,19 +87,31 @@
 		searchQuery = query;
 		searchField = field;
 		searchExact = exact;
-		currentPage = 1; // 검색 시 첫 페이지로 이동
+		currentPage = 1; // 새로운 검색 시 첫 페이지로 이동
 
+		await executeSearch();
+	}
+
+	/**
+	 * 검색 API 호출 (페이지 유지)
+	 */
+	async function executeSearch() {
 		loading = true;
 		errorMessage = '';
 
 		try {
 			const params = new URLSearchParams({
-				q: query,
-				field: field,
-				exact: exact.toString(),
-				page: '1',
+				q: searchQuery,
+				field: searchField,
+				exact: searchExact.toString(),
+				page: currentPage.toString(),
 				limit: pageSize.toString()
 			});
+
+			// 중복 필터링 파라미터 추가
+			if (showOnlyDuplicates) {
+				params.set('filter', 'duplicates');
+			}
 
 			const response = await fetch(`/api/search?${params}`);
 			const result: ApiResponse = await response.json();
@@ -102,7 +120,6 @@
 				entries = result.data.entries || [];
 				totalCount = result.data.totalResults || 0;
 				totalPages = result.data.pagination?.totalPages || 1;
-				currentPage = 1;
 			} else {
 				errorMessage = result.error || '검색 실패';
 			}
@@ -135,7 +152,7 @@
 
 		if (searchQuery) {
 			// 검색 중인 경우 검색 재실행
-			await handleSearch({ query: searchQuery, field: searchField, exact: searchExact });
+			await executeSearch();
 		} else {
 			// 일반 조회 시 데이터 재로드
 			await loadTerminologyData();
@@ -150,8 +167,23 @@
 		currentPage = page;
 
 		if (searchQuery) {
+			// 검색 중인 경우 현재 페이지로 검색 재실행
+			await executeSearch();
+		} else {
+			// 일반 조회 시 데이터 재로드
+			await loadTerminologyData();
+		}
+	}
+
+	/**
+	 * 중복 필터 변경 처리
+	 */
+	async function handleDuplicateFilterChange() {
+		currentPage = 1; // 필터 변경 시 첫 페이지로 이동
+
+		if (searchQuery) {
 			// 검색 중인 경우 검색 재실행
-			await handleSearch({ query: searchQuery, field: searchField, exact: searchExact });
+			await executeSearch();
 		} else {
 			// 일반 조회 시 데이터 재로드
 			await loadTerminologyData();
@@ -249,7 +281,7 @@
 				<p class="mt-2 text-gray-600">표준단어명, 영문약어, 영문명으로 용어를 검색하세요</p>
 			</div>
 
-			<div class="mb-8">
+			<div class="mb-6">
 				<SearchBar
 					bind:query={searchQuery}
 					bind:field={searchField}
@@ -257,6 +289,44 @@
 					onsearch={handleSearch}
 					onclear={handleSearchClear}
 				/>
+			</div>
+
+			<!-- 고급 검색 옵션 -->
+			<div class="mb-4">
+				<div class="flex flex-wrap items-center gap-4">
+					<div class="flex items-center space-x-2">
+						<input
+							type="checkbox"
+							id="showOnlyDuplicates"
+							bind:checked={showOnlyDuplicates}
+							onchange={handleDuplicateFilterChange}
+							class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+						/>
+						<label
+							for="showOnlyDuplicates"
+							class="cursor-pointer select-none text-sm font-medium text-gray-700"
+						>
+							중복 항목만 보기
+						</label>
+					</div>
+
+					<!-- 필터 상태 표시 -->
+					{#if showOnlyDuplicates}
+						<div
+							class="flex items-center space-x-1 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800"
+						>
+							<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+								/>
+							</svg>
+							<span>중복 필터 활성</span>
+						</div>
+					{/if}
+				</div>
 			</div>
 		</div>
 

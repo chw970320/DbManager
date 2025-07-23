@@ -1,11 +1,12 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse, SearchResult, SearchQuery, TerminologyEntry } from '../../../lib/types/terminology.js';
 import { loadTerminologyData } from '../../../lib/utils/file-handler.js';
+import { getDuplicateIds } from '../../../lib/utils/duplicate-handler.js';
 import { sanitizeSearchQuery } from '../../../lib/utils/validation.js';
 
 /**
  * 용어집 검색 API
- * GET /api/search?q=검색어&field=필드&page=1&limit=50
+ * GET /api/search?q=검색어&field=필드&page=1&limit=50&filter=duplicates
  */
 export async function GET({ url }: RequestEvent) {
     try {
@@ -15,6 +16,7 @@ export async function GET({ url }: RequestEvent) {
         const page = parseInt(url.searchParams.get('page') || '1');
         const limit = parseInt(url.searchParams.get('limit') || '50');
         const exact = url.searchParams.get('exact') === 'true';
+        const filter = url.searchParams.get('filter'); // 중복 필터링 파라미터 추가
 
         // 검색어 유효성 검증 및 정제
         const sanitizedQuery = sanitizeSearchQuery(query);
@@ -57,8 +59,19 @@ export async function GET({ url }: RequestEvent) {
             } as ApiResponse, { status: 500 });
         }
 
+        // 중복 필터링을 위한 ID 목록 가져오기
+        let duplicateIds: Set<string> | null = null;
+        if (filter === 'duplicates') {
+            duplicateIds = getDuplicateIds(terminologyData.entries);
+        }
+
         // 검색 로직
         const searchResults = terminologyData.entries.filter((entry: TerminologyEntry) => {
+            // 중복 필터링 적용
+            if (filter === 'duplicates' && duplicateIds && !duplicateIds.has(entry.id)) {
+                return false;
+            }
+
             const searchTargets: string[] = [];
 
             // 검색 대상 필드 설정
@@ -154,10 +167,14 @@ export async function GET({ url }: RequestEvent) {
                 field,
                 exact,
                 executionTime: Date.now() // 실제로는 검색 시작 시간과의 차이를 계산해야 함
+            },
+            filtering: {
+                filter: filter || 'none',
+                isFiltered: filter === 'duplicates'
             }
         };
 
-        console.log(`검색 완료: "${sanitizedQuery}" (${field}) - ${totalResults}개 결과 중 ${paginatedResults.length}개 반환`);
+        console.log(`검색 완료: "${sanitizedQuery}" (${field}) - ${totalResults}개 결과 중 ${paginatedResults.length}개 반환${filter === 'duplicates' ? ' - 중복 필터링 적용' : ''}`);
 
         return json({
             success: true,

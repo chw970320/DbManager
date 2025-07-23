@@ -6,9 +6,10 @@
 	interface Props {
 		entry?: Partial<TerminologyEntry>;
 		isEditMode?: boolean;
+		serverError?: string;
 	}
 
-	let { entry = {}, isEditMode = false }: Props = $props();
+	let { entry = {}, isEditMode = false, serverError = '' }: Props = $props();
 
 	// Event dispatcher
 	const dispatch = createEventDispatcher<{
@@ -117,6 +118,14 @@
 		dispatch('cancel');
 	}
 
+	// Handle background click
+	function handleBackgroundClick(event: MouseEvent) {
+		// 배경을 클릭했을 때만 모달 닫기 (이벤트 타켓이 배경 div인 경우)
+		if (event.target === event.currentTarget) {
+			handleCancel();
+		}
+	}
+
 	// Handle input changes with uppercase conversion for abbreviation
 	function handleAbbreviationInput(event: Event) {
 		const target = event.target as HTMLInputElement;
@@ -124,13 +133,47 @@
 	}
 </script>
 
-<div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-	<div class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+<div
+	class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+	onclick={handleBackgroundClick}
+>
+	<div
+		class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+		onclick={(e) => e.stopPropagation()}
+	>
 		<h2 class="mb-4 text-xl font-bold text-gray-800">
 			{isEditMode ? '용어 수정' : '새 용어 추가'}
 		</h2>
 
-		<form on:submit|preventDefault={handleSave} class="space-y-4">
+		<!-- 서버 에러 메시지 -->
+		{#if serverError}
+			<div class="mb-4 rounded-md border border-red-300 bg-red-50 p-3">
+				<div class="flex items-center">
+					<svg
+						class="mr-2 h-5 w-5 text-red-400"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+						/>
+					</svg>
+					<p class="text-sm font-medium text-red-800">{serverError}</p>
+				</div>
+			</div>
+		{/if}
+
+		<form
+			onsubmit={(e) => {
+				e.preventDefault();
+				handleSave();
+			}}
+			class="space-y-4"
+		>
 			<!-- 표준단어명 -->
 			<div>
 				<label for="standardName" class="mb-1 block text-sm font-medium text-gray-700">
@@ -159,7 +202,7 @@
 					id="abbreviation"
 					type="text"
 					value={formData.abbreviation}
-					on:input={handleAbbreviationInput}
+					oninput={handleAbbreviationInput}
 					placeholder="예: DB"
 					class="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
 					class:border-red-500={errors.abbreviation}
@@ -206,7 +249,7 @@
 			<div class="flex justify-end space-x-3 pt-4">
 				<button
 					type="button"
-					on:click={handleCancel}
+					onclick={handleCancel}
 					class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
 					disabled={isSubmitting}
 				>

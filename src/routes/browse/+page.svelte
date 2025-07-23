@@ -33,6 +33,7 @@
 		abbreviation: string;
 		englishName: string;
 	} | null>(null);
+	let editorServerError = $state('');
 
 	// 통계 정보
 	let statistics = $state({
@@ -240,6 +241,7 @@
 		event: CustomEvent<{ standardName: string; abbreviation: string; englishName: string }>
 	) {
 		editorPrefilledData = event.detail;
+		editorServerError = ''; // 에러 상태 초기화
 		showEditor = true;
 	}
 
@@ -250,6 +252,7 @@
 		const newEntry = event.detail;
 		loading = true;
 		errorMessage = '';
+		editorServerError = ''; // 에러 상태 초기화
 
 		try {
 			const response = await fetch('/api/terminology', {
@@ -266,6 +269,7 @@
 				// 모달 닫기
 				showEditor = false;
 				editorPrefilledData = null;
+				editorServerError = ''; // 에러 상태 초기화
 				// 데이터 새로고침
 				await loadTerminologyData();
 
@@ -300,11 +304,16 @@
 
 				console.log('새 용어가 성공적으로 추가되었습니다.');
 			} else {
-				errorMessage = result.error || '용어 추가에 실패했습니다.';
+				// 에러 발생 시 모달 내부에 표시
+				const errorMsg = result.error || '용어 추가에 실패했습니다.';
+				editorServerError = errorMsg;
+				errorMessage = errorMsg;
 			}
 		} catch (error) {
 			console.error('용어 추가 중 오류:', error);
-			errorMessage = '서버 연결 오류가 발생했습니다.';
+			const errorMsg = '서버 연결 오류가 발생했습니다.';
+			editorServerError = errorMsg;
+			errorMessage = errorMsg;
 		} finally {
 			loading = false;
 		}
@@ -409,7 +418,10 @@
 					<!-- 새 용어 추가 버튼 -->
 					<button
 						type="button"
-						onclick={() => (showEditor = true)}
+						onclick={() => {
+							editorServerError = '';
+							showEditor = true;
+						}}
 						disabled={loading}
 						class="group inline-flex items-center space-x-2 rounded-xl border border-blue-200/50 bg-blue-50/80 px-6 py-3 text-sm font-medium text-blue-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-blue-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
 					>
@@ -484,10 +496,12 @@
 		{#if showEditor}
 			<TermEditor
 				entry={editorPrefilledData || {}}
+				serverError={editorServerError}
 				on:save={handleSave}
 				on:cancel={() => {
 					showEditor = false;
 					editorPrefilledData = null;
+					editorServerError = '';
 				}}
 			/>
 		{/if}

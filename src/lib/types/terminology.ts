@@ -11,6 +11,11 @@ export interface TerminologyEntry {
     description: string;    // 설명
     createdAt: string;     // ISO 8601 날짜 문자열
     updatedAt: string;     // ISO 8601 날짜 문자열
+    duplicateInfo?: {      // 중복 정보 (선택적)
+        standardName: boolean;
+        abbreviation: boolean;
+        englishName: boolean;
+    };
 }
 
 // 전체 용어집 데이터 구조

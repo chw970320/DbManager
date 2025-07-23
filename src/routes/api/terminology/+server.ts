@@ -1,7 +1,7 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse, TerminologyData, TerminologyEntry } from '../../../lib/types/terminology.js';
 import { loadTerminologyData, saveTerminologyData } from '../../../lib/utils/file-handler.js';
-import { getDuplicateIds } from '../../../lib/utils/duplicate-handler.js';
+import { getDuplicateIds, getDuplicateDetails } from '../../../lib/utils/duplicate-handler.js';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -48,11 +48,43 @@ export async function GET({ url }: RequestEvent) {
             } as ApiResponse, { status: 500 });
         }
 
-        // 중복 필터링 적용
-        let filteredEntries = terminologyData.entries;
-        if (filter === 'duplicates') {
-            const duplicateIds = getDuplicateIds(terminologyData.entries);
-            filteredEntries = terminologyData.entries.filter(entry => duplicateIds.has(entry.id));
+        // 중복 정보 가져오기
+        const duplicateDetails = getDuplicateDetails(terminologyData.entries);
+
+        // 모든 항목에 duplicateInfo 추가
+        const entriesWithDuplicateInfo = terminologyData.entries.map(entry => ({
+            ...entry,
+            duplicateInfo: duplicateDetails.get(entry.id) || {
+                standardName: false,
+                abbreviation: false,
+                englishName: false
+            }
+        }));
+
+        // 세분화된 중복 필터링 적용
+        let filteredEntries = entriesWithDuplicateInfo;
+        if (filter && filter.startsWith('duplicates:')) {
+            // filter=duplicates:standardName,abbreviation 형태 파싱
+            const filterFields = filter.substring('duplicates:'.length).split(',').map(f => f.trim());
+            const validFields = ['standardName', 'abbreviation', 'englishName'];
+            const requestedFields = filterFields.filter(field => validFields.includes(field));
+
+            if (requestedFields.length > 0) {
+                filteredEntries = entriesWithDuplicateInfo.filter(entry => {
+                    return requestedFields.some(field =>
+                        entry.duplicateInfo && entry.duplicateInfo[field as keyof typeof entry.duplicateInfo]
+                    );
+                });
+            }
+        } else if (filter === 'duplicates') {
+            // 기존 호환성: 모든 중복 항목
+            filteredEntries = entriesWithDuplicateInfo.filter(entry =>
+                entry.duplicateInfo && (
+                    entry.duplicateInfo.standardName ||
+                    entry.duplicateInfo.abbreviation ||
+                    entry.duplicateInfo.englishName
+                )
+            );
         }
 
         // 정렬 적용

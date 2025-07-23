@@ -128,6 +128,30 @@
 	let displayedPages = $derived(getPageNumbers());
 
 	/**
+	 * 특정 필드의 중복 상태에 따른 배경색 클래스를 결정
+	 */
+	function getFieldDuplicateBackgroundClass(
+		duplicateInfo:
+			| { standardName: boolean; abbreviation: boolean; englishName: boolean }
+			| undefined,
+		fieldKey: string
+	): string {
+		if (!duplicateInfo) return '';
+
+		// 필드별 중복 상태에 따라 배경색 결정
+		switch (fieldKey) {
+			case 'standardName':
+				return duplicateInfo.standardName ? 'bg-red-100' : '';
+			case 'abbreviation':
+				return duplicateInfo.abbreviation ? 'bg-orange-100' : '';
+			case 'englishName':
+				return duplicateInfo.englishName ? 'bg-yellow-100' : '';
+			default:
+				return '';
+		}
+	}
+
+	/**
 	 * 컬럼 정렬 처리
 	 */
 	function handleSort(column: string) {
@@ -346,13 +370,18 @@
 					{#each entries as entry (entry.id)}
 						{@const isEditing = editingId === entry.id}
 						{@const isDuplicate = duplicates.has(entry.id)}
-						<tr
-							class:bg-red-50={isDuplicate && !isEditing}
-							class:bg-blue-50={isEditing}
-							class="border-t border-gray-300"
-						>
+						<tr class:bg-blue-50={isEditing} class="border-t border-gray-300">
 							{#each columns as column}
-								<td class="whitespace-nowrap px-6 py-4 text-sm text-gray-700">
+								{@const fieldBackgroundClass = getFieldDuplicateBackgroundClass(
+									entry.duplicateInfo,
+									column.key
+								)}
+								<td
+									class="whitespace-nowrap px-6 py-4 text-sm text-gray-700 {fieldBackgroundClass &&
+									!isEditing
+										? fieldBackgroundClass
+										: ''}"
+								>
 									{#if column.key === 'actions'}
 										<div class="flex items-center space-x-2">
 											{#if isEditing}

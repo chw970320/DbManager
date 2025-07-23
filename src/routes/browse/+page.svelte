@@ -19,7 +19,11 @@
 	let sortDirection = $state<'asc' | 'desc'>('asc');
 	let lastUpdated = $state('');
 	let errorMessage = $state('');
-	let showOnlyDuplicates = $state(false); // 중복 항목만 보기 필터 상태
+	let duplicateFilters = $state({
+		standardName: false,
+		abbreviation: false,
+		englishName: false
+	}); // 세부 중복 필터 상태
 
 	// 통계 정보
 	let statistics = $state({
@@ -32,6 +36,21 @@
 	type SearchDetail = { query: string; field: string; exact: boolean };
 	type SortDetail = { column: string; direction: 'asc' | 'desc' };
 	type PageChangeDetail = { page: number };
+
+	/**
+	 * 중복 필터 상태에 따라 필터 파라미터 문자열을 생성
+	 */
+	function getDuplicateFilterParam(): string | null {
+		const activeFilters = [];
+		if (duplicateFilters.standardName) activeFilters.push('standardName');
+		if (duplicateFilters.abbreviation) activeFilters.push('abbreviation');
+		if (duplicateFilters.englishName) activeFilters.push('englishName');
+
+		if (activeFilters.length > 0) {
+			return `duplicates:${activeFilters.join(',')}`;
+		}
+		return null;
+	}
 
 	/**
 	 * 컴포넌트 마운트 시 초기 데이터 로드
@@ -56,8 +75,9 @@
 			});
 
 			// 중복 필터링 파라미터 추가
-			if (showOnlyDuplicates) {
-				params.set('filter', 'duplicates');
+			const filterParam = getDuplicateFilterParam();
+			if (filterParam) {
+				params.set('filter', filterParam);
 			}
 
 			const response = await fetch(`/api/terminology?${params}`);
@@ -109,8 +129,9 @@
 			});
 
 			// 중복 필터링 파라미터 추가
-			if (showOnlyDuplicates) {
-				params.set('filter', 'duplicates');
+			const filterParam = getDuplicateFilterParam();
+			if (filterParam) {
+				params.set('filter', filterParam);
 			}
 
 			const response = await fetch(`/api/search?${params}`);
@@ -180,13 +201,19 @@
 	 */
 	async function handleDuplicateFilterChange() {
 		currentPage = 1; // 필터 변경 시 첫 페이지로 이동
+		errorMessage = ''; // 이전 오류 메시지 초기화
 
-		if (searchQuery) {
-			// 검색 중인 경우 검색 재실행
-			await executeSearch();
-		} else {
-			// 일반 조회 시 데이터 재로드
-			await loadTerminologyData();
+		try {
+			if (searchQuery) {
+				// 검색 중인 경우 검색 재실행
+				await executeSearch();
+			} else {
+				// 일반 조회 시 데이터 재로드
+				await loadTerminologyData();
+			}
+		} catch (error) {
+			console.error('필터 변경 중 오류:', error);
+			errorMessage = '필터 적용 중 오류가 발생했습니다.';
 		}
 	}
 
@@ -293,37 +320,110 @@
 
 			<!-- 고급 검색 옵션 -->
 			<div class="mb-4">
-				<div class="flex flex-wrap items-center gap-4">
-					<div class="flex items-center space-x-2">
-						<input
-							type="checkbox"
-							id="showOnlyDuplicates"
-							bind:checked={showOnlyDuplicates}
-							onchange={handleDuplicateFilterChange}
-							class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-						/>
-						<label
-							for="showOnlyDuplicates"
-							class="cursor-pointer select-none text-sm font-medium text-gray-700"
-						>
-							중복 항목만 보기
-						</label>
+				<div class="space-y-3">
+					<h3 class="text-sm font-medium text-gray-700">중복 필터</h3>
+
+					<div class="flex flex-wrap items-center gap-6">
+						<!-- 표준단어명 중복 필터 -->
+						<div class="flex items-center space-x-2">
+							<input
+								type="checkbox"
+								id="duplicateStandardName"
+								bind:checked={duplicateFilters.standardName}
+								onchange={handleDuplicateFilterChange}
+								class="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+							/>
+							<label
+								for="duplicateStandardName"
+								class="cursor-pointer select-none text-sm font-medium text-gray-700"
+							>
+								표준단어명 중복
+							</label>
+						</div>
+
+						<!-- 영문약어 중복 필터 -->
+						<div class="flex items-center space-x-2">
+							<input
+								type="checkbox"
+								id="duplicateAbbreviation"
+								bind:checked={duplicateFilters.abbreviation}
+								onchange={handleDuplicateFilterChange}
+								class="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+							/>
+							<label
+								for="duplicateAbbreviation"
+								class="cursor-pointer select-none text-sm font-medium text-gray-700"
+							>
+								영문약어 중복
+							</label>
+						</div>
+
+						<!-- 영문명 중복 필터 -->
+						<div class="flex items-center space-x-2">
+							<input
+								type="checkbox"
+								id="duplicateEnglishName"
+								bind:checked={duplicateFilters.englishName}
+								onchange={handleDuplicateFilterChange}
+								class="h-4 w-4 rounded border-gray-300 text-yellow-600 focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
+							/>
+							<label
+								for="duplicateEnglishName"
+								class="cursor-pointer select-none text-sm font-medium text-gray-700"
+							>
+								영문명 중복
+							</label>
+						</div>
 					</div>
 
 					<!-- 필터 상태 표시 -->
-					{#if showOnlyDuplicates}
-						<div
-							class="flex items-center space-x-1 rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800"
-						>
-							<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-								/>
-							</svg>
-							<span>중복 필터 활성</span>
+					{#if duplicateFilters.standardName || duplicateFilters.abbreviation || duplicateFilters.englishName}
+						<div class="flex flex-wrap items-center gap-2">
+							{#if duplicateFilters.standardName}
+								<div
+									class="flex items-center space-x-1 rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-800"
+								>
+									<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+										/>
+									</svg>
+									<span>표준단어명</span>
+								</div>
+							{/if}
+							{#if duplicateFilters.abbreviation}
+								<div
+									class="flex items-center space-x-1 rounded-md bg-orange-100 px-2 py-1 text-xs font-medium text-orange-800"
+								>
+									<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+										/>
+									</svg>
+									<span>영문약어</span>
+								</div>
+							{/if}
+							{#if duplicateFilters.englishName}
+								<div
+									class="flex items-center space-x-1 rounded-md bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800"
+								>
+									<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+										/>
+									</svg>
+									<span>영문명</span>
+								</div>
+							{/if}
 						</div>
 					{/if}
 				</div>

@@ -12,8 +12,8 @@
 	// 네비게이션 메뉴 아이템
 	const menuItems = [
 		{ href: '/', label: '홈', icon: 'home' },
-		{ href: '/browse', label: '용어집 관리', icon: 'list' },
-		{ href: '/upload', label: '파일 업로드', icon: 'upload' }
+		{ href: '/browse', label: '용어집 관리', icon: 'search' },
+		{ href: '/upload', label: '용어집 업로드', icon: 'upload' }
 	];
 
 	// 모바일 메뉴 토글

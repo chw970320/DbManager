@@ -1,6 +1,7 @@
 <script lang="ts">
 	import CopyToClipboard from 'svelte-copy-to-clipboard';
 	import { debounce } from '$lib/utils/debounce';
+	import { createEventDispatcher } from 'svelte';
 
 	// --- Component State ---
 	let sourceTerm = $state('');
@@ -13,6 +14,11 @@
 	let isLoadingResult = $state(false);
 	let justCopied = $state(false);
 	let copyTimeout: ReturnType<typeof setTimeout>;
+
+	// Event dispatcher
+	const dispatch = createEventDispatcher<{
+		addterm: { standardName: string; abbreviation: string; englishName: string };
+	}>();
 
 	// --- Effects ---
 	$effect(() => {
@@ -84,6 +90,38 @@
 			justCopied = false;
 		}, 1000);
 	}
+
+	function handleAddToTerminology() {
+		if (!selectedSegment || !finalResult || finalResult.includes('##')) return;
+
+		// 방향에 따라 표준단어명과 영문약어 결정
+		let standardName = '';
+		let abbreviation = '';
+		let englishName = '';
+
+		if (direction === 'ko-to-en') {
+			// 한글 → 영문: 선택된 조합이 표준단어명, 결과가 영문약어
+			standardName = selectedSegment.replace(/_/g, ' '); // 언더스코어를 공백으로 변환
+			abbreviation = finalResult.replace(/ /g, '_').toUpperCase(); // 공백을 언더스코어로, 대문자로 변환
+			englishName = ''; // 영문명은 사용자가 입력
+		} else {
+			// 영문 → 한글: 선택된 조합이 영문약어, 결과가 표준단어명
+			abbreviation = selectedSegment.replace(/ /g, '_').toUpperCase();
+			standardName = finalResult.replace(/_/g, ' ');
+			englishName = ''; // 영문명은 사용자가 입력
+		}
+
+		dispatch('addterm', {
+			standardName,
+			abbreviation,
+			englishName
+		});
+	}
+
+	// 용어 추가 버튼 활성화 조건 확인
+	let canAddToTerminology = $derived(
+		selectedSegment && finalResult && !finalResult.includes('##') && !selectedSegment.includes('##')
+	);
 
 	const debouncedFindCombinations = debounce(findCombinations, 300);
 </script>
@@ -189,7 +227,7 @@
 					<p class="text-center">생성 중...</p>
 				{:else if finalResult}
 					<p class="p-2">{finalResult}</p>
-					<div class="absolute right-1 top-1">
+					<div class="absolute right-1 top-1 flex items-center space-x-1">
 						<CopyToClipboard text={finalResult} let:copy>
 							<button
 								onclick={() => {
@@ -234,6 +272,32 @@
 								{/if}
 							</button>
 						</CopyToClipboard>
+						<button
+							onclick={handleAddToTerminology}
+							class="btn btn-ghost btn-sm p-1"
+							class:opacity-50={!canAddToTerminology}
+							class:cursor-not-allowed={!canAddToTerminology}
+							disabled={!canAddToTerminology}
+							title={canAddToTerminology
+								? '용어집에 추가'
+								: '##가 포함된 결과는 추가할 수 없습니다'}
+						>
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								width="20"
+								height="20"
+								viewBox="0 0 24 24"
+								fill="none"
+								stroke="currentColor"
+								stroke-width="2"
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								class="lucide lucide-book-plus"
+								><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" /><path
+									d="M9 10h6"
+								/><path d="M12 7v6" /></svg
+							>
+						</button>
 					</div>
 				{/if}
 			</div>

@@ -45,7 +45,7 @@ function segmentPart(originalPart: string, wordSet: Set<string>): string[] {
     }
 
     // 원본 대소문자에 맞춰 결과 복원
-    return dp[n].map((result) => {
+    const results = dp[n].map((result) => {
         let originalIndex = 0;
         return result
             .split('_')
@@ -56,6 +56,9 @@ function segmentPart(originalPart: string, wordSet: Set<string>): string[] {
             })
             .join('_');
     });
+
+    // 매칭되는 조합이 없으면 ##으로 표시
+    return results.length > 0 ? results : ['##'];
 }
 
 /**
@@ -80,13 +83,8 @@ export async function POST({ request }: RequestEvent) {
         // 공백으로 단어를 분리
         const termParts = term.split(' ').filter(p => p.length > 0);
 
-        // 각 단어를 분해
+        // 각 단어를 분해 (매칭되지 않는 단어는 ##으로 표시)
         const segmentedParts = termParts.map(part => segmentPart(part, wordSet));
-
-        // 한 부분이라도 유효한 조합이 없으면 빈 배열 반환
-        if (segmentedParts.some(p => p.length === 0)) {
-            return json({ success: true, segments: [] });
-        }
 
         // 분해된 조합들의 모든 경우의 수를 계산 (Cartesian Product)
         const finalResult = segmentedParts.reduce((acc, current) => {
@@ -99,7 +97,6 @@ export async function POST({ request }: RequestEvent) {
             }
             return res;
         }, [] as string[]);
-
 
         return json({
             success: true,

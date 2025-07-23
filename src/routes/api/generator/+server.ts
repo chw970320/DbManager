@@ -54,9 +54,17 @@ export async function POST({ request }: RequestEvent) {
         }
 
         const sourceMap = direction === 'ko-to-en' ? koToEnMap : enToKoMap;
-        const terms = term.split('_');
-        const convertedTerms = terms.map((t) => sourceMap.get(t.toLowerCase()) || '##');
-        const result = convertedTerms.join('_');
+
+        // 스페이스 또는 언더스코어로 분리 (스페이스 우선)
+        const separator = term.includes(' ') ? ' ' : '_';
+        const terms = term.split(separator);
+
+        const convertedTerms = terms.map((t) => {
+            const trimmedTerm = t.trim();
+            return sourceMap.get(trimmedTerm.toLowerCase()) || '##';
+        });
+
+        const result = convertedTerms.join(separator);
 
         return json({
             success: true,

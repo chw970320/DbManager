@@ -143,7 +143,7 @@
 
 			if (result.success && result.data) {
 				entries = result.data.entries || [];
-				totalCount = result.data.totalResults || 0;
+				totalCount = result.data.pagination?.totalResults || 0;
 				totalPages = result.data.pagination?.totalPages || 1;
 			} else {
 				errorMessage = result.error || '검색 실패';

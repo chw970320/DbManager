@@ -160,19 +160,51 @@ export async function mergeTerminologyData(
             finalEntries = [...newEntries];
         } else {
             // 기존 데이터와 병합
-            const existingMap = new Map<string, TerminologyEntry>();
+            const mergedMap = new Map<string, TerminologyEntry>();
+            let duplicateCount = 0;
+            let updatedCount = 0;
 
-            // 기존 엔트리들을 Map에 저장 (abbreviation을 키로 사용)
+            // 기존 엔트리들을 Map에 저장 (복합 키 사용)
             existingData.entries.forEach(entry => {
-                existingMap.set(entry.abbreviation, entry);
+                const compositeKey = `${entry.standardName.toLowerCase()}|${entry.abbreviation.toLowerCase()}|${entry.englishName.toLowerCase()}`;
+                mergedMap.set(compositeKey, entry);
             });
 
-            // 새로운 엔트리들 추가 (중복시 새 데이터로 덮어쓰기)
+            // 새로운 엔트리들 처리
             newEntries.forEach(entry => {
-                existingMap.set(entry.abbreviation, entry);
+                const compositeKey = `${entry.standardName.toLowerCase()}|${entry.abbreviation.toLowerCase()}|${entry.englishName.toLowerCase()}`;
+
+                if (mergedMap.has(compositeKey)) {
+                    // 완전히 동일한 엔트리 - 업데이트
+                    console.log(`중복 엔트리 업데이트: ${entry.standardName} (${entry.abbreviation})`);
+                    updatedCount++;
+                } else {
+                    // 부분 중복 검사 (같은 약어나 표준명이 있는지 확인)
+                    const hasAbbreviationConflict = Array.from(mergedMap.values()).some(existing =>
+                        existing.abbreviation.toLowerCase() === entry.abbreviation.toLowerCase() &&
+                        existing.standardName.toLowerCase() !== entry.standardName.toLowerCase()
+                    );
+
+                    const hasStandardNameConflict = Array.from(mergedMap.values()).some(existing =>
+                        existing.standardName.toLowerCase() === entry.standardName.toLowerCase() &&
+                        existing.abbreviation.toLowerCase() !== entry.abbreviation.toLowerCase()
+                    );
+
+                    if (hasAbbreviationConflict) {
+                        console.warn(`영문약어 중복 발견: ${entry.abbreviation} - 기존과 다른 표준명 "${entry.standardName}"`);
+                    }
+
+                    if (hasStandardNameConflict) {
+                        console.warn(`표준명 중복 발견: ${entry.standardName} - 기존과 다른 약어 "${entry.abbreviation}"`);
+                    }
+                }
+
+                mergedMap.set(compositeKey, entry);
             });
 
-            finalEntries = Array.from(existingMap.values());
+            finalEntries = Array.from(mergedMap.values());
+
+            console.log(`병합 상세: 업데이트 ${updatedCount}개, 새로 추가 ${newEntries.length - updatedCount}개`);
         }
 
         // 최종 데이터 객체 생성
@@ -185,7 +217,13 @@ export async function mergeTerminologyData(
         // 병합된 데이터 저장
         await saveTerminologyData(mergedData);
 
-        console.log(`데이터 병합 완료: ${finalEntries.length}개 항목`);
+        console.log(`데이터 병합 완료: 기존 ${existingData.entries.length}개 + 신규 ${newEntries.length}개 → 최종 ${finalEntries.length}개 항목`);
+
+        if (!replaceExisting) {
+            const addedCount = finalEntries.length - existingData.entries.length;
+            console.log(`실제 추가된 새 항목: ${addedCount}개`);
+        }
+
         return mergedData;
 
     } catch (error) {

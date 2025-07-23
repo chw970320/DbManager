@@ -29,6 +29,7 @@
 	let dragOver = $state(false);
 	let uploadResult = $state('');
 	let errorMessage = $state('');
+	let selectedMode = $state<'replace' | 'merge'>(replaceExisting ? 'replace' : 'merge');
 
 	// 파생 상태
 	let dragoverClass = $derived(
@@ -133,7 +134,7 @@
 			// FormData 생성
 			const formData = new FormData();
 			formData.append('file', file);
-			formData.append('replace', replaceExisting.toString());
+			formData.append('replace', (selectedMode === 'replace').toString());
 
 			// 진행 상태 시뮬레이션 (실제로는 XMLHttpRequest로 진행률 추적 가능)
 			const progressInterval = setInterval(() => {
@@ -202,6 +203,45 @@
 	<div class="mb-6">
 		<h2 class="mb-2 text-2xl font-bold text-gray-800">파일 업로드</h2>
 		<p class="text-sm text-gray-600">Excel 파일(.xlsx)을 업로드하세요.</p>
+	</div>
+
+	<!-- 업로드 모드 선택 -->
+	<div class="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
+		<h3 class="mb-3 text-sm font-semibold text-gray-700">업로드 모드 선택</h3>
+		<div class="space-y-3">
+			<label class="flex cursor-pointer items-start space-x-3">
+				<input
+					type="radio"
+					name="uploadMode"
+					value="replace"
+					bind:group={selectedMode}
+					class="mt-0.5 h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+					{disabled}
+				/>
+				<div class="flex-1">
+					<div class="text-sm font-medium text-gray-900">교체 (Replace)</div>
+					<div class="text-xs text-gray-600">
+						기존 용어집을 완전히 삭제하고 새로운 데이터로 교체합니다. 히스토리도 초기화됩니다.
+					</div>
+				</div>
+			</label>
+			<label class="flex cursor-pointer items-start space-x-3">
+				<input
+					type="radio"
+					name="uploadMode"
+					value="merge"
+					bind:group={selectedMode}
+					class="mt-0.5 h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+					{disabled}
+				/>
+				<div class="flex-1">
+					<div class="text-sm font-medium text-gray-900">병합 (Merge)</div>
+					<div class="text-xs text-gray-600">
+						기존 용어집에 새로운 데이터를 추가합니다. 중복된 용어는 자동으로 제거됩니다.
+					</div>
+				</div>
+			</label>
+		</div>
 	</div>
 
 	<!-- 드래그앤드롭 영역 -->

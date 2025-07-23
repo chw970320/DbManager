@@ -3,6 +3,7 @@ import type { ApiResponse, UploadResult, TerminologyData } from '../../../lib/ty
 import { validateXlsxFile } from '../../../lib/utils/validation.js';
 import { parseXlsxToJson, createTerminologyData } from '../../../lib/utils/xlsx-parser.js';
 import { mergeTerminologyData } from '../../../lib/utils/file-handler.js';
+import { clearHistoryData, addHistoryLog } from '../../../lib/utils/history-handler.js';
 
 /**
  * 파일 업로드 및 처리 API
@@ -75,6 +76,39 @@ export async function POST({ request }: RequestEvent) {
                 error: mergeError instanceof Error ? mergeError.message : '데이터 병합 실패',
                 message: 'Data merge failed'
             } as ApiResponse, { status: 500 });
+        }
+
+        // 용어집이 교체되는 경우 히스토리도 초기화
+        if (replaceExisting) {
+            try {
+                await clearHistoryData(true); // 백업 생성 후 초기화
+                console.log('용어집 교체로 인한 히스토리 초기화 완료');
+            } catch (historyError) {
+                console.warn('히스토리 초기화 실패:', historyError);
+                // 히스토리 초기화 실패는 전체 업로드를 실패시키지 않음
+            }
+        }
+
+        // 업로드 성공 히스토리 로그 추가 (병합 모드일 때만)
+        if (!replaceExisting) {
+            try {
+                await addHistoryLog({
+                    id: `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+                    action: 'UPLOAD_MERGE',
+                    targetId: 'terminology_file',
+                    targetName: `${file.name} (${parsedEntries.length}개 용어)`,
+                    timestamp: new Date().toISOString(),
+                    details: {
+                        fileName: file.name,
+                        fileSize: file.size,
+                        processedCount: parsedEntries.length,
+                        replaceMode: replaceExisting
+                    }
+                });
+            } catch (historyError) {
+                console.warn('업로드 히스토리 로그 추가 실패:', historyError);
+                // 히스토리 로그 실패는 전체 업로드를 실패시키지 않음
+            }
         }
 
         // 성공 응답

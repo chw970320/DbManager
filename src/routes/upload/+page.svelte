@@ -54,6 +54,16 @@
 		// 업로드 기록 새로고침
 		await loadUploadHistory();
 
+		// 작업 히스토리 새로고침 (전역 함수 호출)
+		if (typeof window !== 'undefined' && (window as any).refreshHistoryLog) {
+			try {
+				(window as any).refreshHistoryLog();
+				console.log('작업 히스토리 새로고침 완료');
+			} catch (error) {
+				console.warn('작업 히스토리 새로고침 실패:', error);
+			}
+		}
+
 		// 3초 후 조회 페이지로 이동
 		setTimeout(() => {
 			goto('/browse');
@@ -261,7 +271,7 @@
 									</div>
 									<div class="flex items-center space-x-3">
 										<div class="h-2 w-2 rounded-full bg-red-500"></div>
-										<span class="text-sm text-gray-700">기존 데이터 완전 대체</span>
+										<span class="text-sm text-gray-700">교체/병합 모드 선택 가능</span>
 									</div>
 								</div>
 							</div>

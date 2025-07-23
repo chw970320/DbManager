@@ -54,6 +54,8 @@
 				return '수정';
 			case 'delete':
 				return '삭제';
+			case 'UPLOAD_MERGE':
+				return '업로드(병합)';
 			default:
 				return action;
 		}
@@ -70,6 +72,8 @@
 				return 'text-blue-600 bg-blue-50';
 			case 'delete':
 				return 'text-red-600 bg-red-50';
+			case 'UPLOAD_MERGE':
+				return 'text-indigo-600 bg-indigo-50';
 			default:
 				return 'text-gray-600 bg-gray-50';
 		}

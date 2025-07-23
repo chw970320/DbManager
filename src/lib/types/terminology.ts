@@ -28,13 +28,18 @@ export interface TerminologyData {
 // 히스토리 로그 엔트리 인터페이스
 export interface HistoryLogEntry {
     id: string;            // 히스토리 로그 고유 ID
-    action: 'add' | 'update' | 'delete';  // 수행된 작업 타입
+    action: 'add' | 'update' | 'delete' | 'UPLOAD_MERGE';  // 수행된 작업 타입
     targetId: string;      // 대상 용어의 ID
     targetName: string;    // 대상 용어의 표준단어명
     timestamp: string;     // ISO 8601 날짜 문자열
     details?: {            // 추가 세부 정보 (선택적)
         before?: Partial<TerminologyEntry>;  // 변경 전 데이터 (update/delete 시)
         after?: Partial<TerminologyEntry>;   // 변경 후 데이터 (add/update 시)
+        // 업로드 관련 추가 정보
+        fileName?: string;     // 업로드된 파일명
+        fileSize?: number;     // 파일 크기
+        processedCount?: number; // 처리된 항목 수
+        replaceMode?: boolean;   // 교체 모드 여부
     };
 }
 

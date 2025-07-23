@@ -190,4 +190,35 @@ export async function createHistoryBackup(): Promise<string> {
         console.error('히스토리 백업 생성 실패:', error);
         throw new Error(`히스토리 백업 생성 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
     }
+}
+
+/**
+ * 히스토리 데이터를 초기화 (모든 로그 삭제)
+ * @param createBackup - 초기화 전 백업 생성 여부 (기본값: true)
+ * @returns 초기화된 빈 HistoryData 객체
+ */
+export async function clearHistoryData(createBackup: boolean = true): Promise<HistoryData> {
+    try {
+        // 백업 생성 (요청된 경우)
+        if (createBackup && existsSync(HISTORY_PATH)) {
+            await createHistoryBackup();
+        }
+
+        // 빈 히스토리 데이터 생성
+        const emptyData: HistoryData = {
+            logs: [],
+            lastUpdated: new Date().toISOString(),
+            totalCount: 0
+        };
+
+        // 빈 데이터로 파일 저장
+        await saveHistoryData(emptyData);
+
+        console.log('히스토리 데이터 초기화 완료');
+        return emptyData;
+
+    } catch (error) {
+        console.error('히스토리 데이터 초기화 실패:', error);
+        throw new Error(`히스토리 데이터 초기화 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+    }
 } 

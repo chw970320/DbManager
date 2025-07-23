@@ -78,11 +78,11 @@ export async function POST({ request }: RequestEvent) {
             } as ApiResponse, { status: 500 });
         }
 
-        // 용어집이 교체되는 경우 히스토리도 초기화
+        // 단어집이 교체되는 경우 히스토리도 초기화
         if (replaceExisting) {
             try {
                 await clearHistoryData(true); // 백업 생성 후 초기화
-                console.log('용어집 교체로 인한 히스토리 초기화 완료');
+                console.log('단어집 교체로 인한 히스토리 초기화 완료');
             } catch (historyError) {
                 console.warn('히스토리 초기화 실패:', historyError);
                 // 히스토리 초기화 실패는 전체 업로드를 실패시키지 않음
@@ -96,7 +96,7 @@ export async function POST({ request }: RequestEvent) {
                     id: `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                     action: 'UPLOAD_MERGE',
                     targetId: 'terminology_file',
-                    targetName: `${file.name} (${parsedEntries.length}개 용어)`,
+                    targetName: `${file.name} (${parsedEntries.length}개 단어)`,
                     timestamp: new Date().toISOString(),
                     details: {
                         fileName: file.name,
@@ -114,7 +114,7 @@ export async function POST({ request }: RequestEvent) {
         // 성공 응답
         const uploadResult: UploadResult = {
             success: true,
-            message: `${parsedEntries.length}개의 용어가 성공적으로 처리되었습니다.`,
+            message: `${parsedEntries.length}개의 단어가 성공적으로 처리되었습니다.`,
             data: finalData
         };
 

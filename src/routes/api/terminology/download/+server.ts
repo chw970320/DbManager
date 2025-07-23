@@ -5,7 +5,7 @@ import { getDuplicateDetails } from '../../../../lib/utils/duplicate-handler.js'
 import { exportJsonToXlsxBuffer } from '../../../../lib/utils/xlsx-parser.js';
 
 /**
- * 용어집 데이터를 XLSX 파일로 다운로드하는 API
+ * 단어집 데이터를 XLSX 파일로 다운로드하는 API
  * GET /api/terminology/download
  */
 export async function GET({ url }: RequestEvent) {
@@ -109,7 +109,7 @@ export async function GET({ url }: RequestEvent) {
         const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD 형식
         const filename = `terminology_${currentDate}.xlsx`;
 
-        console.log(`용어집 XLSX 다운로드 생성: ${sortedEntries.length}개 항목${filter ? ` (필터: ${filter})` : ''}`);
+        console.log(`단어집 XLSX 다운로드 생성: ${sortedEntries.length}개 항목${filter ? ` (필터: ${filter})` : ''}`);
 
         // XLSX 파일로 응답
         return new Response(xlsxBuffer, {
@@ -125,7 +125,7 @@ export async function GET({ url }: RequestEvent) {
         });
 
     } catch (error) {
-        console.error('용어집 XLSX 다운로드 중 오류:', error);
+        console.error('단어집 XLSX 다운로드 중 오류:', error);
 
         return new Response(
             JSON.stringify({

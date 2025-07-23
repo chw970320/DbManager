@@ -139,7 +139,7 @@
 		onclick={(e) => e.stopPropagation()}
 	>
 		<h2 class="mb-4 text-xl font-bold text-gray-900">
-			{isEditMode ? '용어 수정' : '새 용어 추가'}
+			{isEditMode ? '단어 수정' : '새 단어 추가'}
 		</h2>
 
 		<!-- 서버 에러 메시지 -->
@@ -235,7 +235,7 @@
 				<textarea
 					id="description"
 					bind:value={formData.description}
-					placeholder="용어에 대한 상세 설명을 입력하세요 (선택사항)"
+					placeholder="단어에 대한 상세 설명을 입력하세요 (선택사항)"
 					rows="3"
 					class="input resize-none"
 					disabled={isSubmitting}

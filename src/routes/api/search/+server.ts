@@ -5,7 +5,7 @@ import { getDuplicateIds, getDuplicateDetails } from '../../../lib/utils/duplica
 import { sanitizeSearchQuery } from '../../../lib/utils/validation.js';
 
 /**
- * 용어집 검색 API
+ * 단어집 검색 API
  * GET /api/search?q=검색어&field=필드&page=1&limit=50&filter=duplicates
  */
 export async function GET({ url }: RequestEvent) {

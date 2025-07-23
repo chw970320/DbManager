@@ -23,7 +23,7 @@
 				<h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
 					<span class="text-blue-600">데이터 관리 시스템</span>
 				</h2>
-				<p class="mt-4 text-lg text-gray-600">데이터 및 용어 관리 시스템</p>
+				<p class="mt-4 text-lg text-gray-600">데이터 및 단어 관리 시스템</p>
 			</div>
 
 			<!-- 기능 그리드 -->
@@ -49,8 +49,8 @@
 								/>
 							</svg>
 						</div>
-						<h3 class="mt-4 text-lg font-semibold text-gray-900">용어집 관리</h3>
-						<p class="mt-2 text-sm text-gray-600">쉽고 빠르게 용어집을 관리하세요.</p>
+						<h3 class="mt-4 text-lg font-semibold text-gray-900">단어집 관리</h3>
+						<p class="mt-2 text-sm text-gray-600">쉽고 빠르게 단어집을 관리하세요.</p>
 					</div>
 				</a>
 
@@ -75,9 +75,9 @@
 								/>
 							</svg>
 						</div>
-						<h3 class="mt-4 text-lg font-semibold text-gray-900">용어집 업로드</h3>
+						<h3 class="mt-4 text-lg font-semibold text-gray-900">단어집 업로드</h3>
 						<p class="mt-2 text-sm text-gray-600">
-							드래그 앤 드롭으로 용어집을 업로드하고 즉시 활용하세요.
+							드래그 앤 드롭으로 단어집을 업로드하고 즉시 활용하세요.
 						</p>
 					</div>
 				</a>

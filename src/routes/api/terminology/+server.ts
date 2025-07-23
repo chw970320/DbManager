@@ -5,7 +5,7 @@ import { getDuplicateIds, getDuplicateDetails } from '../../../lib/utils/duplica
 import { v4 as uuidv4 } from 'uuid';
 
 /**
- * 저장된 용어집 데이터 조회 API
+ * 저장된 단어집 데이터 조회 API
  * GET /api/terminology
  */
 export async function GET({ url }: RequestEvent) {
@@ -136,7 +136,7 @@ export async function GET({ url }: RequestEvent) {
             lastUpdated: terminologyData.lastUpdated
         };
 
-        console.log(`용어집 관리 성공: ${paginatedEntries.length}개 항목 (페이지 ${page}/${totalPages})${filter === 'duplicates' ? ' - 중복 필터링 적용' : ''}`);
+        console.log(`단어집 관리 성공: ${paginatedEntries.length}개 항목 (페이지 ${page}/${totalPages})${filter === 'duplicates' ? ' - 중복 필터링 적용' : ''}`);
 
         return json({
             success: true,
@@ -145,7 +145,7 @@ export async function GET({ url }: RequestEvent) {
         } as ApiResponse, { status: 200 });
 
     } catch (error) {
-        console.error('용어집 관리 중 오류:', error);
+        console.error('단어집 관리 중 오류:', error);
 
         return json({
             success: false,
@@ -156,7 +156,7 @@ export async function GET({ url }: RequestEvent) {
 }
 
 /**
- * 신규 용어 추가 API
+ * 신규 단어 추가 API
  * POST /api/terminology
  */
 export async function POST({ request }: RequestEvent) {
@@ -209,16 +209,16 @@ export async function POST({ request }: RequestEvent) {
             {
                 success: true,
                 data: entryToSave,
-                message: '새로운 용어가 성공적으로 추가되었습니다.'
+                message: '새로운 단어가 성공적으로 추가되었습니다.'
             } as ApiResponse,
             { status: 201 } // Created
         );
     } catch (error) {
-        console.error('용어 추가 중 오류:', error);
+        console.error('단어 추가 중 오류:', error);
         return json(
             {
                 success: false,
-                error: '서버에서 용어 추가 중 오류가 발생했습니다.',
+                error: '서버에서 단어 추가 중 오류가 발생했습니다.',
                 message: 'Internal server error'
             } as ApiResponse,
             { status: 500 }
@@ -227,7 +227,7 @@ export async function POST({ request }: RequestEvent) {
 }
 
 /**
- * 용어 수정 API
+ * 단어 수정 API
  * PUT /api/terminology/:id
  */
 export async function PUT({ request }: RequestEvent) {
@@ -236,7 +236,7 @@ export async function PUT({ request }: RequestEvent) {
 
         if (!updatedEntry.id) {
             return json(
-                { success: false, error: '용어 ID가 필요합니다.', message: 'Missing terminology ID' } as ApiResponse,
+                { success: false, error: '단어 ID가 필요합니다.', message: 'Missing terminology ID' } as ApiResponse,
                 { status: 400 }
             );
         }
@@ -246,7 +246,7 @@ export async function PUT({ request }: RequestEvent) {
 
         if (entryIndex === -1) {
             return json(
-                { success: false, error: '수정할 용어를 찾을 수 없습니다.', message: 'Entry not found' } as ApiResponse,
+                { success: false, error: '수정할 단어를 찾을 수 없습니다.', message: 'Entry not found' } as ApiResponse,
                 { status: 404 }
             );
         }
@@ -264,16 +264,16 @@ export async function PUT({ request }: RequestEvent) {
             {
                 success: true,
                 data: terminologyData.entries[entryIndex],
-                message: '용어가 성공적으로 수정되었습니다.'
+                message: '단어가 성공적으로 수정되었습니다.'
             } as ApiResponse,
             { status: 200 }
         );
     } catch (error) {
-        console.error('용어 수정 중 오류:', error);
+        console.error('단어 수정 중 오류:', error);
         return json(
             {
                 success: false,
-                error: '서버에서 용어 수정 중 오류가 발생했습니다.',
+                error: '서버에서 단어 수정 중 오류가 발생했습니다.',
                 message: 'Internal server error'
             } as ApiResponse,
             { status: 500 }
@@ -282,7 +282,7 @@ export async function PUT({ request }: RequestEvent) {
 }
 
 /**
- * 용어 삭제 API
+ * 단어 삭제 API
  * DELETE /api/terminology/:id
  */
 export async function DELETE({ url }: RequestEvent) {
@@ -290,7 +290,7 @@ export async function DELETE({ url }: RequestEvent) {
         const id = url.searchParams.get('id');
         if (!id) {
             return json(
-                { success: false, error: '삭제할 용어의 ID가 필요합니다.', message: 'Missing terminology ID' } as ApiResponse,
+                { success: false, error: '삭제할 단어의 ID가 필요합니다.', message: 'Missing terminology ID' } as ApiResponse,
                 { status: 400 }
             );
         }
@@ -301,7 +301,7 @@ export async function DELETE({ url }: RequestEvent) {
 
         if (terminologyData.entries.length === initialLength) {
             return json(
-                { success: false, error: '삭제할 용어를 찾을 수 없습니다.', message: 'Entry not found' } as ApiResponse,
+                { success: false, error: '삭제할 단어를 찾을 수 없습니다.', message: 'Entry not found' } as ApiResponse,
                 { status: 404 }
             );
         }
@@ -309,15 +309,15 @@ export async function DELETE({ url }: RequestEvent) {
         await saveTerminologyData(terminologyData);
 
         return json(
-            { success: true, message: '용어가 성공적으로 삭제되었습니다.' } as ApiResponse,
+            { success: true, message: '단어가 성공적으로 삭제되었습니다.' } as ApiResponse,
             { status: 200 }
         );
     } catch (error) {
-        console.error('용어 삭제 중 오류:', error);
+        console.error('단어 삭제 중 오류:', error);
         return json(
             {
                 success: false,
-                error: '서버에서 용어 삭제 중 오류가 발생했습니다.',
+                error: '서버에서 단어 삭제 중 오류가 발생했습니다.',
                 message: 'Internal server error'
             } as ApiResponse,
             { status: 500 }

@@ -4,7 +4,7 @@ import type { TerminologyEntry, TerminologyData } from '../types/terminology.js'
 import { validateTerminologyEntry } from './validation.js';
 
 /**
- * xlsx 파일 버퍼를 파싱하여 용어집 엔트리 배열로 변환
+ * xlsx 파일 버퍼를 파싱하여 단어집 엔트리 배열로 변환
  * @param fileBuffer - xlsx 파일의 Buffer 데이터
  * @returns TerminologyEntry 배열
  */
@@ -81,10 +81,10 @@ export function parseXlsxToJson(fileBuffer: Buffer): TerminologyEntry[] {
         }
 
         if (entries.length === 0) {
-            throw new Error('유효한 용어집 데이터를 찾을 수 없습니다.');
+            throw new Error('유효한 단어집 데이터를 찾을 수 없습니다.');
         }
 
-        console.log(`성공적으로 ${entries.length}개의 용어를 파싱했습니다.`);
+        console.log(`성공적으로 ${entries.length}개의 단어를 파싱했습니다.`);
         return entries;
 
     } catch (error) {
@@ -94,7 +94,7 @@ export function parseXlsxToJson(fileBuffer: Buffer): TerminologyEntry[] {
 }
 
 /**
- * 용어집 엔트리 배열을 TerminologyData 형태로 변환
+ * 단어집 엔트리 배열을 TerminologyData 형태로 변환
  * @param entries - TerminologyEntry 배열
  * @returns TerminologyData 객체
  */
@@ -115,7 +115,7 @@ function getCellAddress(row: number, col: number): string {
 }
 
 /**
- * 용어집 엔트리 배열을 XLSX 파일 버퍼로 변환 (xlsx-js-style 사용)
+ * 단어집 엔트리 배열을 XLSX 파일 버퍼로 변환 (xlsx-js-style 사용)
  * @param data - TerminologyEntry 배열
  * @returns XLSX 파일의 Buffer 데이터
  */
@@ -219,7 +219,7 @@ export function exportJsonToXlsxBuffer(data: TerminologyEntry[]): Buffer {
         const workbook = XLSX.utils.book_new();
 
         // 워크시트를 워크북에 추가
-        XLSX.utils.book_append_sheet(workbook, worksheet, '용어집');
+        XLSX.utils.book_append_sheet(workbook, worksheet, '단어집');
 
         // 워크북을 버퍼로 변환 (스타일 포함)
         const buffer = XLSX.write(workbook, {
@@ -228,7 +228,7 @@ export function exportJsonToXlsxBuffer(data: TerminologyEntry[]): Buffer {
             compression: true
         });
 
-        console.log(`성공적으로 ${data.length}개의 용어를 XLSX 버퍼로 변환했습니다.`);
+        console.log(`성공적으로 ${data.length}개의 단어를 XLSX 버퍼로 변환했습니다.`);
         return buffer as Buffer;
 
     } catch (error) {

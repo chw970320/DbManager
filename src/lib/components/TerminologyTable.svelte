@@ -305,13 +305,13 @@
 	}
 </script>
 
-<!-- 용어집 테이블 컴포넌트 -->
+<!-- 단어집 테이블 컴포넌트 -->
 <div class="overflow-x-auto rounded-lg border border-gray-300 shadow-md">
 	<!-- 테이블 헤더 -->
 	<div class="border-b border-gray-200 px-6 py-4">
 		<div class="flex items-center justify-between">
 			<h3 class="text-lg font-medium text-gray-900">
-				용어집 목록
+				단어집 목록
 				{#if totalCount > 0}
 					<span class="ml-2 text-sm font-normal text-gray-500">
 						총 {totalCount.toLocaleString()}개 항목
@@ -436,7 +436,7 @@
 										<p class="text-sm">다른 검색어를 시도해보세요</p>
 									{:else}
 										<p class="text-lg font-medium">표시할 데이터가 없습니다</p>
-										<p class="text-sm">먼저 파일을 업로드하여 용어집을 등록해주세요.</p>
+										<p class="text-sm">먼저 파일을 업로드하여 단어집을 등록해주세요.</p>
 									{/if}
 								</div>
 							</div>

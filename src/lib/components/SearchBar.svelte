@@ -8,7 +8,7 @@
 	};
 
 	let {
-		placeholder = '용어를 검색하세요...',
+		placeholder = '단어를 검색하세요...',
 		disabled = false,
 		loading = false,
 		query = $bindable(''),

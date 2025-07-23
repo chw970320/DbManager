@@ -1,10 +1,10 @@
 import type { TerminologyEntry } from '../types/terminology.js';
 
 /**
- * 용어 데이터에서 중복된 항목의 ID를 찾아 반환하는 유틸리티 함수 (하위 호환성)
+ * 단어 데이터에서 중복된 항목의 ID를 찾아 반환하는 유틸리티 함수 (하위 호환성)
  * standardName, abbreviation, englishName을 기준으로 중복을 검사합니다.
  * 
- * @param entries - 검사할 용어 데이터 배열
+ * @param entries - 검사할 단어 데이터 배열
  * @returns 중복된 항목들의 ID Set
  */
 export function getDuplicateIds(entries: TerminologyEntry[]): Set<string> {
@@ -13,11 +13,11 @@ export function getDuplicateIds(entries: TerminologyEntry[]): Set<string> {
 }
 
 /**
- * 용어 데이터에서 중복된 항목의 세부 정보를 반환하는 유틸리티 함수
+ * 단어 데이터에서 중복된 항목의 세부 정보를 반환하는 유틸리티 함수
  * standardName, abbreviation, englishName을 기준으로 중복을 검사하고,
  * 각 ID별로 어떤 필드가 중복되는지에 대한 상세 정보를 제공합니다.
  * 
- * @param entries - 검사할 용어 데이터 배열
+ * @param entries - 검사할 단어 데이터 배열
  * @returns 각 ID별 중복 필드 정보를 담은 Map
  */
 export function getDuplicateDetails(entries: TerminologyEntry[]): Map<string, { standardName: boolean; abbreviation: boolean; englishName: boolean; }> {
@@ -69,10 +69,10 @@ export function getDuplicateDetails(entries: TerminologyEntry[]): Map<string, { 
 }
 
 /**
- * 용어 데이터에서 중복된 그룹을 반환하는 함수
+ * 단어 데이터에서 중복된 그룹을 반환하는 함수
  * 기존 duplicates API에서 사용하기 위한 함수
  * 
- * @param entries - 검사할 용어 데이터 배열
+ * @param entries - 검사할 단어 데이터 배열
  * @returns 중복된 그룹들의 배열
  */
 export function getDuplicateGroups(entries: TerminologyEntry[]): TerminologyEntry[][] {

@@ -221,7 +221,7 @@
 				<div class="flex-1">
 					<div class="text-sm font-medium text-gray-900">교체 (Replace)</div>
 					<div class="text-xs text-gray-600">
-						기존 용어집을 완전히 삭제하고 새로운 데이터로 교체합니다. 히스토리도 초기화됩니다.
+						기존 단어집을 완전히 삭제하고 새로운 데이터로 교체합니다. 히스토리도 초기화됩니다.
 					</div>
 				</div>
 			</label>
@@ -237,7 +237,7 @@
 				<div class="flex-1">
 					<div class="text-sm font-medium text-gray-900">병합 (Merge)</div>
 					<div class="text-xs text-gray-600">
-						기존 용어집에 새로운 데이터를 추가합니다. 중복된 용어는 자동으로 제거됩니다.
+						기존 단어집에 새로운 데이터를 추가합니다. 중복된 단어는 자동으로 제거됩니다.
 					</div>
 				</div>
 			</label>

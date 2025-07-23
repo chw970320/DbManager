@@ -4,7 +4,7 @@ import { loadTerminologyData } from '../../../../lib/utils/file-handler.js';
 import { getDuplicateGroups } from '../../../../lib/utils/duplicate-handler.js';
 
 /**
- * 중복된 용어 조회 API
+ * 중복된 단어 조회 API
  * GET /api/terminology/duplicates
  */
 export async function GET({ url }: RequestEvent) {
@@ -24,16 +24,16 @@ export async function GET({ url }: RequestEvent) {
             {
                 success: true,
                 data: responseData,
-                message: '중복 용어 조회가 완료되었습니다.'
+                message: '중복 단어 조회가 완료되었습니다.'
             } as ApiResponse,
             { status: 200 }
         );
     } catch (error) {
-        console.error('중복 용어 조회 중 오류:', error);
+        console.error('중복 단어 조회 중 오류:', error);
         return json(
             {
                 success: false,
-                error: '서버에서 중복 용어 조회 중 오류가 발생했습니다.',
+                error: '서버에서 중복 단어 조회 중 오류가 발생했습니다.',
                 message: 'Internal server error'
             } as ApiResponse,
             { status: 500 }

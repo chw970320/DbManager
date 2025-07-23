@@ -2,7 +2,7 @@
  * 데이터 관리 시스템을 위한 TypeScript 타입 정의
  */
 
-// 개별 용어 엔트리 인터페이스
+// 개별 단어 엔트리 인터페이스
 export interface TerminologyEntry {
     id: string;
     standardName: string;  // 표준단어명 (한국어)
@@ -18,7 +18,7 @@ export interface TerminologyEntry {
     };
 }
 
-// 전체 용어집 데이터 구조
+// 전체 단어집 데이터 구조
 export interface TerminologyData {
     entries: TerminologyEntry[];
     lastUpdated: string;   // ISO 8601 날짜 문자열
@@ -29,8 +29,8 @@ export interface TerminologyData {
 export interface HistoryLogEntry {
     id: string;            // 히스토리 로그 고유 ID
     action: 'add' | 'update' | 'delete' | 'UPLOAD_MERGE';  // 수행된 작업 타입
-    targetId: string;      // 대상 용어의 ID
-    targetName: string;    // 대상 용어의 표준단어명
+    targetId: string;      // 대상 단어의 ID
+    targetName: string;    // 대상 단어의 표준단어명
     timestamp: string;     // ISO 8601 날짜 문자열
     details?: {            // 추가 세부 정보 (선택적)
         before?: Partial<TerminologyEntry>;  // 변경 전 데이터 (update/delete 시)

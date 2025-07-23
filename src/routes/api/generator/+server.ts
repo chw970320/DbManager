@@ -18,15 +18,15 @@ async function initializeCache() {
             koToEnMap.set(entry.standardName.toLowerCase(), entry.abbreviation);
             enToKoMap.set(entry.abbreviation.toLowerCase(), entry.standardName);
         }
-        console.log('용어집 캐시 초기화 완료');
+        console.log('단어집 캐시 초기화 완료');
     } catch (error) {
-        console.error('용어집 캐시 초기화 중 오류:', error);
+        console.error('단어집 캐시 초기화 중 오류:', error);
         terminologyCache = null; // 오류 발생 시 캐시 비우기
     }
 }
 
 /**
- * 용어 변환 생성 API
+ * 단어 변환 생성 API
  * POST /api/generator
  */
 export async function POST({ request }: RequestEvent) {
@@ -37,7 +37,7 @@ export async function POST({ request }: RequestEvent) {
             return json(
                 {
                     success: false,
-                    error: '용어집 데이터를 불러올 수 없습니다.',
+                    error: '단어집 데이터를 불러올 수 없습니다.',
                     message: 'Failed to load terminology data'
                 } as ApiResponse,
                 { status: 500 }
@@ -48,7 +48,7 @@ export async function POST({ request }: RequestEvent) {
 
         if (!term || typeof term !== 'string') {
             return json(
-                { success: false, error: '변환할 용어를 제공해야 합니다.', message: 'Missing term' } as ApiResponse,
+                { success: false, error: '변환할 단어를 제공해야 합니다.', message: 'Missing term' } as ApiResponse,
                 { status: 400 }
             );
         }
@@ -71,11 +71,11 @@ export async function POST({ request }: RequestEvent) {
             result: result
         });
     } catch (error) {
-        console.error('용어 변환 중 오류:', error);
+        console.error('단어 변환 중 오류:', error);
         return json(
             {
                 success: false,
-                error: '서버에서 용어 변환 중 오류가 발생했습니다.',
+                error: '서버에서 단어 변환 중 오류가 발생했습니다.',
                 message: 'Internal server error'
             } as ApiResponse,
             { status: 500 }

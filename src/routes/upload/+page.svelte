@@ -105,10 +105,10 @@
 </script>
 
 <svelte:head>
-	<title>용어집 업로드</title>
+	<title>단어집 업로드</title>
 	<meta
 		name="description"
-		content="드래그 앤 드롭으로 Excel 파일을 업로드하고 용어집을 구축하세요."
+		content="드래그 앤 드롭으로 Excel 파일을 업로드하고 단어집을 구축하세요."
 	/>
 </svelte:head>
 
@@ -119,11 +119,11 @@
 			<h1
 				class="bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-4xl font-bold text-transparent"
 			>
-				용어집 업로드
+				단어집 업로드
 			</h1>
 			<p class="mx-auto mt-4 max-w-2xl text-lg text-gray-600">
 				드래그 앤 드롭으로 Excel 파일을 업로드하여 <span class="font-semibold text-blue-600"
-					>용어집</span
+					>단어집</span
 				>을 등록하세요
 			</p>
 		</div>
@@ -267,7 +267,7 @@
 									</div>
 									<div class="flex items-center space-x-3">
 										<div class="h-2 w-2 rounded-full bg-yellow-500"></div>
-										<span class="text-sm text-gray-700">중복 용어 자동 제거</span>
+										<span class="text-sm text-gray-700">중복 단어 자동 제거</span>
 									</div>
 									<div class="flex items-center space-x-3">
 										<div class="h-2 w-2 rounded-full bg-red-500"></div>

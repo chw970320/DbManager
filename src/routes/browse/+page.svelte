@@ -65,7 +65,7 @@
 	});
 
 	/**
-	 * 용어집 데이터 로드
+	 * 단어집 데이터 로드
 	 */
 	async function loadTerminologyData() {
 		loading = true;
@@ -230,7 +230,7 @@
 	}
 
 	/**
-	 * 새 용어 추가 처리
+	 * 새 단어 추가 처리
 	 */
 	async function handleSave(event: CustomEvent<TerminologyEntry>) {
 		const newEntry = event.detail;
@@ -285,15 +285,15 @@
 					console.warn('히스토리 로그 기록 실패:', historyError);
 				}
 
-				console.log('새 용어가 성공적으로 추가되었습니다.');
+				console.log('새 단어가 성공적으로 추가되었습니다.');
 			} else {
 				// 에러 발생 시 모달 내부에 표시
-				const errorMsg = result.error || '용어 추가에 실패했습니다.';
+				const errorMsg = result.error || '단어 추가에 실패했습니다.';
 				editorServerError = errorMsg;
 				errorMessage = errorMsg;
 			}
 		} catch (error) {
-			console.error('용어 추가 중 오류:', error);
+			console.error('단어 추가 중 오류:', error);
 			const errorMsg = '서버 연결 오류가 발생했습니다.';
 			editorServerError = errorMsg;
 			errorMessage = errorMsg;
@@ -377,8 +377,8 @@
 </script>
 
 <svelte:head>
-	<title>용어집 관리 - 모던한 용어 관리 시스템</title>
-	<meta name="description" content="AI 기반 검색으로 등록된 용어집을 빠르게 찾아보세요." />
+	<title>단어집 관리 - 모던한 단어 관리 시스템</title>
+	<meta name="description" content="AI 기반 검색으로 등록된 단어집을 빠르게 찾아보세요." />
 </svelte:head>
 
 <div class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 py-8">
@@ -392,13 +392,13 @@
 					<h1
 						class="bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-4xl font-bold text-transparent"
 					>
-						용어집 관리
+						단어집 관리
 					</h1>
 				</div>
 
 				<!-- 액션 버튼들 -->
 				<div class="flex items-center space-x-3">
-					<!-- 새 용어 추가 버튼 -->
+					<!-- 새 단어 추가 버튼 -->
 					<button
 						type="button"
 						onclick={() => {
@@ -421,7 +421,7 @@
 								d="M12 6v6m0 0v6m0-6h6m-6 0H6"
 							/>
 						</svg>
-						<span>새 용어 추가</span>
+						<span>새 단어 추가</span>
 					</button>
 
 					<!-- XLSX 다운로드 버튼 -->
@@ -521,7 +521,7 @@
 		>
 			<div class="mb-6">
 				<h2 class="text-2xl font-bold text-gray-900">통합검색</h2>
-				<p class="mt-2 text-gray-600">표준단어명, 영문약어, 영문명으로 용어를 검색하세요</p>
+				<p class="mt-2 text-gray-600">표준단어명, 영문약어, 영문명으로 단어를 검색하세요</p>
 			</div>
 
 			<div class="mb-6">
@@ -655,7 +655,7 @@
 						{#if searchQuery}
 							"{searchQuery}"에 대한 검색 결과 {totalCount.toLocaleString()}건
 						{:else}
-							전체 용어 {totalCount.toLocaleString()}건
+							전체 단어 {totalCount.toLocaleString()}건
 						{/if}
 					</p>
 				</div>

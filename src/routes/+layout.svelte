@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import { page } from '$app/stores';
+	import ScrollToTop from '$lib/components/ScrollToTop.svelte';
 
 	let { children } = $props();
 
@@ -178,4 +179,6 @@
 			</div>
 		</div>
 	</footer>
+
+	<ScrollToTop />
 </div>

@@ -217,8 +217,22 @@
 			onclick={(e) => e.stopPropagation()}
 		>
 			<!-- Header -->
-			<div class="mb-4 border-b pb-4">
+			<div class="mb-4 flex items-center justify-between border-b pb-4">
 				<h2 class="text-xl font-bold text-gray-900">금지어 관리</h2>
+				<button
+					onclick={handleClose}
+					class="text-gray-400 hover:text-gray-600"
+					disabled={isSubmitting}
+				>
+					<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M6 18L18 6M6 6l12 12"
+						></path>
+					</svg>
+				</button>
 			</div>
 
 			<!-- Error/Success Messages -->

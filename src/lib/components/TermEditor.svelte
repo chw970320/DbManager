@@ -138,9 +138,25 @@
 		class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
 		onclick={(e) => e.stopPropagation()}
 	>
-		<h2 class="mb-4 text-xl font-bold text-gray-900">
-			{isEditMode ? '단어 수정' : '새 단어 추가'}
-		</h2>
+		<div class="mb-4 flex items-center justify-between">
+			<h2 class="text-xl font-bold text-gray-900">
+				{isEditMode ? '단어 수정' : '새 단어 추가'}
+			</h2>
+			<button
+				onclick={handleCancel}
+				class="text-gray-400 hover:text-gray-600"
+				disabled={isSubmitting}
+			>
+				<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M6 18L18 6M6 6l12 12"
+					></path>
+				</svg>
+			</button>
+		</div>
 
 		<!-- 서버 에러 메시지 -->
 		{#if serverError}

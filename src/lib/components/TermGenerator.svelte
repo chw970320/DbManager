@@ -269,6 +269,8 @@
 						</ul>
 					{:else if !isLoadingCombinations && sourceTerm}
 						<p class="p-2 text-gray-700">결과를 찾을 수 없습니다.</p>
+					{:else}
+						<p class="text-gray-500">용어를 입력하세요</p>
 					{/if}
 				</div>
 			</div>
@@ -359,7 +361,7 @@
 					{:else if selectedSegment}
 						<p class="text-gray-700">변환할 수 없습니다.</p>
 					{:else}
-						<p class="text-gray-500">위에서 단어 조합을 선택하세요</p>
+						<p class="text-gray-500">단어 조합을 선택하세요</p>
 					{/if}
 				</div>
 			</div>

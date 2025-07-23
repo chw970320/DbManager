@@ -407,7 +407,7 @@
 							showForbiddenWordManager = true;
 						}}
 						disabled={loading}
-						class="btn btn-secondary group space-x-2 rounded-xl px-6 py-3 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+						class="group inline-flex items-center space-x-2 rounded-xl border border-red-200/50 bg-red-50/80 px-6 py-3 text-sm font-medium text-red-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-red-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
 					>
 						<svg
 							class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"

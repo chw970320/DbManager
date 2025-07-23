@@ -3,8 +3,8 @@ import type { ApiResponse, TerminologyData } from '$lib/types/terminology.js';
 import { loadTerminologyData } from '$lib/utils/file-handler.js';
 
 let terminologyCache: TerminologyData | null = null;
-let koToEnMap: Map<string, string> = new Map();
-let enToKoMap: Map<string, string> = new Map();
+let koToEnMap: Map<string, string[]> = new Map(); // 여러 결과를 위해 배열로 변경
+let enToKoMap: Map<string, string[]> = new Map(); // 여러 결과를 위해 배열로 변경
 
 async function initializeCache() {
     if (terminologyCache) return;
@@ -15,10 +15,21 @@ async function initializeCache() {
         enToKoMap.clear();
 
         for (const entry of terminologyCache.entries) {
-            koToEnMap.set(entry.standardName.toLowerCase(), entry.abbreviation);
-            enToKoMap.set(entry.abbreviation.toLowerCase(), entry.standardName);
+            const koKey = entry.standardName.toLowerCase();
+            const enKey = entry.abbreviation.toLowerCase();
+
+            // 동음이의어 처리: 배열에 추가
+            if (!koToEnMap.has(koKey)) {
+                koToEnMap.set(koKey, []);
+            }
+            koToEnMap.get(koKey)!.push(entry.abbreviation);
+
+            if (!enToKoMap.has(enKey)) {
+                enToKoMap.set(enKey, []);
+            }
+            enToKoMap.get(enKey)!.push(entry.standardName);
         }
-        console.log('단어집 캐시 초기화 완료');
+        console.log('단어집 캐시 초기화 완료 (동음이의어 지원)');
     } catch (error) {
         console.error('단어집 캐시 초기화 중 오류:', error);
         terminologyCache = null; // 오류 발생 시 캐시 비우기
@@ -59,16 +70,33 @@ export async function POST({ request }: RequestEvent) {
         const separator = term.includes(' ') ? ' ' : '_';
         const terms = term.split(separator);
 
-        const convertedTerms = terms.map((t) => {
+        // 각 단어에 대해 가능한 모든 변환 결과를 가져옴
+        const termOptions = terms.map((t) => {
             const trimmedTerm = t.trim();
-            return sourceMap.get(trimmedTerm.toLowerCase()) || '##';
+            const results = sourceMap.get(trimmedTerm.toLowerCase());
+            return results && results.length > 0 ? results : ['##'];
         });
 
-        const result = convertedTerms.join(separator);
+        // 모든 조합의 경우의 수를 계산 (Cartesian Product)
+        function cartesianProduct(arrays: string[][]): string[][] {
+            return arrays.reduce<string[][]>((acc, curr) => {
+                const result: string[][] = [];
+                for (const a of acc) {
+                    for (const c of curr) {
+                        result.push([...a, c]);
+                    }
+                }
+                return result;
+            }, [[]]);
+        }
+
+        const combinations = cartesianProduct(termOptions);
+        const results = combinations.map(combo => combo.join(separator));
 
         return json({
             success: true,
-            result: result
+            results: results, // 단일 result에서 복수 results로 변경
+            hasMultiple: results.length > 1 // 동음이의어 여부 표시
         });
     } catch (error) {
         console.error('단어 변환 중 오류:', error);

@@ -40,9 +40,6 @@
 		if (!value.trim()) {
 			return '표준단어명은 필수 입력 항목입니다.';
 		}
-		if (value.trim().length < 2) {
-			return '표준단어명은 최소 2자 이상 입력해야 합니다.';
-		}
 		return '';
 	}
 

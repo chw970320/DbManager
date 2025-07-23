@@ -28,11 +28,6 @@
 
 	// TermEditor 모달 상태
 	let showEditor = $state(false);
-	let editorPrefilledData = $state<{
-		standardName: string;
-		abbreviation: string;
-		englishName: string;
-	} | null>(null);
 	let editorServerError = $state('');
 
 	// 통계 정보
@@ -235,17 +230,6 @@
 	}
 
 	/**
-	 * 용어 변환기에서 용어 추가 처리
-	 */
-	function handleAddTermFromGenerator(
-		event: CustomEvent<{ standardName: string; abbreviation: string; englishName: string }>
-	) {
-		editorPrefilledData = event.detail;
-		editorServerError = ''; // 에러 상태 초기화
-		showEditor = true;
-	}
-
-	/**
 	 * 새 용어 추가 처리
 	 */
 	async function handleSave(event: CustomEvent<TerminologyEntry>) {
@@ -268,7 +252,6 @@
 			if (result.success) {
 				// 모달 닫기
 				showEditor = false;
-				editorPrefilledData = null;
 				editorServerError = ''; // 에러 상태 초기화
 				// 데이터 새로고침
 				await loadTerminologyData();
@@ -495,12 +478,11 @@
 		<!-- TermEditor 모달 -->
 		{#if showEditor}
 			<TermEditor
-				entry={editorPrefilledData || {}}
+				entry={{}}
 				serverError={editorServerError}
 				on:save={handleSave}
 				on:cancel={() => {
 					showEditor = false;
-					editorPrefilledData = null;
 					editorServerError = '';
 				}}
 			/>
@@ -508,7 +490,7 @@
 
 		<!-- 통계 카드 섹션 -->
 		<div class="my-8">
-			<TermGenerator on:addterm={handleAddTermFromGenerator} />
+			<TermGenerator />
 		</div>
 
 		<!-- 에러 메시지 -->

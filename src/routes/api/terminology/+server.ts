@@ -1,6 +1,6 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse, TerminologyData, TerminologyEntry } from '../../../lib/types/terminology.js';
-import { loadTerminologyData, saveTerminologyData } from '../../../lib/utils/file-handler.js';
+import { loadTerminologyData, saveTerminologyData, loadForbiddenWordsData } from '../../../lib/utils/file-handler.js';
 import { getDuplicateIds, getDuplicateDetails } from '../../../lib/utils/duplicate-handler.js';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -177,19 +177,59 @@ export async function POST({ request }: RequestEvent) {
 
         const terminologyData = await loadTerminologyData();
 
-        // 중복 검사 (표준단어명, 영문약어)
-        const isDuplicate = terminologyData.entries.some(
-            (e) => e.standardName === newEntry.standardName || e.abbreviation === newEntry.abbreviation
-        );
-        if (isDuplicate) {
-            return json(
-                {
-                    success: false,
-                    error: '이미 존재하는 표준단어명 또는 영문약어입니다.',
-                    message: 'Duplicate entry'
-                } as ApiResponse,
-                { status: 409 } // Conflict
+        // 금지어 검사
+        try {
+            const forbiddenWordsData = await loadForbiddenWordsData();
+
+            // 표준단어명이 금지어에 해당하는지 확인
+            const standardNameForbidden = forbiddenWordsData.entries.find(
+                entry => entry.keyword.toLowerCase() === newEntry.standardName!.toLowerCase() &&
+                    entry.type === 'standardName'
             );
+
+            if (standardNameForbidden) {
+                const errorMessage = standardNameForbidden.reason
+                    ? `금지된 단어입니다. 사유: ${standardNameForbidden.reason}`
+                    : '금지된 단어입니다.';
+
+                return json({
+                    success: false,
+                    error: errorMessage,
+                    message: 'Forbidden word detected'
+                } as ApiResponse, { status: 400 });
+            }
+
+            // 영문약어가 금지어에 해당하는지 확인
+            const abbreviationForbidden = forbiddenWordsData.entries.find(
+                entry => entry.keyword.toLowerCase() === newEntry.abbreviation!.toLowerCase() &&
+                    entry.type === 'abbreviation'
+            );
+
+            if (abbreviationForbidden) {
+                const errorMessage = abbreviationForbidden.reason
+                    ? `금지된 단어입니다. 사유: ${abbreviationForbidden.reason}`
+                    : '금지된 단어입니다.';
+
+                return json({
+                    success: false,
+                    error: errorMessage,
+                    message: 'Forbidden word detected'
+                } as ApiResponse, { status: 400 });
+            }
+        } catch (forbiddenError) {
+            console.warn('금지어 확인 중 오류 (계속 진행):', forbiddenError);
+        }
+
+        // 영문약어 중복 검사 (표준단어명 중복은 허용)
+        const isAbbreviationDuplicate = terminologyData.entries.some(
+            (e) => e.abbreviation === newEntry.abbreviation
+        );
+        if (isAbbreviationDuplicate) {
+            return json({
+                success: false,
+                error: '이미 존재하는 영문약어입니다.',
+                message: 'Duplicate abbreviation'
+            } as ApiResponse, { status: 409 });
         }
 
         const entryToSave: TerminologyEntry = {

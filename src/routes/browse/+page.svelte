@@ -4,6 +4,7 @@
 	import TerminologyTable from '$lib/components/TerminologyTable.svelte';
 	import TermGenerator from '$lib/components/TermGenerator.svelte';
 	import TermEditor from '$lib/components/TermEditor.svelte';
+	import ForbiddenWordManager from '$lib/components/ForbiddenWordManager.svelte';
 	import type { TerminologyEntry, ApiResponse } from '$lib/types/terminology.js';
 
 	// 상태 변수
@@ -29,6 +30,9 @@
 	// TermEditor 모달 상태
 	let showEditor = $state(false);
 	let editorServerError = $state('');
+
+	// ForbiddenWordManager 모달 상태
+	let showForbiddenWordManager = $state(false);
 
 	// 통계 정보
 	let statistics = $state({
@@ -290,13 +294,11 @@
 				// 에러 발생 시 모달 내부에 표시
 				const errorMsg = result.error || '단어 추가에 실패했습니다.';
 				editorServerError = errorMsg;
-				errorMessage = errorMsg;
 			}
 		} catch (error) {
 			console.error('단어 추가 중 오류:', error);
 			const errorMsg = '서버 연결 오류가 발생했습니다.';
 			editorServerError = errorMsg;
-			errorMessage = errorMsg;
 		} finally {
 			loading = false;
 		}
@@ -398,6 +400,31 @@
 
 				<!-- 액션 버튼들 -->
 				<div class="flex items-center space-x-3">
+					<!-- 금지어 관리 버튼 -->
+					<button
+						type="button"
+						onclick={() => {
+							showForbiddenWordManager = true;
+						}}
+						disabled={loading}
+						class="btn btn-secondary group space-x-2 rounded-xl px-6 py-3 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+					>
+						<svg
+							class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18 12l-2.364-2.364M5.636 5.636L12 12l2.364-2.364"
+							/>
+						</svg>
+						<span>금지어 관리</span>
+					</button>
+
 					<!-- 새 단어 추가 버튼 -->
 					<button
 						type="button"
@@ -488,32 +515,18 @@
 			/>
 		{/if}
 
+		<!-- ForbiddenWordManager 모달 -->
+		<ForbiddenWordManager
+			isOpen={showForbiddenWordManager}
+			on:close={() => {
+				showForbiddenWordManager = false;
+			}}
+		/>
+
 		<!-- 통계 카드 섹션 -->
 		<div class="my-8">
 			<TermGenerator />
 		</div>
-
-		<!-- 에러 메시지 -->
-		{#if errorMessage}
-			<div class="bg-error mb-8 rounded-2xl p-4">
-				<div class="flex items-center">
-					<svg
-						class="mr-3 h-5 w-5 text-red-700"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-						/>
-					</svg>
-					<p class="text-error text-sm font-medium">{errorMessage}</p>
-				</div>
-			</div>
-		{/if}
 
 		<!-- 검색 영역 -->
 		<div

@@ -74,6 +74,22 @@ export interface SearchResult {
     query: SearchQuery;
 }
 
+// 금지어 엔트리 인터페이스
+export interface ForbiddenWordEntry {
+    id: string;
+    keyword: string;           // 금지어 키워드
+    type: 'standardName' | 'abbreviation';  // 적용 타입
+    reason?: string;           // 금지 사유 (선택적)
+    createdAt: string;         // ISO 8601 날짜 문자열
+}
+
+// 금지어 데이터 구조
+export interface ForbiddenWordsData {
+    entries: ForbiddenWordEntry[];
+    lastUpdated: string;       // ISO 8601 날짜 문자열
+    totalCount: number;
+}
+
 // API 응답 공통 인터페이스
 export interface ApiResponse<T = any> {
     success: boolean;

@@ -1,7 +1,7 @@
 import { writeFile, readFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
-import type { TerminologyData, TerminologyEntry } from '../types/terminology.js';
+import type { TerminologyData, TerminologyEntry, ForbiddenWordsData, ForbiddenWordEntry } from '../types/terminology.js';
 import { validateCompleteEntry } from './validation.js';
 
 // 데이터 저장 경로 설정
@@ -275,5 +275,95 @@ export async function createBackup(): Promise<string> {
     } catch (error) {
         console.error('백업 생성 실패:', error);
         throw new Error(`백업 생성 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+    }
+}
+
+// 금지어 데이터 파일 경로
+const FORBIDDEN_WORDS_FILE = 'forbidden-words.json';
+const FORBIDDEN_WORDS_PATH = join(DATA_DIR, FORBIDDEN_WORDS_FILE);
+
+/**
+ * 금지어 데이터를 JSON 파일에서 불러오기
+ * @returns 금지어 데이터 객체
+ */
+export async function loadForbiddenWordsData(): Promise<ForbiddenWordsData> {
+    try {
+        // 파일이 존재하지 않으면 기본 데이터 구조 반환
+        if (!existsSync(FORBIDDEN_WORDS_PATH)) {
+            console.log('금지어 파일이 존재하지 않습니다. 기본 데이터를 반환합니다.');
+            const defaultData: ForbiddenWordsData = {
+                entries: [],
+                lastUpdated: new Date().toISOString(),
+                totalCount: 0
+            };
+            await saveForbiddenWordsData(defaultData);
+            return defaultData;
+        }
+
+        const fileContent = await readFile(FORBIDDEN_WORDS_PATH, 'utf-8');
+        const data: ForbiddenWordsData = JSON.parse(fileContent);
+
+        // 데이터 유효성 검증
+        if (!data || !Array.isArray(data.entries)) {
+            throw new Error('유효하지 않은 금지어 데이터 형식입니다.');
+        }
+
+        // 엔트리 수 재계산
+        data.totalCount = data.entries.length;
+
+        console.log(`금지어 데이터 로드 완료: ${data.totalCount}개 항목`);
+        return data;
+
+    } catch (error) {
+        console.error('금지어 데이터 로드 실패:', error);
+        throw new Error(`금지어 데이터 로드 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+    }
+}
+
+/**
+ * 금지어 데이터를 JSON 파일로 저장
+ * @param data - 저장할 ForbiddenWordsData 객체
+ */
+export async function saveForbiddenWordsData(data: ForbiddenWordsData): Promise<void> {
+    try {
+        // 데이터 디렉토리 확인 및 생성
+        await ensureDataDirectory();
+
+        // 데이터 유효성 검증
+        if (!data || !Array.isArray(data.entries)) {
+            throw new Error('유효하지 않은 금지어 데이터입니다.');
+        }
+
+        // 각 엔트리 유효성 검증
+        const validEntries = data.entries.filter(entry => {
+            const isValid = entry.id && entry.keyword && entry.type && entry.createdAt;
+            if (!isValid) {
+                console.warn('유효하지 않은 금지어 엔트리 제외:', entry);
+            }
+            return isValid;
+        });
+
+        if (validEntries.length === 0 && data.entries.length > 0) {
+            throw new Error('저장할 유효한 금지어 데이터가 없습니다.');
+        }
+
+        // 최종 데이터 구조 생성
+        const finalData: ForbiddenWordsData = {
+            entries: validEntries,
+            lastUpdated: new Date().toISOString(),
+            totalCount: validEntries.length
+        };
+
+        // JSON 문자열로 변환 (가독성을 위해 들여쓰기 적용)
+        const jsonData = JSON.stringify(finalData, null, 2);
+
+        // 파일 저장
+        await writeFile(FORBIDDEN_WORDS_PATH, jsonData, 'utf-8');
+
+        console.log(`금지어 데이터 저장 완료: ${finalData.totalCount}개 항목`);
+
+    } catch (error) {
+        console.error('금지어 데이터 저장 실패:', error);
+        throw new Error(`금지어 데이터 저장 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
     }
 } 

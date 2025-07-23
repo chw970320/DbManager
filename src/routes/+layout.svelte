@@ -2,6 +2,7 @@
 	import '../app.css';
 	import { page } from '$app/stores';
 	import ScrollToTop from '$lib/components/ScrollToTop.svelte';
+	import HistoryLog from '$lib/components/HistoryLog.svelte';
 
 	let { children } = $props();
 
@@ -11,7 +12,7 @@
 	// 네비게이션 메뉴 아이템
 	const menuItems = [
 		{ href: '/', label: '홈', icon: 'home' },
-		{ href: '/browse', label: '용어집 조회', icon: 'list' },
+		{ href: '/browse', label: '용어집 관리', icon: 'list' },
 		{ href: '/upload', label: '파일 업로드', icon: 'upload' }
 	];
 
@@ -69,7 +70,7 @@
 						</div>
 						<span
 							class="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-xl font-bold text-transparent"
-							>용어집 관리</span
+							>데이터 관리</span
 						>
 					</a>
 
@@ -181,4 +182,5 @@
 	</footer>
 
 	<ScrollToTop />
+	<HistoryLog />
 </div>

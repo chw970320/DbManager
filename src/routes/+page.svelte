@@ -49,8 +49,8 @@
 								/>
 							</svg>
 						</div>
-						<h3 class="mt-4 text-lg font-semibold text-gray-900">용어집 조회</h3>
-						<p class="mt-2 text-sm text-gray-600">용어집을 조회하고 검색하세요.</p>
+						<h3 class="mt-4 text-lg font-semibold text-gray-900">용어집 관리</h3>
+						<p class="mt-2 text-sm text-gray-600">쉽고 빠르게 용어집을 관리하세요.</p>
 					</div>
 				</a>
 

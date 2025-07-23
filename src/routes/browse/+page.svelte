@@ -3,6 +3,7 @@
 	import SearchBar from '$lib/components/SearchBar.svelte';
 	import TerminologyTable from '$lib/components/TerminologyTable.svelte';
 	import TermGenerator from '$lib/components/TermGenerator.svelte';
+	import TermEditor from '$lib/components/TermEditor.svelte';
 	import type { TerminologyEntry, ApiResponse } from '$lib/types/terminology.js';
 
 	// 상태 변수
@@ -24,6 +25,9 @@
 		abbreviation: false,
 		englishName: false
 	}); // 세부 중복 필터 상태
+
+	// TermEditor 모달 상태
+	let showEditor = $state(false);
 
 	// 통계 정보
 	let statistics = $state({
@@ -225,6 +229,72 @@
 	}
 
 	/**
+	 * 새 용어 추가 처리
+	 */
+	async function handleSave(event: CustomEvent<TerminologyEntry>) {
+		const newEntry = event.detail;
+		loading = true;
+		errorMessage = '';
+
+		try {
+			const response = await fetch('/api/terminology', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify(newEntry)
+			});
+
+			const result: ApiResponse = await response.json();
+
+			if (result.success) {
+				// 모달 닫기
+				showEditor = false;
+				// 데이터 새로고침
+				await loadTerminologyData();
+
+				// 히스토리 로그 기록
+				try {
+					await fetch('/api/history', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({
+							action: 'add',
+							targetId: result.data.id,
+							targetName: result.data.standardName,
+							details: {
+								after: {
+									standardName: result.data.standardName,
+									abbreviation: result.data.abbreviation,
+									englishName: result.data.englishName
+								}
+							}
+						})
+					});
+
+					// 히스토리 UI 새로고침
+					if (typeof window !== 'undefined' && (window as any).refreshHistoryLog) {
+						(window as any).refreshHistoryLog();
+					}
+				} catch (historyError) {
+					console.warn('히스토리 로그 기록 실패:', historyError);
+				}
+
+				console.log('새 용어가 성공적으로 추가되었습니다.');
+			} else {
+				errorMessage = result.error || '용어 추가에 실패했습니다.';
+			}
+		} catch (error) {
+			console.error('용어 추가 중 오류:', error);
+			errorMessage = '서버 연결 오류가 발생했습니다.';
+		} finally {
+			loading = false;
+		}
+	}
+
+	/**
 	 * XLSX 파일 다운로드 처리
 	 */
 	async function handleDownload() {
@@ -299,7 +369,7 @@
 </script>
 
 <svelte:head>
-	<title>용어집 조회 - 모던한 용어 관리 시스템</title>
+	<title>용어집 관리 - 모던한 용어 관리 시스템</title>
 	<meta name="description" content="AI 기반 검색으로 등록된 용어집을 빠르게 찾아보세요." />
 </svelte:head>
 
@@ -314,12 +384,35 @@
 					<h1
 						class="bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-4xl font-bold text-transparent"
 					>
-						용어집 조회
+						용어집 관리
 					</h1>
 				</div>
 
 				<!-- 액션 버튼들 -->
 				<div class="flex items-center space-x-3">
+					<!-- 새 용어 추가 버튼 -->
+					<button
+						type="button"
+						onclick={() => (showEditor = true)}
+						disabled={loading}
+						class="group inline-flex items-center space-x-2 rounded-xl border border-blue-200/50 bg-blue-50/80 px-6 py-3 text-sm font-medium text-blue-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-blue-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+					>
+						<svg
+							class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+							/>
+						</svg>
+						<span>새 용어 추가</span>
+					</button>
+
 					<!-- XLSX 다운로드 버튼 -->
 					<button
 						type="button"
@@ -370,6 +463,11 @@
 				</div>
 			</div>
 		</div>
+
+		<!-- TermEditor 모달 -->
+		{#if showEditor}
+			<TermEditor on:save={handleSave} on:cancel={() => (showEditor = false)} />
+		{/if}
 
 		<!-- 통계 카드 섹션 -->
 		<div class="my-8">

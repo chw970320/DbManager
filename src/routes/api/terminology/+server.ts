@@ -136,7 +136,7 @@ export async function GET({ url }: RequestEvent) {
             lastUpdated: terminologyData.lastUpdated
         };
 
-        console.log(`용어집 조회 성공: ${paginatedEntries.length}개 항목 (페이지 ${page}/${totalPages})${filter === 'duplicates' ? ' - 중복 필터링 적용' : ''}`);
+        console.log(`용어집 관리 성공: ${paginatedEntries.length}개 항목 (페이지 ${page}/${totalPages})${filter === 'duplicates' ? ' - 중복 필터링 적용' : ''}`);
 
         return json({
             success: true,
@@ -145,7 +145,7 @@ export async function GET({ url }: RequestEvent) {
         } as ApiResponse, { status: 200 });
 
     } catch (error) {
-        console.error('용어집 조회 중 오류:', error);
+        console.error('용어집 관리 중 오류:', error);
 
         return json({
             success: false,

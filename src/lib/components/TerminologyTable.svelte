@@ -81,13 +81,56 @@
 
 	async function handleSave(id: string) {
 		if (!editedEntry) return;
+
+		// 수정 전 데이터 백업
+		const originalEntry = entries.find((e) => e.id === id);
+
 		try {
 			const response = await fetch(`/api/terminology`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ ...editedEntry, id })
 			});
+
 			if (response.ok) {
+				const result = await response.json();
+
+				// 히스토리 로그 기록
+				try {
+					await fetch('/api/history', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({
+							action: 'update',
+							targetId: id,
+							targetName: editedEntry.standardName || originalEntry?.standardName || '',
+							details: {
+								before: originalEntry
+									? {
+											standardName: originalEntry.standardName,
+											abbreviation: originalEntry.abbreviation,
+											englishName: originalEntry.englishName
+										}
+									: undefined,
+								after: {
+									standardName: editedEntry.standardName,
+									abbreviation: editedEntry.abbreviation,
+									englishName: editedEntry.englishName
+								}
+							}
+						})
+					});
+
+					// 히스토리 UI 새로고침
+					if (typeof window !== 'undefined' && (window as any).refreshHistoryLog) {
+						(window as any).refreshHistoryLog();
+					}
+				} catch (historyError) {
+					console.warn('히스토리 로그 기록 실패:', historyError);
+				}
+
 				cancelEdit();
 				onrefresh(); // 데이터 새로고침
 				fetchDuplicates(); // 중복 데이터 다시 확인
@@ -100,10 +143,44 @@
 	}
 
 	async function handleDelete(id: string) {
+		// 삭제할 엔트리 정보 백업
+		const entryToDelete = entries.find((e) => e.id === id);
+
 		if (confirm('정말로 이 항목을 삭제하시겠습니까?')) {
 			try {
 				const response = await fetch(`/api/terminology?id=${id}`, { method: 'DELETE' });
 				if (response.ok) {
+					// 히스토리 로그 기록
+					if (entryToDelete) {
+						try {
+							await fetch('/api/history', {
+								method: 'POST',
+								headers: {
+									'Content-Type': 'application/json'
+								},
+								body: JSON.stringify({
+									action: 'delete',
+									targetId: id,
+									targetName: entryToDelete.standardName,
+									details: {
+										before: {
+											standardName: entryToDelete.standardName,
+											abbreviation: entryToDelete.abbreviation,
+											englishName: entryToDelete.englishName
+										}
+									}
+								})
+							});
+
+							// 히스토리 UI 새로고침
+							if (typeof window !== 'undefined' && (window as any).refreshHistoryLog) {
+								(window as any).refreshHistoryLog();
+							}
+						} catch (historyError) {
+							console.warn('히스토리 로그 기록 실패:', historyError);
+						}
+					}
+
 					onrefresh();
 					fetchDuplicates();
 				} else {

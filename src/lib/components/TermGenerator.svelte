@@ -14,6 +14,9 @@
 	let justCopied = $state(false);
 	let copyTimeout: ReturnType<typeof setTimeout>;
 
+	// 검색 입력 필드 참조
+	let searchInput: HTMLInputElement | undefined;
+
 	// --- Effects ---
 	$effect(() => {
 		sourceTerm;
@@ -85,6 +88,28 @@
 		}, 1000);
 	}
 
+	/**
+	 * 검색어 초기화
+	 */
+	function clearSearch() {
+		sourceTerm = '';
+		// 검색 입력 필드에 포커스 이동
+		if (searchInput) {
+			searchInput.focus();
+		}
+	}
+
+	/**
+	 * 방향 전환 후 포커스 이동
+	 */
+	function handleDirectionChange() {
+		direction = direction === 'ko-to-en' ? 'en-to-ko' : 'ko-to-en';
+		// 검색 입력 필드에 포커스 이동
+		if (searchInput) {
+			searchInput.focus();
+		}
+	}
+
 	const debouncedFindCombinations = debounce(findCombinations, 300);
 </script>
 
@@ -93,30 +118,53 @@
 
 	<!-- Input Section -->
 	<div class="relative">
-		<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-			<svg
-				class="h-5 w-5 text-gray-400"
-				xmlns="http://www.w3.org/2000/svg"
-				viewBox="0 0 20 20"
-				fill="currentColor"
-				aria-hidden="true"
-			>
-				<path
-					fill-rule="evenodd"
-					d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
-					clip-rule="evenodd"
-				/>
-			</svg>
-		</div>
 		<div class="flex items-center space-x-2">
-			<input
-				type="text"
-				bind:value={sourceTerm}
-				placeholder={direction === 'ko-to-en' ? '한글 약어 입력...' : '영문 전체 단어 입력...'}
-				class="block w-full rounded-md border border-gray-300 bg-white py-2 pl-10 pr-3 leading-5 placeholder-gray-500 focus:border-blue-500 focus:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
-			/>
+			<div class="relative flex-1">
+				<!-- Search Icon -->
+				<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+					<svg
+						class="h-5 w-5 text-gray-400"
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 20 20"
+						fill="currentColor"
+						aria-hidden="true"
+					>
+						<path
+							fill-rule="evenodd"
+							d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+				</div>
+
+				<input
+					bind:this={searchInput}
+					type="text"
+					bind:value={sourceTerm}
+					placeholder={direction === 'ko-to-en' ? '한글 약어 입력...' : '영문 전체 단어 입력...'}
+					class="block w-full rounded-md border border-gray-300 bg-white py-2 pl-10 pr-10 leading-5 placeholder-gray-500 focus:border-blue-500 focus:placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-blue-500"
+				/>
+
+				<!-- X 버튼 -->
+				{#if sourceTerm}
+					<button
+						type="button"
+						onclick={clearSearch}
+						class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 transition-colors hover:text-gray-500 focus:text-gray-500 focus:outline-none"
+						aria-label="검색어 지우기"
+					>
+						<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+							<path
+								fill-rule="evenodd"
+								d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+								clip-rule="evenodd"
+							/>
+						</svg>
+					</button>
+				{/if}
+			</div>
 			<button
-				onclick={() => (direction = direction === 'ko-to-en' ? 'en-to-ko' : 'ko-to-en')}
+				onclick={handleDirectionChange}
 				class="btn btn-outline flex w-36 items-center justify-center space-x-2"
 				title="방향 전환"
 			>

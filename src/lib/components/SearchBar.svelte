@@ -29,6 +29,9 @@
 
 	let showAdvanced = $state(false);
 
+	// 검색 입력 필드 참조
+	let searchInput: HTMLInputElement | undefined;
+
 	// 검색 필드 옵션
 	const searchFields = [
 		{ value: 'all', label: '전체' },
@@ -79,6 +82,10 @@
 		field = 'all';
 		exact = false;
 		onclear();
+		// 검색 입력 필드에 포커스 이동
+		if (searchInput) {
+			searchInput.focus();
+		}
 	}
 
 	/**
@@ -118,6 +125,7 @@
 			</div>
 
 			<input
+				bind:this={searchInput}
 				type="text"
 				bind:value={query}
 				oninput={handleInput}

@@ -223,6 +223,79 @@
 	async function refreshData() {
 		await loadTerminologyData();
 	}
+
+	/**
+	 * XLSX 파일 다운로드 처리
+	 */
+	async function handleDownload() {
+		loading = true;
+		errorMessage = '';
+
+		try {
+			// 현재 적용된 모든 상태를 쿼리 파라미터로 구성
+			const params = new URLSearchParams({
+				sortBy: sortColumn,
+				sortOrder: sortDirection
+			});
+
+			// 검색 조건이 있는 경우 추가
+			if (searchQuery) {
+				params.set('q', searchQuery);
+				params.set('field', searchField);
+				params.set('exact', searchExact.toString());
+			}
+
+			// 중복 필터링 파라미터 추가
+			const filterParam = getDuplicateFilterParam();
+			if (filterParam) {
+				params.set('filter', filterParam);
+			}
+
+			console.log('다운로드 요청 파라미터:', params.toString());
+
+			// 다운로드 API 호출
+			const response = await fetch(`/api/terminology/download?${params}`);
+
+			if (!response.ok) {
+				throw new Error(`다운로드 실패: ${response.status} ${response.statusText}`);
+			}
+
+			// Blob 데이터로 변환
+			const blob = await response.blob();
+
+			// 파일명 추출 (Content-Disposition 헤더에서)
+			let filename = 'terminology.xlsx';
+			const contentDisposition = response.headers.get('Content-Disposition');
+			if (contentDisposition) {
+				const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
+				if (filenameMatch) {
+					filename = filenameMatch[1];
+				}
+			}
+
+			// 다운로드 트리거
+			const downloadUrl = URL.createObjectURL(blob);
+			const link = document.createElement('a');
+			link.href = downloadUrl;
+			link.download = filename;
+			link.style.display = 'none';
+
+			// DOM에 추가하고 클릭한 후 제거
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+
+			// 메모리 해제
+			URL.revokeObjectURL(downloadUrl);
+
+			console.log(`XLSX 파일 다운로드 완료: ${filename}`);
+		} catch (error) {
+			console.error('다운로드 중 오류:', error);
+			errorMessage = error instanceof Error ? error.message : '다운로드 중 오류가 발생했습니다.';
+		} finally {
+			loading = false;
+		}
+	}
 </script>
 
 <svelte:head>
@@ -245,30 +318,56 @@
 					</h1>
 				</div>
 
-				<!-- 새로고침 버튼 -->
-				<button
-					type="button"
-					onclick={refreshData}
-					disabled={loading}
-					class="group inline-flex items-center space-x-2 rounded-xl border border-gray-200/50 bg-white/80 px-6 py-3 text-sm font-medium text-gray-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-				>
-					<svg
-						class="h-5 w-5 transition-transform duration-200 {loading
-							? 'animate-spin'
-							: 'group-hover:rotate-180'}"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
+				<!-- 액션 버튼들 -->
+				<div class="flex items-center space-x-3">
+					<!-- XLSX 다운로드 버튼 -->
+					<button
+						type="button"
+						onclick={handleDownload}
+						disabled={loading}
+						class="group inline-flex items-center space-x-2 rounded-xl border border-green-200/50 bg-green-50/80 px-6 py-3 text-sm font-medium text-green-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-green-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
 					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-						/>
-					</svg>
-					<span>{loading ? '로딩 중' : '새로고침'}</span>
-				</button>
+						<svg
+							class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+							/>
+						</svg>
+						<span>{loading ? '준비 중' : 'XLSX 다운로드'}</span>
+					</button>
+
+					<!-- 새로고침 버튼 -->
+					<button
+						type="button"
+						onclick={refreshData}
+						disabled={loading}
+						class="group inline-flex items-center space-x-2 rounded-xl border border-gray-200/50 bg-white/80 px-6 py-3 text-sm font-medium text-gray-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+					>
+						<svg
+							class="h-5 w-5 transition-transform duration-200 {loading
+								? 'animate-spin'
+								: 'group-hover:rotate-180'}"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+							/>
+						</svg>
+						<span>{loading ? '로딩 중' : '새로고침'}</span>
+					</button>
+				</div>
 			</div>
 		</div>
 

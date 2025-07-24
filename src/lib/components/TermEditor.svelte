@@ -1,10 +1,10 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import type { TerminologyEntry } from '$lib/types/terminology';
+	import type { VocabularyEntry } from '$lib/types/vocabulary';
 
 	// Props
 	interface Props {
-		entry?: Partial<TerminologyEntry>;
+		entry?: Partial<VocabularyEntry>;
 		isEditMode?: boolean;
 		serverError?: string;
 	}
@@ -13,7 +13,7 @@
 
 	// Event dispatcher
 	const dispatch = createEventDispatcher<{
-		save: TerminologyEntry;
+		save: VocabularyEntry;
 		cancel: void;
 	}>();
 
@@ -96,7 +96,7 @@
 
 		isSubmitting = true;
 
-		const editedEntry: TerminologyEntry = {
+		const editedEntry: VocabularyEntry = {
 			id: entry.id || '',
 			standardName: formData.standardName.trim(),
 			abbreviation: formData.abbreviation.trim(),

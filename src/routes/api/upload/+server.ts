@@ -1,8 +1,8 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type { ApiResponse, UploadResult, TerminologyData } from '../../../lib/types/terminology.js';
+import type { ApiResponse, UploadResult, VocabularyData } from '../../../lib/types/vocabulary.js';
 import { validateXlsxFile } from '../../../lib/utils/validation.js';
-import { parseXlsxToJson, createTerminologyData } from '../../../lib/utils/xlsx-parser.js';
-import { mergeTerminologyData } from '../../../lib/utils/file-handler.js';
+import { parseXlsxToJson, createVocabularyData } from '../../../lib/utils/xlsx-parser.js';
+import { mergeVocabularyData } from '../../../lib/utils/file-handler.js';
 import { clearHistoryData, addHistoryLog } from '../../../lib/utils/history-handler.js';
 
 /**
@@ -62,14 +62,14 @@ export async function POST({ request }: RequestEvent) {
         }
 
         // 데이터 구조 생성
-        const terminologyData = createTerminologyData(parsedEntries);
+        const vocabularyData = createVocabularyData(parsedEntries);
 
         // 기존 데이터와 병합 (replace 옵션 확인)
         const replaceExisting = formData.get('replace') === 'true';
-        let finalData: TerminologyData;
+        let finalData: VocabularyData;
 
         try {
-            finalData = await mergeTerminologyData(parsedEntries, replaceExisting);
+            finalData = await mergeVocabularyData(parsedEntries, replaceExisting);
         } catch (mergeError) {
             return json({
                 success: false,
@@ -95,7 +95,7 @@ export async function POST({ request }: RequestEvent) {
                 await addHistoryLog({
                     id: `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
                     action: 'UPLOAD_MERGE',
-                    targetId: 'terminology_file',
+                    targetId: 'vocabulary_file',
                     targetName: `${file.name} (${parsedEntries.length}개 단어)`,
                     timestamp: new Date().toISOString(),
                     details: {

@@ -1,6 +1,6 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type { ApiResponse } from '$lib/types/terminology.js';
-import { loadTerminologyData } from '$lib/utils/file-handler.js';
+import type { ApiResponse } from '$lib/types/vocabulary.js';
+import { loadVocabularyData } from '$lib/utils/file-handler.js';
 
 // --- 캐시 ---
 let dictionaryCache: { ko: Set<string>; en: Set<string> } | null = null;
@@ -10,11 +10,11 @@ async function getDictionary() {
         return dictionaryCache;
     }
     try {
-        const terminologyData = await loadTerminologyData();
-        const ko = new Set(terminologyData.entries.map((e) => e.standardName.toLowerCase()));
-        const en = new Set(terminologyData.entries.map((e) => e.abbreviation.toLowerCase()));
+        const vocabularyData = await loadVocabularyData();
+        const ko = new Set(vocabularyData.entries.map((e) => e.standardName.toLowerCase()));
+        const en = new Set(vocabularyData.entries.map((e) => e.abbreviation.toLowerCase()));
         dictionaryCache = { ko, en };
-        console.log('단어 조합 분석을 위한 사전 캐시 초기화 완료');
+        console.log('단어 조합 분석을 위한 사전 캐시 초기화 완료 (vocabulary 기준)');
         return dictionaryCache;
     } catch (error) {
         console.error('사전 캐시 초기화 오류:', error);

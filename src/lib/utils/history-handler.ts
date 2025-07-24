@@ -1,7 +1,8 @@
 import { writeFile, readFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
-import type { HistoryData, HistoryLogEntry } from '../types/terminology.js';
+import type { HistoryData, HistoryLogEntry } from '$lib/types/vocabulary';
+// vocabulary 기준으로 주석 정리
 
 // 히스토리 데이터 저장 경로 설정
 const DATA_DIR = 'static/data';

@@ -1,4 +1,4 @@
-import type { TerminologyEntry } from '../types/terminology.js';
+// vocabulary 기준으로 주석 정리
 
 /**
  * 단어 데이터에서 중복된 항목의 ID를 찾아 반환하는 유틸리티 함수 (하위 호환성)
@@ -7,7 +7,7 @@ import type { TerminologyEntry } from '../types/terminology.js';
  * @param entries - 검사할 단어 데이터 배열
  * @returns 중복된 항목들의 ID Set
  */
-export function getDuplicateIds(entries: TerminologyEntry[]): Set<string> {
+export function getDuplicateIds(entries: any[]): Set<string> {
     const duplicateDetails = getDuplicateDetails(entries);
     return new Set(duplicateDetails.keys());
 }
@@ -20,9 +20,9 @@ export function getDuplicateIds(entries: TerminologyEntry[]): Set<string> {
  * @param entries - 검사할 단어 데이터 배열
  * @returns 각 ID별 중복 필드 정보를 담은 Map
  */
-export function getDuplicateDetails(entries: TerminologyEntry[]): Map<string, { standardName: boolean; abbreviation: boolean; englishName: boolean; }> {
+export function getDuplicateDetails(entries: any[]): Map<string, { standardName: boolean; abbreviation: boolean; englishName: boolean; }> {
     const duplicateDetails = new Map<string, { standardName: boolean; abbreviation: boolean; englishName: boolean; }>();
-    const seen: Record<string, Record<string, TerminologyEntry>> = {
+    const seen: Record<string, Record<string, any>> = {
         standardName: {},
         abbreviation: {},
         englishName: {}
@@ -30,11 +30,11 @@ export function getDuplicateDetails(entries: TerminologyEntry[]): Map<string, { 
 
     // 각 필드별로 중복을 검사하고 세부 정보를 기록
     const checkField = (field: keyof typeof seen) => {
-        const fieldValues: Record<string, TerminologyEntry[]> = {};
+        const fieldValues: Record<string, any[]> = {};
 
         // 같은 값을 가진 항목들을 그룹화
         for (const entry of entries) {
-            const value = (entry[field as keyof TerminologyEntry] as string).toLowerCase();
+            const value = (entry[field as keyof any] as string).toLowerCase();
             if (!fieldValues[value]) {
                 fieldValues[value] = [];
             }
@@ -75,9 +75,9 @@ export function getDuplicateDetails(entries: TerminologyEntry[]): Map<string, { 
  * @param entries - 검사할 단어 데이터 배열
  * @returns 중복된 그룹들의 배열
  */
-export function getDuplicateGroups(entries: TerminologyEntry[]): TerminologyEntry[][] {
-    const duplicates: Record<string, TerminologyEntry[]> = {};
-    const seen: Record<string, Record<string, TerminologyEntry>> = {
+export function getDuplicateGroups(entries: any[]): any[][] {
+    const duplicates: Record<string, any[]> = {};
+    const seen: Record<string, Record<string, any>> = {
         standardName: {},
         abbreviation: {},
         englishName: {}
@@ -85,9 +85,9 @@ export function getDuplicateGroups(entries: TerminologyEntry[]): TerminologyEntr
 
     const checkAndAddDuplicate = (
         field: keyof typeof seen,
-        entry: TerminologyEntry
+        entry: any
     ) => {
-        const value = (entry[field as keyof TerminologyEntry] as string).toLowerCase();
+        const value = (entry[field as keyof any] as string).toLowerCase();
         if (seen[field][value]) {
             const key = `${field}:${value}`;
             if (!duplicates[key]) {

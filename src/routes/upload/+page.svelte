@@ -2,15 +2,15 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import FileUpload from '$lib/components/FileUpload.svelte';
-	import type { UploadResult } from '$lib/types/terminology.js';
+	import type { UploadResult } from '$lib/types/vocabulary.js';
 
 	// 상태 변수
 	let uploading = $state(false);
 	let uploadMessage = $state('');
 	let errorMessage = $state('');
-	let uploadHistory = $state<UploadResult[]>([]);
+	let uploadHistory = $state<any[]>([]); // vocabulary 기준으로 변경
 
-	type UploadSuccessDetail = { result: UploadResult };
+	type UploadSuccessDetail = { result: any };
 	type UploadErrorDetail = { error: string };
 
 	/**

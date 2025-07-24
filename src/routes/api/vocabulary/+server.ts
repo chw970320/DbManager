@@ -1,12 +1,12 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type { ApiResponse, TerminologyData, TerminologyEntry } from '../../../lib/types/terminology.js';
-import { loadTerminologyData, saveTerminologyData, loadForbiddenWordsData } from '../../../lib/utils/file-handler.js';
+import type { ApiResponse, VocabularyData, VocabularyEntry } from '../../../lib/types/vocabulary.js';
+import { loadVocabularyData, saveVocabularyData, loadForbiddenWordsData } from '../../../lib/utils/file-handler.js';
 import { getDuplicateIds, getDuplicateDetails } from '../../../lib/utils/duplicate-handler.js';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
  * 저장된 단어집 데이터 조회 API
- * GET /api/terminology
+ * GET /api/vocabulary
  */
 export async function GET({ url }: RequestEvent) {
     try {
@@ -37,9 +37,9 @@ export async function GET({ url }: RequestEvent) {
         }
 
         // 데이터 로드
-        let terminologyData: TerminologyData;
+        let vocabularyData: VocabularyData;
         try {
-            terminologyData = await loadTerminologyData();
+            vocabularyData = await loadVocabularyData();
         } catch (loadError) {
             return json({
                 success: false,
@@ -49,10 +49,10 @@ export async function GET({ url }: RequestEvent) {
         }
 
         // 중복 정보 가져오기
-        const duplicateDetails = getDuplicateDetails(terminologyData.entries);
+        const duplicateDetails = getDuplicateDetails(vocabularyData.entries);
 
         // 모든 항목에 duplicateInfo 추가
-        const entriesWithDuplicateInfo = terminologyData.entries.map(entry => ({
+        const entriesWithDuplicateInfo = vocabularyData.entries.map(entry => ({
             ...entry,
             duplicateInfo: duplicateDetails.get(entry.id) || {
                 standardName: false,
@@ -133,7 +133,7 @@ export async function GET({ url }: RequestEvent) {
                 filter: filter || 'none',
                 isFiltered: filter === 'duplicates'
             },
-            lastUpdated: terminologyData.lastUpdated
+            lastUpdated: vocabularyData.lastUpdated
         };
 
         console.log(`단어집 관리 성공: ${paginatedEntries.length}개 항목 (페이지 ${page}/${totalPages})${filter === 'duplicates' ? ' - 중복 필터링 적용' : ''}`);
@@ -141,7 +141,7 @@ export async function GET({ url }: RequestEvent) {
         return json({
             success: true,
             data: responseData,
-            message: 'Terminology data retrieved successfully'
+            message: 'Vocabulary data retrieved successfully'
         } as ApiResponse, { status: 200 });
 
     } catch (error) {
@@ -157,11 +157,11 @@ export async function GET({ url }: RequestEvent) {
 
 /**
  * 신규 단어 추가 API
- * POST /api/terminology
+ * POST /api/vocabulary
  */
 export async function POST({ request }: RequestEvent) {
     try {
-        const newEntry: Partial<TerminologyEntry> = await request.json();
+        const newEntry: Partial<VocabularyEntry> = await request.json();
 
         // 필수 필드 검증
         if (!newEntry.standardName || !newEntry.abbreviation || !newEntry.englishName) {
@@ -175,7 +175,7 @@ export async function POST({ request }: RequestEvent) {
             );
         }
 
-        const terminologyData = await loadTerminologyData();
+        const vocabularyData = await loadVocabularyData();
 
         // 금지어 검사
         try {
@@ -221,7 +221,7 @@ export async function POST({ request }: RequestEvent) {
         }
 
         // 영문약어 중복 검사 (표준단어명 중복은 허용)
-        const isAbbreviationDuplicate = terminologyData.entries.some(
+        const isAbbreviationDuplicate = vocabularyData.entries.some(
             (e) => e.abbreviation === newEntry.abbreviation
         );
         if (isAbbreviationDuplicate) {
@@ -232,7 +232,7 @@ export async function POST({ request }: RequestEvent) {
             } as ApiResponse, { status: 409 });
         }
 
-        const entryToSave: TerminologyEntry = {
+        const entryToSave: VocabularyEntry = {
             id: uuidv4(),
             standardName: newEntry.standardName,
             abbreviation: newEntry.abbreviation,
@@ -242,8 +242,8 @@ export async function POST({ request }: RequestEvent) {
             updatedAt: new Date().toISOString()
         };
 
-        terminologyData.entries.push(entryToSave);
-        await saveTerminologyData(terminologyData);
+        vocabularyData.entries.push(entryToSave);
+        await saveVocabularyData(vocabularyData);
 
         return json(
             {
@@ -268,21 +268,21 @@ export async function POST({ request }: RequestEvent) {
 
 /**
  * 단어 수정 API
- * PUT /api/terminology/:id
+ * PUT /api/vocabulary/:id
  */
 export async function PUT({ request }: RequestEvent) {
     try {
-        const updatedEntry: TerminologyEntry = await request.json();
+        const updatedEntry: VocabularyEntry = await request.json();
 
         if (!updatedEntry.id) {
             return json(
-                { success: false, error: '단어 ID가 필요합니다.', message: 'Missing terminology ID' } as ApiResponse,
+                { success: false, error: '단어 ID가 필요합니다.', message: 'Missing vocabulary ID' } as ApiResponse,
                 { status: 400 }
             );
         }
 
-        const terminologyData = await loadTerminologyData();
-        const entryIndex = terminologyData.entries.findIndex((e) => e.id === updatedEntry.id);
+        const vocabularyData = await loadVocabularyData();
+        const entryIndex = vocabularyData.entries.findIndex((e) => e.id === updatedEntry.id);
 
         if (entryIndex === -1) {
             return json(
@@ -292,18 +292,18 @@ export async function PUT({ request }: RequestEvent) {
         }
 
         // 기존 데이터를 유지하면서 업데이트
-        terminologyData.entries[entryIndex] = {
-            ...terminologyData.entries[entryIndex],
+        vocabularyData.entries[entryIndex] = {
+            ...vocabularyData.entries[entryIndex],
             ...updatedEntry,
             updatedAt: new Date().toISOString()
         };
 
-        await saveTerminologyData(terminologyData);
+        await saveVocabularyData(vocabularyData);
 
         return json(
             {
                 success: true,
-                data: terminologyData.entries[entryIndex],
+                data: vocabularyData.entries[entryIndex],
                 message: '단어가 성공적으로 수정되었습니다.'
             } as ApiResponse,
             { status: 200 }
@@ -323,30 +323,30 @@ export async function PUT({ request }: RequestEvent) {
 
 /**
  * 단어 삭제 API
- * DELETE /api/terminology/:id
+ * DELETE /api/vocabulary/:id
  */
 export async function DELETE({ url }: RequestEvent) {
     try {
         const id = url.searchParams.get('id');
         if (!id) {
             return json(
-                { success: false, error: '삭제할 단어의 ID가 필요합니다.', message: 'Missing terminology ID' } as ApiResponse,
+                { success: false, error: '삭제할 단어의 ID가 필요합니다.', message: 'Missing vocabulary ID' } as ApiResponse,
                 { status: 400 }
             );
         }
 
-        const terminologyData = await loadTerminologyData();
-        const initialLength = terminologyData.entries.length;
-        terminologyData.entries = terminologyData.entries.filter((e) => e.id !== id);
+        const vocabularyData = await loadVocabularyData();
+        const initialLength = vocabularyData.entries.length;
+        vocabularyData.entries = vocabularyData.entries.filter((e) => e.id !== id);
 
-        if (terminologyData.entries.length === initialLength) {
+        if (vocabularyData.entries.length === initialLength) {
             return json(
                 { success: false, error: '삭제할 단어를 찾을 수 없습니다.', message: 'Entry not found' } as ApiResponse,
                 { status: 404 }
             );
         }
 
-        await saveTerminologyData(terminologyData);
+        await saveVocabularyData(vocabularyData);
 
         return json(
             { success: true, message: '단어가 성공적으로 삭제되었습니다.' } as ApiResponse,

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { ApiResponse, UploadResult } from '../types/terminology.js';
+	import type { ApiResponse, UploadResult } from '$lib/types/vocabulary';
 
 	// 컴포넌트 속성
 	let {
@@ -7,7 +7,7 @@
 		maxSize = 10 * 1024 * 1024, // 10MB
 		replaceExisting = true,
 		disabled = false,
-		apiEndpoint = '/api/upload', // 기본값은 terminology API
+		apiEndpoint = '/api/upload', // 기본값은 vocabulary API
 		contentType = '단어집', // 표시할 데이터 타입 ('단어집' 또는 '도메인')
 		onuploadstart,
 		onuploadsuccess,

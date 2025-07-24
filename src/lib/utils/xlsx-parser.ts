@@ -1,15 +1,15 @@
 import XLSX from 'xlsx-js-style';
 import { v4 as uuidv4 } from 'uuid';
-import type { TerminologyEntry, TerminologyData } from '../types/terminology.js';
 import type { DomainEntry, DomainData, RawDomainData } from '../types/domain.js';
-import { validateTerminologyEntry } from './validation.js';
+import { validateVocabularyEntry } from './validation.js';
+import type { VocabularyEntry, VocabularyData } from '../types/vocabulary.js';
 
 /**
  * xlsx 파일 버퍼를 파싱하여 단어집 엔트리 배열로 변환
  * @param fileBuffer - xlsx 파일의 Buffer 데이터
- * @returns TerminologyEntry 배열
+ * @returns VocabularyEntry 배열
  */
-export function parseXlsxToJson(fileBuffer: Buffer): TerminologyEntry[] {
+export function parseXlsxToJson(fileBuffer: Buffer): VocabularyEntry[] {
     try {
         // xlsx 파일을 워크북으로 읽기
         const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
@@ -34,7 +34,7 @@ export function parseXlsxToJson(fileBuffer: Buffer): TerminologyEntry[] {
 
         // 첫 번째 행(헤더) 제외하고 데이터 처리
         const dataRows = rawData.slice(1);
-        const entries: TerminologyEntry[] = [];
+        const entries: VocabularyEntry[] = [];
         const seenCombinations = new Set<string>(); // 중복 체크용
 
         for (let i = 0; i < dataRows.length; i++) {
@@ -53,7 +53,7 @@ export function parseXlsxToJson(fileBuffer: Buffer): TerminologyEntry[] {
             };
 
             // 유효성 검증
-            const validatedEntry = validateTerminologyEntry(rawEntry);
+            const validatedEntry = validateVocabularyEntry(rawEntry);
             if (!validatedEntry) {
                 console.warn(`Row ${i + 2}: 유효하지 않은 데이터 건너뜀 -`, rawEntry);
                 continue;
@@ -68,7 +68,7 @@ export function parseXlsxToJson(fileBuffer: Buffer): TerminologyEntry[] {
             seenCombinations.add(combination);
 
             // 최종 엔트리 생성
-            const entry: TerminologyEntry = {
+            const entry: VocabularyEntry = {
                 id: uuidv4(),
                 standardName: validatedEntry.standardName,
                 abbreviation: validatedEntry.abbreviation,
@@ -95,11 +95,11 @@ export function parseXlsxToJson(fileBuffer: Buffer): TerminologyEntry[] {
 }
 
 /**
- * 단어집 엔트리 배열을 TerminologyData 형태로 변환
- * @param entries - TerminologyEntry 배열
- * @returns TerminologyData 객체
+ * 단어집 엔트리 배열을 VocabularyData 형태로 변환
+ * @param entries - VocabularyEntry 배열
+ * @returns VocabularyData 객체
  */
-export function createTerminologyData(entries: TerminologyEntry[]): TerminologyData {
+export function createVocabularyData(entries: VocabularyEntry[]): VocabularyData {
     return {
         entries,
         lastUpdated: new Date().toISOString(),
@@ -117,10 +117,10 @@ function getCellAddress(row: number, col: number): string {
 
 /**
  * 단어집 엔트리 배열을 XLSX 파일 버퍼로 변환 (xlsx-js-style 사용)
- * @param data - TerminologyEntry 배열
+ * @param data - VocabularyEntry 배열
  * @returns XLSX 파일의 Buffer 데이터
  */
-export function exportJsonToXlsxBuffer(data: TerminologyEntry[]): Buffer {
+export function exportJsonToXlsxBuffer(data: VocabularyEntry[]): Buffer {
     try {
         // 빈 워크시트 생성
         const worksheet: any = {};

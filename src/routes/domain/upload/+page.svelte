@@ -3,7 +3,7 @@
 	import { goto } from '$app/navigation';
 	import FileUpload from '$lib/components/FileUpload.svelte';
 	import type { DomainUploadResult } from '$lib/types/domain.js';
-	import type { UploadResult } from '$lib/types/terminology.js';
+	import type { UploadResult } from '$lib/types/vocabulary.js';
 
 	// 상태 변수
 	let uploading = $state(false);

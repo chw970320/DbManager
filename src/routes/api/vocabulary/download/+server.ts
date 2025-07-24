@@ -1,12 +1,12 @@
 import { type RequestEvent } from '@sveltejs/kit';
-import type { TerminologyData } from '../../../../lib/types/terminology.js';
-import { loadTerminologyData } from '../../../../lib/utils/file-handler.js';
+import type { VocabularyData } from '../../../../lib/types/vocabulary.js';
+import { loadVocabularyData } from '../../../../lib/utils/file-handler.js';
 import { getDuplicateDetails } from '../../../../lib/utils/duplicate-handler.js';
 import { exportJsonToXlsxBuffer } from '../../../../lib/utils/xlsx-parser.js';
 
 /**
  * 단어집 데이터를 XLSX 파일로 다운로드하는 API
- * GET /api/terminology/download
+ * GET /api/vocabulary/download
  */
 export async function GET({ url }: RequestEvent) {
     try {
@@ -31,9 +31,9 @@ export async function GET({ url }: RequestEvent) {
         }
 
         // 데이터 로드
-        let terminologyData: TerminologyData;
+        let vocabularyData: VocabularyData;
         try {
-            terminologyData = await loadTerminologyData();
+            vocabularyData = await loadVocabularyData();
         } catch (loadError) {
             return new Response(
                 JSON.stringify({
@@ -48,10 +48,10 @@ export async function GET({ url }: RequestEvent) {
         }
 
         // 중복 정보 가져오기
-        const duplicateDetails = getDuplicateDetails(terminologyData.entries);
+        const duplicateDetails = getDuplicateDetails(vocabularyData.entries);
 
         // 모든 항목에 duplicateInfo 추가
-        const entriesWithDuplicateInfo = terminologyData.entries.map(entry => ({
+        const entriesWithDuplicateInfo = vocabularyData.entries.map(entry => ({
             ...entry,
             duplicateInfo: duplicateDetails.get(entry.id) || {
                 standardName: false,
@@ -107,7 +107,7 @@ export async function GET({ url }: RequestEvent) {
 
         // 현재 날짜를 포함한 파일명 생성
         const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD 형식
-        const filename = `terminology_${currentDate}.xlsx`;
+        const filename = `vocabulary_${currentDate}.xlsx`;
 
         console.log(`단어집 XLSX 다운로드 생성: ${sortedEntries.length}개 항목${filter ? ` (필터: ${filter})` : ''}`);
 

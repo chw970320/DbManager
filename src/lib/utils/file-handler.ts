@@ -1,12 +1,11 @@
 import { writeFile, readFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
-import type { TerminologyData, TerminologyEntry, ForbiddenWordsData, ForbiddenWordEntry } from '../types/terminology.js';
-import { validateCompleteEntry } from './validation.js';
+import type { ForbiddenWordsData, ForbiddenWordEntry, VocabularyData, VocabularyEntry } from '$lib/types/vocabulary';
 
 // 데이터 저장 경로 설정
 const DATA_DIR = 'static/data';
-const DATA_FILE = 'terminology.json';
+const DATA_FILE = 'vocabulary.json';
 const DATA_PATH = join(DATA_DIR, DATA_FILE);
 
 /**
@@ -26,9 +25,9 @@ export async function ensureDataDirectory(): Promise<void> {
 
 /**
  * 단어집 데이터를 JSON 파일로 저장
- * @param data - 저장할 TerminologyData 객체
+ * @param data - 저장할 VocabularyData 객체
  */
-export async function saveTerminologyData(data: TerminologyData): Promise<void> {
+export async function saveVocabularyData(data: import('../types/vocabulary.js').VocabularyData): Promise<void> {
     try {
         // 데이터 디렉토리 확인 및 생성
         await ensureDataDirectory();
@@ -40,19 +39,16 @@ export async function saveTerminologyData(data: TerminologyData): Promise<void> 
 
         // 각 엔트리 유효성 검증
         const validEntries = data.entries.filter(entry => {
-            const isValid = validateCompleteEntry(entry);
-            if (!isValid) {
-                console.warn('유효하지 않은 엔트리 제외:', entry);
-            }
+            const isValid = entry.id && entry.standardName && entry.abbreviation && entry.englishName && entry.createdAt;
             return isValid;
         });
 
-        if (validEntries.length === 0) {
+        if (validEntries.length === 0 && data.entries.length > 0) {
             throw new Error('저장할 유효한 단어집 데이터가 없습니다.');
         }
 
         // 최종 데이터 객체 구성
-        const finalData: TerminologyData = {
+        const finalData: import('../types/vocabulary.js').VocabularyData = {
             entries: validEntries,
             lastUpdated: new Date().toISOString(),
             totalCount: validEntries.length
@@ -72,9 +68,9 @@ export async function saveTerminologyData(data: TerminologyData): Promise<void> 
 
 /**
  * 저장된 단어집 데이터를 JSON 파일에서 로드
- * @returns 로드된 TerminologyData 객체
+ * @returns 로드된 VocabularyData 객체
  */
-export async function loadTerminologyData(): Promise<TerminologyData> {
+export async function loadVocabularyData(): Promise<import('../types/vocabulary.js').VocabularyData> {
     try {
         // 파일 존재 확인
         if (!existsSync(DATA_PATH)) {
@@ -99,7 +95,7 @@ export async function loadTerminologyData(): Promise<TerminologyData> {
         }
 
         // JSON 파싱
-        const data = JSON.parse(jsonString) as TerminologyData;
+        const data = JSON.parse(jsonString) as import('../types/vocabulary.js').VocabularyData;
 
         // 데이터 구조 검증
         if (!data || typeof data !== 'object') {
@@ -112,10 +108,7 @@ export async function loadTerminologyData(): Promise<TerminologyData> {
 
         // 각 엔트리 유효성 검증 및 필터링
         const validEntries = data.entries.filter(entry => {
-            const isValid = validateCompleteEntry(entry);
-            if (!isValid) {
-                console.warn('로드 중 유효하지 않은 엔트리 발견:', entry);
-            }
+            const isValid = entry.id && entry.standardName && entry.abbreviation && entry.englishName && entry.createdAt;
             return isValid;
         });
 
@@ -143,112 +136,49 @@ export async function loadTerminologyData(): Promise<TerminologyData> {
  * 기존 단어집 데이터에 새로운 엔트리들을 병합
  * @param newEntries - 추가할 새로운 엔트리들
  * @param replaceExisting - 기존 데이터를 교체할지 여부 (기본값: true)
- * @returns 병합된 TerminologyData 객체
+ * @returns 병합된 VocabularyData 객체
  */
-export async function mergeTerminologyData(
-    newEntries: TerminologyEntry[],
+export async function mergeVocabularyData(
+    newEntries: import('../types/vocabulary.js').VocabularyEntry[],
     replaceExisting: boolean = true
-): Promise<TerminologyData> {
+): Promise<import('../types/vocabulary.js').VocabularyData> {
     try {
-        // 기존 데이터 로드
-        const existingData = await loadTerminologyData();
-
-        let finalEntries: TerminologyEntry[];
-
+        const existingData = await loadVocabularyData();
+        let finalEntries: import('../types/vocabulary.js').VocabularyEntry[];
         if (replaceExisting || existingData.entries.length === 0) {
-            // 기존 데이터 교체 또는 기존 데이터가 없는 경우
             finalEntries = [...newEntries];
         } else {
-            // 기존 데이터와 병합
-            const mergedMap = new Map<string, TerminologyEntry>();
-            let duplicateCount = 0;
-            let updatedCount = 0;
-
-            // 기존 엔트리들을 Map에 저장 (복합 키 사용)
+            const mergedMap = new Map<string, import('../types/vocabulary.js').VocabularyEntry>();
             existingData.entries.forEach(entry => {
                 const compositeKey = `${entry.standardName.toLowerCase()}|${entry.abbreviation.toLowerCase()}|${entry.englishName.toLowerCase()}`;
                 mergedMap.set(compositeKey, entry);
             });
-
-            // 새로운 엔트리들 처리
             newEntries.forEach(entry => {
                 const compositeKey = `${entry.standardName.toLowerCase()}|${entry.abbreviation.toLowerCase()}|${entry.englishName.toLowerCase()}`;
-
                 if (mergedMap.has(compositeKey)) {
-                    // 완전히 동일한 엔트리 - 기존 설명 보존하면서 업데이트
                     const existingEntry = mergedMap.get(compositeKey)!;
-                    const mergedEntry: TerminologyEntry = {
+                    const mergedEntry: import('../types/vocabulary.js').VocabularyEntry = {
                         ...entry,
-                        // 기존 설명이 있고 새 설명이 없으면 기존 설명 유지
                         description: entry.description || existingEntry.description,
-                        // 생성일은 기존 것 유지, 수정일은 현재 시간으로 업데이트
                         createdAt: existingEntry.createdAt,
                         updatedAt: new Date().toISOString()
                     };
-
-                    console.log(`중복 엔트리 업데이트: ${entry.standardName} (${entry.abbreviation}) - 설명 보존: ${existingEntry.description ? '있음' : '없음'} → ${mergedEntry.description ? '있음' : '없음'}`);
                     mergedMap.set(compositeKey, mergedEntry);
-                    updatedCount++;
                 } else {
-                    // 새 항목 추가
-                    // 부분 중복 검사 (같은 약어나 표준명이 있는지 확인)
-                    const hasAbbreviationConflict = Array.from(mergedMap.values()).some(existing =>
-                        existing.abbreviation.toLowerCase() === entry.abbreviation.toLowerCase() &&
-                        existing.standardName.toLowerCase() !== entry.standardName.toLowerCase()
-                    );
-
-                    const hasStandardNameConflict = Array.from(mergedMap.values()).some(existing =>
-                        existing.standardName.toLowerCase() === entry.standardName.toLowerCase() &&
-                        existing.abbreviation.toLowerCase() !== entry.abbreviation.toLowerCase()
-                    );
-
-                    if (hasAbbreviationConflict) {
-                        console.warn(`영문약어 중복 발견: ${entry.abbreviation} - 기존과 다른 표준명 "${entry.standardName}"`);
-                    }
-
-                    if (hasStandardNameConflict) {
-                        console.warn(`표준명 중복 발견: ${entry.standardName} - 기존과 다른 약어 "${entry.abbreviation}"`);
-                    }
-
-                    // 새 항목 추가 - 설명이 없으면 빈 문자열로 설정
-                    const newEntry: TerminologyEntry = {
-                        ...entry,
-                        description: entry.description || '',
-                        createdAt: entry.createdAt || new Date().toISOString(),
-                        updatedAt: entry.updatedAt || new Date().toISOString()
-                    };
-
-                    mergedMap.set(compositeKey, newEntry);
+                    mergedMap.set(compositeKey, entry);
                 }
             });
-
             finalEntries = Array.from(mergedMap.values());
-
-            console.log(`병합 상세: 업데이트 ${updatedCount}개, 새로 추가 ${newEntries.length - updatedCount}개`);
         }
-
-        // 최종 데이터 객체 생성
-        const mergedData: TerminologyData = {
+        const mergedData: import('../types/vocabulary.js').VocabularyData = {
             entries: finalEntries,
             lastUpdated: new Date().toISOString(),
             totalCount: finalEntries.length
         };
-
-        // 병합된 데이터 저장
-        await saveTerminologyData(mergedData);
-
-        console.log(`데이터 병합 완료: 기존 ${existingData.entries.length}개 + 신규 ${newEntries.length}개 → 최종 ${finalEntries.length}개 항목`);
-
-        if (!replaceExisting) {
-            const addedCount = finalEntries.length - existingData.entries.length;
-            console.log(`실제 추가된 새 항목: ${addedCount}개`);
-        }
-
+        await saveVocabularyData(mergedData);
         return mergedData;
-
     } catch (error) {
-        console.error('데이터 병합 실패:', error);
-        throw new Error(`데이터 병합 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
+        throw new Error(`단어집 데이터 병합 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
     }
 }
 
@@ -263,7 +193,7 @@ export async function createBackup(): Promise<string> {
         }
 
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const backupFileName = `terminology_backup_${timestamp}.json`;
+        const backupFileName = `vocabulary_backup_${timestamp}.json`;
         const backupPath = join(DATA_DIR, backupFileName);
 
         const originalData = await readFile(DATA_PATH, 'utf-8');
@@ -391,7 +321,7 @@ export async function loadDomainData(): Promise<import('../types/domain.js').Dom
         }
 
         const fileContent = await readFile(DOMAIN_PATH, 'utf-8');
-        
+
         if (!fileContent.trim()) {
             console.warn('도메인 데이터 파일이 비어있습니다.');
             const defaultData: import('../types/domain.js').DomainData = {
@@ -437,9 +367,9 @@ export async function saveDomainData(data: import('../types/domain.js').DomainDa
 
         // 각 엔트리 유효성 검증
         const validEntries = data.entries.filter(entry => {
-            const isValid = entry.id && entry.domainGroup && entry.domainCategory && 
-                           entry.standardDomainName && entry.logicalDataType && 
-                           entry.physicalDataType && entry.createdAt;
+            const isValid = entry.id && entry.domainGroup && entry.domainCategory &&
+                entry.standardDomainName && entry.logicalDataType &&
+                entry.physicalDataType && entry.createdAt;
             if (!isValid) {
                 console.warn('유효하지 않은 도메인 엔트리 제외:', entry);
             }

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import type { HistoryLogEntry, ApiResponse } from '$lib/types/terminology';
+	import type { HistoryLogEntry, ApiResponse } from '$lib/types/vocabulary';
 
 	// 상태 변수
 	let historyLogs = $state<HistoryLogEntry[]>([]);

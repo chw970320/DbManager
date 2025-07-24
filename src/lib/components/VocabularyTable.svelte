@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { TerminologyEntry } from '$lib/types/terminology';
+	import type { VocabularyEntry } from '$lib/types/vocabulary.js';
 	import { onMount } from 'svelte';
 
 	type SortEvent = {
@@ -13,7 +13,7 @@
 
 	// 컴포넌트 속성
 	let {
-		entries = [] as TerminologyEntry[],
+		entries = [] as VocabularyEntry[],
 		loading = false,
 		searchQuery = '',
 		totalCount = 0,
@@ -27,7 +27,7 @@
 		onpagechange,
 		onrefresh
 	}: {
-		entries?: TerminologyEntry[];
+		entries?: VocabularyEntry[];
 		loading?: boolean;
 		searchQuery?: string;
 		totalCount?: number;
@@ -44,7 +44,7 @@
 
 	// 상태 변수
 	let editingId = $state<string | null>(null);
-	let editedEntry = $state<Partial<TerminologyEntry>>({});
+	let editedEntry = $state<Partial<VocabularyEntry>>({});
 	let duplicates = $state<Set<string>>(new Set());
 
 	onMount(() => {
@@ -53,7 +53,7 @@
 
 	async function fetchDuplicates() {
 		try {
-			const response = await fetch('/api/terminology/duplicates');
+			const response = await fetch('/api/vocabulary/duplicates');
 			const result = await response.json();
 			if (result.success) {
 				const duplicateIds = new Set<string>();
@@ -69,7 +69,7 @@
 		}
 	}
 
-	function handleEdit(entry: TerminologyEntry) {
+	function handleEdit(entry: VocabularyEntry) {
 		editingId = entry.id;
 		editedEntry = { ...entry };
 	}
@@ -86,7 +86,7 @@
 		const originalEntry = entries.find((e) => e.id === id);
 
 		try {
-			const response = await fetch(`/api/terminology`, {
+			const response = await fetch(`/api/vocabulary`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ ...editedEntry, id })
@@ -148,7 +148,7 @@
 
 		if (confirm('정말로 이 항목을 삭제하시겠습니까?')) {
 			try {
-				const response = await fetch(`/api/terminology?id=${id}`, { method: 'DELETE' });
+				const response = await fetch(`/api/vocabulary?id=${id}`, { method: 'DELETE' });
 				if (response.ok) {
 					// 히스토리 로그 기록
 					if (entryToDelete) {
@@ -483,12 +483,12 @@
 									{:else if isEditing}
 										<input
 											type="text"
-											bind:value={editedEntry[column.key as keyof TerminologyEntry]}
+											bind:value={editedEntry[column.key as keyof VocabularyEntry]}
 											class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
 										/>
 									{:else}
 										{@html highlightSearchTerm(
-											(entry[column.key as keyof TerminologyEntry] as string) || '',
+											(entry[column.key as keyof VocabularyEntry] as string) || '',
 											searchQuery,
 											column.key
 										)}

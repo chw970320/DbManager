@@ -1,6 +1,6 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type { ApiResponse, SearchResult, SearchQuery, TerminologyEntry } from '../../../lib/types/terminology.js';
-import { loadTerminologyData } from '../../../lib/utils/file-handler.js';
+import type { ApiResponse, SearchResult, SearchQuery, VocabularyEntry } from '../../../lib/types/vocabulary.js';
+import { loadVocabularyData } from '../../../lib/utils/file-handler.js';
 import { getDuplicateIds, getDuplicateDetails } from '../../../lib/utils/duplicate-handler.js';
 import { sanitizeSearchQuery } from '../../../lib/utils/validation.js';
 
@@ -48,9 +48,9 @@ export async function GET({ url }: RequestEvent) {
         }
 
         // 데이터 로드
-        let terminologyData;
+        let vocabularyData;
         try {
-            terminologyData = await loadTerminologyData();
+            vocabularyData = await loadVocabularyData();
         } catch (loadError) {
             return json({
                 success: false,
@@ -60,10 +60,10 @@ export async function GET({ url }: RequestEvent) {
         }
 
         // 중복 정보 가져오기
-        const duplicateDetails = getDuplicateDetails(terminologyData.entries);
+        const duplicateDetails = getDuplicateDetails(vocabularyData.entries);
 
         // 모든 항목에 duplicateInfo 추가
-        const entriesWithDuplicateInfo = terminologyData.entries.map(entry => ({
+        const entriesWithDuplicateInfo = vocabularyData.entries.map(entry => ({
             ...entry,
             duplicateInfo: duplicateDetails.get(entry.id) || {
                 standardName: false,
@@ -73,7 +73,7 @@ export async function GET({ url }: RequestEvent) {
         }));
 
         // 검색 로직
-        const searchResults = entriesWithDuplicateInfo.filter((entry: TerminologyEntry) => {
+        const searchResults = entriesWithDuplicateInfo.filter((entry: VocabularyEntry) => {
             // 세분화된 중복 필터링 적용
             if (filter && filter.startsWith('duplicates:')) {
                 const filterFields = filter.substring('duplicates:'.length).split(',').map(f => f.trim());
@@ -106,7 +106,7 @@ export async function GET({ url }: RequestEvent) {
                     entry.englishName
                 );
             } else {
-                searchTargets.push(entry[field as keyof TerminologyEntry] as string);
+                searchTargets.push(entry[field as keyof VocabularyEntry] as string);
             }
 
             // 검색 수행
@@ -244,13 +244,13 @@ export async function POST({ request }: RequestEvent) {
         }
 
         // 데이터 로드
-        const terminologyData = await loadTerminologyData();
+        const vocabularyData = await loadVocabularyData();
 
         // 제안 검색 (시작 문자열 매칭)
         const suggestions = new Set<string>();
         const queryLower = sanitizedQuery.toLowerCase();
 
-        terminologyData.entries.forEach(entry => {
+        vocabularyData.entries.forEach(entry => {
             // 표준단어명 제안
             if (entry.standardName.toLowerCase().startsWith(queryLower)) {
                 suggestions.add(entry.standardName);

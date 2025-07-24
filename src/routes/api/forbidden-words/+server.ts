@@ -1,5 +1,5 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type { ApiResponse, ForbiddenWordsData, ForbiddenWordEntry } from '../../../lib/types/terminology.js';
+import type { ApiResponse, ForbiddenWordsData, ForbiddenWordEntry } from '../../../lib/types/vocabulary.js';
 import { loadForbiddenWordsData, saveForbiddenWordsData } from '../../../lib/utils/file-handler.js';
 import { v4 as uuidv4 } from 'uuid';
 

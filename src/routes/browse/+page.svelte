@@ -1,14 +1,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import SearchBar from '$lib/components/SearchBar.svelte';
-	import TerminologyTable from '$lib/components/TerminologyTable.svelte';
+	import VocabularyTable from '$lib/components/VocabularyTable.svelte';
 	import TermGenerator from '$lib/components/TermGenerator.svelte';
 	import TermEditor from '$lib/components/TermEditor.svelte';
 	import ForbiddenWordManager from '$lib/components/ForbiddenWordManager.svelte';
-	import type { TerminologyEntry, ApiResponse } from '$lib/types/terminology.js';
+	import type { VocabularyEntry, ApiResponse } from '$lib/types/vocabulary.js';
 
 	// 상태 변수
-	let entries = $state<TerminologyEntry[]>([]);
+	let entries = $state<VocabularyEntry[]>([]);
 	let loading = $state(false);
 	let searchQuery = $state('');
 	let searchField = $state('all');
@@ -65,13 +65,13 @@
 	 * 컴포넌트 마운트 시 초기 데이터 로드
 	 */
 	onMount(async () => {
-		await loadTerminologyData();
+		await loadVocabularyData();
 	});
 
 	/**
 	 * 단어집 데이터 로드
 	 */
-	async function loadTerminologyData() {
+	async function loadVocabularyData() {
 		loading = true;
 		errorMessage = '';
 
@@ -89,7 +89,7 @@
 				params.set('filter', filterParam);
 			}
 
-			const response = await fetch(`/api/terminology?${params}`);
+			const response = await fetch(`/api/vocabulary?${params}`);
 			const result: ApiResponse = await response.json();
 
 			if (result.success && result.data) {
@@ -169,7 +169,7 @@
 		searchField = 'all';
 		searchExact = false;
 		currentPage = 1;
-		await loadTerminologyData();
+		await loadVocabularyData();
 	}
 
 	/**
@@ -185,7 +185,7 @@
 			await executeSearch();
 		} else {
 			// 일반 조회 시 데이터 재로드
-			await loadTerminologyData();
+			await loadVocabularyData();
 		}
 	}
 
@@ -201,7 +201,7 @@
 			await executeSearch();
 		} else {
 			// 일반 조회 시 데이터 재로드
-			await loadTerminologyData();
+			await loadVocabularyData();
 		}
 	}
 
@@ -218,7 +218,7 @@
 				await executeSearch();
 			} else {
 				// 일반 조회 시 데이터 재로드
-				await loadTerminologyData();
+				await loadVocabularyData();
 			}
 		} catch (error) {
 			console.error('필터 변경 중 오류:', error);
@@ -230,20 +230,20 @@
 	 * 데이터 새로고침
 	 */
 	async function refreshData() {
-		await loadTerminologyData();
+		await loadVocabularyData();
 	}
 
 	/**
 	 * 새 단어 추가 처리
 	 */
-	async function handleSave(event: CustomEvent<TerminologyEntry>) {
+	async function handleSave(event: CustomEvent<VocabularyEntry>) {
 		const newEntry = event.detail;
 		loading = true;
 		errorMessage = '';
 		editorServerError = ''; // 에러 상태 초기화
 
 		try {
-			const response = await fetch('/api/terminology', {
+			const response = await fetch('/api/vocabulary', {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -258,7 +258,7 @@
 				showEditor = false;
 				editorServerError = ''; // 에러 상태 초기화
 				// 데이터 새로고침
-				await loadTerminologyData();
+				await loadVocabularyData();
 
 				// 히스토리 로그 기록
 				try {
@@ -334,7 +334,7 @@
 			console.log('다운로드 요청 파라미터:', params.toString());
 
 			// 다운로드 API 호출
-			const response = await fetch(`/api/terminology/download?${params}`);
+			const response = await fetch(`/api/vocabulary/download?${params}`);
 
 			if (!response.ok) {
 				throw new Error(`다운로드 실패: ${response.status} ${response.statusText}`);
@@ -344,7 +344,7 @@
 			const blob = await response.blob();
 
 			// 파일명 추출 (Content-Disposition 헤더에서)
-			let filename = 'terminology.xlsx';
+			let filename = 'vocabulary.xlsx';
 			const contentDisposition = response.headers.get('Content-Disposition');
 			if (contentDisposition) {
 				const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
@@ -689,7 +689,7 @@
 			</div>
 
 			<div class="overflow-hidden rounded-xl border border-gray-200">
-				<TerminologyTable
+				<VocabularyTable
 					{entries}
 					{loading}
 					{searchQuery}

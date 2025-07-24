@@ -1,5 +1,3 @@
-import type { TerminologyEntry } from '../types/terminology.js';
-
 /**
  * 업로드된 파일이 유효한 xlsx 파일인지 검증
  * @param file - 업로드된 파일 객체
@@ -41,7 +39,7 @@ export function validateXlsxFile(file: File): boolean {
  * @param entry - 검증할 원시 데이터 객체
  * @returns 유효한 경우 정제된 데이터, 무효한 경우 null
  */
-export function validateTerminologyEntry(entry: any): {
+export function validateVocabularyEntry(entry: any): {
     standardName: string;
     abbreviation: string;
     englishName: string;
@@ -95,43 +93,6 @@ export function validateTerminologyEntry(entry: any): {
         abbreviation: abbreviation.toUpperCase(), // 약어는 대문자로 통일
         englishName
     };
-}
-
-/**
- * 완성된 TerminologyEntry 객체의 유효성 최종 검증
- * @param entry - 검증할 TerminologyEntry 객체
- * @returns 유효성 검증 결과
- */
-export function validateCompleteEntry(entry: TerminologyEntry): boolean {
-    if (!entry || typeof entry !== 'object') {
-        return false;
-    }
-
-    // 필수 필드 존재 확인
-    const requiredFields = ['id', 'standardName', 'abbreviation', 'englishName', 'createdAt'];
-    for (const field of requiredFields) {
-        if (!entry[field as keyof TerminologyEntry]) {
-            return false;
-        }
-    }
-
-    // ID 형식 검증 (UUID v4)
-    const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    if (!uuidPattern.test(entry.id)) {
-        return false;
-    }
-
-    // 날짜 형식 검증 (ISO 8601)
-    try {
-        const date = new Date(entry.createdAt);
-        if (isNaN(date.getTime())) {
-            return false;
-        }
-    } catch {
-        return false;
-    }
-
-    return true;
 }
 
 /**

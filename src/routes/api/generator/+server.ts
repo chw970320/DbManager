@@ -1,24 +1,23 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type { ApiResponse, TerminologyData } from '$lib/types/terminology.js';
-import { loadTerminologyData } from '$lib/utils/file-handler.js';
+import type { ApiResponse, VocabularyData } from '$lib/types/vocabulary.js';
+import { loadVocabularyData } from '$lib/utils/file-handler.js';
 
-let terminologyCache: TerminologyData | null = null;
-let koToEnMap: Map<string, string[]> = new Map(); // 여러 결과를 위해 배열로 변경
-let enToKoMap: Map<string, string[]> = new Map(); // 여러 결과를 위해 배열로 변경
+let vocabularyCache: VocabularyData | null = null;
+let koToEnMap: Map<string, string[]> = new Map();
+let enToKoMap: Map<string, string[]> = new Map();
 
 async function initializeCache() {
-    if (terminologyCache) return;
+    if (vocabularyCache) return;
 
     try {
-        terminologyCache = await loadTerminologyData();
+        vocabularyCache = await loadVocabularyData();
         koToEnMap.clear();
         enToKoMap.clear();
 
-        for (const entry of terminologyCache.entries) {
+        for (const entry of vocabularyCache.entries) {
             const koKey = entry.standardName.toLowerCase();
             const enKey = entry.abbreviation.toLowerCase();
 
-            // 동음이의어 처리: 배열에 추가
             if (!koToEnMap.has(koKey)) {
                 koToEnMap.set(koKey, []);
             }
@@ -29,27 +28,23 @@ async function initializeCache() {
             }
             enToKoMap.get(enKey)!.push(entry.standardName);
         }
-        console.log('단어집 캐시 초기화 완료 (동음이의어 지원)');
+        console.log('단어집 캐시 초기화 완료 (동음이의어 지원, vocabulary 기준)');
     } catch (error) {
         console.error('단어집 캐시 초기화 중 오류:', error);
-        terminologyCache = null; // 오류 발생 시 캐시 비우기
+        vocabularyCache = null;
     }
 }
 
-/**
- * 단어 변환 생성 API
- * POST /api/generator
- */
 export async function POST({ request }: RequestEvent) {
     try {
         await initializeCache();
 
-        if (!terminologyCache) {
+        if (!vocabularyCache) {
             return json(
                 {
                     success: false,
                     error: '단어집 데이터를 불러올 수 없습니다.',
-                    message: 'Failed to load terminology data'
+                    message: 'Failed to load vocabulary data'
                 } as ApiResponse,
                 { status: 500 }
             );
@@ -65,19 +60,15 @@ export async function POST({ request }: RequestEvent) {
         }
 
         const sourceMap = direction === 'ko-to-en' ? koToEnMap : enToKoMap;
-
-        // 스페이스 또는 언더스코어로 분리 (스페이스 우선)
         const separator = term.includes(' ') ? ' ' : '_';
         const terms = term.split(separator);
 
-        // 각 단어에 대해 가능한 모든 변환 결과를 가져옴
         const termOptions = terms.map((t) => {
             const trimmedTerm = t.trim();
             const results = sourceMap.get(trimmedTerm.toLowerCase());
             return results && results.length > 0 ? results : ['##'];
         });
 
-        // 모든 조합의 경우의 수를 계산 (Cartesian Product)
         function cartesianProduct(arrays: string[][]): string[][] {
             return arrays.reduce<string[][]>((acc, curr) => {
                 const result: string[][] = [];
@@ -95,8 +86,8 @@ export async function POST({ request }: RequestEvent) {
 
         return json({
             success: true,
-            results: results, // 단일 result에서 복수 results로 변경
-            hasMultiple: results.length > 1 // 동음이의어 여부 표시
+            results: results,
+            hasMultiple: results.length > 1
         });
     } catch (error) {
         console.error('단어 변환 중 오류:', error);
@@ -109,7 +100,4 @@ export async function POST({ request }: RequestEvent) {
             { status: 500 }
         );
     }
-}
-
-// 파일 변경을 감지하고 캐시를 무효화하는 로직 추가 (선택적 고급 기능)
-// 예를 들어, fs.watch를 사용하거나, 특정 API 호출 시 캐시를 리셋할 수 있습니다. 
+} 

@@ -1,12 +1,12 @@
 // Reexport your entry components here
 export { default as ScrollToTop } from './components/ScrollToTop.svelte';
 
-// 단어집 시스템 타입 정의 export
+// vocabulary 기준으로 주석 정리
 export type {
-    TerminologyEntry,
-    TerminologyData,
+    VocabularyEntry,
+    VocabularyData,
     UploadResult,
     SearchQuery,
     SearchResult,
     ApiResponse
-} from './types/terminology.js';
+} from './types/vocabulary.js';

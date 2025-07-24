@@ -1,16 +1,16 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type { ApiResponse, TerminologyEntry } from '../../../../lib/types/terminology.js';
-import { loadTerminologyData } from '../../../../lib/utils/file-handler.js';
+import type { ApiResponse, VocabularyEntry } from '../../../../lib/types/vocabulary.js';
+import { loadVocabularyData } from '../../../../lib/utils/file-handler.js';
 import { getDuplicateGroups } from '../../../../lib/utils/duplicate-handler.js';
 
 /**
  * 중복된 단어 조회 API
- * GET /api/terminology/duplicates
+ * GET /api/vocabulary/duplicates
  */
 export async function GET({ url }: RequestEvent) {
     try {
-        const terminologyData = await loadTerminologyData();
-        const entries = terminologyData.entries;
+        const vocabularyData = await loadVocabularyData();
+        const entries = vocabularyData.entries;
 
         // 새로운 유틸리티 함수를 사용하여 중복된 그룹 조회
         const duplicateGroups = getDuplicateGroups(entries);

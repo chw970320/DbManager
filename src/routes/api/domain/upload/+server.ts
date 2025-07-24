@@ -1,5 +1,5 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type { ApiResponse } from '../../../../lib/types/terminology.js';
+import type { ApiResponse } from '../../../../lib/types/vocabulary.js';
 import type { DomainData, DomainEntry } from '../../../../lib/types/domain.js';
 import { getDomainDataStore, setDomainDataStore } from '../../../../lib/stores/domain-store.js';
 import { mergeDomainData } from '../../../../lib/utils/file-handler.js';

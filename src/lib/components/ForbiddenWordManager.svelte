@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import type { ForbiddenWordEntry, ApiResponse } from '$lib/types/terminology';
+	import type { ForbiddenWordEntry, ApiResponse } from '$lib/types/vocabulary';
 
 	// Props
 	interface Props {
@@ -376,10 +376,22 @@
 							<table class="w-full">
 								<thead class="bg-gray-50">
 									<tr>
-										<th class="whitespace-nowrap px-4 py-2 text-left text-sm font-medium text-gray-900">키워드</th>
-										<th class="whitespace-nowrap px-4 py-2 text-left text-sm font-medium text-gray-900">타입</th>
-										<th class="whitespace-nowrap px-4 py-2 text-left text-sm font-medium text-gray-900">사유</th>
-										<th class="whitespace-nowrap px-4 py-2 text-center text-sm font-medium text-gray-900">작업</th>
+										<th
+											class="whitespace-nowrap px-4 py-2 text-left text-sm font-medium text-gray-900"
+											>키워드</th
+										>
+										<th
+											class="whitespace-nowrap px-4 py-2 text-left text-sm font-medium text-gray-900"
+											>타입</th
+										>
+										<th
+											class="whitespace-nowrap px-4 py-2 text-left text-sm font-medium text-gray-900"
+											>사유</th
+										>
+										<th
+											class="whitespace-nowrap px-4 py-2 text-center text-sm font-medium text-gray-900"
+											>작업</th
+										>
 									</tr>
 								</thead>
 								<tbody class="divide-y divide-gray-200">
@@ -396,14 +408,14 @@
 												<div class="flex justify-center space-x-2">
 													<button
 														onclick={() => handleEdit(word)}
-														class="text-sm text-blue-600 hover:text-blue-800"
+														class="whitespace-nowrap text-sm text-blue-600 hover:text-blue-800"
 														disabled={isSubmitting}
 													>
 														수정
 													</button>
 													<button
 														onclick={() => handleDelete(word.id, word.keyword)}
-														class="text-sm text-red-600 hover:text-red-800"
+														class="whitespace-nowrap text-sm text-red-600 hover:text-red-800"
 														disabled={isSubmitting}
 													>
 														삭제

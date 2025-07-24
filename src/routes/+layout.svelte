@@ -13,7 +13,9 @@
 	const menuItems = [
 		{ href: '/', label: '홈', icon: 'home' },
 		{ href: '/browse', label: '단어집 관리', icon: 'search' },
-		{ href: '/upload', label: '단어집 업로드', icon: 'upload' }
+		{ href: '/upload', label: '단어집 업로드', icon: 'upload' },
+		{ href: '/domain/browse', label: '도메인 조회', icon: 'database' },
+		{ href: '/domain/upload', label: '도메인 업로드', icon: 'cloud-upload' }
 	];
 
 	// 모바일 메뉴 토글
@@ -32,7 +34,11 @@
 			home: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6',
 			search: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z',
 			upload:
-				'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12'
+				'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12',
+			database:
+				'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4',
+			'cloud-upload':
+				'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 12l3-3m0 0l3 3m-3-3v9'
 		};
 		return icons[iconName as keyof typeof icons] || icons.home;
 	}
@@ -79,7 +85,7 @@
 						{#each menuItems as item}
 							<a
 								href={item.href}
-								class="flex items-center space-x-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 {isCurrentPage(
+								class="flex items-center space-x-2 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 {isCurrentPage(
 									item.href
 								)
 									? 'bg-blue-50 text-blue-700 shadow-sm'

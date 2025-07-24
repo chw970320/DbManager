@@ -1,6 +1,5 @@
 <script lang="ts">
-	import type { TerminologyEntry } from '$lib/types/terminology';
-	import { onMount } from 'svelte';
+	import type { DomainEntry } from '$lib/types/domain.js';
 
 	type SortEvent = {
 		column: string;
@@ -13,7 +12,7 @@
 
 	// 컴포넌트 속성
 	let {
-		entries = [] as TerminologyEntry[],
+		entries = [] as DomainEntry[],
 		loading = false,
 		searchQuery = '',
 		totalCount = 0,
@@ -27,7 +26,7 @@
 		onpagechange,
 		onrefresh
 	}: {
-		entries?: TerminologyEntry[];
+		entries?: DomainEntry[];
 		loading?: boolean;
 		searchQuery?: string;
 		totalCount?: number;
@@ -42,197 +41,28 @@
 		onrefresh: () => void;
 	} = $props();
 
-	// 상태 변수
-	let editingId = $state<string | null>(null);
-	let editedEntry = $state<Partial<TerminologyEntry>>({});
-	let duplicates = $state<Set<string>>(new Set());
-
-	onMount(() => {
-		fetchDuplicates();
-	});
-
-	async function fetchDuplicates() {
-		try {
-			const response = await fetch('/api/terminology/duplicates');
-			const result = await response.json();
-			if (result.success) {
-				const duplicateIds = new Set<string>();
-				for (const group of result.data.duplicates) {
-					for (const entry of group) {
-						duplicateIds.add(entry.id);
-					}
-				}
-				duplicates = duplicateIds;
-			}
-		} catch (error) {
-			console.error('중복 데이터 로드 실패:', error);
-		}
-	}
-
-	function handleEdit(entry: TerminologyEntry) {
-		editingId = entry.id;
-		editedEntry = { ...entry };
-	}
-
-	function cancelEdit() {
-		editingId = null;
-		editedEntry = {};
-	}
-
-	async function handleSave(id: string) {
-		if (!editedEntry) return;
-
-		// 수정 전 데이터 백업
-		const originalEntry = entries.find((e) => e.id === id);
-
-		try {
-			const response = await fetch(`/api/terminology`, {
-				method: 'PUT',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ ...editedEntry, id })
-			});
-
-			if (response.ok) {
-				const result = await response.json();
-
-				// 히스토리 로그 기록
-				try {
-					await fetch('/api/history', {
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json'
-						},
-						body: JSON.stringify({
-							action: 'update',
-							targetId: id,
-							targetName: editedEntry.standardName || originalEntry?.standardName || '',
-							details: {
-								before: originalEntry
-									? {
-											standardName: originalEntry.standardName,
-											abbreviation: originalEntry.abbreviation,
-											englishName: originalEntry.englishName
-										}
-									: undefined,
-								after: {
-									standardName: editedEntry.standardName,
-									abbreviation: editedEntry.abbreviation,
-									englishName: editedEntry.englishName
-								}
-							}
-						})
-					});
-
-					// 히스토리 UI 새로고침
-					if (typeof window !== 'undefined' && (window as any).refreshHistoryLog) {
-						(window as any).refreshHistoryLog();
-					}
-				} catch (historyError) {
-					console.warn('히스토리 로그 기록 실패:', historyError);
-				}
-
-				cancelEdit();
-				onrefresh(); // 데이터 새로고침
-				fetchDuplicates(); // 중복 데이터 다시 확인
-			} else {
-				alert('수정에 실패했습니다.');
-			}
-		} catch (error) {
-			console.error('수정 오류:', error);
-		}
-	}
-
-	async function handleDelete(id: string) {
-		// 삭제할 엔트리 정보 백업
-		const entryToDelete = entries.find((e) => e.id === id);
-
-		if (confirm('정말로 이 항목을 삭제하시겠습니까?')) {
-			try {
-				const response = await fetch(`/api/terminology?id=${id}`, { method: 'DELETE' });
-				if (response.ok) {
-					// 히스토리 로그 기록
-					if (entryToDelete) {
-						try {
-							await fetch('/api/history', {
-								method: 'POST',
-								headers: {
-									'Content-Type': 'application/json'
-								},
-								body: JSON.stringify({
-									action: 'delete',
-									targetId: id,
-									targetName: entryToDelete.standardName,
-									details: {
-										before: {
-											standardName: entryToDelete.standardName,
-											abbreviation: entryToDelete.abbreviation,
-											englishName: entryToDelete.englishName
-										}
-									}
-								})
-							});
-
-							// 히스토리 UI 새로고침
-							if (typeof window !== 'undefined' && (window as any).refreshHistoryLog) {
-								(window as any).refreshHistoryLog();
-							}
-						} catch (historyError) {
-							console.warn('히스토리 로그 기록 실패:', historyError);
-						}
-					}
-
-					onrefresh();
-					fetchDuplicates();
-				} else {
-					alert('삭제에 실패했습니다.');
-				}
-			} catch (error) {
-				console.error('삭제 오류:', error);
-			}
-		}
-	}
-
 	// 테이블 컬럼 정의
 	const columns = [
-		{ key: 'standardName', label: '표준단어명', sortable: true, width: 'w-1/4' },
-		{ key: 'abbreviation', label: '영문약어', sortable: true, width: 'w-1/5' },
-		{ key: 'englishName', label: '영문명', sortable: true, width: 'w-1/4' },
-		{ key: 'description', label: '설명', sortable: false, width: 'w-1/3' },
-		{ key: 'actions', label: '관리', sortable: false, width: 'w-auto' }
+		{ key: 'domainGroup', label: '도메인그룹', sortable: true, width: 'w-24' },
+		{ key: 'domainCategory', label: '도메인 분류명', sortable: true, width: 'w-32' },
+		{ key: 'standardDomainName', label: '표준 도메인명', sortable: true, width: 'w-40' },
+		{ key: 'logicalDataType', label: '논리 데이터타입', sortable: true, width: 'w-32' },
+		{ key: 'physicalDataType', label: '물리 데이터타입', sortable: true, width: 'w-32' },
+		{ key: 'dataLength', label: '데이터 길이', sortable: false, width: 'w-20' },
+		{ key: 'decimalPlaces', label: '소수점자리수', sortable: false, width: 'w-24' },
+		{ key: 'dataValue', label: '데이터값', sortable: false, width: 'w-28' },
+		{ key: 'measurementUnit', label: '측정단위', sortable: false, width: 'w-24' },
+		{ key: 'remarks', label: '비고', sortable: false, width: 'w-32' }
 	];
 
 	// 파생 상태 (페이지네이션)
 	let displayedPages = $derived(getPageNumbers());
 
 	/**
-	 * 특정 필드의 중복 상태에 따른 배경색 클래스를 결정
-	 */
-	function getFieldDuplicateBackgroundClass(
-		duplicateInfo:
-			| { standardName: boolean; abbreviation: boolean; englishName: boolean }
-			| undefined,
-		fieldKey: string
-	): string {
-		if (!duplicateInfo) return '';
-
-		// 필드별 중복 상태에 따라 배경색 결정
-		switch (fieldKey) {
-			case 'standardName':
-				return duplicateInfo.standardName ? 'bg-red-100' : '';
-			case 'abbreviation':
-				return duplicateInfo.abbreviation ? 'bg-orange-100' : '';
-			case 'englishName':
-				return duplicateInfo.englishName ? 'bg-yellow-100' : '';
-			default:
-				return '';
-		}
-	}
-
-	/**
 	 * 컬럼 정렬 처리
 	 */
 	function handleSort(column: string) {
-		if (!loading && !editingId) {
+		if (!loading) {
 			const newDirection = sortColumn === column && sortDirection === 'asc' ? 'desc' : 'asc';
 			onsort({ column, direction: newDirection });
 		}
@@ -242,7 +72,7 @@
 	 * 페이지 변경 처리
 	 */
 	function handlePageChange(page: number) {
-		if (!loading && !editingId && page !== currentPage && page >= 1 && page <= totalPages) {
+		if (!loading && page !== currentPage && page >= 1 && page <= totalPages) {
 			onpagechange({ page });
 		}
 	}
@@ -303,15 +133,25 @@
 
 		return pages;
 	}
+
+	/**
+	 * 데이터 값 포맷팅
+	 */
+	function formatValue(value: any): string {
+		if (value === null || value === undefined) {
+			return '-';
+		}
+		return String(value);
+	}
 </script>
 
-<!-- 단어집 테이블 컴포넌트 -->
+<!-- 도메인 테이블 컴포넌트 -->
 <div class="overflow-x-auto rounded-lg border border-gray-300 shadow-md">
 	<!-- 테이블 헤더 -->
 	<div class="border-b border-gray-200 px-6 py-4">
 		<div class="flex items-center justify-between">
 			<h3 class="text-lg font-medium text-gray-900">
-				단어집 목록
+				도메인 목록
 				{#if totalCount > 0}
 					<span class="ml-2 text-sm font-normal text-gray-500">
 						총 {totalCount.toLocaleString()}개 항목
@@ -398,18 +238,13 @@
 					<!-- 로딩 상태 -->
 					{#each Array(pageSize).fill(0) as _, i}
 						<tr class="animate-pulse">
-							<td class="whitespace-nowrap px-6 py-4">
-								<div class="h-4 w-3/4 rounded bg-gray-200"></div>
-							</td>
-							<td class="whitespace-nowrap px-6 py-4">
-								<div class="h-4 w-1/2 rounded bg-gray-200"></div>
-							</td>
-							<td class="whitespace-nowrap px-6 py-4">
-								<div class="h-4 w-2/3 rounded bg-gray-200"></div>
-							</td>
-							<td class="whitespace-nowrap px-6 py-4">
-								<div class="h-4 w-1/3 rounded bg-gray-200"></div>
-							</td>
+							{#each columns as column}
+								<td class="whitespace-nowrap px-6 py-4">
+									<div
+										class="h-4 rounded bg-gray-200 {column.width === 'w-20' ? 'w-12' : 'w-3/4'}"
+									></div>
+								</td>
+							{/each}
 						</tr>
 					{/each}
 				{:else if entries.length === 0}
@@ -436,7 +271,7 @@
 										<p class="text-sm">다른 검색어를 시도해보세요</p>
 									{:else}
 										<p class="text-lg font-medium">표시할 데이터가 없습니다</p>
-										<p class="text-sm">먼저 파일을 업로드하여 단어집을 등록해주세요.</p>
+										<p class="text-sm">먼저 파일을 업로드하여 도메인을 등록해주세요.</p>
 									{/if}
 								</div>
 							</div>
@@ -445,53 +280,28 @@
 				{:else}
 					<!-- 데이터 행 -->
 					{#each entries as entry (entry.id)}
-						{@const isEditing = editingId === entry.id}
-						{@const isDuplicate = duplicates.has(entry.id)}
-						<tr class:bg-blue-50={isEditing} class="border-t border-gray-300">
+						<tr class="border-t border-gray-300 hover:bg-gray-50">
 							{#each columns as column}
-								{@const fieldBackgroundClass = getFieldDuplicateBackgroundClass(
-									entry.duplicateInfo,
-									column.key
-								)}
-								<td
-									class="whitespace-nowrap px-6 py-4 text-sm text-gray-700 {fieldBackgroundClass &&
-									!isEditing
-										? fieldBackgroundClass
-										: ''}"
-								>
-									{#if column.key === 'actions'}
-										<div class="flex items-center space-x-2">
-											{#if isEditing}
-												<button
-													onclick={() => handleSave(entry.id)}
-													class="text-blue-600 hover:text-blue-900">저장</button
-												>
-												<button onclick={cancelEdit} class="text-gray-600 hover:text-gray-900"
-													>취소</button
-												>
-											{:else}
-												<button
-													onclick={() => handleEdit(entry)}
-													class="text-indigo-600 hover:text-indigo-900">편집</button
-												>
-												<button
-													onclick={() => handleDelete(entry.id)}
-													class="text-red-600 hover:text-red-900">삭제</button
-												>
-											{/if}
-										</div>
-									{:else if isEditing}
-										<input
-											type="text"
-											bind:value={editedEntry[column.key as keyof TerminologyEntry]}
-											class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-										/>
+								<td class="px-6 py-4 text-sm text-gray-700">
+									{#if column.key === 'dataLength' || column.key === 'decimalPlaces'}
+										<span class="block text-center">
+											{@html highlightSearchTerm(
+												formatValue(entry[column.key as keyof DomainEntry]),
+												searchQuery,
+												column.key
+											)}
+										</span>
 									{:else}
-										{@html highlightSearchTerm(
-											(entry[column.key as keyof TerminologyEntry] as string) || '',
-											searchQuery,
-											column.key
-										)}
+										<div
+											class="max-w-xs truncate"
+											title={formatValue(entry[column.key as keyof DomainEntry])}
+										>
+											{@html highlightSearchTerm(
+												formatValue(entry[column.key as keyof DomainEntry]),
+												searchQuery,
+												column.key
+											)}
+										</div>
 									{/if}
 								</td>
 							{/each}
@@ -539,7 +349,7 @@
 							disabled={loading}
 							class="relative inline-flex items-center px-4 py-2 text-sm font-semibold ring-1 ring-inset ring-gray-300 transition-colors focus:z-20 focus:outline-offset-0 disabled:cursor-not-allowed disabled:opacity-50 {currentPage ===
 							page
-								? 'z-10 bg-blue-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600'
+								? 'z-10 bg-purple-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-600'
 								: 'text-gray-900 hover:bg-gray-50'}"
 						>
 							{page}

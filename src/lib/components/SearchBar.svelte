@@ -14,6 +14,12 @@
 		query = $bindable(''),
 		field = $bindable('all'),
 		exact = $bindable(false),
+		searchFields = [
+			{ value: 'all', label: '전체' },
+			{ value: 'standardName', label: '표준단어명' },
+			{ value: 'abbreviation', label: '영문약어' },
+			{ value: 'englishName', label: '영문명' }
+		],
 		onsearch,
 		onclear
 	}: {
@@ -23,6 +29,7 @@
 		query?: string;
 		field?: string;
 		exact?: boolean;
+		searchFields?: Array<{ value: string; label: string }>;
 		onsearch: (detail: SearchEvent) => void;
 		onclear: () => void;
 	} = $props();
@@ -31,14 +38,6 @@
 
 	// 검색 입력 필드 참조
 	let searchInput: HTMLInputElement | undefined;
-
-	// 검색 필드 옵션
-	const searchFields = [
-		{ value: 'all', label: '전체' },
-		{ value: 'standardName', label: '표준단어명' },
-		{ value: 'abbreviation', label: '영문약어' },
-		{ value: 'englishName', label: '영문명' }
-	];
 
 	// 디바운스된 검색 함수
 	const debouncedSearch = debounce((q: string, f: string, e: boolean) => {

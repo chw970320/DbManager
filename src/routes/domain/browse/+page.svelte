@@ -60,7 +60,7 @@
 
 			if (result.success && result.data) {
 				entries = result.data.entries || [];
-				totalCount = result.data.pagination?.totalItems || 0;
+				totalCount = result.data.pagination?.totalCount || 0;
 				totalPages = result.data.pagination?.totalPages || 1;
 				lastUpdated = result.data.lastUpdated || '';
 			} else {
@@ -117,7 +117,7 @@
 
 		try {
 			const params = new URLSearchParams({
-				q: searchQuery,
+				query: searchQuery, // 'q' → 'query'로 변경
 				field: searchField,
 				page: currentPage.toString(),
 				limit: pageSize.toString(),
@@ -130,7 +130,7 @@
 
 			if (result.success && result.data) {
 				entries = result.data.entries || [];
-				totalCount = result.data.pagination?.totalItems || 0;
+				totalCount = result.data.pagination?.totalCount || 0;
 				totalPages = result.data.pagination?.totalPages || 1;
 				lastUpdated = result.data.lastUpdated || '';
 			} else {

@@ -152,11 +152,9 @@
 		<div class="flex items-center justify-between">
 			<h3 class="text-lg font-medium text-gray-900">
 				도메인 목록
-				{#if totalCount > 0}
-					<span class="ml-2 text-sm font-normal text-gray-500">
-						총 {totalCount.toLocaleString()}개 항목
-					</span>
-				{/if}
+				<span class="ml-2 text-sm font-normal text-gray-500">
+					총 {totalCount.toLocaleString()}개 항목
+				</span>
 			</h3>
 
 			{#if searchQuery}

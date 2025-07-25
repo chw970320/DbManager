@@ -1,9 +1,5 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type {
-	ApiResponse,
-	VocabularyData,
-	VocabularyEntry
-} from '$lib/types/vocabulary.js';
+import type { ApiResponse, VocabularyData, VocabularyEntry } from '$lib/types/vocabulary.js';
 import {
 	loadVocabularyData,
 	saveVocabularyData,

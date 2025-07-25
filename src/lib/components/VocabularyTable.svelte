@@ -43,6 +43,7 @@
 	// 상태 변수
 	let editingId = $state<string | null>(null);
 	let editedEntry = $state<Partial<VocabularyEntry>>({});
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
 	let duplicates = $state<Set<string>>(new Set());
 
 	onMount(() => {

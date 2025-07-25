@@ -28,7 +28,7 @@ async function initializeCache() {
             }
             enToKoMap.get(enKey)!.push(entry.standardName);
         }
-        console.log('단어집 캐시 초기화 완료 (동음이의어 지원, vocabulary 기준)');
+        
     } catch (error) {
         console.error('단어집 캐시 초기화 중 오류:', error);
         vocabularyCache = null;

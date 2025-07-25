@@ -57,7 +57,7 @@ export async function GET({ url }: RequestEvent) {
             lastUpdated: historyData.lastUpdated
         };
 
-        console.log(`히스토리 데이터 조회 성공: ${paginatedLogs.length}개 로그 반환`);
+        
 
         return json({
             success: true,
@@ -124,7 +124,7 @@ export async function POST({ request }: RequestEvent) {
             } as ApiResponse, { status: 500 });
         }
 
-        console.log(`히스토리 로그 추가 성공: ${newLogEntry.action} - ${newLogEntry.targetName}`);
+        
 
         return json({
             success: true,

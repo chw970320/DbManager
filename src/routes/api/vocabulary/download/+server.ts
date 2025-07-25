@@ -109,7 +109,7 @@ export async function GET({ url }: RequestEvent) {
         const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD 형식
         const filename = `vocabulary_${currentDate}.xlsx`;
 
-        console.log(`단어집 XLSX 다운로드 생성: ${sortedEntries.length}개 항목${filter ? ` (필터: ${filter})` : ''}`);
+        
 
         // XLSX 파일로 응답
         return new Response(xlsxBuffer, {

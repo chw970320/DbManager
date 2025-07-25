@@ -15,7 +15,7 @@ export async function ensureDataDirectory(): Promise<void> {
     try {
         if (!existsSync(DATA_DIR)) {
             await mkdir(DATA_DIR, { recursive: true });
-            console.log(`데이터 디렉토리 생성: ${DATA_DIR}`);
+            
         }
     } catch (error) {
         console.error('데이터 디렉토리 생성 실패:', error);
@@ -58,7 +58,7 @@ export async function saveVocabularyData(data: import('../types/vocabulary.js').
         const jsonString = JSON.stringify(finalData, null, 2);
         await writeFile(DATA_PATH, jsonString, 'utf-8');
 
-        console.log(`단어집 데이터 저장 완료: ${validEntries.length}개 항목, 파일: ${DATA_PATH}`);
+        
 
     } catch (error) {
         console.error('단어집 데이터 저장 실패:', error);
@@ -74,7 +74,7 @@ export async function loadVocabularyData(): Promise<import('../types/vocabulary.
     try {
         // 파일 존재 확인
         if (!existsSync(DATA_PATH)) {
-            console.log('단어집 데이터 파일이 없습니다. 빈 데이터를 반환합니다.');
+            
             return {
                 entries: [],
                 lastUpdated: new Date().toISOString(),
@@ -112,7 +112,7 @@ export async function loadVocabularyData(): Promise<import('../types/vocabulary.
             return isValid;
         });
 
-        console.log(`단어집 데이터 로드 완료: ${validEntries.length}개 항목`);
+        
 
         return {
             entries: validEntries,
@@ -199,7 +199,7 @@ export async function createBackup(): Promise<string> {
         const originalData = await readFile(DATA_PATH, 'utf-8');
         await writeFile(backupPath, originalData, 'utf-8');
 
-        console.log(`백업 생성 완료: ${backupPath}`);
+        
         return backupPath;
 
     } catch (error) {
@@ -220,7 +220,7 @@ export async function loadForbiddenWordsData(): Promise<ForbiddenWordsData> {
     try {
         // 파일이 존재하지 않으면 기본 데이터 구조 반환
         if (!existsSync(FORBIDDEN_WORDS_PATH)) {
-            console.log('금지어 파일이 존재하지 않습니다. 기본 데이터를 반환합니다.');
+            
             const defaultData: ForbiddenWordsData = {
                 entries: [],
                 lastUpdated: new Date().toISOString(),
@@ -241,7 +241,7 @@ export async function loadForbiddenWordsData(): Promise<ForbiddenWordsData> {
         // 엔트리 수 재계산
         data.totalCount = data.entries.length;
 
-        console.log(`금지어 데이터 로드 완료: ${data.totalCount}개 항목`);
+        
         return data;
 
     } catch (error) {
@@ -290,7 +290,7 @@ export async function saveForbiddenWordsData(data: ForbiddenWordsData): Promise<
         // 파일 저장
         await writeFile(FORBIDDEN_WORDS_PATH, jsonData, 'utf-8');
 
-        console.log(`금지어 데이터 저장 완료: ${finalData.totalCount}개 항목`);
+        
 
     } catch (error) {
         console.error('금지어 데이터 저장 실패:', error);
@@ -310,7 +310,7 @@ export async function loadDomainData(): Promise<import('../types/domain.js').Dom
     try {
         // 파일이 존재하지 않으면 기본 데이터 구조 반환
         if (!existsSync(DOMAIN_PATH)) {
-            console.log('도메인 파일이 존재하지 않습니다. 기본 데이터를 반환합니다.');
+            
             const defaultData: import('../types/domain.js').DomainData = {
                 entries: [],
                 lastUpdated: new Date().toISOString(),
@@ -342,7 +342,7 @@ export async function loadDomainData(): Promise<import('../types/domain.js').Dom
         // 엔트리 수 재계산
         data.totalCount = data.entries.length;
 
-        console.log(`도메인 데이터 로드 완료: ${data.totalCount}개 항목`);
+        
         return data;
 
     } catch (error) {
@@ -393,7 +393,7 @@ export async function saveDomainData(data: import('../types/domain.js').DomainDa
         // 파일 저장
         await writeFile(DOMAIN_PATH, jsonData, 'utf-8');
 
-        console.log(`도메인 데이터 저장 완료: ${finalData.totalCount}개 항목`);
+        
 
     } catch (error) {
         console.error('도메인 데이터 저장 실패:', error);
@@ -448,7 +448,7 @@ export async function mergeDomainData(
                         updatedAt: new Date().toISOString()
                     };
 
-                    console.log(`중복 도메인 엔트리 업데이트: ${entry.standardDomainName} (${entry.domainGroup}) - 비고 보존: ${existingEntry.remarks ? '있음' : '없음'} → ${mergedEntry.remarks ? '있음' : '없음'}`);
+                    
                     mergedMap.set(compositeKey, mergedEntry);
                     updatedCount++;
                 } else {
@@ -460,7 +460,7 @@ export async function mergeDomainData(
             finalEntries = Array.from(mergedMap.values());
 
             if (duplicateCount > 0 || updatedCount > 0) {
-                console.log(`도메인 데이터 병합 결과: 중복 제거 ${duplicateCount}개, 업데이트 ${updatedCount}개`);
+                
             }
         }
 
@@ -474,11 +474,11 @@ export async function mergeDomainData(
         // 병합된 데이터 저장
         await saveDomainData(mergedData);
 
-        console.log(`도메인 데이터 병합 완료: 기존 ${existingData.entries.length}개 + 신규 ${newEntries.length}개 → 최종 ${finalEntries.length}개 항목`);
+        
 
         if (!replaceExisting) {
             const addedCount = finalEntries.length - existingData.entries.length;
-            console.log(`실제 추가된 새 도메인 항목: ${addedCount}개`);
+            
         }
 
         return mergedData;
@@ -506,7 +506,7 @@ export async function createDomainBackup(): Promise<string> {
         const originalData = await readFile(DOMAIN_PATH, 'utf-8');
         await writeFile(backupPath, originalData, 'utf-8');
 
-        console.log(`도메인 데이터 백업 생성 완료: ${backupPath}`);
+        
         return backupPath;
 
     } catch (error) {

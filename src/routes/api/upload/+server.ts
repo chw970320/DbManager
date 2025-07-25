@@ -82,7 +82,7 @@ export async function POST({ request }: RequestEvent) {
         if (replaceExisting) {
             try {
                 await clearHistoryData(true); // 백업 생성 후 초기화
-                console.log('단어집 교체로 인한 히스토리 초기화 완료');
+                
             } catch (historyError) {
                 console.warn('히스토리 초기화 실패:', historyError);
                 // 히스토리 초기화 실패는 전체 업로드를 실패시키지 않음
@@ -118,7 +118,7 @@ export async function POST({ request }: RequestEvent) {
             data: finalData
         };
 
-        console.log(`파일 업로드 성공: ${file.name}, 처리된 항목: ${parsedEntries.length}개`);
+        
 
         return json({
             success: true,

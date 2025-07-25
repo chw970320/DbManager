@@ -141,7 +141,7 @@ export async function GET({ url }: RequestEvent) {
             lastUpdated: domainData.lastUpdated
         };
 
-        console.log(`도메인 데이터 조회 성공: ${paginatedEntries.length}개 항목 (페이지 ${page}/${totalPages})`);
+        
 
         return json({
             success: true,
@@ -227,7 +227,7 @@ export async function OPTIONS() {
             }
         };
 
-        console.log(`도메인 통계 조회 성공: 총 ${domainData.totalCount}개 항목`);
+        
 
         return json({
             success: true,

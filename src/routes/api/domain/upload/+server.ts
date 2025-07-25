@@ -123,7 +123,7 @@ export async function POST({ request }: RequestEvent) {
             message: `도메인 데이터 업로드 완료: ${parsedEntries.length}개 항목`
         };
 
-        console.log(`도메인 업로드 성공: ${parsedEntries.length}개 항목 업로드, 총 ${finalData.totalCount}개 항목`);
+        
 
         return json({
             success: true,

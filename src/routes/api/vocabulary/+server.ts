@@ -136,7 +136,7 @@ export async function GET({ url }: RequestEvent) {
             lastUpdated: vocabularyData.lastUpdated
         };
 
-        console.log(`단어집 관리 성공: ${paginatedEntries.length}개 항목 (페이지 ${page}/${totalPages})${filter === 'duplicates' ? ' - 중복 필터링 적용' : ''}`);
+        
 
         return json({
             success: true,

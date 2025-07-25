@@ -58,7 +58,7 @@
 		if (typeof window !== 'undefined' && (window as any).refreshHistoryLog) {
 			try {
 				(window as any).refreshHistoryLog();
-				console.log('작업 히스토리 새로고침 완료');
+				
 			} catch (error) {
 				console.warn('작업 히스토리 새로고침 실패:', error);
 			}

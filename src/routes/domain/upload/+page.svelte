@@ -18,7 +18,7 @@
 	 * 컴포넌트 마운트 시 초기화
 	 */
 	onMount(() => {
-		console.log('도메인 업로드 페이지 로드됨');
+		
 	});
 
 	/**
@@ -26,7 +26,7 @@
 	 */
 	async function loadUploadInfo() {
 		// GET API 오류로 인해 임시로 비활성화
-		console.log('업로드 정보 로드 스킵됨');
+		
 	}
 
 	/**

@@ -16,7 +16,7 @@ export async function ensureDataDirectory(): Promise<void> {
     try {
         if (!existsSync(DATA_DIR)) {
             await mkdir(DATA_DIR, { recursive: true });
-            console.log(`데이터 디렉토리 생성: ${DATA_DIR}`);
+            
         }
     } catch (error) {
         console.error('데이터 디렉토리 생성 실패:', error);
@@ -58,7 +58,7 @@ export async function saveHistoryData(data: HistoryData): Promise<void> {
         const jsonString = JSON.stringify(finalData, null, 2);
         await writeFile(HISTORY_PATH, jsonString, 'utf-8');
 
-        console.log(`히스토리 데이터 저장 완료: ${validLogs.length}개 로그, 파일: ${HISTORY_PATH}`);
+        
 
     } catch (error) {
         console.error('히스토리 데이터 저장 실패:', error);
@@ -74,7 +74,7 @@ export async function loadHistoryData(): Promise<HistoryData> {
     try {
         // 파일 존재 확인
         if (!existsSync(HISTORY_PATH)) {
-            console.log('히스토리 데이터 파일이 없습니다. 빈 데이터를 반환합니다.');
+            
             return {
                 logs: [],
                 lastUpdated: new Date().toISOString(),
@@ -115,7 +115,7 @@ export async function loadHistoryData(): Promise<HistoryData> {
             return isValid;
         });
 
-        console.log(`히스토리 데이터 로드 완료: ${validLogs.length}개 로그`);
+        
 
         return {
             logs: validLogs,
@@ -158,7 +158,7 @@ export async function addHistoryLog(newLog: HistoryLogEntry): Promise<HistoryDat
         // 업데이트된 데이터 저장
         await saveHistoryData(updatedData);
 
-        console.log(`히스토리 로그 추가 완료: ${newLog.action} - ${newLog.targetName}`);
+        
         return updatedData;
 
     } catch (error) {
@@ -184,7 +184,7 @@ export async function createHistoryBackup(): Promise<string> {
         const originalData = await readFile(HISTORY_PATH, 'utf-8');
         await writeFile(backupPath, originalData, 'utf-8');
 
-        console.log(`히스토리 백업 생성 완료: ${backupPath}`);
+        
         return backupPath;
 
     } catch (error) {
@@ -215,7 +215,7 @@ export async function clearHistoryData(createBackup: boolean = true): Promise<Hi
         // 빈 데이터로 파일 저장
         await saveHistoryData(emptyData);
 
-        console.log('히스토리 데이터 초기화 완료');
+        
         return emptyData;
 
     } catch (error) {

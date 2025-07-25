@@ -289,7 +289,7 @@
 					console.warn('히스토리 로그 기록 실패:', historyError);
 				}
 
-				console.log('새 단어가 성공적으로 추가되었습니다.');
+				
 			} else {
 				// 에러 발생 시 모달 내부에 표시
 				const errorMsg = result.error || '단어 추가에 실패했습니다.';
@@ -331,7 +331,7 @@
 				params.set('filter', filterParam);
 			}
 
-			console.log('다운로드 요청 파라미터:', params.toString());
+			
 
 			// 다운로드 API 호출
 			const response = await fetch(`/api/vocabulary/download?${params}`);
@@ -368,7 +368,7 @@
 			// 메모리 해제
 			URL.revokeObjectURL(downloadUrl);
 
-			console.log(`XLSX 파일 다운로드 완료: ${filename}`);
+			
 		} catch (error) {
 			console.error('다운로드 중 오류:', error);
 			errorMessage = error instanceof Error ? error.message : '다운로드 중 오류가 발생했습니다.';

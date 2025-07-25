@@ -85,7 +85,7 @@ export function parseXlsxToJson(fileBuffer: Buffer): VocabularyEntry[] {
             throw new Error('유효한 단어집 데이터를 찾을 수 없습니다.');
         }
 
-        console.log(`성공적으로 ${entries.length}개의 단어를 파싱했습니다.`);
+        
         return entries;
 
     } catch (error) {
@@ -229,7 +229,7 @@ export function exportJsonToXlsxBuffer(data: VocabularyEntry[]): Buffer {
             compression: true
         });
 
-        console.log(`성공적으로 ${data.length}개의 단어를 XLSX 버퍼로 변환했습니다.`);
+        
         return buffer as Buffer;
 
     } catch (error) {
@@ -245,11 +245,11 @@ export function exportJsonToXlsxBuffer(data: VocabularyEntry[]): Buffer {
  */
 export function parseDomainXlsxToJson(fileBuffer: Buffer): DomainEntry[] {
     try {
-        console.log('도메인 XLSX 파싱 시작, 파일 크기:', fileBuffer.length);
+        
 
         // xlsx 파일을 워크북으로 읽기
         const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
-        console.log('워크북 읽기 완료, 시트 수:', workbook.SheetNames.length);
+        
 
         // 첫 번째 시트 가져오기
         const firstSheetName = workbook.SheetNames[0];
@@ -265,7 +265,7 @@ export function parseDomainXlsxToJson(fileBuffer: Buffer): DomainEntry[] {
             defval: ''  // 빈 셀은 빈 문자열로 처리
         });
 
-        console.log('시트 데이터 변환 완료, 총 행 수:', rawData.length);
+        
 
         if (rawData.length < 2) {
             throw new Error('Excel 파일에 데이터가 충분하지 않습니다. (헤더 + 최소 1행 필요)');
@@ -363,7 +363,7 @@ export function parseDomainXlsxToJson(fileBuffer: Buffer): DomainEntry[] {
             throw new Error('유효한 도메인 데이터를 찾을 수 없습니다.');
         }
 
-        console.log(`성공적으로 ${entries.length}개의 도메인을 파싱했습니다.`);
+        
         return entries;
 
     } catch (error) {
@@ -496,7 +496,7 @@ export function exportDomainToXlsxBuffer(data: DomainEntry[]): Buffer {
             compression: true
         });
 
-        console.log(`성공적으로 ${data.length}개의 도메인을 XLSX 버퍼로 변환했습니다.`);
+        
         return buffer as Buffer;
 
     } catch (error) {

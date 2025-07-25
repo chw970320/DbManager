@@ -14,7 +14,7 @@ async function getDictionary() {
         const ko = new Set(vocabularyData.entries.map((e) => e.standardName.toLowerCase()));
         const en = new Set(vocabularyData.entries.map((e) => e.abbreviation.toLowerCase()));
         dictionaryCache = { ko, en };
-        console.log('단어 조합 분석을 위한 사전 캐시 초기화 완료 (vocabulary 기준)');
+        
         return dictionaryCache;
     } catch (error) {
         console.error('사전 캐시 초기화 오류:', error);

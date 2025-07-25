@@ -198,7 +198,7 @@ export async function GET({ url }: RequestEvent) {
             }
         };
 
-        console.log(`검색 완료: "${sanitizedQuery}" (${field}) - ${totalResults}개 결과 중 ${paginatedResults.length}개 반환${filter === 'duplicates' ? ' - 중복 필터링 적용' : ''}`);
+        
 
         return json({
             success: true,

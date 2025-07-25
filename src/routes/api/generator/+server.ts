@@ -3,8 +3,8 @@ import type { ApiResponse, VocabularyData } from '$lib/types/vocabulary.js';
 import { loadVocabularyData } from '$lib/utils/file-handler.js';
 
 let vocabularyCache: VocabularyData | null = null;
-let koToEnMap: Map<string, string[]> = new Map();
-let enToKoMap: Map<string, string[]> = new Map();
+const koToEnMap: Map<string, string[]> = new Map();
+const enToKoMap: Map<string, string[]> = new Map();
 
 async function initializeCache() {
 	if (vocabularyCache) return;

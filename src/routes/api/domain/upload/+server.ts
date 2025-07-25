@@ -1,7 +1,7 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse } from '../../../../lib/types/vocabulary.js';
 import type { DomainData, DomainEntry } from '../../../../lib/types/domain.js';
-import { getDomainDataStore, setDomainDataStore } from '../../../../lib/stores/domain-store.js';
+import { getDomainDataStore } from '../../../../lib/stores/domain-store.js';
 import { mergeDomainData } from '../../../../lib/utils/file-handler.js';
 import { validateXlsxFile } from '../../../../lib/utils/validation.js';
 import { parseDomainXlsxToJson } from '../../../../lib/utils/xlsx-parser.js';

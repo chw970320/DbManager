@@ -1,5 +1,7 @@
 // vocabulary 기준으로 주석 정리
 
+import type { VocabularyEntry } from '../types/vocabulary';
+
 /**
  * 단어 데이터에서 중복된 항목의 ID를 찾아 반환하는 유틸리티 함수 (하위 호환성)
  * standardName, abbreviation, englishName을 기준으로 중복을 검사합니다.
@@ -7,7 +9,7 @@
  * @param entries - 검사할 단어 데이터 배열
  * @returns 중복된 항목들의 ID Set
  */
-export function getDuplicateIds(entries: any[]): Set<string> {
+export function getDuplicateIds(entries: VocabularyEntry[]): Set<string> {
 	const duplicateDetails = getDuplicateDetails(entries);
 	return new Set(duplicateDetails.keys());
 }
@@ -21,25 +23,20 @@ export function getDuplicateIds(entries: any[]): Set<string> {
  * @returns 각 ID별 중복 필드 정보를 담은 Map
  */
 export function getDuplicateDetails(
-	entries: any[]
+	entries: VocabularyEntry[]
 ): Map<string, { standardName: boolean; abbreviation: boolean; englishName: boolean }> {
 	const duplicateDetails = new Map<
 		string,
 		{ standardName: boolean; abbreviation: boolean; englishName: boolean }
 	>();
-	const seen: Record<string, Record<string, any>> = {
-		standardName: {},
-		abbreviation: {},
-		englishName: {}
-	};
 
 	// 각 필드별로 중복을 검사하고 세부 정보를 기록
-	const checkField = (field: keyof typeof seen) => {
-		const fieldValues: Record<string, any[]> = {};
+	const checkField = (field: keyof VocabularyEntry) => {
+		const fieldValues: Record<string, VocabularyEntry[]> = {};
 
 		// 같은 값을 가진 항목들을 그룹화
 		for (const entry of entries) {
-			const value = (entry[field as keyof any] as string).toLowerCase();
+			const value = (entry[field] as string).toLowerCase();
 			if (!fieldValues[value]) {
 				fieldValues[value] = [];
 			}
@@ -47,7 +44,7 @@ export function getDuplicateDetails(
 		}
 
 		// 중복된 값(2개 이상의 항목)을 가진 그룹 처리
-		for (const [value, entriesWithSameValue] of Object.entries(fieldValues)) {
+		for (const [_, entriesWithSameValue] of Object.entries(fieldValues)) {
 			if (entriesWithSameValue.length > 1) {
 				for (const entry of entriesWithSameValue) {
 					if (!duplicateDetails.has(entry.id)) {
@@ -59,7 +56,7 @@ export function getDuplicateDetails(
 					}
 
 					const details = duplicateDetails.get(entry.id)!;
-					(details as any)[field] = true;
+					(details as { [key: string]: boolean })[field] = true;
 				}
 			}
 		}
@@ -80,16 +77,16 @@ export function getDuplicateDetails(
  * @param entries - 검사할 단어 데이터 배열
  * @returns 중복된 그룹들의 배열
  */
-export function getDuplicateGroups(entries: any[]): any[][] {
-	const duplicates: Record<string, any[]> = {};
-	const seen: Record<string, Record<string, any>> = {
+export function getDuplicateGroups(entries: VocabularyEntry[]): VocabularyEntry[][] {
+	const duplicates: Record<string, VocabularyEntry[]> = {};
+	const seen: Record<string, Record<string, VocabularyEntry>> = {
 		standardName: {},
 		abbreviation: {},
 		englishName: {}
 	};
 
-	const checkAndAddDuplicate = (field: keyof typeof seen, entry: any) => {
-		const value = (entry[field as keyof any] as string).toLowerCase();
+	const checkAndAddDuplicate = (field: keyof VocabularyEntry, entry: VocabularyEntry) => {
+		const value = (entry[field] as string).toLowerCase();
 		if (seen[field][value]) {
 			const key = `${field}:${value}`;
 			if (!duplicates[key]) {

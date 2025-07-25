@@ -188,7 +188,14 @@ export async function POST({ request }: RequestEvent) {
 		return json(
 			{
 				success: true,
-				data: newEntry,
+				data: {
+					entries: [newEntry],
+					totalCount: 1,
+					page: 1,
+					limit: 1,
+					totalPages: 1,
+					lastUpdated: new Date().toISOString()
+				},
 				message: '금지어가 성공적으로 추가되었습니다.'
 			} as ApiResponse,
 			{ status: 201 }
@@ -311,7 +318,14 @@ export async function PUT({ request }: RequestEvent) {
 
 		return json({
 			success: true,
-			data: updatedEntry,
+			data: {
+				entries: [updatedEntry],
+				totalCount: 1,
+				page: 1,
+				limit: 1,
+				totalPages: 1,
+				lastUpdated: new Date().toISOString()
+			},
 			message: '금지어가 성공적으로 수정되었습니다.'
 		} as ApiResponse);
 	} catch (error) {
@@ -372,7 +386,14 @@ export async function DELETE({ request }: RequestEvent) {
 
 		return json({
 			success: true,
-			data: deletedEntry,
+			data: {
+				entries: [deletedEntry],
+				totalCount: 1,
+				page: 1,
+				limit: 1,
+				totalPages: 1,
+				lastUpdated: new Date().toISOString()
+			},
 			message: '금지어가 성공적으로 삭제되었습니다.'
 		} as ApiResponse);
 	} catch (error) {

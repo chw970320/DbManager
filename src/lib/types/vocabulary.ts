@@ -55,7 +55,7 @@ export interface HistoryData {
 export interface UploadResult {
 	success: boolean;
 	message?: string;
-	data?: any;
+	data?: VocabularyData;
 	uploadedAt?: string;
 	totalEntries?: number;
 	error?: string;
@@ -94,7 +94,7 @@ export interface ForbiddenWordsData {
 // API 응답 타입
 export interface ApiResponse {
 	success: boolean;
-	data?: any;
+	data?: unknown;
 	error?: string;
 	message?: string;
 }

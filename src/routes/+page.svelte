@@ -1,11 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-
-	let mounted = $state(false);
-
-	onMount(() => {
-		mounted = true;
-	});
 </script>
 
 <!-- 페이지 헤드 설정 -->

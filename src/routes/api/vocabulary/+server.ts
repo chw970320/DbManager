@@ -9,7 +9,7 @@ import {
 	saveVocabularyData,
 	loadForbiddenWordsData
 } from '../../../lib/utils/file-handler.js';
-import { getDuplicateIds, getDuplicateDetails } from '../../../lib/utils/duplicate-handler.js';
+import { getDuplicateDetails } from '../../../lib/utils/duplicate-handler.js';
 import { v4 as uuidv4 } from 'uuid';
 
 /**

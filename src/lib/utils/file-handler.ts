@@ -1,12 +1,7 @@
 import { writeFile, readFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
-import type {
-	ForbiddenWordsData,
-	ForbiddenWordEntry,
-	VocabularyData,
-	VocabularyEntry
-} from '$lib/types/vocabulary';
+import type { ForbiddenWordsData } from '$lib/types/vocabulary';
 
 // 데이터 저장 경로 설정
 const DATA_DIR = 'static/data';
@@ -443,16 +438,10 @@ export async function mergeDomainData(
 		} else {
 			// 기존 데이터와 병합
 			const mergedMap = new Map<string, import('../types/domain.js').DomainEntry>();
-			let duplicateCount = 0;
-			let updatedCount = 0;
-
-			// 기존 엔트리들을 Map에 저장 (복합 키 사용)
 			existingData.entries.forEach((entry) => {
 				const compositeKey = `${entry.domainGroup.toLowerCase()}|${entry.domainCategory.toLowerCase()}|${entry.standardDomainName.toLowerCase()}`;
 				mergedMap.set(compositeKey, entry);
 			});
-
-			// 새로운 엔트리들 처리
 			newEntries.forEach((entry) => {
 				const compositeKey = `${entry.domainGroup.toLowerCase()}|${entry.domainCategory.toLowerCase()}|${entry.standardDomainName.toLowerCase()}`;
 
@@ -469,7 +458,6 @@ export async function mergeDomainData(
 					};
 
 					mergedMap.set(compositeKey, mergedEntry);
-					updatedCount++;
 				} else {
 					// 새로운 엔트리 추가
 					mergedMap.set(compositeKey, entry);
@@ -477,9 +465,6 @@ export async function mergeDomainData(
 			});
 
 			finalEntries = Array.from(mergedMap.values());
-
-			if (duplicateCount > 0 || updatedCount > 0) {
-			}
 		}
 
 		// 최종 데이터 객체 생성
@@ -491,10 +476,6 @@ export async function mergeDomainData(
 
 		// 병합된 데이터 저장
 		await saveDomainData(mergedData);
-
-		if (!replaceExisting) {
-			const addedCount = finalEntries.length - existingData.entries.length;
-		}
 
 		return mergedData;
 	} catch (error) {

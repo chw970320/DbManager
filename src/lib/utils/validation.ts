@@ -34,12 +34,13 @@ export function validateXlsxFile(file: File): boolean {
 	return true;
 }
 
+import type { VocabularyEntry } from '../types/vocabulary';
 /**
  * 원시 단어집 엔트리 데이터의 유효성을 검증하고 정제
  * @param entry - 검증할 원시 데이터 객체
  * @returns 유효한 경우 정제된 데이터, 무효한 경우 null
  */
-export function validateVocabularyEntry(entry: any): {
+export function validateVocabularyEntry(entry: VocabularyEntry): {
 	standardName: string;
 	abbreviation: string;
 	englishName: string;

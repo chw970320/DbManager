@@ -91,7 +91,7 @@ export interface DomainPaginationParams {
 }
 
 // API 응답 공통 인터페이스
-export interface DomainApiResponse<T = any> {
+export interface DomainApiResponse<T = unknown> {
 	success: boolean;
 	data?: T;
 	error?: string;

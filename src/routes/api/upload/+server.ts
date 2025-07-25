@@ -1,7 +1,7 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse, UploadResult, VocabularyData } from '../../../lib/types/vocabulary.js';
 import { validateXlsxFile } from '../../../lib/utils/validation.js';
-import { parseXlsxToJson, createVocabularyData } from '../../../lib/utils/xlsx-parser.js';
+import { parseXlsxToJson } from '../../../lib/utils/xlsx-parser.js';
 import { mergeVocabularyData } from '../../../lib/utils/file-handler.js';
 import { clearHistoryData, addHistoryLog } from '../../../lib/utils/history-handler.js';
 
@@ -72,9 +72,6 @@ export async function POST({ request }: RequestEvent) {
 				{ status: 422 }
 			);
 		}
-
-		// 데이터 구조 생성
-		const vocabularyData = createVocabularyData(parsedEntries);
 
 		// 기존 데이터와 병합 (replace 옵션 확인)
 		const replaceExisting = formData.get('replace') === 'true';

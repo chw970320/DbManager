@@ -204,7 +204,7 @@
 						{disabled}
 						class="input"
 					>
-						{#each searchFields as field}
+						{#each searchFields as field (field.value)}
 							<option value={field.value}>{field.label}</option>
 						{/each}
 					</select>

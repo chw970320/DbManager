@@ -24,8 +24,7 @@
 		sortDirection = 'asc' as 'asc' | 'desc',
 		searchField = 'all',
 		onsort,
-		onpagechange,
-		onrefresh
+		onpagechange
 	}: {
 		entries?: VocabularyEntry[];
 		loading?: boolean;
@@ -39,7 +38,6 @@
 		searchField?: string;
 		onsort: (detail: SortEvent) => void;
 		onpagechange: (detail: PageChangeEvent) => void;
-		onrefresh: () => void;
 	} = $props();
 
 	// 상태 변수
@@ -93,8 +91,6 @@
 			});
 
 			if (response.ok) {
-				const result = await response.json();
-
 				// 히스토리 로그 기록
 				try {
 					await fetch('/api/history', {
@@ -124,15 +120,17 @@
 					});
 
 					// 히스토리 UI 새로고침
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					if (typeof window !== 'undefined' && (window as any).refreshHistoryLog) {
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any
 						(window as any).refreshHistoryLog();
 					}
-				} catch (historyError) {
+				} catch (historyError: unknown) {
 					console.warn('히스토리 로그 기록 실패:', historyError);
 				}
 
 				cancelEdit();
-				onrefresh(); // 데이터 새로고침
+				onpagechange({ page: currentPage }); // 데이터 새로고침
 				fetchDuplicates(); // 중복 데이터 다시 확인
 			} else {
 				alert('수정에 실패했습니다.');
@@ -173,15 +171,17 @@
 							});
 
 							// 히스토리 UI 새로고침
+							// eslint-disable-next-line @typescript-eslint/no-explicit-any
 							if (typeof window !== 'undefined' && (window as any).refreshHistoryLog) {
+								// eslint-disable-next-line @typescript-eslint/no-explicit-any
 								(window as any).refreshHistoryLog();
 							}
-						} catch (historyError) {
+						} catch (historyError: unknown) {
 							console.warn('히스토리 로그 기록 실패:', historyError);
 						}
 					}
 
-					onrefresh();
+					onpagechange({ page: currentPage });
 					fetchDuplicates();
 				} else {
 					alert('삭제에 실패했습니다.');
@@ -267,6 +267,14 @@
 	}
 
 	/**
+	 * HTML 태그 및 스크립트 태그 제거 (mark 태그만 허용)
+	 */
+	function sanitizeHtml(html: string): string {
+		// mark 태그만 허용, 나머지 태그는 모두 제거
+		return html.replace(/<(?!\/?mark(?=>|\s.*>))\/?[^>]+>/gi, '');
+	}
+
+	/**
 	 * 페이지네이션 번호 생성
 	 */
 	function getPageNumbers(): (number | string)[] {
@@ -333,7 +341,7 @@
 			<!-- 테이블 헤더 -->
 			<thead class="bg-gray-100">
 				<tr>
-					{#each columns as column}
+					{#each columns as column (column.key)}
 						<th
 							scope="col"
 							class="whitespace-nowrap px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 {column.width} {column.sortable
@@ -396,7 +404,7 @@
 			<tbody class="divide-y divide-gray-200 bg-white">
 				{#if loading}
 					<!-- 로딩 상태 -->
-					{#each Array(pageSize).fill(0) as _, i}
+					{#each Array(pageSize) as _, i (i)}
 						<tr class="animate-pulse">
 							<td class="whitespace-nowrap px-6 py-4">
 								<div class="h-4 w-3/4 rounded bg-gray-200"></div>
@@ -446,9 +454,8 @@
 					<!-- 데이터 행 -->
 					{#each entries as entry (entry.id)}
 						{@const isEditing = editingId === entry.id}
-						{@const isDuplicate = duplicates.has(entry.id)}
 						<tr class:bg-blue-50={isEditing} class="border-t border-gray-300">
-							{#each columns as column}
+							{#each columns as column (column.key)}
 								{@const fieldBackgroundClass = getFieldDuplicateBackgroundClass(
 									entry.duplicateInfo,
 									column.key
@@ -487,10 +494,12 @@
 											class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
 										/>
 									{:else}
-										{@html highlightSearchTerm(
-											(entry[column.key as keyof VocabularyEntry] as string) || '',
-											searchQuery,
-											column.key
+										{@html sanitizeHtml(
+											highlightSearchTerm(
+												(entry[column.key as keyof VocabularyEntry] as string) || '',
+												searchQuery,
+												column.key
+											)
 										)}
 									{/if}
 								</td>
@@ -532,7 +541,7 @@
 				</button>
 
 				<!-- 페이지 번호 -->
-				{#each displayedPages as page}
+				{#each displayedPages as page, i (typeof page === 'number' ? page : `ellipsis-${i}`)}
 					{#if typeof page === 'number'}
 						<button
 							onclick={() => handlePageChange(page)}

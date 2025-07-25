@@ -65,13 +65,19 @@
 			const response = await fetch('/api/forbidden-words');
 			const result: ApiResponse = await response.json();
 
-			if (result.success && result.data) {
-				forbiddenWords = result.data.entries || [];
+			if (
+				result.success &&
+				result.data &&
+				'entries' in result.data &&
+				Array.isArray(result.data.entries) &&
+				(result.data.entries.length === 0 || 'keyword' in result.data.entries[0])
+			) {
+				forbiddenWords = result.data.entries as ForbiddenWordEntry[];
 				hasLoaded = true; // 로드 완료 표시
 			} else {
 				error = result.error || '금지어 목록을 불러오는데 실패했습니다.';
 			}
-		} catch (e) {
+		} catch {
 			error = '서버 연결에 실패했습니다.';
 		} finally {
 			isLoading = false;
@@ -109,7 +115,7 @@
 			} else {
 				error = result.error || '금지어 처리에 실패했습니다.';
 			}
-		} catch (e) {
+		} catch {
 			error = '서버 연결에 실패했습니다.';
 		} finally {
 			isSubmitting = false;
@@ -153,7 +159,7 @@
 			} else {
 				error = result.error || '금지어 삭제에 실패했습니다.';
 			}
-		} catch (e) {
+		} catch {
 			error = '서버 연결에 실패했습니다.';
 		} finally {
 			isLoading = false;

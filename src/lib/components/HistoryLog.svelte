@@ -29,9 +29,18 @@
 			const response = await fetch('/api/history?limit=20');
 			const result: ApiResponse = await response.json();
 
-			if (result.success && result.data) {
-				historyLogs = result.data.logs || [];
-				totalCount = result.data.pagination?.totalCount || 0;
+			if (
+				result.success &&
+				result.data &&
+				'logs' in result.data &&
+				Array.isArray(result.data.logs)
+			) {
+				historyLogs = result.data.logs;
+				const data = result.data as {
+					logs: HistoryLogEntry[];
+					pagination?: { totalCount?: number };
+				};
+				totalCount = data.pagination?.totalCount || 0;
 			} else {
 				error = result.error || '히스토리 데이터 로드 실패';
 			}
@@ -117,7 +126,7 @@
 
 	// 외부에서 새로고침을 트리거할 수 있도록 전역 함수 등록
 	if (typeof window !== 'undefined') {
-		(window as any).refreshHistoryLog = loadHistoryData;
+		(window as unknown as { refreshHistoryLog: () => void }).refreshHistoryLog = loadHistoryData;
 	}
 
 	/**
@@ -128,16 +137,14 @@
 
 <!-- 플로팅 컨테이너 -->
 <div
-	class="fixed right-4 top-20 z-40"
+	class="fixed right-4 top-20 z-40 transition-transform duration-300 ease-in-out"
 	onmouseenter={() => (isHovered = true)}
 	onmouseleave={() => (isHovered = false)}
+	class:translate-x-72={!shouldShowContainer}
+	class:translate-x-0={shouldShowContainer}
 >
 	<!-- 플로팅 박스들 컨테이너 -->
-	<div
-		class="w-80 space-y-4 transition-transform duration-300 ease-in-out"
-		class:translate-x-72={!shouldShowContainer}
-		class:translate-x-0={shouldShowContainer}
-	>
+	<div class="w-80 space-y-4">
 		<!-- 작업 히스토리 박스 -->
 		<div class="rounded-xl border border-gray-200 bg-white shadow-lg">
 			<!-- 헤더 (항상 표시) -->

@@ -2,15 +2,14 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import FileUpload from '$lib/components/FileUpload.svelte';
-	import type { UploadResult } from '$lib/types/vocabulary.js';
+	import type { UploadResult, VocabularyEntry } from '$lib/types/vocabulary.js';
 
 	// 상태 변수
 	let uploading = $state(false);
 	let uploadMessage = $state('');
 	let errorMessage = $state('');
-	let uploadHistory = $state<any[]>([]); // vocabulary 기준으로 변경
 
-	type UploadSuccessDetail = { result: any };
+	type UploadSuccessDetail = { result: UploadResult };
 	type UploadErrorDetail = { error: string };
 
 	/**
@@ -29,7 +28,18 @@
 			const result = await response.json();
 
 			if (result.success && result.data?.history) {
-				uploadHistory = result.data.history;
+				uploadHistory = (result.data.history ?? []).map((entry: VocabularyEntry) => ({
+					...entry,
+					// undefined가 될 수 있는 필드를 빈 문자열로 보정
+					standardName: entry.standardName ?? '',
+					abbreviation: entry.abbreviation ?? '',
+					englishName: entry.englishName ?? '',
+					description: entry.description ?? '',
+					createdAt: entry.createdAt ?? '',
+					updatedAt: entry.updatedAt ?? ''
+					// 추가적으로 string 타입 필드가 있다면 모두 ?? ''로 보정
+					// (필요시 아래에 추가)
+				}));
 			}
 		} catch (error) {
 			console.error('업로드 기록 로드 오류:', error);
@@ -55,8 +65,10 @@
 		await loadUploadHistory();
 
 		// 작업 히스토리 새로고침 (전역 함수 호출)
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		if (typeof window !== 'undefined' && (window as any).refreshHistoryLog) {
 			try {
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				(window as any).refreshHistoryLog();
 			} catch (error) {
 				console.warn('작업 히스토리 새로고침 실패:', error);
@@ -82,24 +94,6 @@
 	 */
 	function handleUploadComplete() {
 		uploading = false;
-	}
-
-	/**
-	 * 날짜 포맷팅
-	 */
-	function formatDate(dateString: string): string {
-		try {
-			const date = new Date(dateString);
-			return date.toLocaleString('ko-KR', {
-				year: 'numeric',
-				month: '2-digit',
-				day: '2-digit',
-				hour: '2-digit',
-				minute: '2-digit'
-			});
-		} catch {
-			return dateString;
-		}
 	}
 </script>
 

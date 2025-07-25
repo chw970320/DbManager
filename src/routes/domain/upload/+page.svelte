@@ -2,14 +2,12 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import FileUpload from '$lib/components/FileUpload.svelte';
-	import type { DomainUploadResult } from '$lib/types/domain.js';
 	import type { UploadResult } from '$lib/types/vocabulary.js';
 
 	// 상태 변수
 	let uploading = $state(false);
 	let uploadMessage = $state('');
 	let errorMessage = $state('');
-	let uploadHistory = $state<DomainUploadResult[]>([]);
 
 	type UploadSuccessDetail = { result: UploadResult };
 	type UploadErrorDetail = { error: string };
@@ -18,13 +16,6 @@
 	 * 컴포넌트 마운트 시 초기화
 	 */
 	onMount(() => {});
-
-	/**
-	 * 업로드 정보 로드 (현재는 사용하지 않음)
-	 */
-	async function loadUploadInfo() {
-		// GET API 오류로 인해 임시로 비활성화
-	}
 
 	/**
 	 * 파일 업로드 시작 처리
@@ -66,24 +57,6 @@
 	 */
 	function handleUploadComplete() {
 		uploading = false;
-	}
-
-	/**
-	 * 날짜 포맷팅
-	 */
-	function formatDate(dateString: string): string {
-		try {
-			const date = new Date(dateString);
-			return date.toLocaleString('ko-KR', {
-				year: 'numeric',
-				month: '2-digit',
-				day: '2-digit',
-				hour: '2-digit',
-				minute: '2-digit'
-			});
-		} catch {
-			return dateString;
-		}
 	}
 </script>
 

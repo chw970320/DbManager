@@ -1,5 +1,5 @@
-import { json, type RequestEvent } from '@sveltejs/kit';
-import type { ApiResponse, VocabularyEntry } from '../../../../lib/types/vocabulary.js';
+import { json } from '@sveltejs/kit';
+import type { ApiResponse } from '../../../../lib/types/vocabulary.js';
 import { loadVocabularyData } from '../../../../lib/utils/file-handler.js';
 import { getDuplicateGroups } from '../../../../lib/utils/duplicate-handler.js';
 
@@ -7,7 +7,7 @@ import { getDuplicateGroups } from '../../../../lib/utils/duplicate-handler.js';
  * 중복된 단어 조회 API
  * GET /api/vocabulary/duplicates
  */
-export async function GET({ url }: RequestEvent) {
+export async function GET() {
 	try {
 		const vocabularyData = await loadVocabularyData();
 		const entries = vocabularyData.entries;
@@ -16,8 +16,10 @@ export async function GET({ url }: RequestEvent) {
 		const duplicateGroups = getDuplicateGroups(entries);
 
 		const responseData = {
-			duplicateCount: duplicateGroups.length,
-			duplicates: duplicateGroups
+			duplicates: duplicateGroups,
+			entries: entries,
+			totalCount: entries.length,
+			lastUpdated: new Date().toISOString()
 		};
 
 		return json(

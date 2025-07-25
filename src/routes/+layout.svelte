@@ -82,7 +82,7 @@
 
 					<!-- 데스크탑 네비게이션 -->
 					<nav class="hidden items-center space-x-2 md:flex">
-						{#each menuItems as item}
+						{#each menuItems as item (item.href)}
 							<a
 								href={item.href}
 								class="flex items-center space-x-2 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 {isCurrentPage(
@@ -142,7 +142,7 @@
 		{#if mobileMenuOpen}
 			<div class="border-t border-gray-200 bg-white/95 backdrop-blur-sm md:hidden" id="mobile-menu">
 				<div class="space-y-1 px-4 py-3">
-					{#each menuItems as item}
+					{#each menuItems as item (item.href)}
 						<a
 							href={item.href}
 							class="flex items-center space-x-3 rounded-lg px-3 py-2 text-base font-medium transition-colors {isCurrentPage(

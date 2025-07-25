@@ -23,8 +23,7 @@
 		sortDirection = 'asc' as 'asc' | 'desc',
 		searchField = 'all',
 		onsort,
-		onpagechange,
-		onrefresh
+		onpagechange
 	}: {
 		entries?: DomainEntry[];
 		loading?: boolean;
@@ -38,7 +37,6 @@
 		searchField?: string;
 		onsort: (detail: SortEvent) => void;
 		onpagechange: (detail: PageChangeEvent) => void;
-		onrefresh: () => void;
 	} = $props();
 
 	// 테이블 컬럼 정의
@@ -137,11 +135,19 @@
 	/**
 	 * 데이터 값 포맷팅
 	 */
-	function formatValue(value: any): string {
+	function formatValue(value: unknown): string {
 		if (value === null || value === undefined) {
 			return '-';
 		}
 		return String(value);
+	}
+
+	/**
+	 * HTML 태그 및 스크립트 태그 제거 (mark 태그만 허용)
+	 */
+	function sanitizeHtml(html: string): string {
+		// mark 태그만 허용, 나머지 태그는 모두 제거
+		return html.replace(/<(?!\/?mark(?=>|\s.*>))\/?[^>]+>/gi, '');
 	}
 </script>
 
@@ -171,7 +177,7 @@
 			<!-- 테이블 헤더 -->
 			<thead class="bg-gray-100">
 				<tr>
-					{#each columns as column}
+					{#each columns as column (column.key)}
 						<th
 							scope="col"
 							class="whitespace-nowrap px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 {column.width} {column.sortable
@@ -234,9 +240,9 @@
 			<tbody class="divide-y divide-gray-200 bg-white">
 				{#if loading}
 					<!-- 로딩 상태 -->
-					{#each Array(pageSize).fill(0) as _, i}
+					{#each Array(pageSize) as _, i (i)}
 						<tr class="animate-pulse">
-							{#each columns as column}
+							{#each columns as column (column.key)}
 								<td class="whitespace-nowrap px-6 py-4">
 									<div
 										class="h-4 rounded bg-gray-200 {column.width === 'w-20' ? 'w-12' : 'w-3/4'}"
@@ -279,14 +285,16 @@
 					<!-- 데이터 행 -->
 					{#each entries as entry (entry.id)}
 						<tr class="border-t border-gray-300 hover:bg-gray-50">
-							{#each columns as column}
+							{#each columns as column (column.key)}
 								<td class="px-6 py-4 text-sm text-gray-700">
 									{#if column.key === 'dataLength' || column.key === 'decimalPlaces'}
 										<span class="block text-center">
-											{@html highlightSearchTerm(
-												formatValue(entry[column.key as keyof DomainEntry]),
-												searchQuery,
-												column.key
+											{@html sanitizeHtml(
+												highlightSearchTerm(
+													formatValue(entry[column.key as keyof DomainEntry]),
+													searchQuery,
+													column.key
+												)
 											)}
 										</span>
 									{:else}
@@ -294,10 +302,12 @@
 											class="max-w-xs truncate"
 											title={formatValue(entry[column.key as keyof DomainEntry])}
 										>
-											{@html highlightSearchTerm(
-												formatValue(entry[column.key as keyof DomainEntry]),
-												searchQuery,
-												column.key
+											{@html sanitizeHtml(
+												highlightSearchTerm(
+													formatValue(entry[column.key as keyof DomainEntry]),
+													searchQuery,
+													column.key
+												)
 											)}
 										</div>
 									{/if}
@@ -340,7 +350,7 @@
 				</button>
 
 				<!-- 페이지 번호 -->
-				{#each displayedPages as page}
+				{#each displayedPages as page, i (typeof page === 'number' ? page : `ellipsis-${i}`)}
 					{#if typeof page === 'number'}
 						<button
 							onclick={() => handlePageChange(page)}

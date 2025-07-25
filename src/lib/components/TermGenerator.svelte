@@ -19,8 +19,8 @@
 
 	// --- Effects ---
 	$effect(() => {
-		sourceTerm;
-		direction;
+		void sourceTerm;
+		void direction;
 		debouncedFindCombinations();
 	});
 
@@ -52,8 +52,8 @@
 			if (segmentsList.length > 0) {
 				convertToFinal(segmentsList[0]);
 			}
-		} catch (e: any) {
-			error = e.message;
+		} catch (e: unknown) {
+			error = e instanceof Error ? e.message : '알 수 없는 오류가 발생했습니다.';
 		} finally {
 			isLoadingCombinations = false;
 		}
@@ -252,7 +252,7 @@
 				<div class="h-48 overflow-y-auto rounded-md border bg-white p-2">
 					{#if segmentsList.length > 0}
 						<ul class="space-y-1">
-							{#each segmentsList as segment}
+							{#each segmentsList as segment (segment)}
 								<li>
 									<button
 										type="button"

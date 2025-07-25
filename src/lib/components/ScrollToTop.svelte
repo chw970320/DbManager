@@ -1,14 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { writable, derived } from 'svelte/store';
 
 	// 상태 변수
-	let showButton = $state(false);
-	let scrollY = $state(0);
-
-	// 스크롤 위치에 따라 버튼 표시/숨김 결정
-	$effect(() => {
-		showButton = scrollY > 300; // 300px 이상 스크롤하면 버튼 표시
-	});
+	const scrollY = writable(0);
+	const showButton = derived(scrollY, ($scrollY) => $scrollY > 300);
 
 	/**
 	 * 맨 위로 스크롤하는 함수
@@ -24,7 +20,7 @@
 	 * 스크롤 이벤트 핸들러
 	 */
 	function handleScroll() {
-		scrollY = window.scrollY;
+		scrollY.set(window.scrollY);
 	}
 
 	onMount(() => {
@@ -42,7 +38,7 @@
 </script>
 
 <!-- 맨 위로 이동 버튼 -->
-{#if showButton}
+{#if $showButton}
 	<button
 		type="button"
 		onclick={scrollToTop}

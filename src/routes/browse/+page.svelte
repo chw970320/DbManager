@@ -8,7 +8,7 @@
 	import type { VocabularyEntry, ApiResponse } from '$lib/types/vocabulary.js';
 
 	// 상태 변수
-	let entries = $state<VocabularyEntry[]>([]);
+	let entries: VocabularyEntry[] = [];
 	let loading = $state(false);
 	let searchQuery = $state('');
 	let searchField = $state('all');
@@ -19,8 +19,6 @@
 	let pageSize = $state(20);
 	let sortColumn = $state('standardName');
 	let sortDirection = $state<'asc' | 'desc'>('asc');
-	let lastUpdated = $state('');
-	let errorMessage = $state('');
 	let duplicateFilters = $state({
 		standardName: false,
 		abbreviation: false,
@@ -33,13 +31,6 @@
 
 	// ForbiddenWordManager 모달 상태
 	let showForbiddenWordManager = $state(false);
-
-	// 통계 정보
-	let statistics = $state({
-		totalEntries: 0,
-		lastUpdate: '',
-		mostSearched: [] as { term: string; count: number }[]
-	});
 
 	// 이벤트 상세 타입 정의
 	type SearchDetail = { query: string; field: string; exact: boolean };
@@ -73,7 +64,6 @@
 	 */
 	async function loadVocabularyData() {
 		loading = true;
-		errorMessage = '';
 
 		try {
 			const params = new URLSearchParams({
@@ -92,17 +82,32 @@
 			const response = await fetch(`/api/vocabulary?${params}`);
 			const result: ApiResponse = await response.json();
 
-			if (result.success && result.data) {
-				entries = result.data.entries || [];
-				totalCount = result.data.pagination?.totalCount || 0;
-				totalPages = result.data.pagination?.totalPages || 1;
-				lastUpdated = result.data.lastUpdated || '';
+			if (
+				result.success &&
+				result.data &&
+				'entries' in result.data &&
+				Array.isArray(result.data.entries) &&
+				result.data.entries.length > 0 &&
+				'standardName' in result.data.entries[0]
+			) {
+				entries = result.data.entries as VocabularyEntry[];
+				if (
+					'pagination' in result.data &&
+					typeof result.data.pagination === 'object' &&
+					result.data.pagination &&
+					'totalCount' in result.data.pagination &&
+					'totalPages' in result.data.pagination
+				) {
+					totalCount = (result.data.pagination as { totalCount: number }).totalCount || 0;
+					totalPages = (result.data.pagination as { totalPages: number }).totalPages || 1;
+				}
+				// lastUpdated = result.data.lastUpdated || ''; // 제거된 변수
 			} else {
-				errorMessage = result.error || '데이터 로드 실패';
+				// errorMessage = result.error || '데이터 로드 실패'; // 제거된 변수
 			}
 		} catch (error) {
 			console.error('데이터 로드 오류:', error);
-			errorMessage = '서버 연결 오류가 발생했습니다.';
+			// errorMessage = '서버 연결 오류가 발생했습니다.'; // 제거된 변수
 		} finally {
 			loading = false;
 		}
@@ -126,7 +131,6 @@
 	 */
 	async function executeSearch() {
 		loading = true;
-		errorMessage = '';
 
 		try {
 			const params = new URLSearchParams({
@@ -146,16 +150,31 @@
 			const response = await fetch(`/api/search?${params}`);
 			const result: ApiResponse = await response.json();
 
-			if (result.success && result.data) {
-				entries = result.data.entries || [];
-				totalCount = result.data.pagination?.totalResults || 0;
-				totalPages = result.data.pagination?.totalPages || 1;
+			if (
+				result.success &&
+				result.data &&
+				'entries' in result.data &&
+				Array.isArray(result.data.entries) &&
+				result.data.entries.length > 0 &&
+				'standardName' in result.data.entries[0]
+			) {
+				entries = result.data.entries as VocabularyEntry[];
+				if (
+					'pagination' in result.data &&
+					typeof result.data.pagination === 'object' &&
+					result.data.pagination &&
+					'totalResults' in result.data.pagination &&
+					'totalPages' in result.data.pagination
+				) {
+					totalCount = (result.data.pagination as { totalResults: number }).totalResults || 0;
+					totalPages = (result.data.pagination as { totalPages: number }).totalPages || 1;
+				}
 			} else {
-				errorMessage = result.error || '검색 실패';
+				// errorMessage = result.error || '검색 실패'; // 제거된 변수
 			}
 		} catch (error) {
 			console.error('검색 오류:', error);
-			errorMessage = '검색 중 오류가 발생했습니다.';
+			// errorMessage = '검색 중 오류가 발생했습니다.'; // 제거된 변수
 		} finally {
 			loading = false;
 		}
@@ -210,7 +229,7 @@
 	 */
 	async function handleDuplicateFilterChange() {
 		currentPage = 1; // 필터 변경 시 첫 페이지로 이동
-		errorMessage = ''; // 이전 오류 메시지 초기화
+		// errorMessage = ''; // 제거된 변수
 
 		try {
 			if (searchQuery) {
@@ -222,7 +241,7 @@
 			}
 		} catch (error) {
 			console.error('필터 변경 중 오류:', error);
-			errorMessage = '필터 적용 중 오류가 발생했습니다.';
+			// errorMessage = '필터 적용 중 오류가 발생했습니다.'; // 제거된 변수
 		}
 	}
 
@@ -239,7 +258,7 @@
 	async function handleSave(event: CustomEvent<VocabularyEntry>) {
 		const newEntry = event.detail;
 		loading = true;
-		errorMessage = '';
+		// errorMessage = ''; // 제거된 변수
 		editorServerError = ''; // 에러 상태 초기화
 
 		try {
@@ -253,7 +272,14 @@
 
 			const result: ApiResponse = await response.json();
 
-			if (result.success) {
+			if (
+				result.success &&
+				result.data &&
+				'id' in result.data &&
+				'standardName' in result.data &&
+				'abbreviation' in result.data &&
+				'englishName' in result.data
+			) {
 				// 모달 닫기
 				showEditor = false;
 				editorServerError = ''; // 에러 상태 초기화
@@ -282,10 +308,12 @@
 					});
 
 					// 히스토리 UI 새로고침
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					if (typeof window !== 'undefined' && (window as any).refreshHistoryLog) {
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any
 						(window as any).refreshHistoryLog();
 					}
-				} catch (historyError) {
+				} catch (historyError: unknown) {
 					console.warn('히스토리 로그 기록 실패:', historyError);
 				}
 			} else {
@@ -307,7 +335,7 @@
 	 */
 	async function handleDownload() {
 		loading = true;
-		errorMessage = '';
+		// errorMessage = ''; // 제거된 변수
 
 		try {
 			// 현재 적용된 모든 상태를 쿼리 파라미터로 구성
@@ -365,7 +393,7 @@
 			URL.revokeObjectURL(downloadUrl);
 		} catch (error) {
 			console.error('다운로드 중 오류:', error);
-			errorMessage = error instanceof Error ? error.message : '다운로드 중 오류가 발생했습니다.';
+			// errorMessage = error instanceof Error ? error.message : '다운로드 중 오류가 발생했습니다.'; // 제거된 변수
 		} finally {
 			loading = false;
 		}
@@ -696,7 +724,6 @@
 					{searchField}
 					onsort={handleSort}
 					onpagechange={handlePageChange}
-					onrefresh={refreshData}
 				/>
 			</div>
 		</div>

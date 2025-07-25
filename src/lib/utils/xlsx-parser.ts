@@ -1,6 +1,6 @@
 import XLSX from 'xlsx-js-style';
 import { v4 as uuidv4 } from 'uuid';
-import type { DomainEntry, DomainData, RawDomainData } from '../types/domain.js';
+import type { DomainEntry, RawDomainData } from '../types/domain.js';
 import { validateVocabularyEntry } from './validation.js';
 import type { VocabularyEntry, VocabularyData } from '../types/vocabulary.js';
 
@@ -23,7 +23,7 @@ export function parseXlsxToJson(fileBuffer: Buffer): VocabularyEntry[] {
 		const worksheet = workbook.Sheets[firstSheetName];
 
 		// 시트를 JSON으로 변환 (헤더 포함)
-		const rawData: any[] = XLSX.utils.sheet_to_json(worksheet, {
+		const rawData: string[][] = XLSX.utils.sheet_to_json(worksheet, {
 			header: 1, // 배열 형태로 반환
 			defval: '' // 빈 셀은 빈 문자열로 처리
 		});
@@ -41,7 +41,11 @@ export function parseXlsxToJson(fileBuffer: Buffer): VocabularyEntry[] {
 			const row = dataRows[i];
 
 			// 빈 행 건너뛰기
-			if (!row || row.length === 0 || !row.some((cell: any) => cell && String(cell).trim())) {
+			if (
+				!row ||
+				row.length === 0 ||
+				!row.some((cell: string | number | undefined) => cell && String(cell).trim())
+			) {
 				continue;
 			}
 
@@ -49,11 +53,22 @@ export function parseXlsxToJson(fileBuffer: Buffer): VocabularyEntry[] {
 			const rawEntry = {
 				standardName: row[0] ? String(row[0]).trim() : '',
 				abbreviation: row[1] ? String(row[1]).trim() : '',
-				englishName: row[2] ? String(row[2]).trim() : ''
+				englishName: row[2] ? String(row[2]).trim() : '',
+				description: row[3] ? String(row[3]).trim() : '', // 설명 필드 추가 (D열)
+				createdAt: new Date().toISOString(),
+				updatedAt: new Date().toISOString() // updatedAt 필드 추가
 			};
 
 			// 유효성 검증
-			const validatedEntry = validateVocabularyEntry(rawEntry);
+			const validatedEntry = validateVocabularyEntry({
+				id: '',
+				standardName: rawEntry.standardName ?? '',
+				abbreviation: rawEntry.abbreviation ?? '',
+				englishName: rawEntry.englishName ?? '',
+				description: rawEntry.description ?? '',
+				createdAt: '',
+				updatedAt: ''
+			});
 			if (!validatedEntry) {
 				console.warn(`Row ${i + 2}: 유효하지 않은 데이터 건너뜀 -`, rawEntry);
 				continue;
@@ -123,7 +138,8 @@ function getCellAddress(row: number, col: number): string {
 export function exportJsonToXlsxBuffer(data: VocabularyEntry[]): Buffer {
 	try {
 		// 빈 워크시트 생성
-		const worksheet: any = {};
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const worksheet: Record<string, any> = {};
 
 		// 헤더 정의
 		const headers = ['표준단어명', '영문약어', '영문명', '설명'];
@@ -257,7 +273,7 @@ export function parseDomainXlsxToJson(fileBuffer: Buffer): DomainEntry[] {
 		const worksheet = workbook.Sheets[firstSheetName];
 
 		// 시트를 JSON으로 변환 (헤더 포함)
-		const rawData: any[] = XLSX.utils.sheet_to_json(worksheet, {
+		const rawData: string[][] = XLSX.utils.sheet_to_json(worksheet, {
 			header: 1, // 배열 형태로 반환
 			defval: '' // 빈 셀은 빈 문자열로 처리
 		});
@@ -268,18 +284,6 @@ export function parseDomainXlsxToJson(fileBuffer: Buffer): DomainEntry[] {
 
 		// 헤더 검증
 		const headerRow = rawData[0];
-		const expectedHeaders = [
-			'도메인그룹',
-			'도메인 분류명',
-			'표준 도메인명',
-			'논리 데이터타입',
-			'물리 데이터타입',
-			'데이터 길이',
-			'소수점자리수',
-			'데이터값',
-			'측정단위',
-			'비고'
-		];
 
 		// 헤더가 예상과 다른 경우 경고하지만 계속 진행
 		if (headerRow.length < 5) {
@@ -297,7 +301,11 @@ export function parseDomainXlsxToJson(fileBuffer: Buffer): DomainEntry[] {
 			const row = dataRows[i];
 
 			// 빈 행 건너뛰기
-			if (!row || row.length === 0 || !row.some((cell: any) => cell && String(cell).trim())) {
+			if (
+				!row ||
+				row.length === 0 ||
+				!row.some((cell: string | number | undefined) => cell && String(cell).trim())
+			) {
 				continue;
 			}
 
@@ -394,7 +402,8 @@ export function parseDomainXlsxToJson(fileBuffer: Buffer): DomainEntry[] {
 export function exportDomainToXlsxBuffer(data: DomainEntry[]): Buffer {
 	try {
 		// 빈 워크시트 생성
-		const worksheet: any = {};
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const worksheet: Record<string, any> = {};
 
 		// 헤더 정의
 		const headers = [

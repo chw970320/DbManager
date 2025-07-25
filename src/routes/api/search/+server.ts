@@ -6,7 +6,7 @@ import type {
 	VocabularyEntry
 } from '../../../lib/types/vocabulary.js';
 import { loadVocabularyData } from '../../../lib/utils/file-handler.js';
-import { getDuplicateIds, getDuplicateDetails } from '../../../lib/utils/duplicate-handler.js';
+import { getDuplicateDetails } from '../../../lib/utils/duplicate-handler.js';
 import { sanitizeSearchQuery } from '../../../lib/utils/validation.js';
 
 /**

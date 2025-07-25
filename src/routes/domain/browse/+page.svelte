@@ -186,6 +186,50 @@
 	}
 
 	/**
+	 * 도메인 XLSX 다운로드 처리 (단어집 관리와 동일하게)
+	 */
+	async function handleDomainDownload() {
+		loading = true;
+		try {
+			const params = new URLSearchParams({
+				sortBy: sortColumn,
+				sortOrder: sortDirection
+			});
+			const response = await fetch(`/api/domain/download?${params}`);
+			if (!response.ok) {
+				throw new Error(`다운로드 실패: ${response.status} ${response.statusText}`);
+			}
+			const blob = await response.blob();
+			// 파일명: domain_YYYY-MM-DD.xlsx
+			const today = new Date();
+			const yyyy = today.getFullYear();
+			const mm = String(today.getMonth() + 1).padStart(2, '0');
+			const dd = String(today.getDate()).padStart(2, '0');
+			let filename = `domain_${yyyy}-${mm}-${dd}.xlsx`;
+			const contentDisposition = response.headers.get('Content-Disposition');
+			if (contentDisposition) {
+				const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
+				if (filenameMatch) {
+					filename = filenameMatch[1];
+				}
+			}
+			const downloadUrl = URL.createObjectURL(blob);
+			const link = document.createElement('a');
+			link.href = downloadUrl;
+			link.download = filename;
+			link.style.display = 'none';
+			document.body.appendChild(link);
+			link.click();
+			document.body.removeChild(link);
+			URL.revokeObjectURL(downloadUrl);
+		} catch (error) {
+			console.error('도메인 다운로드 중 오류:', error);
+		} finally {
+			loading = false;
+		}
+	}
+
+	/**
 	 * 날짜 포맷팅
 	 */
 	function formatDate(dateString: string): string {
@@ -222,6 +266,33 @@
 			<p class="mx-auto mt-4 max-w-2xl break-words text-base text-gray-600 sm:text-lg">
 				등록된 <span class="font-semibold text-purple-600">도메인 정보</span>를 검색하고 조회하세요
 			</p>
+		</div>
+
+		<!-- 액션 버튼들 -->
+		<div class="flex items-center space-x-3">
+			<!-- 도메인 XLSX 다운로드 버튼 (단어집 관리와 동일 스타일) -->
+			<button
+				type="button"
+				onclick={handleDomainDownload}
+				disabled={loading}
+				class="group inline-flex items-center space-x-2 rounded-xl border border-green-200/50 bg-green-50/80 px-6 py-3 text-sm font-medium text-green-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-green-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+			>
+				<svg
+					class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
+					fill="none"
+					stroke="currentColor"
+					viewBox="0 0 24 24"
+				>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+					/>
+				</svg>
+				<span>{loading ? '준비 중' : 'XLSX 다운로드'}</span>
+			</button>
+			<!-- 기존 버튼들 ... -->
 		</div>
 
 		<!-- 통계 카드 -->
@@ -388,6 +459,7 @@
 				onsort={handleSort}
 				onpagechange={handlePageChange}
 				onrefresh={handleRefresh}
+				ondownload={handleDomainDownload}
 			/>
 		</div>
 

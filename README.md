@@ -4,16 +4,16 @@
 
 ## ✨ 주요 기능
 
--   **단어집 관리**: 등록된 모든 단어를 페이지네이션이 적용된 테이블 형태로 조회할 수 있습니다.
--   **단어집 업로드**: XLSX, CSV 등 다양한 형식의 파일을 드래그 앤 드롭으로 간편하게 업로드하여 단어 데이터를 시스템에 등록할 수 있습니다.
+- **단어집 관리**: 등록된 모든 단어를 페이지네이션이 적용된 테이블 형태로 조회할 수 있습니다.
+- **단어집 업로드**: XLSX, CSV 등 다양한 형식의 파일을 드래그 앤 드롭으로 간편하게 업로드하여 단어 데이터를 시스템에 등록할 수 있습니다.
 
-##  기술 스택
+## 기술 스택
 
--   **프레임워크**: SvelteKit
--   **언어**: TypeScript
--   **스타일링**: Tailwind CSS
--   **빌드 도구**: Vite
--   **패키지 매니저**: pnpm
+- **프레임워크**: SvelteKit
+- **언어**: TypeScript
+- **스타일링**: Tailwind CSS
+- **빌드 도구**: Vite
+- **패키지 매니저**: pnpm
 
 ## 📁 프로젝트 구조
 
@@ -40,8 +40,8 @@
 
 ### 전제 조건
 
--   [Node.js](https://nodejs.org/) (v18 이상 권장)
--   [pnpm](https://pnpm.io/)
+- [Node.js](https://nodejs.org/) (v18 이상 권장)
+- [pnpm](https://pnpm.io/)
 
 ### 설치 및 실행
 
@@ -68,9 +68,9 @@
 
 ## 📜 사용 가능한 스크립트
 
--   `pnpm run dev`: 개발 모드로 애플리케이션을 실행합니다.
--   `pnpm run build`: 프로덕션 용으로 애플리케이션을 빌드합니다.
--   `pnpm run preview`: 프로덕션 빌드를 로컬에서 미리 봅니다.
--   `pnpm run check`: TypeScript와 Svelte 코드의 타입 오류를 검사합니다.
--   `pnpm run lint`: ESLint로 코드 스타일을 검사합니다.
--   `pnpm run format`: Prettier로 전체 코드의 형식을 맞춥니다.
+- `pnpm run dev`: 개발 모드로 애플리케이션을 실행합니다.
+- `pnpm run build`: 프로덕션 용으로 애플리케이션을 빌드합니다.
+- `pnpm run preview`: 프로덕션 빌드를 로컬에서 미리 봅니다.
+- `pnpm run check`: TypeScript와 Svelte 코드의 타입 오류를 검사합니다.
+- `pnpm run lint`: ESLint로 코드 스타일을 검사합니다.
+- `pnpm run format`: Prettier로 전체 코드의 형식을 맞춥니다.

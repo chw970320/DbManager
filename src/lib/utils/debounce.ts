@@ -5,26 +5,26 @@
  * @returns debounced 함수
  */
 export function debounce<T extends (...args: any[]) => any>(
-    func: T,
-    wait: number
+	func: T,
+	wait: number
 ): ((...args: Parameters<T>) => void) & { cancel: () => void } {
-    let timeout: ReturnType<typeof setTimeout> | undefined;
+	let timeout: ReturnType<typeof setTimeout> | undefined;
 
-    const debounced = function executedFunction(...args: Parameters<T>) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
+	const debounced = function executedFunction(...args: Parameters<T>) {
+		const later = () => {
+			clearTimeout(timeout);
+			func(...args);
+		};
 
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
+		clearTimeout(timeout);
+		timeout = setTimeout(later, wait);
+	};
 
-    debounced.cancel = () => {
-        clearTimeout(timeout);
-    };
+	debounced.cancel = () => {
+		clearTimeout(timeout);
+	};
 
-    return debounced;
+	return debounced;
 }
 
 /**
@@ -35,22 +35,22 @@ export function debounce<T extends (...args: any[]) => any>(
  * @returns debounced 함수
  */
 export function debounceImmediate<T extends (...args: any[]) => any>(
-    func: T,
-    wait: number,
-    immediate = false
+	func: T,
+	wait: number,
+	immediate = false
 ): (...args: Parameters<T>) => void {
-    let timeout: ReturnType<typeof setTimeout> | undefined;
+	let timeout: ReturnType<typeof setTimeout> | undefined;
 
-    return function executedFunction(...args: Parameters<T>) {
-        const later = () => {
-            timeout = undefined;
-            if (!immediate) func(...args);
-        };
+	return function executedFunction(...args: Parameters<T>) {
+		const later = () => {
+			timeout = undefined;
+			if (!immediate) func(...args);
+		};
 
-        const callNow = immediate && !timeout;
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
+		const callNow = immediate && !timeout;
+		clearTimeout(timeout);
+		timeout = setTimeout(later, wait);
 
-        if (callNow) func(...args);
-    };
-} 
+		if (callNow) func(...args);
+	};
+}

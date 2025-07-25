@@ -1,14 +1,14 @@
 {
-    "svelte.enable-ts-plugin": true,
-    "svelte.plugin.svelte.compilerWarnings": {
-        "a11y-autofocus": "ignore",
-        "a11y-click-events-have-key-events": "ignore"
-    },
-    "svelte.plugin.typescript.diagnostics.enable": true,
-    "typescript.preferences.includePackageJsonAutoImports": "on",
-    "typescript.suggest.autoImports": true,
-    "typescript.updateImportsOnFileMove.enabled": "always",
-    "files.associations": {
-        "*.svelte": "svelte"
-    }
+	"svelte.enable-ts-plugin": true,
+	"svelte.plugin.svelte.compilerWarnings": {
+		"a11y-autofocus": "ignore",
+		"a11y-click-events-have-key-events": "ignore"
+	},
+	"svelte.plugin.typescript.diagnostics.enable": true,
+	"typescript.preferences.includePackageJsonAutoImports": "on",
+	"typescript.suggest.autoImports": true,
+	"typescript.updateImportsOnFileMove.enabled": "always",
+	"files.associations": {
+		"*.svelte": "svelte"
+	}
 }

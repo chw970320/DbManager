@@ -17,16 +17,13 @@
 	/**
 	 * 컴포넌트 마운트 시 초기화
 	 */
-	onMount(() => {
-		
-	});
+	onMount(() => {});
 
 	/**
 	 * 업로드 정보 로드 (현재는 사용하지 않음)
 	 */
 	async function loadUploadInfo() {
 		// GET API 오류로 인해 임시로 비활성화
-		
 	}
 
 	/**

@@ -4,34 +4,34 @@
  * @returns 유효성 검증 결과
  */
 export function validateXlsxFile(file: File): boolean {
-    // 파일 존재 확인
-    if (!file) {
-        return false;
-    }
+	// 파일 존재 확인
+	if (!file) {
+		return false;
+	}
 
-    // 파일 크기 검증 (최대 10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    if (file.size > maxSize) {
-        throw new Error('파일 크기가 너무 큽니다. 최대 10MB까지 업로드 가능합니다.');
-    }
+	// 파일 크기 검증 (최대 10MB)
+	const maxSize = 10 * 1024 * 1024; // 10MB
+	if (file.size > maxSize) {
+		throw new Error('파일 크기가 너무 큽니다. 최대 10MB까지 업로드 가능합니다.');
+	}
 
-    // 파일 타입 검증
-    const validMimeTypes = [
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
-        'application/vnd.ms-excel' // .xls (하위 호환)
-    ];
+	// 파일 타입 검증
+	const validMimeTypes = [
+		'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
+		'application/vnd.ms-excel' // .xls (하위 호환)
+	];
 
-    if (!validMimeTypes.includes(file.type)) {
-        throw new Error('지원하지 않는 파일 형식입니다. .xlsx 파일만 업로드 가능합니다.');
-    }
+	if (!validMimeTypes.includes(file.type)) {
+		throw new Error('지원하지 않는 파일 형식입니다. .xlsx 파일만 업로드 가능합니다.');
+	}
 
-    // 파일 확장자 검증
-    const fileName = file.name.toLowerCase();
-    if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
-        throw new Error('파일 확장자가 올바르지 않습니다. .xlsx 파일을 업로드해주세요.');
-    }
+	// 파일 확장자 검증
+	const fileName = file.name.toLowerCase();
+	if (!fileName.endsWith('.xlsx') && !fileName.endsWith('.xls')) {
+		throw new Error('파일 확장자가 올바르지 않습니다. .xlsx 파일을 업로드해주세요.');
+	}
 
-    return true;
+	return true;
 }
 
 /**
@@ -40,59 +40,59 @@ export function validateXlsxFile(file: File): boolean {
  * @returns 유효한 경우 정제된 데이터, 무효한 경우 null
  */
 export function validateVocabularyEntry(entry: any): {
-    standardName: string;
-    abbreviation: string;
-    englishName: string;
+	standardName: string;
+	abbreviation: string;
+	englishName: string;
 } | null {
-    if (!entry || typeof entry !== 'object') {
-        return null;
-    }
+	if (!entry || typeof entry !== 'object') {
+		return null;
+	}
 
-    // 필수 필드 존재 확인 및 문자열 변환
-    const standardName = entry.standardName ? String(entry.standardName).trim() : '';
-    const abbreviation = entry.abbreviation ? String(entry.abbreviation).trim() : '';
-    const englishName = entry.englishName ? String(entry.englishName).trim() : '';
+	// 필수 필드 존재 확인 및 문자열 변환
+	const standardName = entry.standardName ? String(entry.standardName).trim() : '';
+	const abbreviation = entry.abbreviation ? String(entry.abbreviation).trim() : '';
+	const englishName = entry.englishName ? String(entry.englishName).trim() : '';
 
-    // 필수 필드 공백 검증
-    if (!standardName || !abbreviation || !englishName) {
-        return null;
-    }
+	// 필수 필드 공백 검증
+	if (!standardName || !abbreviation || !englishName) {
+		return null;
+	}
 
-    // 문자열 길이 검증
-    if (standardName.length > 100) {
-        console.warn('표준단어명이 너무 깁니다 (최대 100자):', standardName);
-        return null;
-    }
+	// 문자열 길이 검증
+	if (standardName.length > 100) {
+		console.warn('표준단어명이 너무 깁니다 (최대 100자):', standardName);
+		return null;
+	}
 
-    if (abbreviation.length > 50) {
-        console.warn('영문약어가 너무 깁니다 (최대 50자):', abbreviation);
-        return null;
-    }
+	if (abbreviation.length > 50) {
+		console.warn('영문약어가 너무 깁니다 (최대 50자):', abbreviation);
+		return null;
+	}
 
-    if (englishName.length > 200) {
-        console.warn('영문명이 너무 깁니다 (최대 200자):', englishName);
-        return null;
-    }
+	if (englishName.length > 200) {
+		console.warn('영문명이 너무 깁니다 (최대 200자):', englishName);
+		return null;
+	}
 
-    // 영문약어 형식 검증 (영문, 숫자, 하이픈, 언더스코어만 허용)
-    const abbreviationPattern = /^[A-Za-z0-9_-]+$/;
-    if (!abbreviationPattern.test(abbreviation)) {
-        console.warn('영문약어에 허용되지 않는 문자가 포함되어 있습니다:', abbreviation);
-        return null;
-    }
+	// 영문약어 형식 검증 (영문, 숫자, 하이픈, 언더스코어만 허용)
+	const abbreviationPattern = /^[A-Za-z0-9_-]+$/;
+	if (!abbreviationPattern.test(abbreviation)) {
+		console.warn('영문약어에 허용되지 않는 문자가 포함되어 있습니다:', abbreviation);
+		return null;
+	}
 
-    // 영문명 형식 검증 (기본적인 영문, 공백, 일부 특수문자 허용)
-    const englishNamePattern = /^[A-Za-z0-9\s\-_.()&]+$/;
-    if (!englishNamePattern.test(englishName)) {
-        console.warn('영문명에 허용되지 않는 문자가 포함되어 있습니다:', englishName);
-        return null;
-    }
+	// 영문명 형식 검증 (기본적인 영문, 공백, 일부 특수문자 허용)
+	const englishNamePattern = /^[A-Za-z0-9\s\-_.()&]+$/;
+	if (!englishNamePattern.test(englishName)) {
+		console.warn('영문명에 허용되지 않는 문자가 포함되어 있습니다:', englishName);
+		return null;
+	}
 
-    return {
-        standardName,
-        abbreviation: abbreviation.toUpperCase(), // 약어는 대문자로 통일
-        englishName
-    };
+	return {
+		standardName,
+		abbreviation: abbreviation.toUpperCase(), // 약어는 대문자로 통일
+		englishName
+	};
 }
 
 /**
@@ -101,16 +101,16 @@ export function validateVocabularyEntry(entry: any): {
  * @returns 정제된 검색 쿼리 (유효하지 않은 경우 빈 문자열)
  */
 export function sanitizeSearchQuery(query: string): string {
-    if (!query || typeof query !== 'string') {
-        return '';
-    }
+	if (!query || typeof query !== 'string') {
+		return '';
+	}
 
-    // 앞뒤 공백 제거 및 길이 제한
-    const sanitized = query.trim();
-    if (sanitized.length === 0 || sanitized.length > 100) {
-        return '';
-    }
+	// 앞뒤 공백 제거 및 길이 제한
+	const sanitized = query.trim();
+	if (sanitized.length === 0 || sanitized.length > 100) {
+		return '';
+	}
 
-    // 특수문자 이스케이프 (정규식 안전성)
-    return sanitized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-} 
+	// 특수문자 이스케이프 (정규식 안전성)
+	return sanitized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}

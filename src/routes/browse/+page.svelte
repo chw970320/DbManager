@@ -93,8 +93,9 @@
 				entries = result.data.entries as VocabularyEntry[];
 				if (
 					'pagination' in result.data &&
-					typeof result.data.pagination === 'object' &&
 					result.data.pagination &&
+					typeof result.data.pagination === 'object' &&
+					result.data.pagination !== null &&
 					'totalCount' in result.data.pagination &&
 					'totalPages' in result.data.pagination
 				) {
@@ -153,24 +154,30 @@
 			if (
 				result.success &&
 				result.data &&
+				typeof result.data === 'object' &&
 				'entries' in result.data &&
-				Array.isArray(result.data.entries) &&
-				result.data.entries.length > 0 &&
-				'standardName' in result.data.entries[0]
+				Array.isArray(result.data.entries)
 			) {
 				entries = result.data.entries as VocabularyEntry[];
 				if (
 					'pagination' in result.data &&
-					typeof result.data.pagination === 'object' &&
 					result.data.pagination &&
-					'totalResults' in result.data.pagination &&
+					typeof result.data.pagination === 'object' &&
+					result.data.pagination !== null &&
+					('totalResults' in result.data.pagination || 'totalCount' in result.data.pagination) &&
 					'totalPages' in result.data.pagination
 				) {
-					totalCount = (result.data.pagination as { totalResults: number }).totalResults || 0;
+					totalCount =
+						(result.data.pagination as { totalResults?: number; totalCount?: number })
+							.totalResults ??
+						(result.data.pagination as { totalCount?: number }).totalCount ??
+						0;
 					totalPages = (result.data.pagination as { totalPages: number }).totalPages || 1;
 				}
 			} else {
-				// errorMessage = result.error || '검색 실패'; // 제거된 변수
+				entries = [];
+				totalCount = 0;
+				totalPages = 1;
 			}
 		} catch (error) {
 			console.error('검색 오류:', error);

@@ -49,49 +49,19 @@ export function validateVocabularyEntry(entry: VocabularyEntry): {
 		return null;
 	}
 
-	// 필수 필드 존재 확인 및 문자열 변환
+	// 필드 값만 trim
 	const standardName = entry.standardName ? String(entry.standardName).trim() : '';
 	const abbreviation = entry.abbreviation ? String(entry.abbreviation).trim() : '';
 	const englishName = entry.englishName ? String(entry.englishName).trim() : '';
 
-	// 필수 필드 공백 검증
+	// 세 필드 모두 값이 있어야 통과
 	if (!standardName || !abbreviation || !englishName) {
-		return null;
-	}
-
-	// 문자열 길이 검증
-	if (standardName.length > 100) {
-		console.warn('표준단어명이 너무 깁니다 (최대 100자):', standardName);
-		return null;
-	}
-
-	if (abbreviation.length > 50) {
-		console.warn('영문약어가 너무 깁니다 (최대 50자):', abbreviation);
-		return null;
-	}
-
-	if (englishName.length > 200) {
-		console.warn('영문명이 너무 깁니다 (최대 200자):', englishName);
-		return null;
-	}
-
-	// 영문약어 형식 검증 (영문, 숫자, 하이픈, 언더스코어만 허용)
-	const abbreviationPattern = /^[A-Za-z0-9_-]+$/;
-	if (!abbreviationPattern.test(abbreviation)) {
-		console.warn('영문약어에 허용되지 않는 문자가 포함되어 있습니다:', abbreviation);
-		return null;
-	}
-
-	// 영문명 형식 검증 (기본적인 영문, 공백, 일부 특수문자 허용)
-	const englishNamePattern = /^[A-Za-z0-9\s\-_.()&]+$/;
-	if (!englishNamePattern.test(englishName)) {
-		console.warn('영문명에 허용되지 않는 문자가 포함되어 있습니다:', englishName);
 		return null;
 	}
 
 	return {
 		standardName,
-		abbreviation: abbreviation.toUpperCase(), // 약어는 대문자로 통일
+		abbreviation,
 		englishName
 	};
 }

@@ -4,10 +4,10 @@ import type {
 	SearchResult,
 	SearchQuery,
 	VocabularyEntry
-} from '../../../lib/types/vocabulary.js';
-import { loadVocabularyData } from '../../../lib/utils/file-handler.js';
-import { getDuplicateDetails } from '../../../lib/utils/duplicate-handler.js';
-import { sanitizeSearchQuery } from '../../../lib/utils/validation.js';
+} from '$lib/types/vocabulary.js';
+import { loadVocabularyData } from '$lib/utils/file-handler.js';
+import { getDuplicateDetails } from '$lib/utils/duplicate-handler.js';
+import { sanitizeSearchQuery } from '$lib/utils/validation.js';
 
 /**
  * 단어집 검색 API

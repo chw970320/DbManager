@@ -1,8 +1,8 @@
 import { type RequestEvent } from '@sveltejs/kit';
-import type { VocabularyData } from '../../../../lib/types/vocabulary.js';
-import { loadVocabularyData } from '../../../../lib/utils/file-handler.js';
-import { getDuplicateDetails } from '../../../../lib/utils/duplicate-handler.js';
-import { exportJsonToXlsxBuffer } from '../../../../lib/utils/xlsx-parser.js';
+import type { VocabularyData } from '$lib/types/vocabulary.js';
+import { loadVocabularyData } from '$lib/utils/file-handler.js';
+import { getDuplicateDetails } from '$lib/utils/duplicate-handler.js';
+import { exportJsonToXlsxBuffer } from '$lib/utils/xlsx-parser.js';
 
 /**
  * 단어집 데이터를 XLSX 파일로 다운로드하는 API

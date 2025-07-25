@@ -1,9 +1,9 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type { ApiResponse, UploadResult, VocabularyData } from '../../../lib/types/vocabulary.js';
-import { validateXlsxFile } from '../../../lib/utils/validation.js';
-import { parseXlsxToJson } from '../../../lib/utils/xlsx-parser.js';
-import { mergeVocabularyData } from '../../../lib/utils/file-handler.js';
-import { clearHistoryData, addHistoryLog } from '../../../lib/utils/history-handler.js';
+import type { ApiResponse, UploadResult, VocabularyData } from '$lib/types/vocabulary.js';
+import { validateXlsxFile } from '$lib/utils/validation.js';
+import { parseXlsxToJson } from '$lib/utils/xlsx-parser.js';
+import { mergeVocabularyData } from '$lib/utils/file-handler.js';
+import { clearHistoryData, addHistoryLog } from '$lib/utils/history-handler.js';
 
 /**
  * 파일 업로드 및 처리 API

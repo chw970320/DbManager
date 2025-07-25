@@ -3,13 +3,13 @@ import type {
 	ApiResponse,
 	VocabularyData,
 	VocabularyEntry
-} from '../../../lib/types/vocabulary.js';
+} from '$lib/types/vocabulary.js';
 import {
 	loadVocabularyData,
 	saveVocabularyData,
 	loadForbiddenWordsData
-} from '../../../lib/utils/file-handler.js';
-import { getDuplicateDetails } from '../../../lib/utils/duplicate-handler.js';
+} from '$lib/utils/file-handler.js';
+import { getDuplicateDetails } from '$lib/utils/duplicate-handler.js';
 import { v4 as uuidv4 } from 'uuid';
 
 /**

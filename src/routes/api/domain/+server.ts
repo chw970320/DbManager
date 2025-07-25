@@ -1,7 +1,7 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type { ApiResponse } from '../../../lib/types/vocabulary.js';
-import type { DomainData, DomainEntry } from '../../../lib/types/domain.js';
-import { getDomainDataStore } from '../../../lib/stores/domain-store.js';
+import type { ApiResponse } from '$lib/types/vocabulary.js';
+import type { DomainData, DomainEntry } from '$lib/types/domain.js';
+import { getDomainDataStore } from '$lib/stores/domain-store.js';
 
 /**
  * 저장된 도메인 데이터 조회 API

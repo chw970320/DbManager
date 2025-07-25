@@ -1,10 +1,10 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type { ApiResponse } from '../../../../lib/types/vocabulary.js';
-import type { DomainData, DomainEntry } from '../../../../lib/types/domain.js';
-import { getDomainDataStore } from '../../../../lib/stores/domain-store.js';
-import { mergeDomainData } from '../../../../lib/utils/file-handler.js';
-import { validateXlsxFile } from '../../../../lib/utils/validation.js';
-import { parseDomainXlsxToJson } from '../../../../lib/utils/xlsx-parser.js';
+import type { ApiResponse } from '$lib/types/vocabulary.js';
+import type { DomainData, DomainEntry } from '$lib/types/domain.js';
+import { getDomainDataStore } from '$lib/stores/domain-store.js';
+import { mergeDomainData } from '$lib/utils/file-handler.js';
+import { validateXlsxFile } from '$lib/utils/validation.js';
+import { parseDomainXlsxToJson } from '$lib/utils/xlsx-parser.js';
 
 /**
  * 도메인 업로드 정보 조회 API

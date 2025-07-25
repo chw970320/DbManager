@@ -1,6 +1,6 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type { ApiResponse, HistoryData, HistoryLogEntry } from '../../../lib/types/vocabulary.js';
-import { loadHistoryData, addHistoryLog } from '../../../lib/utils/history-handler.js';
+import type { ApiResponse, HistoryData, HistoryLogEntry } from '$lib/types/vocabulary.js';
+import { loadHistoryData, addHistoryLog } from '$lib/utils/history-handler.js';
 import { v4 as uuidv4 } from 'uuid';
 
 /**

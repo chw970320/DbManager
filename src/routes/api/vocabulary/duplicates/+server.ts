@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
-import type { ApiResponse } from '../../../../lib/types/vocabulary.js';
-import { loadVocabularyData } from '../../../../lib/utils/file-handler.js';
-import { getDuplicateGroups } from '../../../../lib/utils/duplicate-handler.js';
+import type { ApiResponse } from '$lib/types/vocabulary.js';
+import { loadVocabularyData } from '$lib/utils/file-handler.js';
+import { getDuplicateGroups } from '$lib/utils/duplicate-handler.js';
 
 /**
  * 중복된 단어 조회 API

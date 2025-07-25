@@ -69,14 +69,13 @@
 							</svg>
 						</div>
 						<h3 class="mt-4 text-lg font-semibold text-gray-900">단어집 업로드</h3>
-						<p class="mt-2 text-sm text-gray-600">
-							드래그 앤 드롭으로 단어집을 업로드하고 즉시 활용하세요.
-						</p>
+						<p class="mt-2 text-sm text-gray-600">드래그 앤 드롭으로 단어집을 업로드하세요.</p>
 					</div>
 				</a>
 
-				<!-- 기능 3 -->
-				<div
+				<!-- 기능 3: 도메인 조회 -->
+				<a
+					href="/domain/browse"
 					class="animate-fade-in-up delay-600 group relative overflow-hidden rounded-2xl border border-gray-200/50 bg-white p-8 opacity-0 shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-xl"
 				>
 					<div
@@ -91,17 +90,18 @@
 									stroke-linecap="round"
 									stroke-linejoin="round"
 									stroke-width="2"
-									d="M13 10V3L4 14h7v7l9-11h-7z"
+									d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"
 								/>
 							</svg>
 						</div>
-						<h3 class="mt-4 text-lg font-semibold text-gray-900">준비중입니다.</h3>
-						<p class="mt-2 text-sm text-gray-600">준비중입니다.</p>
+						<h3 class="mt-4 text-lg font-semibold text-gray-900">도메인 조회</h3>
+						<p class="mt-2 text-sm text-gray-600">등록된 도메인 정보를 검색하고 조회하세요.</p>
 					</div>
-				</div>
+				</a>
 
-				<!-- 기능 4 -->
-				<div
+				<!-- 기능 4: 도메인 업로드 -->
+				<a
+					href="/domain/upload"
 					class="animate-fade-in-up group relative overflow-hidden rounded-2xl border border-gray-200/50 bg-white p-8 opacity-0 shadow-sm transition-all delay-700 duration-300 hover:scale-105 hover:shadow-xl"
 				>
 					<div
@@ -116,14 +116,14 @@
 									stroke-linecap="round"
 									stroke-linejoin="round"
 									stroke-width="2"
-									d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"
+									d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 12l3-3m0 0l3 3m-3-3v9"
 								/>
 							</svg>
 						</div>
-						<h3 class="mt-4 text-lg font-semibold text-gray-900">준비중입니다.</h3>
-						<p class="mt-2 text-sm text-gray-600">준비중입니다.</p>
+						<h3 class="mt-4 text-lg font-semibold text-gray-900">도메인 업로드</h3>
+						<p class="mt-2 text-sm text-gray-600">드래그 앤 드롭으로 도메인 정보를 업로드하세요.</p>
 					</div>
-				</div>
+				</a>
 			</div>
 		</div>
 	</section>

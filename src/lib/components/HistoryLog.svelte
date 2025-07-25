@@ -145,7 +145,7 @@
 >
 	<!-- 플로팅 박스들 컨테이너 -->
 	<div class="w-80 space-y-4">
-		<!-- 작업 히스토리 박스 -->
+		<!-- 단어집 히스토리 박스 -->
 		<div class="rounded-xl border border-gray-200 bg-white shadow-lg">
 			<!-- 헤더 (항상 표시) -->
 			<div
@@ -169,7 +169,7 @@
 							/>
 						</svg>
 					</div>
-					<h3 class="text-sm font-semibold text-gray-800">작업 히스토리</h3>
+					<h3 class="text-sm font-semibold text-gray-800">단어집 히스토리</h3>
 					{#if totalCount > 0}
 						<span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
 							{totalCount}

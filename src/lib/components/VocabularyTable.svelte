@@ -480,11 +480,12 @@
 											{:else}
 												<button
 													onclick={() => handleEdit(entry)}
-													class="text-indigo-600 hover:text-indigo-900">편집</button
+													class="whitespace-nowrap text-indigo-600 hover:text-indigo-900"
+													>편집</button
 												>
 												<button
 													onclick={() => handleDelete(entry.id)}
-													class="text-red-600 hover:text-red-900">삭제</button
+													class="whitespace-nowrap text-red-600 hover:text-red-900">삭제</button
 												>
 											{/if}
 										</div>

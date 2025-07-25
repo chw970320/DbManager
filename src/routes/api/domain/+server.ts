@@ -2,6 +2,7 @@ import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse } from '$lib/types/vocabulary.js';
 import type { DomainData, DomainEntry } from '$lib/types/domain.js';
 import { getDomainDataStore } from '$lib/stores/domain-store.js';
+import { saveDomainData } from '$lib/utils/file-handler.js';
 
 /**
  * 저장된 도메인 데이터 조회 API
@@ -285,6 +286,87 @@ export async function OPTIONS() {
 				error: '서버에서 통계 조회 중 오류가 발생했습니다.',
 				message: 'Internal server error'
 			} as ApiResponse,
+			{ status: 500 }
+		);
+	}
+}
+
+export async function PUT({ request }: RequestEvent) {
+	try {
+		const body = await request.json();
+		const { id, ...updateFields } = body;
+
+		if (!id) {
+			return json(
+				{ success: false, error: 'ID가 필요합니다.', message: 'ID required' },
+				{ status: 400 }
+			);
+		}
+
+		const domainData = await getDomainDataStore();
+		const entryIndex = domainData.entries.findIndex((e) => e.id === id);
+
+		if (entryIndex === -1) {
+			return json(
+				{ success: false, error: '수정할 도메인을 찾을 수 없습니다.', message: 'Not found' },
+				{ status: 404 }
+			);
+		}
+
+		// 데이터 수정
+		domainData.entries[entryIndex] = {
+			...domainData.entries[entryIndex],
+			...updateFields,
+			updatedAt: new Date().toISOString()
+		};
+
+		await saveDomainData(domainData);
+
+		return json(
+			{ success: true, data: domainData.entries[entryIndex], message: '도메인 수정 완료' },
+			{ status: 200 }
+		);
+	} catch (error) {
+		console.error('도메인 수정 중 오류:', error);
+		return json(
+			{ success: false, error: '서버 오류', message: 'Internal server error' },
+			{ status: 500 }
+		);
+	}
+}
+
+export async function DELETE({ url }: RequestEvent) {
+	try {
+		const id = url.searchParams.get('id');
+		if (!id) {
+			return json(
+				{ success: false, error: '삭제할 도메인 ID가 필요합니다.', message: 'ID required' },
+				{ status: 400 }
+			);
+		}
+
+		const domainData = await getDomainDataStore();
+		const entryIndex = domainData.entries.findIndex((e) => e.id === id);
+
+		if (entryIndex === -1) {
+			return json(
+				{ success: false, error: '삭제할 도메인을 찾을 수 없습니다.', message: 'Not found' },
+				{ status: 404 }
+			);
+		}
+
+		// 데이터 삭제
+		domainData.entries.splice(entryIndex, 1);
+		await saveDomainData(domainData);
+
+		return json(
+			{ success: true, message: '도메인 삭제 완료' },
+			{ status: 200 }
+		);
+	} catch (error) {
+		console.error('도메인 삭제 중 오류:', error);
+		return json(
+			{ success: false, error: '서버 오류', message: 'Internal server error' },
 			{ status: 500 }
 		);
 	}

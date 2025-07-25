@@ -39,6 +39,53 @@
 		onpagechange: (detail: PageChangeEvent) => void;
 	} = $props();
 
+	let editingId = $state<string | null>(null);
+	let editedEntry = $state<Partial<DomainEntry>>({});
+
+	function handleEdit(entry: DomainEntry) {
+		editingId = entry.id;
+		editedEntry = { ...entry };
+	}
+
+	function cancelEdit() {
+		editingId = null;
+		editedEntry = {};
+	}
+
+	async function handleSave(id: string) {
+		if (!editedEntry) return;
+		try {
+			const response = await fetch(`/api/domain`, {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ ...editedEntry, id })
+			});
+			if (response.ok) {
+				cancelEdit();
+				onpagechange({ page: currentPage }); // 데이터 새로고침
+			} else {
+				alert('수정에 실패했습니다.');
+			}
+		} catch (error) {
+			console.error('수정 오류:', error);
+		}
+	}
+
+	async function handleDelete(id: string) {
+		if (confirm('정말로 이 항목을 삭제하시겠습니까?')) {
+			try {
+				const response = await fetch(`/api/domain?id=${id}`, { method: 'DELETE' });
+				if (response.ok) {
+					onpagechange({ page: currentPage });
+				} else {
+					alert('삭제에 실패했습니다.');
+				}
+			} catch (error) {
+				console.error('삭제 오류:', error);
+			}
+		}
+	}
+
 	// 테이블 컬럼 정의
 	const columns = [
 		{ key: 'domainGroup', label: '도메인그룹', sortable: true, width: 'w-24' },
@@ -50,7 +97,8 @@
 		{ key: 'decimalPlaces', label: '소수점자리수', sortable: false, width: 'w-24' },
 		{ key: 'dataValue', label: '데이터값', sortable: false, width: 'w-28' },
 		{ key: 'measurementUnit', label: '측정단위', sortable: false, width: 'w-24' },
-		{ key: 'remarks', label: '비고', sortable: false, width: 'w-32' }
+		{ key: 'remarks', label: '비고', sortable: false, width: 'w-32' },
+		{ key: 'actions', label: '관리', sortable: false, width: 'w-auto' }
 	];
 
 	// 파생 상태 (페이지네이션)
@@ -284,10 +332,39 @@
 				{:else}
 					<!-- 데이터 행 -->
 					{#each entries as entry (entry.id)}
-						<tr class="border-t border-gray-300 hover:bg-gray-50">
+						{@const isEditing = editingId === entry.id}
+						<tr class:bg-blue-50={isEditing} class="border-t border-gray-300 hover:bg-gray-50">
 							{#each columns as column (column.key)}
 								<td class="px-6 py-4 text-sm text-gray-700">
-									{#if column.key === 'dataLength' || column.key === 'decimalPlaces'}
+									{#if column.key === 'actions'}
+										<div class="flex items-center space-x-2">
+											{#if isEditing}
+												<button
+													onclick={() => handleSave(entry.id)}
+													class="text-blue-600 hover:text-blue-900">저장</button
+												>
+												<button onclick={cancelEdit} class="text-gray-600 hover:text-gray-900"
+													>취소</button
+												>
+											{:else}
+												<button
+													onclick={() => handleEdit(entry)}
+													class="whitespace-nowrap text-indigo-600 hover:text-indigo-900"
+													>편집</button
+												>
+												<button
+													onclick={() => handleDelete(entry.id)}
+													class="whitespace-nowrap text-red-600 hover:text-red-900">삭제</button
+												>
+											{/if}
+										</div>
+									{:else if isEditing}
+										<input
+											type="text"
+											bind:value={editedEntry[column.key as keyof DomainEntry]}
+											class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+										/>
+									{:else if column.key === 'dataLength' || column.key === 'decimalPlaces'}
 										<span class="block text-center">
 											{@html sanitizeHtml(
 												highlightSearchTerm(

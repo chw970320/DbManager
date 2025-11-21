@@ -127,6 +127,93 @@
 			</div>
 		</div>
 	</section>
+
+	<!-- 서비스 기능 설명 섹션 -->
+	<section class="bg-gray-50 py-20 sm:py-32">
+		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+			<div class="mx-auto max-w-2xl text-center">
+				<h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+					주요 기능
+				</h2>
+				<p class="mt-4 text-lg leading-8 text-gray-600">
+					데이터 관리 시스템은 다음과 같은 핵심 기능을 통해 사용자의 데이터 관리 효율성을
+					극대화합니다.
+				</p>
+			</div>
+			<div
+				class="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none"
+			>
+				<dl class="grid max-w-xl grid-cols-1 gap-x-8 gap-y-16 lg:max-w-none lg:grid-cols-3">
+					<div class="flex flex-col">
+						<dt class="flex items-center gap-x-3 text-base font-semibold leading-7 text-gray-900">
+							<svg
+								class="h-5 w-5 flex-none text-blue-600"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+								aria-hidden="true"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M15.312 5.125l-6.188 6.188-2.125-2.125-1.062 1.062 3.188 3.188 7.25-7.25-1.062-1.062z"
+								/>
+							</svg>
+							단어 및 도메인 관리
+						</dt>
+						<dd class="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-600">
+							<p class="flex-auto">
+								용어, 동의어, 금지어 등 다양한 단어와 도메인 정보를 체계적으로 관리하고 검색할 수
+								있습니다.
+							</p>
+						</dd>
+					</div>
+					<div class="flex flex-col">
+						<dt class="flex items-center gap-x-3 text-base font-semibold leading-7 text-gray-900">
+							<svg
+								class="h-5 w-5 flex-none text-blue-600"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+								aria-hidden="true"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M15.312 5.125l-6.188 6.188-2.125-2.125-1.062 1.062 3.188 3.188 7.25-7.25-1.062-1.062z"
+								/>
+							</svg>
+							파일 업로드 및 다운로드
+						</dt>
+						<dd class="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-600">
+							<p class="flex-auto">
+								엑셀 파일을 통해 대량의 단어 및 도메인 정보를 손쉽게 업로드하고, 필요한 데이터를
+								다시 엑셀 파일로 다운로드할 수 있습니다.
+							</p>
+						</dd>
+					</div>
+					<div class="flex flex-col">
+						<dt class="flex items-center gap-x-3 text-base font-semibold leading-7 text-gray-900">
+							<svg
+								class="h-5 w-5 flex-none text-blue-600"
+								viewBox="0 0 20 20"
+								fill="currentColor"
+								aria-hidden="true"
+							>
+								<path
+									fill-rule="evenodd"
+									d="M15.312 5.125l-6.188 6.188-2.125-2.125-1.062 1.062 3.188 3.188 7.25-7.25-1.062-1.062z"
+								/>
+							</svg>
+							변경 이력 추적
+						</dt>
+						<dd class="mt-4 flex flex-auto flex-col text-base leading-7 text-gray-600">
+							<p class="flex-auto">
+								모든 데이터 변경 사항에 대한 이력을 자동으로 기록하여, 언제든지 변경 내용을 확인하고
+								추적할 수 있습니다.
+							</p>
+						</dd>
+					</div>
+				</dl>
+			</div>
+		</div>
+	</section>
 </div>
 
 <style>

@@ -183,6 +183,9 @@
 			return () => clearTimeout(timer);
 		}
 	});
+	function focus(el: HTMLElement) {
+		el.focus();
+	}
 </script>
 
 {#if isOpen}
@@ -226,6 +229,11 @@
 				<div class="flex gap-2">
 					<input
 						type="text"
+						onkeydown={(e) => {
+							if (e.key === 'Enter') {
+								handleCreate();
+							}
+						}}
 						bind:value={newFilename}
 						placeholder="파일명 (예: new_vocab)"
 						class="flex-1 rounded-md border-gray-300 px-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
@@ -257,6 +265,12 @@
 										<input
 											type="text"
 											bind:value={renameValue}
+											onkeydown={(e) => {
+												if (e.key === 'Enter') {
+													handleRename();
+												}
+											}}
+											use:focus
 											class="flex-1 rounded-md border-gray-300 px-2 py-1 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
 										/>
 										<button

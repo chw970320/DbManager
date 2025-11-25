@@ -317,6 +317,9 @@
 
 		return pages;
 	}
+	function focus(el: HTMLElement, shouldFocus: boolean) {
+		if (shouldFocus) el.focus();
+	}
 </script>
 
 <!-- 단어집 테이블 컴포넌트 -->
@@ -515,16 +518,25 @@
 										<input
 											type="text"
 											bind:value={editedEntry[column.key as keyof VocabularyEntry]}
-											class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+											use:focus={column.key === 'standardName'}
+											onkeydown={(e: KeyboardEvent) => {
+												if (e.key === 'Enter') {
+													e.preventDefault();
+													handleSave(entry.id);
+												}
+											}}
+											class="w-full rounded-md border-gray-300 px-2 py-1 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
 										/>
 									{:else}
-										{@html sanitizeHtml(
-											highlightSearchTerm(
-												(entry[column.key as keyof VocabularyEntry] as string) || '',
-												searchQuery,
-												column.key
-											)
-										)}
+										<p class="px-2 py-1">
+											{@html sanitizeHtml(
+												highlightSearchTerm(
+													(entry[column.key as keyof VocabularyEntry] as string) || '',
+													searchQuery,
+													column.key
+												)
+											)}
+										</p>
 									{/if}
 								</td>
 							{/each}

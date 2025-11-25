@@ -198,6 +198,11 @@
 				// 캐시 무효화 후 새로고침
 				hasLoaded = false;
 				await loadForbiddenWords();
+
+				// 현재 수정 중인 항목을 삭제한 경우 폼 초기화
+				if (editingId === id) {
+					resetForm();
+				}
 			} else {
 				error = result.error || '금지어 삭제에 실패했습니다.';
 			}
@@ -254,6 +259,15 @@
 			return () => clearTimeout(timer);
 		}
 	});
+	function focus(el: HTMLElement, shouldFocus: boolean) {
+		if (shouldFocus) el.focus();
+
+		return {
+			update(newShouldFocus: boolean) {
+				if (newShouldFocus) el.focus();
+			}
+		};
+	}
 </script>
 
 {#if isOpen}
@@ -379,6 +393,7 @@
 								id="keyword"
 								type="text"
 								bind:value={formData.keyword}
+								use:focus={editingId !== null}
 								placeholder="금지할 키워드를 입력하세요"
 								class="input"
 								class:input-error={formErrors.keyword}

@@ -1,8 +1,7 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse } from '$lib/types/vocabulary.js';
 import type { DomainData, DomainEntry } from '$lib/types/domain.js';
-import { getDomainDataStore } from '$lib/stores/domain-store.js';
-import { saveDomainData } from '$lib/utils/file-handler.js';
+import { saveDomainData, loadDomainData } from '$lib/utils/file-handler.js';
 
 /**
  * 저장된 도메인 데이터 조회 API
@@ -17,6 +16,7 @@ export async function GET({ url }: RequestEvent) {
 		const sortOrder = url.searchParams.get('sortOrder') || 'desc';
 		const searchQuery = url.searchParams.get('query') || '';
 		const searchField = url.searchParams.get('field') || 'all';
+		const filename = url.searchParams.get('filename') || 'domain.json';
 
 		// 페이지네이션 유효성 검증
 		if (page < 1 || limit < 1 || limit > 100) {
@@ -73,7 +73,7 @@ export async function GET({ url }: RequestEvent) {
 		// 데이터 로드
 		let domainData: DomainData;
 		try {
-			domainData = await getDomainDataStore(); // await 추가
+			domainData = await loadDomainData(filename);
 		} catch (loadError) {
 			return json(
 				{
@@ -194,12 +194,14 @@ export async function GET({ url }: RequestEvent) {
  * 도메인 통계 정보 조회 API
  * OPTIONS /api/domain
  */
-export async function OPTIONS() {
+export async function OPTIONS({ url }: RequestEvent) {
 	try {
+		const filename = url.searchParams.get('filename') || 'domain.json';
+
 		// 데이터 로드 (비동기 함수이므로 await 사용)
 		let domainData: DomainData;
 		try {
-			domainData = await getDomainDataStore();
+			domainData = await loadDomainData(filename);
 		} catch (loadError) {
 			return json(
 				{
@@ -294,7 +296,7 @@ export async function OPTIONS() {
 export async function PUT({ request }: RequestEvent) {
 	try {
 		const body = await request.json();
-		const { id, ...updateFields } = body;
+		const { id, filename = 'domain.json', ...updateFields } = body;
 
 		if (!id) {
 			return json(
@@ -303,7 +305,7 @@ export async function PUT({ request }: RequestEvent) {
 			);
 		}
 
-		const domainData = await getDomainDataStore();
+		const domainData = await loadDomainData(filename);
 		const entryIndex = domainData.entries.findIndex((e) => e.id === id);
 
 		if (entryIndex === -1) {
@@ -320,7 +322,7 @@ export async function PUT({ request }: RequestEvent) {
 			updatedAt: new Date().toISOString()
 		};
 
-		await saveDomainData(domainData);
+		await saveDomainData(domainData, filename);
 
 		return json(
 			{ success: true, data: domainData.entries[entryIndex], message: '도메인 수정 완료' },
@@ -338,6 +340,7 @@ export async function PUT({ request }: RequestEvent) {
 export async function DELETE({ url }: RequestEvent) {
 	try {
 		const id = url.searchParams.get('id');
+		const filename = url.searchParams.get('filename') || 'domain.json';
 		if (!id) {
 			return json(
 				{ success: false, error: '삭제할 도메인 ID가 필요합니다.', message: 'ID required' },
@@ -345,7 +348,7 @@ export async function DELETE({ url }: RequestEvent) {
 			);
 		}
 
-		const domainData = await getDomainDataStore();
+		const domainData = await loadDomainData(filename);
 		const entryIndex = domainData.entries.findIndex((e) => e.id === id);
 
 		if (entryIndex === -1) {
@@ -357,12 +360,9 @@ export async function DELETE({ url }: RequestEvent) {
 
 		// 데이터 삭제
 		domainData.entries.splice(entryIndex, 1);
-		await saveDomainData(domainData);
+		await saveDomainData(domainData, filename);
 
-		return json(
-			{ success: true, message: '도메인 삭제 완료' },
-			{ status: 200 }
-		);
+		return json({ success: true, message: '도메인 삭제 완료' }, { status: 200 });
 	} catch (error) {
 		console.error('도메인 삭제 중 오류:', error);
 		return json(

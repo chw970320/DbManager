@@ -10,9 +10,10 @@ export async function GET({ url }: RequestEvent) {
 		const sortOrder = url.searchParams.get('sortOrder') || 'asc';
 		const searchQuery = url.searchParams.get('q') || '';
 		const searchField = url.searchParams.get('field') || 'all';
+		const targetFilename = url.searchParams.get('filename') || 'domain.json';
 
 		// 데이터 로드
-		const domainData = await loadDomainData();
+		const domainData = await loadDomainData(targetFilename);
 		let entries: DomainEntry[] = domainData.entries || [];
 
 		// 검색 적용
@@ -55,7 +56,7 @@ export async function GET({ url }: RequestEvent) {
 		const dd = String(today.getDate()).padStart(2, '0');
 		const filename = `domain_${yyyy}-${mm}-${dd}.xlsx`;
 
-		return new Response(buffer, {
+		return new Response(buffer as unknown as BodyInit, {
 			headers: {
 				'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 				'Content-Disposition': `attachment; filename="${filename}"`,

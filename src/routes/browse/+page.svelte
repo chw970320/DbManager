@@ -564,7 +564,7 @@
 						</div>
 
 						<!-- 액션 버튼들 -->
-						<div class="flex items-center space-x-3">
+						<div class="mb-4 flex items-center space-x-3">
 							<!-- 금지어 관리 버튼 -->
 							<button
 								type="button"

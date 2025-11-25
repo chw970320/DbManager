@@ -1,8 +1,7 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse } from '$lib/types/vocabulary.js';
 import type { DomainData, DomainEntry } from '$lib/types/domain.js';
-import { getDomainDataStore } from '$lib/stores/domain-store.js';
-import { mergeDomainData } from '$lib/utils/file-handler.js';
+import { loadDomainData, mergeDomainData } from '$lib/utils/file-handler.js';
 import { validateXlsxFile } from '$lib/utils/validation.js';
 import { parseDomainXlsxToJson } from '$lib/utils/xlsx-parser.js';
 
@@ -10,9 +9,10 @@ import { parseDomainXlsxToJson } from '$lib/utils/xlsx-parser.js';
  * 도메인 업로드 정보 조회 API
  * GET /api/domain/upload
  */
-export async function GET() {
+export async function GET({ url }: RequestEvent) {
 	try {
-		const currentStore = await getDomainDataStore(); // await 추가
+		const filename = url.searchParams.get('filename') || 'domain.json';
+		const currentStore = await loadDomainData(filename);
 		return json({
 			success: true,
 			data: {
@@ -126,10 +126,11 @@ export async function POST({ request }: RequestEvent) {
 
 		// 기존 데이터와 병합 (replace 옵션 확인)
 		const replaceExisting = formData.get('replace') === 'true';
+		const filename = (formData.get('filename') as string) || 'domain.json';
 		let finalData: DomainData;
 
 		try {
-			finalData = await mergeDomainData(parsedEntries, replaceExisting);
+			finalData = await mergeDomainData(parsedEntries, replaceExisting, filename);
 		} catch (mergeError) {
 			return json(
 				{

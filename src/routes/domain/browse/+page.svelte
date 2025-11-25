@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import SearchBar from '$lib/components/SearchBar.svelte';
 	import DomainTable from '$lib/components/DomainTable.svelte';
+	import DomainFileManager from '$lib/components/DomainFileManager.svelte';
 	import type { DomainEntry, DomainApiResponse } from '$lib/types/domain.js';
 
 	// 상태 변수
@@ -18,6 +19,11 @@
 	let sortDirection = $state<'asc' | 'desc'>('asc');
 	let lastUpdated = $state('');
 	let errorMessage = $state('');
+
+	// 파일 관리 상태
+	let isFileManagerOpen = $state(false);
+	let selectedFilename = $state('domain.json');
+	let fileList = $state<string[]>([]);
 
 	// 통계 정보
 	let statistics = $state({
@@ -37,8 +43,22 @@
 	 */
 	onMount(async () => {
 		await loadDomainData();
+		await loadDomainData();
 		await loadStatistics();
+		await loadFileList();
 	});
+
+	async function loadFileList() {
+		try {
+			const response = await fetch('/api/domain/files');
+			const result = await response.json();
+			if (result.success && result.data) {
+				fileList = result.data;
+			}
+		} catch (error) {
+			console.error('파일 목록 로드 실패:', error);
+		}
+	}
 
 	/**
 	 * 도메인 데이터 로드
@@ -52,7 +72,8 @@
 				page: currentPage.toString(),
 				limit: pageSize.toString(),
 				sortBy: sortColumn,
-				sortOrder: sortDirection
+				sortOrder: sortDirection,
+				filename: selectedFilename
 			});
 
 			const response = await fetch(`/api/domain?${params}`);
@@ -84,7 +105,8 @@
 	 */
 	async function loadStatistics() {
 		try {
-			const response = await fetch('/api/domain', { method: 'OPTIONS' });
+			const params = new URLSearchParams({ filename: selectedFilename });
+			const response = await fetch(`/api/domain?${params}`, { method: 'OPTIONS' });
 			const result: DomainApiResponse = await response.json();
 
 			if (result.success && result.data) {
@@ -132,7 +154,8 @@
 				page: currentPage.toString(),
 				limit: pageSize.toString(),
 				sortBy: sortColumn,
-				sortOrder: sortDirection
+				sortOrder: sortDirection,
+				filename: selectedFilename
 			});
 
 			const response = await fetch(`/api/domain?${params}`);
@@ -198,6 +221,7 @@
 			await loadDomainData();
 		}
 		await loadStatistics();
+		await loadFileList();
 	}
 
 	/**
@@ -208,7 +232,8 @@
 		try {
 			const params = new URLSearchParams({
 				sortBy: sortColumn,
-				sortOrder: sortDirection
+				sortOrder: sortDirection,
+				filename: selectedFilename
 			});
 			const response = await fetch(`/api/domain/download?${params}`);
 			if (!response.ok) {
@@ -262,6 +287,18 @@
 			return dateString;
 		}
 	}
+
+	function handleFileChange() {
+		// 파일 변경 시 데이터 새로고침
+		// selectedFilename은 FileManager에서 변경되지 않음 (현재는).
+		// 하지만 파일 생성/삭제/이름변경 후 목록을 다시 불러와야 할 수도 있고,
+		// 현재 선택된 파일이 삭제되거나 이름이 변경되었을 수 있음.
+		// 여기서는 단순히 데이터를 다시 로드함.
+		// 만약 현재 파일이 삭제되었다면 에러가 날 수 있으므로,
+		// FileManager에서 변경 사항을 알려주면 처리가 필요함.
+		// 일단은 새로고침.
+		handleRefresh();
+	}
 </script>
 
 <svelte:head>
@@ -284,30 +321,76 @@
 		</div>
 
 		<!-- 액션 버튼들 -->
-		<div class="flex items-center space-x-3">
-			<!-- 도메인 XLSX 다운로드 버튼 (단어집 관리와 동일 스타일) -->
-			<button
-				type="button"
-				onclick={handleDomainDownload}
-				disabled={loading}
-				class="group inline-flex items-center space-x-2 rounded-xl border border-green-200/50 bg-green-50/80 px-6 py-3 text-sm font-medium text-green-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-green-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-			>
-				<svg
-					class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
-					fill="none"
-					stroke="currentColor"
-					viewBox="0 0 24 24"
+		<div class="mb-4 flex items-center justify-between space-x-3">
+			<!-- 파일 선택 드롭다운 (임시: 텍스트 표시 및 관리 버튼) -->
+			<div class="flex items-center space-x-2 rounded-xl bg-white/50 px-4 py-2 backdrop-blur-sm">
+				<span class="text-sm font-medium text-gray-600">현재 파일:</span>
+				<select
+					bind:value={selectedFilename}
+					onchange={handleRefresh}
+					class="rounded-md border-gray-300 bg-transparent text-sm font-bold text-gray-900 focus:border-purple-500 focus:ring-purple-500"
 				>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-					/>
-				</svg>
-				<span>{loading ? '준비 중' : 'XLSX 다운로드'}</span>
-			</button>
-			<!-- 기존 버튼들 ... -->
+					<!-- 파일 목록을 불러와서 보여줘야 함. 
+                         하지만 여기서는 DomainFileManager가 파일 목록을 관리함.
+                         간단하게 하기 위해 파일 목록을 여기서도 불러오거나,
+                         DomainFileManager와 연동해야 함.
+                         일단은 DomainFileManager를 열어서 관리하도록 하고,
+                         여기서는 파일명을 입력받거나(임시), 
+                         DomainFileManager에서 선택 기능을 추가해야 함.
+                         
+                         *개선*: DomainFileManager에 '선택' 기능을 넣거나,
+                         여기서 파일 목록을 불러오는 로직을 추가해야 함.
+                         시간 관계상, 파일 목록을 불러오는 로직을 추가함.
+                    -->
+					{#each fileList as file}
+						<option value={file}>{file}</option>
+					{/each}
+				</select>
+			</div>
+
+			<div class="flex items-center gap-2 space-x-2">
+				<button
+					type="button"
+					onclick={() => (isFileManagerOpen = true)}
+					class="group inline-flex items-center space-x-2 rounded-xl border border-purple-200/50 bg-purple-50/80 px-6 py-3 text-sm font-medium text-purple-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-purple-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+				>
+					<svg
+						class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+						/>
+					</svg>
+					<span>파일 관리</span>
+				</button>
+				<button
+					type="button"
+					onclick={handleDomainDownload}
+					disabled={loading}
+					class="group inline-flex items-center space-x-2 rounded-xl border border-green-200/50 bg-green-50/80 px-6 py-3 text-sm font-medium text-green-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-green-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+				>
+					<svg
+						class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+						/>
+					</svg>
+					<span>{loading ? '준비 중' : 'XLSX 다운로드'}</span>
+				</button>
+			</div>
 		</div>
 
 		<!-- 통계 카드 -->
@@ -471,10 +554,17 @@
 				{sortColumn}
 				{sortDirection}
 				{searchField}
+				{selectedFilename}
 				onsort={handleSort}
 				onpagechange={handlePageChange}
 			/>
 		</div>
+
+		<DomainFileManager
+			isOpen={isFileManagerOpen}
+			on:close={() => (isFileManagerOpen = false)}
+			on:change={handleFileChange}
+		/>
 
 		<!-- 추가 정보 -->
 		{#if lastUpdated && !loading}

@@ -2,12 +2,16 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import FileUpload from '$lib/components/FileUpload.svelte';
+	import DomainFileManager from '$lib/components/DomainFileManager.svelte';
 	import type { UploadResult } from '$lib/types/vocabulary.js';
 
 	// 상태 변수
 	let uploading = $state(false);
 	let uploadMessage = $state('');
 	let errorMessage = $state('');
+	let fileList = $state<string[]>([]);
+	let selectedFilename = $state('domain.json');
+	let isFileManagerOpen = $state(false);
 
 	type UploadSuccessDetail = { result: UploadResult };
 	type UploadErrorDetail = { error: string };
@@ -15,7 +19,29 @@
 	/**
 	 * 컴포넌트 마운트 시 초기화
 	 */
-	onMount(() => {});
+	onMount(async () => {
+		await loadFileList();
+	});
+
+	async function loadFileList() {
+		try {
+			const response = await fetch('/api/domain/files');
+			const result = await response.json();
+			if (result.success && result.data) {
+				fileList = result.data;
+				if (fileList.length > 0 && !fileList.includes(selectedFilename)) {
+					selectedFilename = fileList[0];
+				}
+			}
+		} catch (error) {
+			console.error('파일 목록 로드 실패:', error);
+		}
+	}
+
+	function handleFileSelect(event: Event) {
+		const select = event.target as HTMLSelectElement;
+		selectedFilename = select.value;
+	}
 
 	/**
 	 * 파일 업로드 시작 처리
@@ -84,7 +110,78 @@
 			</p>
 		</div>
 
-		<!-- 상태 메시지 -->
+		<!-- 대상 파일 선택 -->
+		<div class="mx-auto mb-10 max-w-lg">
+			<div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-lg">
+				<div class="mb-3 flex items-center justify-between">
+					<label for="targetFile" class="block text-sm font-semibold text-gray-800">
+						대상 파일 선택
+						<span class="ml-1 text-xs font-normal text-gray-500">(데이터가 병합될 파일)</span>
+					</label>
+					<button
+						onclick={() => (isFileManagerOpen = true)}
+						class="flex items-center text-xs text-blue-600 hover:text-blue-800"
+					>
+						<svg class="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+							/>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+							/>
+						</svg>
+						파일 관리
+					</button>
+				</div>
+				<div class="relative">
+					<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+						<svg
+							class="h-5 w-5 text-gray-400"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+							/>
+						</svg>
+					</div>
+					<select
+						id="targetFile"
+						value={selectedFilename}
+						onchange={handleFileSelect}
+						class="block w-full appearance-none rounded-xl border-gray-200 bg-gray-50 py-3.5 pl-10 pr-10 text-gray-700 transition-all hover:bg-gray-100 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 sm:text-sm"
+						disabled={uploading}
+					>
+						{#each fileList as file}
+							<option value={file}>{file}</option>
+						{/each}
+					</select>
+					<div
+						class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"
+					>
+						<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M19 9l-7 7-7-7"
+							/>
+						</svg>
+					</div>
+				</div>
+			</div>
+		</div>
+
 		{#if uploadMessage}
 			<div class="animate-fade-in mx-auto mb-8 max-w-2xl">
 				<div
@@ -161,6 +258,7 @@
 							disabled={uploading}
 							apiEndpoint="/api/domain/upload"
 							contentType="도메인"
+							filename={selectedFilename}
 							onuploadstart={handleUploadStart}
 							onuploadsuccess={handleUploadSuccess}
 							onuploaderror={handleUploadError}
@@ -260,6 +358,12 @@
 		</div>
 	</div>
 </div>
+
+<DomainFileManager
+	isOpen={isFileManagerOpen}
+	on:close={() => (isFileManagerOpen = false)}
+	on:change={loadFileList}
+/>
 
 <style>
 	@keyframes fade-in {

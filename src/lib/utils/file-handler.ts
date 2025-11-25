@@ -1,34 +1,144 @@
-import { writeFile, readFile, mkdir, readdir, rename, unlink } from 'fs/promises';
+import { writeFile, readFile, mkdir, readdir, rename, unlink, stat } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import type { ForbiddenWordsData } from '$lib/types/vocabulary';
 
 // 데이터 저장 경로 설정
 const DATA_DIR = process.env.DATA_PATH || 'static/data';
-const DEFAULT_DATA_FILE = 'vocabulary.json';
+const VOCABULARY_DIR = join(DATA_DIR, 'vocabulary');
+const DOMAIN_DIR = join(DATA_DIR, 'domain');
+
+const DEFAULT_VOCABULARY_FILE = 'vocabulary.json';
+const DEFAULT_DOMAIN_FILE = 'domain.json';
+const FORBIDDEN_WORDS_FILE = 'forbidden-words.json';
+const HISTORY_FILE = 'history.json';
 
 /**
  * 데이터 파일 경로 가져오기
- * @param filename - 파일명 (기본값: vocabulary.json)
+ * @param filename - 파일명
+ * @param type - 데이터 타입 ('vocabulary' | 'domain' | 'forbidden' | 'history')
  */
-function getDataPath(filename: string = DEFAULT_DATA_FILE): string {
+function getDataPath(
+	filename: string,
+	type: 'vocabulary' | 'domain' | 'forbidden' | 'history' = 'vocabulary'
+): string {
 	// 파일명에 경로 구분자가 포함되어 있으면 제거 (보안)
 	const safeFilename = filename.replace(/^.*[\\\/]/, '');
-	return join(DATA_DIR, safeFilename);
+
+	if (type === 'domain') {
+		return join(DOMAIN_DIR, safeFilename);
+	} else {
+		// vocabulary, forbidden, history는 vocabulary 폴더에 저장
+		return join(VOCABULARY_DIR, safeFilename);
+	}
+}
+
+/**
+ * 데이터 마이그레이션 (기존 파일을 하위 폴더로 이동)
+ */
+async function migrateDataFiles(): Promise<void> {
+	try {
+		const files = await readdir(DATA_DIR);
+
+		for (const file of files) {
+			const filePath = join(DATA_DIR, file);
+			const fileStat = await stat(filePath);
+
+			if (fileStat.isDirectory()) continue;
+			if (!file.endsWith('.json')) continue;
+
+			// 시스템 파일 이동
+			if (
+				file === DEFAULT_VOCABULARY_FILE ||
+				file === FORBIDDEN_WORDS_FILE ||
+				file === HISTORY_FILE ||
+				file.includes('_backup_') // 백업 파일은 일단 vocabulary로 가정 (내용 확인 필요할 수도 있음)
+			) {
+				// 백업 파일의 경우 이름에 domain이 있으면 domain으로, 아니면 vocabulary로
+				if (file.includes('domain') && file.includes('_backup_')) {
+					await rename(filePath, join(DOMAIN_DIR, file));
+					console.log(`Migrated ${file} to domain directory`);
+				} else {
+					await rename(filePath, join(VOCABULARY_DIR, file));
+					console.log(`Migrated ${file} to vocabulary directory`);
+				}
+				continue;
+			}
+
+			if (file === DEFAULT_DOMAIN_FILE) {
+				await rename(filePath, join(DOMAIN_DIR, file));
+				console.log(`Migrated ${file} to domain directory`);
+				continue;
+			}
+
+			// 사용자 정의 파일 내용 기반 이동
+			try {
+				const content = await readFile(filePath, 'utf-8');
+				const json = JSON.parse(content);
+
+				if (json.entries && Array.isArray(json.entries) && json.entries.length > 0) {
+					const firstEntry = json.entries[0];
+					if (firstEntry.domainGroup !== undefined) {
+						await rename(filePath, join(DOMAIN_DIR, file));
+						console.log(`Migrated ${file} to domain directory (content-based)`);
+					} else if (firstEntry.standardName !== undefined) {
+						await rename(filePath, join(VOCABULARY_DIR, file));
+						console.log(`Migrated ${file} to vocabulary directory (content-based)`);
+					} else {
+						// 알 수 없는 형식이면 vocabulary로 이동 (기본값)
+						await rename(filePath, join(VOCABULARY_DIR, file));
+						console.log(`Migrated ${file} to vocabulary directory (default)`);
+					}
+				} else {
+					// 빈 파일이거나 entries가 없으면 vocabulary로 이동 (기본값)
+					await rename(filePath, join(VOCABULARY_DIR, file));
+					console.log(`Migrated ${file} to vocabulary directory (empty/unknown)`);
+				}
+			} catch (e) {
+				console.warn(`Failed to parse ${file} during migration, skipping.`);
+			}
+		}
+	} catch (error) {
+		console.error('Data migration failed:', error);
+	}
 }
 
 /**
  * 데이터 디렉토리가 존재하는지 확인하고 없으면 생성
+ * 또한 마이그레이션 로직을 실행
  */
 export async function ensureDataDirectory(): Promise<void> {
 	try {
+		// 1. 기본 데이터 디렉토리 생성
 		if (!existsSync(DATA_DIR)) {
 			await mkdir(DATA_DIR, { recursive: true });
 		}
+
+		// 2. 하위 디렉토리 확인
+		const vocabDirExists = existsSync(VOCABULARY_DIR);
+		const domainDirExists = existsSync(DOMAIN_DIR);
+
+		// 3. 하위 디렉토리가 하나라도 없으면 생성
+		if (!vocabDirExists) {
+			await mkdir(VOCABULARY_DIR, { recursive: true });
+		}
+		if (!domainDirExists) {
+			await mkdir(DOMAIN_DIR, { recursive: true });
+		}
+
+		// 4. 마이그레이션 필요 여부 확인 (루트 데이터 디렉토리에 json 파일이 남아있는지)
+		// 성능을 위해 매번 체크하지 않고, 디렉토리가 방금 생성되었거나 하는 경우에만 할 수도 있지만,
+		// 파일이 루트에 잘못 저장되는 경우를 대비해 루트에 파일이 있으면 이동시키는 것이 안전함.
+		const files = await readdir(DATA_DIR);
+		const hasRootJsonFiles = files.some((f) => f.endsWith('.json'));
+
+		if (hasRootJsonFiles) {
+			await migrateDataFiles();
+		}
 	} catch (error) {
-		console.error('데이터 디렉토리 생성 실패:', error);
+		console.error('데이터 디렉토리 생성 및 마이그레이션 실패:', error);
 		throw new Error(
-			`데이터 디렉토리 생성 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`
+			`데이터 디렉토리 초기화 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`
 		);
 	}
 }
@@ -40,18 +150,15 @@ export async function ensureDataDirectory(): Promise<void> {
  */
 export async function saveVocabularyData(
 	data: import('../types/vocabulary.js').VocabularyData,
-	filename: string = DEFAULT_DATA_FILE
+	filename: string = DEFAULT_VOCABULARY_FILE
 ): Promise<void> {
 	try {
-		// 데이터 디렉토리 확인 및 생성
 		await ensureDataDirectory();
 
-		// 데이터 유효성 검증
 		if (!data || !Array.isArray(data.entries)) {
 			throw new Error('유효하지 않은 단어집 데이터입니다.');
 		}
 
-		// 각 엔트리 유효성 검증
 		const validEntries = data.entries.filter((entry) => {
 			const isValid =
 				entry.id &&
@@ -66,16 +173,14 @@ export async function saveVocabularyData(
 			throw new Error('저장할 유효한 단어집 데이터가 없습니다.');
 		}
 
-		// 최종 데이터 객체 구성
 		const finalData: import('../types/vocabulary.js').VocabularyData = {
 			entries: validEntries,
 			lastUpdated: new Date().toISOString(),
 			totalCount: validEntries.length
 		};
 
-		// JSON 파일로 저장 (들여쓰기 포함)
 		const jsonString = JSON.stringify(finalData, null, 2);
-		await writeFile(getDataPath(filename), jsonString, 'utf-8');
+		await writeFile(getDataPath(filename, 'vocabulary'), jsonString, 'utf-8');
 	} catch (error) {
 		console.error('단어집 데이터 저장 실패:', error);
 		throw new Error(
@@ -87,15 +192,14 @@ export async function saveVocabularyData(
 /**
  * 저장된 단어집 데이터를 JSON 파일에서 로드
  * @param filename - 로드할 파일명 (기본값: vocabulary.json)
- * @returns 로드된 VocabularyData 객체
  */
 export async function loadVocabularyData(
-	filename: string = DEFAULT_DATA_FILE
+	filename: string = DEFAULT_VOCABULARY_FILE
 ): Promise<import('../types/vocabulary.js').VocabularyData> {
 	try {
-		const dataPath = getDataPath(filename);
+		await ensureDataDirectory(); // 마이그레이션 확인을 위해 호출
+		const dataPath = getDataPath(filename, 'vocabulary');
 
-		// 파일 존재 확인
 		if (!existsSync(dataPath)) {
 			return {
 				entries: [],
@@ -104,11 +208,9 @@ export async function loadVocabularyData(
 			};
 		}
 
-		// 파일 읽기
 		const jsonString = await readFile(dataPath, 'utf-8');
 
 		if (!jsonString.trim()) {
-			console.warn('단어집 데이터 파일이 비어있습니다.');
 			return {
 				entries: [],
 				lastUpdated: new Date().toISOString(),
@@ -116,10 +218,8 @@ export async function loadVocabularyData(
 			};
 		}
 
-		// JSON 파싱
 		const data = JSON.parse(jsonString) as import('../types/vocabulary.js').VocabularyData;
 
-		// 데이터 구조 검증
 		if (!data || typeof data !== 'object') {
 			throw new Error('단어집 데이터 형식이 올바르지 않습니다.');
 		}
@@ -128,7 +228,6 @@ export async function loadVocabularyData(
 			throw new Error('단어집 엔트리 데이터가 배열이 아닙니다.');
 		}
 
-		// 각 엔트리 유효성 검증 및 필터링
 		const validEntries = data.entries.filter((entry) => {
 			const isValid =
 				entry.id &&
@@ -146,12 +245,9 @@ export async function loadVocabularyData(
 		};
 	} catch (error) {
 		console.error('단어집 데이터 로드 실패:', error);
-
-		// JSON 파싱 오류인 경우 더 구체적인 메시지
 		if (error instanceof SyntaxError) {
-			throw new Error('단어집 데이터 파일 형식이 손상되었습니다. 파일을 다시 업로드해주세요.');
+			throw new Error('단어집 데이터 파일 형식이 손상되었습니다.');
 		}
-
 		throw new Error(
 			`데이터 로드 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`
 		);
@@ -160,15 +256,11 @@ export async function loadVocabularyData(
 
 /**
  * 기존 단어집 데이터에 새로운 엔트리들을 병합
- * @param newEntries - 추가할 새로운 엔트리들
- * @param replaceExisting - 기존 데이터를 교체할지 여부 (기본값: true)
- * @param filename - 병합할 파일명 (기본값: vocabulary.json)
- * @returns 병합된 VocabularyData 객체
  */
 export async function mergeVocabularyData(
 	newEntries: import('../types/vocabulary.js').VocabularyEntry[],
 	replaceExisting: boolean = true,
-	filename: string = DEFAULT_DATA_FILE
+	filename: string = DEFAULT_VOCABULARY_FILE
 ): Promise<import('../types/vocabulary.js').VocabularyData> {
 	try {
 		const existingData = await loadVocabularyData(filename);
@@ -213,13 +305,12 @@ export async function mergeVocabularyData(
 }
 
 /**
- * 데이터 파일의 백업 생성
- * @param filename - 백업할 파일명 (기본값: vocabulary.json)
- * @returns 백업 파일 경로
+ * 데이터 파일의 백업 생성 (단어집)
  */
-export async function createBackup(filename: string = DEFAULT_DATA_FILE): Promise<string> {
+export async function createBackup(filename: string = DEFAULT_VOCABULARY_FILE): Promise<string> {
 	try {
-		const dataPath = getDataPath(filename);
+		await ensureDataDirectory();
+		const dataPath = getDataPath(filename, 'vocabulary');
 
 		if (!existsSync(dataPath)) {
 			throw new Error('백업할 데이터 파일이 존재하지 않습니다.');
@@ -228,7 +319,7 @@ export async function createBackup(filename: string = DEFAULT_DATA_FILE): Promis
 		const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
 		const safeFilename = filename.replace(/\.json$/, '');
 		const backupFileName = `${safeFilename}_backup_${timestamp}.json`;
-		const backupPath = join(DATA_DIR, backupFileName);
+		const backupPath = join(VOCABULARY_DIR, backupFileName);
 
 		const originalData = await readFile(dataPath, 'utf-8');
 		await writeFile(backupPath, originalData, 'utf-8');
@@ -244,36 +335,32 @@ export async function createBackup(filename: string = DEFAULT_DATA_FILE): Promis
 
 /**
  * 사용 가능한 단어집 파일 목록 조회
- * @returns 파일명 목록
  */
 export async function listVocabularyFiles(): Promise<string[]> {
 	try {
 		await ensureDataDirectory();
-		const files = await readdir(DATA_DIR);
+		const files = await readdir(VOCABULARY_DIR);
 		return files.filter((file) => {
 			return (
 				file.endsWith('.json') &&
-				file !== 'forbidden-words.json' &&
-				file !== 'domain.json' &&
-				file !== 'history.json' &&
+				file !== FORBIDDEN_WORDS_FILE &&
+				file !== HISTORY_FILE &&
 				!file.includes('_backup_')
 			);
 		});
 	} catch (error) {
 		console.error('단어집 파일 목록 조회 실패:', error);
-		return [DEFAULT_DATA_FILE];
+		return [DEFAULT_VOCABULARY_FILE];
 	}
 }
 
 /**
  * 새로운 단어집 파일 생성
- * @param filename - 생성할 파일명 (확장자 .json 포함)
  */
 export async function createVocabularyFile(filename: string): Promise<void> {
 	try {
 		await ensureDataDirectory();
 
-		// 파일명 유효성 검사
 		if (!filename.endsWith('.json')) {
 			throw new Error('파일명은 .json으로 끝나야 합니다.');
 		}
@@ -281,13 +368,12 @@ export async function createVocabularyFile(filename: string): Promise<void> {
 			throw new Error('파일명에 사용할 수 없는 문자가 포함되어 있습니다.');
 		}
 
-		const filePath = getDataPath(filename);
+		const filePath = getDataPath(filename, 'vocabulary');
 
 		if (existsSync(filePath)) {
 			throw new Error('이미 존재하는 파일명입니다.');
 		}
 
-		// 빈 단어집 데이터 생성
 		const emptyData: import('../types/vocabulary.js').VocabularyData = {
 			entries: [],
 			lastUpdated: new Date().toISOString(),
@@ -303,8 +389,6 @@ export async function createVocabularyFile(filename: string): Promise<void> {
 
 /**
  * 단어집 파일 이름 변경
- * @param oldFilename - 변경할 기존 파일명
- * @param newFilename - 새로운 파일명
  */
 export async function renameVocabularyFile(
 	oldFilename: string,
@@ -313,7 +397,6 @@ export async function renameVocabularyFile(
 	try {
 		await ensureDataDirectory();
 
-		// 파일명 유효성 검사
 		if (!newFilename.endsWith('.json')) {
 			throw new Error('새 파일명은 .json으로 끝나야 합니다.');
 		}
@@ -321,8 +404,8 @@ export async function renameVocabularyFile(
 			throw new Error('파일명에 사용할 수 없는 문자가 포함되어 있습니다.');
 		}
 
-		const oldPath = getDataPath(oldFilename);
-		const newPath = getDataPath(newFilename);
+		const oldPath = getDataPath(oldFilename, 'vocabulary');
+		const newPath = getDataPath(newFilename, 'vocabulary');
 
 		if (!existsSync(oldPath)) {
 			throw new Error('변경할 파일이 존재하지 않습니다.');
@@ -331,11 +414,10 @@ export async function renameVocabularyFile(
 			throw new Error('이미 존재하는 파일명입니다.');
 		}
 
-		// 기본 파일 보호
 		if (
-			oldFilename === 'forbidden-words.json' ||
-			oldFilename === 'domain.json' ||
-			oldFilename === 'history.json'
+			oldFilename === FORBIDDEN_WORDS_FILE ||
+			oldFilename === DEFAULT_VOCABULARY_FILE ||
+			oldFilename === HISTORY_FILE
 		) {
 			throw new Error('시스템 파일은 이름을 변경할 수 없습니다.');
 		}
@@ -349,13 +431,11 @@ export async function renameVocabularyFile(
 
 /**
  * 단어집 파일 삭제
- * @param filename - 삭제할 파일명
  */
 export async function deleteVocabularyFile(filename: string): Promise<void> {
 	try {
 		await ensureDataDirectory();
 
-		// 파일명 유효성 검사
 		if (!filename.endsWith('.json')) {
 			throw new Error('삭제할 파일명은 .json으로 끝나야 합니다.');
 		}
@@ -363,16 +443,15 @@ export async function deleteVocabularyFile(filename: string): Promise<void> {
 			throw new Error('파일명에 사용할 수 없는 문자가 포함되어 있습니다.');
 		}
 
-		// 기본 파일 보호
 		if (
-			filename === 'forbidden-words.json' ||
-			filename === 'domain.json' ||
-			filename === 'history.json'
+			filename === FORBIDDEN_WORDS_FILE ||
+			filename === DEFAULT_VOCABULARY_FILE ||
+			filename === HISTORY_FILE
 		) {
 			throw new Error('시스템 파일은 삭제할 수 없습니다.');
 		}
 
-		const filePath = getDataPath(filename);
+		const filePath = getDataPath(filename, 'vocabulary');
 
 		if (!existsSync(filePath)) {
 			throw new Error('삭제할 파일이 존재하지 않습니다.');
@@ -385,18 +464,15 @@ export async function deleteVocabularyFile(filename: string): Promise<void> {
 	}
 }
 
-// 금지어 데이터 파일 경로
-const FORBIDDEN_WORDS_FILE = 'forbidden-words.json';
-const FORBIDDEN_WORDS_PATH = join(DATA_DIR, FORBIDDEN_WORDS_FILE);
-
 /**
  * 금지어 데이터를 JSON 파일에서 불러오기
- * @returns 금지어 데이터 객체
  */
 export async function loadForbiddenWordsData(): Promise<ForbiddenWordsData> {
 	try {
-		// 파일이 존재하지 않으면 기본 데이터 구조 반환
-		if (!existsSync(FORBIDDEN_WORDS_PATH)) {
+		await ensureDataDirectory();
+		const dataPath = getDataPath(FORBIDDEN_WORDS_FILE, 'forbidden');
+
+		if (!existsSync(dataPath)) {
 			const defaultData: ForbiddenWordsData = {
 				entries: [],
 				lastUpdated: new Date().toISOString(),
@@ -406,15 +482,13 @@ export async function loadForbiddenWordsData(): Promise<ForbiddenWordsData> {
 			return defaultData;
 		}
 
-		const fileContent = await readFile(FORBIDDEN_WORDS_PATH, 'utf-8');
+		const fileContent = await readFile(dataPath, 'utf-8');
 		const data: ForbiddenWordsData = JSON.parse(fileContent);
 
-		// 데이터 유효성 검증
 		if (!data || !Array.isArray(data.entries)) {
 			throw new Error('유효하지 않은 금지어 데이터 형식입니다.');
 		}
 
-		// 엔트리 수 재계산
 		data.totalCount = data.entries.length;
 
 		return data;
@@ -428,24 +502,17 @@ export async function loadForbiddenWordsData(): Promise<ForbiddenWordsData> {
 
 /**
  * 금지어 데이터를 JSON 파일로 저장
- * @param data - 저장할 ForbiddenWordsData 객체
  */
 export async function saveForbiddenWordsData(data: ForbiddenWordsData): Promise<void> {
 	try {
-		// 데이터 디렉토리 확인 및 생성
 		await ensureDataDirectory();
 
-		// 데이터 유효성 검증
 		if (!data || !Array.isArray(data.entries)) {
 			throw new Error('유효하지 않은 금지어 데이터입니다.');
 		}
 
-		// 각 엔트리 유효성 검증
 		const validEntries = data.entries.filter((entry) => {
 			const isValid = entry.id && entry.keyword && entry.type && entry.createdAt;
-			if (!isValid) {
-				console.warn('유효하지 않은 금지어 엔트리 제외:', entry);
-			}
 			return isValid;
 		});
 
@@ -453,18 +520,14 @@ export async function saveForbiddenWordsData(data: ForbiddenWordsData): Promise<
 			throw new Error('저장할 유효한 금지어 데이터가 없습니다.');
 		}
 
-		// 최종 데이터 구조 생성
 		const finalData: ForbiddenWordsData = {
 			entries: validEntries,
 			lastUpdated: new Date().toISOString(),
 			totalCount: validEntries.length
 		};
 
-		// JSON 문자열로 변환 (가독성을 위해 들여쓰기 적용)
 		const jsonData = JSON.stringify(finalData, null, 2);
-
-		// 파일 저장
-		await writeFile(FORBIDDEN_WORDS_PATH, jsonData, 'utf-8');
+		await writeFile(getDataPath(FORBIDDEN_WORDS_FILE, 'forbidden'), jsonData, 'utf-8');
 	} catch (error) {
 		console.error('금지어 데이터 저장 실패:', error);
 		throw new Error(
@@ -473,31 +536,31 @@ export async function saveForbiddenWordsData(data: ForbiddenWordsData): Promise<
 	}
 }
 
-// 도메인 데이터 파일 경로
-const DOMAIN_FILE = 'domain.json';
-const DOMAIN_PATH = join(DATA_DIR, DOMAIN_FILE);
-
 /**
  * 도메인 데이터를 JSON 파일에서 불러오기
- * @returns 도메인 데이터 객체
  */
-export async function loadDomainData(): Promise<import('../types/domain.js').DomainData> {
+export async function loadDomainData(
+	filename: string = DEFAULT_DOMAIN_FILE
+): Promise<import('../types/domain.js').DomainData> {
 	try {
-		// 파일이 존재하지 않으면 기본 데이터 구조 반환
-		if (!existsSync(DOMAIN_PATH)) {
+		await ensureDataDirectory();
+		const dataPath = getDataPath(filename, 'domain');
+
+		if (!existsSync(dataPath)) {
 			const defaultData: import('../types/domain.js').DomainData = {
 				entries: [],
 				lastUpdated: new Date().toISOString(),
 				totalCount: 0
 			};
-			await saveDomainData(defaultData);
+			if (filename === DEFAULT_DOMAIN_FILE) {
+				await saveDomainData(defaultData, filename);
+			}
 			return defaultData;
 		}
 
-		const fileContent = await readFile(DOMAIN_PATH, 'utf-8');
+		const fileContent = await readFile(dataPath, 'utf-8');
 
 		if (!fileContent.trim()) {
-			console.warn('도메인 데이터 파일이 비어있습니다.');
 			const defaultData: import('../types/domain.js').DomainData = {
 				entries: [],
 				lastUpdated: new Date().toISOString(),
@@ -508,12 +571,10 @@ export async function loadDomainData(): Promise<import('../types/domain.js').Dom
 
 		const data: import('../types/domain.js').DomainData = JSON.parse(fileContent);
 
-		// 데이터 유효성 검증
 		if (!data || !Array.isArray(data.entries)) {
 			throw new Error('유효하지 않은 도메인 데이터 형식입니다.');
 		}
 
-		// 엔트리 수 재계산
 		data.totalCount = data.entries.length;
 
 		return data;
@@ -527,19 +588,18 @@ export async function loadDomainData(): Promise<import('../types/domain.js').Dom
 
 /**
  * 도메인 데이터를 JSON 파일로 저장
- * @param data - 저장할 DomainData 객체
  */
-export async function saveDomainData(data: import('../types/domain.js').DomainData): Promise<void> {
+export async function saveDomainData(
+	data: import('../types/domain.js').DomainData,
+	filename: string = DEFAULT_DOMAIN_FILE
+): Promise<void> {
 	try {
-		// 데이터 디렉토리 확인 및 생성
 		await ensureDataDirectory();
 
-		// 데이터 유효성 검증
 		if (!data || !Array.isArray(data.entries)) {
 			throw new Error('유효하지 않은 도메인 데이터입니다.');
 		}
 
-		// 각 엔트리 유효성 검증
 		const validEntries = data.entries.filter((entry) => {
 			const isValid =
 				entry.id &&
@@ -549,9 +609,6 @@ export async function saveDomainData(data: import('../types/domain.js').DomainDa
 				entry.logicalDataType &&
 				entry.physicalDataType &&
 				entry.createdAt;
-			if (!isValid) {
-				console.warn('유효하지 않은 도메인 엔트리 제외:', entry);
-			}
 			return isValid;
 		});
 
@@ -559,18 +616,14 @@ export async function saveDomainData(data: import('../types/domain.js').DomainDa
 			throw new Error('저장할 유효한 도메인 데이터가 없습니다.');
 		}
 
-		// 최종 데이터 구조 생성
 		const finalData: import('../types/domain.js').DomainData = {
 			entries: validEntries,
 			lastUpdated: new Date().toISOString(),
 			totalCount: validEntries.length
 		};
 
-		// JSON 문자열로 변환 (가독성을 위해 들여쓰기 적용)
 		const jsonData = JSON.stringify(finalData, null, 2);
-
-		// 파일 저장
-		await writeFile(DOMAIN_PATH, jsonData, 'utf-8');
+		await writeFile(getDataPath(filename, 'domain'), jsonData, 'utf-8');
 	} catch (error) {
 		console.error('도메인 데이터 저장 실패:', error);
 		throw new Error(
@@ -581,25 +634,19 @@ export async function saveDomainData(data: import('../types/domain.js').DomainDa
 
 /**
  * 기존 도메인 데이터에 새로운 엔트리들을 병합
- * @param newEntries - 추가할 새로운 엔트리들
- * @param replaceExisting - 기존 데이터를 교체할지 여부 (기본값: true)
- * @returns 병합된 DomainData 객체
  */
 export async function mergeDomainData(
 	newEntries: import('../types/domain.js').DomainEntry[],
-	replaceExisting: boolean = true
+	replaceExisting: boolean = true,
+	filename: string = DEFAULT_DOMAIN_FILE
 ): Promise<import('../types/domain.js').DomainData> {
 	try {
-		// 기존 데이터 로드
-		const existingData = await loadDomainData();
-
+		const existingData = await loadDomainData(filename);
 		let finalEntries: import('../types/domain.js').DomainEntry[];
 
 		if (replaceExisting || existingData.entries.length === 0) {
-			// 기존 데이터 교체 또는 기존 데이터가 없는 경우
 			finalEntries = [...newEntries];
 		} else {
-			// 기존 데이터와 병합
 			const mergedMap = new Map<string, import('../types/domain.js').DomainEntry>();
 			existingData.entries.forEach((entry) => {
 				const compositeKey = `${entry.domainGroup.toLowerCase()}|${entry.domainCategory.toLowerCase()}|${entry.standardDomainName.toLowerCase()}`;
@@ -609,37 +656,28 @@ export async function mergeDomainData(
 				const compositeKey = `${entry.domainGroup.toLowerCase()}|${entry.domainCategory.toLowerCase()}|${entry.standardDomainName.toLowerCase()}`;
 
 				if (mergedMap.has(compositeKey)) {
-					// 완전히 동일한 엔트리 - 기존 정보 보존하면서 업데이트
 					const existingEntry = mergedMap.get(compositeKey)!;
 					const mergedEntry: import('../types/domain.js').DomainEntry = {
 						...entry,
-						// 기존 비고가 있고 새 비고가 없으면 기존 비고 유지
 						remarks: entry.remarks || existingEntry.remarks,
-						// 생성일은 기존 것 유지, 수정일은 현재 시간으로 업데이트
 						createdAt: existingEntry.createdAt,
 						updatedAt: new Date().toISOString()
 					};
-
 					mergedMap.set(compositeKey, mergedEntry);
 				} else {
-					// 새로운 엔트리 추가
 					mergedMap.set(compositeKey, entry);
 				}
 			});
-
 			finalEntries = Array.from(mergedMap.values());
 		}
 
-		// 최종 데이터 객체 생성
 		const mergedData: import('../types/domain.js').DomainData = {
 			entries: finalEntries,
 			lastUpdated: new Date().toISOString(),
 			totalCount: finalEntries.length
 		};
 
-		// 병합된 데이터 저장
-		await saveDomainData(mergedData);
-
+		await saveDomainData(mergedData, filename);
 		return mergedData;
 	} catch (error) {
 		console.error('도메인 데이터 병합 실패:', error);
@@ -651,19 +689,22 @@ export async function mergeDomainData(
 
 /**
  * 도메인 데이터 파일의 백업 생성
- * @returns 백업 파일 경로
  */
-export async function createDomainBackup(): Promise<string> {
+export async function createDomainBackup(filename: string = DEFAULT_DOMAIN_FILE): Promise<string> {
 	try {
-		if (!existsSync(DOMAIN_PATH)) {
+		await ensureDataDirectory();
+		const dataPath = getDataPath(filename, 'domain');
+
+		if (!existsSync(dataPath)) {
 			throw new Error('백업할 도메인 데이터 파일이 존재하지 않습니다.');
 		}
 
 		const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-		const backupFileName = `domain_backup_${timestamp}.json`;
-		const backupPath = join(DATA_DIR, backupFileName);
+		const safeFilename = filename.replace(/\.json$/, '');
+		const backupFileName = `${safeFilename}_backup_${timestamp}.json`;
+		const backupPath = join(DOMAIN_DIR, backupFileName);
 
-		const originalData = await readFile(DOMAIN_PATH, 'utf-8');
+		const originalData = await readFile(dataPath, 'utf-8');
 		await writeFile(backupPath, originalData, 'utf-8');
 
 		return backupPath;
@@ -672,5 +713,120 @@ export async function createDomainBackup(): Promise<string> {
 		throw new Error(
 			`도메인 백업 생성 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`
 		);
+	}
+}
+
+/**
+ * 사용 가능한 도메인 파일 목록 조회
+ */
+export async function listDomainFiles(): Promise<string[]> {
+	try {
+		await ensureDataDirectory();
+		const files = await readdir(DOMAIN_DIR);
+		return files.filter((file) => {
+			return file.endsWith('.json') && !file.includes('_backup_');
+		});
+	} catch (error) {
+		console.error('도메인 파일 목록 조회 실패:', error);
+		return [DEFAULT_DOMAIN_FILE];
+	}
+}
+
+/**
+ * 새로운 도메인 파일 생성
+ */
+export async function createDomainFile(filename: string): Promise<void> {
+	try {
+		await ensureDataDirectory();
+
+		if (!filename.endsWith('.json')) {
+			throw new Error('파일명은 .json으로 끝나야 합니다.');
+		}
+		if (/[\\/:*?"<>|]/.test(filename)) {
+			throw new Error('파일명에 사용할 수 없는 문자가 포함되어 있습니다.');
+		}
+
+		const filePath = getDataPath(filename, 'domain');
+
+		if (existsSync(filePath)) {
+			throw new Error('이미 존재하는 파일명입니다.');
+		}
+
+		const emptyData: import('../types/domain.js').DomainData = {
+			entries: [],
+			lastUpdated: new Date().toISOString(),
+			totalCount: 0
+		};
+
+		await writeFile(filePath, JSON.stringify(emptyData, null, 2), 'utf-8');
+	} catch (error) {
+		console.error('도메인 파일 생성 실패:', error);
+		throw error;
+	}
+}
+
+/**
+ * 도메인 파일 이름 변경
+ */
+export async function renameDomainFile(oldFilename: string, newFilename: string): Promise<void> {
+	try {
+		await ensureDataDirectory();
+
+		if (!newFilename.endsWith('.json')) {
+			throw new Error('새 파일명은 .json으로 끝나야 합니다.');
+		}
+		if (/[\\/:*?"<>|]/.test(newFilename)) {
+			throw new Error('파일명에 사용할 수 없는 문자가 포함되어 있습니다.');
+		}
+
+		const oldPath = getDataPath(oldFilename, 'domain');
+		const newPath = getDataPath(newFilename, 'domain');
+
+		if (!existsSync(oldPath)) {
+			throw new Error('변경할 파일이 존재하지 않습니다.');
+		}
+		if (existsSync(newPath)) {
+			throw new Error('이미 존재하는 파일명입니다.');
+		}
+
+		if (oldFilename === DEFAULT_DOMAIN_FILE) {
+			throw new Error('시스템 파일은 이름을 변경할 수 없습니다.');
+		}
+
+		await rename(oldPath, newPath);
+	} catch (error) {
+		console.error('도메인 파일 이름 변경 실패:', error);
+		throw error;
+	}
+}
+
+/**
+ * 도메인 파일 삭제
+ */
+export async function deleteDomainFile(filename: string): Promise<void> {
+	try {
+		await ensureDataDirectory();
+
+		if (!filename.endsWith('.json')) {
+			throw new Error('삭제할 파일명은 .json으로 끝나야 합니다.');
+		}
+		if (/[\\/:*?"<>|]/.test(filename)) {
+			throw new Error('파일명에 사용할 수 없는 문자가 포함되어 있습니다.');
+		}
+
+		if (filename === DEFAULT_DOMAIN_FILE) {
+			throw new Error('시스템 파일은 삭제할 수 없습니다.');
+		}
+
+		const filePath = getDataPath(filename, 'domain');
+
+		if (!existsSync(filePath)) {
+			throw new Error('삭제할 파일이 존재하지 않습니다.');
+		}
+
+		await unlink(filePath);
+	} catch (error) {
+		console.error('도메인 파일 삭제 실패:', error);
+		throw error;
 	}
 }

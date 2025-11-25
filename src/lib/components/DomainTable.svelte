@@ -22,6 +22,7 @@
 		sortColumn = '',
 		sortDirection = 'asc' as 'asc' | 'desc',
 		searchField = 'all',
+		selectedFilename = 'domain.json',
 		onsort,
 		onpagechange
 	}: {
@@ -35,6 +36,7 @@
 		sortColumn?: string;
 		sortDirection?: 'asc' | 'desc';
 		searchField?: string;
+		selectedFilename?: string;
 		onsort: (detail: SortEvent) => void;
 		onpagechange: (detail: PageChangeEvent) => void;
 	} = $props();
@@ -58,7 +60,7 @@
 			const response = await fetch(`/api/domain`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ ...editedEntry, id })
+				body: JSON.stringify({ ...editedEntry, id, filename: selectedFilename })
 			});
 			if (response.ok) {
 				cancelEdit();
@@ -74,7 +76,9 @@
 	async function handleDelete(id: string) {
 		if (confirm('정말로 이 항목을 삭제하시겠습니까?')) {
 			try {
-				const response = await fetch(`/api/domain?id=${id}`, { method: 'DELETE' });
+				const response = await fetch(`/api/domain?id=${id}&filename=${selectedFilename}`, {
+					method: 'DELETE'
+				});
 				if (response.ok) {
 					onpagechange({ page: currentPage });
 				} else {

@@ -1,0 +1,18 @@
+services:
+  app:
+    build: .
+    container_name: dbmanager
+    ports:
+      - "63000:3000"
+    volumes:
+      - ./static/data:/app/static/data
+    environment:
+      - PORT=3000
+      - HOST=0.0.0.0
+    restart: unless-stopped
+    networks:
+      - dbmanager-network
+
+network:
+  dbmanager-network:
+    driver: bridge

@@ -14,6 +14,7 @@ export async function GET({ url }: RequestEvent) {
 		const sortBy = url.searchParams.get('sortBy') || 'standardName';
 		const sortOrder = url.searchParams.get('sortOrder') || 'asc';
 		const filter = url.searchParams.get('filter'); // 중복 필터링 파라미터
+		const filename = url.searchParams.get('filename') || undefined; // 파일명 파라미터 추가
 
 		// 정렬 필드 유효성 검증
 		const validSortFields = ['standardName', 'abbreviation', 'englishName', 'createdAt'];
@@ -33,7 +34,7 @@ export async function GET({ url }: RequestEvent) {
 		// 데이터 로드
 		let vocabularyData: VocabularyData;
 		try {
-			vocabularyData = await loadVocabularyData();
+			vocabularyData = await loadVocabularyData(filename);
 		} catch (loadError) {
 			return new Response(
 				JSON.stringify({
@@ -111,14 +112,14 @@ export async function GET({ url }: RequestEvent) {
 
 		// 현재 날짜를 포함한 파일명 생성
 		const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD 형식
-		const filename = `vocabulary_${currentDate}.xlsx`;
+		const downloadFilename = `vocabulary_${currentDate}.xlsx`;
 
 		// XLSX 파일로 응답
 		return new Response(xlsxBuffer, {
 			status: 200,
 			headers: {
 				'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-				'Content-Disposition': `attachment; filename="${filename}"`,
+				'Content-Disposition': `attachment; filename="${downloadFilename}"`,
 				'Content-Length': xlsxBuffer.length.toString(),
 				'Cache-Control': 'no-cache, no-store, must-revalidate',
 				Pragma: 'no-cache',

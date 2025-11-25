@@ -1,49 +1,59 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import FileUpload from '$lib/components/FileUpload.svelte';
-	import type { UploadResult, VocabularyEntry } from '$lib/types/vocabulary.js';
+	import type { UploadResult, VocabularyEntry, ApiResponse } from '$lib/types/vocabulary.js';
+	import { vocabularyStore } from '$lib/stores/vocabularyStore';
 
 	// 상태 변수
 	let uploading = $state(false);
 	let uploadMessage = $state('');
 	let errorMessage = $state('');
+	let vocabularyFiles: string[] = $state([]);
+	let selectedFilename = $state('vocabulary.json');
 
 	type UploadSuccessDetail = { result: UploadResult };
 	type UploadErrorDetail = { error: string };
 
-	/**
-	 * 컴포넌트 마운트 시 업로드 기록 로드
-	 */
-	onMount(async () => {
-		await loadUploadHistory();
+	// 스토어 구독
+	const unsubscribe = vocabularyStore.subscribe((value) => {
+		selectedFilename = value.selectedFilename;
 	});
 
 	/**
-	 * 업로드 기록 로드
+	 * 컴포넌트 마운트 시 업로드 기록 및 파일 목록 로드
 	 */
-	async function loadUploadHistory() {
-		try {
-			const response = await fetch('/api/upload');
-			const result = await response.json();
+	onMount(async () => {
+		await loadVocabularyFiles();
+		// await loadUploadHistory(); // 업로드 히스토리 로드는 일단 보류 (API 미구현 가능성)
+	});
 
-			if (result.success && result.data?.history) {
-				uploadHistory = (result.data.history ?? []).map((entry: VocabularyEntry) => ({
-					...entry,
-					// undefined가 될 수 있는 필드를 빈 문자열로 보정
-					standardName: entry.standardName ?? '',
-					abbreviation: entry.abbreviation ?? '',
-					englishName: entry.englishName ?? '',
-					description: entry.description ?? '',
-					createdAt: entry.createdAt ?? '',
-					updatedAt: entry.updatedAt ?? ''
-					// 추가적으로 string 타입 필드가 있다면 모두 ?? ''로 보정
-					// (필요시 아래에 추가)
-				}));
+	onDestroy(() => {
+		unsubscribe();
+	});
+
+	/**
+	 * 단어집 파일 목록 로드
+	 */
+	async function loadVocabularyFiles() {
+		try {
+			const response = await fetch('/api/vocabulary/files');
+			const result: ApiResponse = await response.json();
+			if (result.success && Array.isArray(result.data)) {
+				vocabularyFiles = result.data as string[];
 			}
 		} catch (error) {
-			console.error('업로드 기록 로드 오류:', error);
+			console.error('파일 목록 로드 오류:', error);
 		}
+	}
+
+	/**
+	 * 파일 선택 변경 처리
+	 */
+	function handleFileSelect(event: Event) {
+		const select = event.target as HTMLSelectElement;
+		const filename = select.value;
+		vocabularyStore.update((store) => ({ ...store, selectedFilename: filename }));
 	}
 
 	/**
@@ -59,10 +69,7 @@
 	 */
 	async function handleUploadSuccess(detail: UploadSuccessDetail) {
 		const { result } = detail;
-		uploadMessage = result.message;
-
-		// 업로드 기록 새로고침
-		await loadUploadHistory();
+		uploadMessage = result.message || '업로드 성공';
 
 		// 작업 히스토리 새로고침 (전역 함수 호출)
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -119,6 +126,39 @@
 					>단어집</span
 				>을 등록하세요
 			</p>
+		</div>
+
+		<!-- 대상 파일 선택 -->
+		<div class="mx-auto mb-10 max-w-lg">
+			<div class="rounded-2xl bg-white p-6 shadow-lg border border-gray-100">
+				<label for="targetFile" class="mb-3 block text-sm font-semibold text-gray-800">
+					대상 파일 선택
+					<span class="ml-1 text-xs font-normal text-gray-500">(데이터가 병합될 파일)</span>
+				</label>
+				<div class="relative">
+					<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+						<svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+						</svg>
+					</div>
+					<select
+						id="targetFile"
+						value={selectedFilename}
+						onchange={handleFileSelect}
+						class="block w-full appearance-none rounded-xl border-gray-200 bg-gray-50 py-3.5 pl-10 pr-10 text-gray-700 transition-all hover:bg-gray-100 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 sm:text-sm"
+						disabled={uploading}
+					>
+						{#each vocabularyFiles as file}
+							<option value={file}>{file}</option>
+						{/each}
+					</select>
+					<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+						<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+						</svg>
+					</div>
+				</div>
+			</div>
 		</div>
 
 		<!-- 상태 메시지 -->
@@ -196,6 +236,7 @@
 					<div class="relative">
 						<FileUpload
 							disabled={uploading}
+							filename={selectedFilename}
 							onuploadstart={handleUploadStart}
 							onuploadsuccess={handleUploadSuccess}
 							onuploaderror={handleUploadError}

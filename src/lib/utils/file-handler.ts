@@ -1,12 +1,21 @@
-import { writeFile, readFile, mkdir } from 'fs/promises';
+import { writeFile, readFile, mkdir, readdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import type { ForbiddenWordsData } from '$lib/types/vocabulary';
 
 // 데이터 저장 경로 설정
 const DATA_DIR = 'static/data';
-const DATA_FILE = 'vocabulary.json';
-const DATA_PATH = join(DATA_DIR, DATA_FILE);
+const DEFAULT_DATA_FILE = 'vocabulary.json';
+
+/**
+ * 데이터 파일 경로 가져오기
+ * @param filename - 파일명 (기본값: vocabulary.json)
+ */
+function getDataPath(filename: string = DEFAULT_DATA_FILE): string {
+	// 파일명에 경로 구분자가 포함되어 있으면 제거 (보안)
+	const safeFilename = filename.replace(/^.*[\\\/]/, '');
+	return join(DATA_DIR, safeFilename);
+}
 
 /**
  * 데이터 디렉토리가 존재하는지 확인하고 없으면 생성
@@ -27,9 +36,11 @@ export async function ensureDataDirectory(): Promise<void> {
 /**
  * 단어집 데이터를 JSON 파일로 저장
  * @param data - 저장할 VocabularyData 객체
+ * @param filename - 저장할 파일명 (기본값: vocabulary.json)
  */
 export async function saveVocabularyData(
-	data: import('../types/vocabulary.js').VocabularyData
+	data: import('../types/vocabulary.js').VocabularyData,
+	filename: string = DEFAULT_DATA_FILE
 ): Promise<void> {
 	try {
 		// 데이터 디렉토리 확인 및 생성
@@ -64,7 +75,7 @@ export async function saveVocabularyData(
 
 		// JSON 파일로 저장 (들여쓰기 포함)
 		const jsonString = JSON.stringify(finalData, null, 2);
-		await writeFile(DATA_PATH, jsonString, 'utf-8');
+		await writeFile(getDataPath(filename), jsonString, 'utf-8');
 	} catch (error) {
 		console.error('단어집 데이터 저장 실패:', error);
 		throw new Error(
@@ -75,14 +86,17 @@ export async function saveVocabularyData(
 
 /**
  * 저장된 단어집 데이터를 JSON 파일에서 로드
+ * @param filename - 로드할 파일명 (기본값: vocabulary.json)
  * @returns 로드된 VocabularyData 객체
  */
-export async function loadVocabularyData(): Promise<
-	import('../types/vocabulary.js').VocabularyData
-> {
+export async function loadVocabularyData(
+	filename: string = DEFAULT_DATA_FILE
+): Promise<import('../types/vocabulary.js').VocabularyData> {
 	try {
+		const dataPath = getDataPath(filename);
+
 		// 파일 존재 확인
-		if (!existsSync(DATA_PATH)) {
+		if (!existsSync(dataPath)) {
 			return {
 				entries: [],
 				lastUpdated: new Date().toISOString(),
@@ -91,7 +105,7 @@ export async function loadVocabularyData(): Promise<
 		}
 
 		// 파일 읽기
-		const jsonString = await readFile(DATA_PATH, 'utf-8');
+		const jsonString = await readFile(dataPath, 'utf-8');
 
 		if (!jsonString.trim()) {
 			console.warn('단어집 데이터 파일이 비어있습니다.');
@@ -148,14 +162,16 @@ export async function loadVocabularyData(): Promise<
  * 기존 단어집 데이터에 새로운 엔트리들을 병합
  * @param newEntries - 추가할 새로운 엔트리들
  * @param replaceExisting - 기존 데이터를 교체할지 여부 (기본값: true)
+ * @param filename - 병합할 파일명 (기본값: vocabulary.json)
  * @returns 병합된 VocabularyData 객체
  */
 export async function mergeVocabularyData(
 	newEntries: import('../types/vocabulary.js').VocabularyEntry[],
-	replaceExisting: boolean = true
+	replaceExisting: boolean = true,
+	filename: string = DEFAULT_DATA_FILE
 ): Promise<import('../types/vocabulary.js').VocabularyData> {
 	try {
-		const existingData = await loadVocabularyData();
+		const existingData = await loadVocabularyData(filename);
 		let finalEntries: import('../types/vocabulary.js').VocabularyEntry[];
 		if (replaceExisting || existingData.entries.length === 0) {
 			finalEntries = [...newEntries];
@@ -187,7 +203,7 @@ export async function mergeVocabularyData(
 			lastUpdated: new Date().toISOString(),
 			totalCount: finalEntries.length
 		};
-		await saveVocabularyData(mergedData);
+		await saveVocabularyData(mergedData, filename);
 		return mergedData;
 	} catch (error) {
 		throw new Error(
@@ -198,19 +214,23 @@ export async function mergeVocabularyData(
 
 /**
  * 데이터 파일의 백업 생성
+ * @param filename - 백업할 파일명 (기본값: vocabulary.json)
  * @returns 백업 파일 경로
  */
-export async function createBackup(): Promise<string> {
+export async function createBackup(filename: string = DEFAULT_DATA_FILE): Promise<string> {
 	try {
-		if (!existsSync(DATA_PATH)) {
+		const dataPath = getDataPath(filename);
+
+		if (!existsSync(dataPath)) {
 			throw new Error('백업할 데이터 파일이 존재하지 않습니다.');
 		}
 
 		const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-		const backupFileName = `vocabulary_backup_${timestamp}.json`;
+		const safeFilename = filename.replace(/\.json$/, '');
+		const backupFileName = `${safeFilename}_backup_${timestamp}.json`;
 		const backupPath = join(DATA_DIR, backupFileName);
 
-		const originalData = await readFile(DATA_PATH, 'utf-8');
+		const originalData = await readFile(dataPath, 'utf-8');
 		await writeFile(backupPath, originalData, 'utf-8');
 
 		return backupPath;
@@ -219,6 +239,29 @@ export async function createBackup(): Promise<string> {
 		throw new Error(
 			`백업 생성 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`
 		);
+	}
+}
+
+/**
+ * 사용 가능한 단어집 파일 목록 조회
+ * @returns 파일명 목록
+ */
+export async function listVocabularyFiles(): Promise<string[]> {
+	try {
+		await ensureDataDirectory();
+		const files = await readdir(DATA_DIR);
+		return files.filter((file) => {
+			return (
+				file.endsWith('.json') &&
+				file !== 'forbidden-words.json' &&
+				file !== 'domain.json' &&
+				file !== 'history.json' &&
+				!file.includes('_backup_')
+			);
+		});
+	} catch (error) {
+		console.error('단어집 파일 목록 조회 실패:', error);
+		return [DEFAULT_DATA_FILE];
 	}
 }
 

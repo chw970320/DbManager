@@ -12,6 +12,7 @@ export async function GET({ url }: RequestEvent) {
 		// 쿼리 파라미터 추출 (향후 페이지네이션이나 필터링 확장 가능)
 		const limit = parseInt(url.searchParams.get('limit') || '50');
 		const offset = parseInt(url.searchParams.get('offset') || '0');
+		const filename = url.searchParams.get('filename') || undefined;
 
 		// 파라미터 유효성 검증
 		if (limit < 1 || limit > 200) {
@@ -39,7 +40,7 @@ export async function GET({ url }: RequestEvent) {
 		// 히스토리 데이터 로드
 		let historyData: HistoryData;
 		try {
-			historyData = await loadHistoryData();
+			historyData = await loadHistoryData(filename);
 		} catch (loadError) {
 			return json(
 				{
@@ -127,6 +128,7 @@ export async function POST({ request }: RequestEvent) {
 			targetId: logData.targetId,
 			targetName: logData.targetName,
 			timestamp: new Date().toISOString(),
+			filename: logData.filename, // 파일명 저장
 			details: logData.details || undefined
 		};
 

@@ -4,7 +4,7 @@
  * @param wait - 지연 시간 (milliseconds)
  * @returns debounced 함수
  */
-export function debounce<T extends (...args: unknown[]) => unknown>(
+export function debounce<T extends (...args: any[]) => any>(
 	func: T,
 	wait: number
 ): ((...args: Parameters<T>) => void) & { cancel: () => void } {
@@ -34,7 +34,7 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
  * @param immediate - 첫 호출 즉시 실행 여부
  * @returns debounced 함수
  */
-export function debounceImmediate<T extends (...args: unknown[]) => unknown>(
+export function debounceImmediate<T extends (...args: any[]) => any>(
 	func: T,
 	wait: number,
 	immediate = false

@@ -27,6 +27,7 @@ export async function POST({ request }: RequestEvent) {
 		// FormData 파싱
 		const formData = await request.formData();
 		const file = formData.get('file') as File;
+		const filename = (formData.get('filename') as string) || 'vocabulary.json';
 
 		// 파일 존재 확인
 		if (!file) {
@@ -78,7 +79,7 @@ export async function POST({ request }: RequestEvent) {
 		let finalData: VocabularyData;
 
 		try {
-			finalData = await mergeVocabularyData(parsedEntries, replaceExisting);
+			finalData = await mergeVocabularyData(parsedEntries, replaceExisting, filename);
 		} catch (mergeError) {
 			return json(
 				{
@@ -90,15 +91,9 @@ export async function POST({ request }: RequestEvent) {
 			);
 		}
 
-		// 단어집이 교체되는 경우 히스토리도 초기화
-		if (replaceExisting) {
-			try {
-				await clearHistoryData(true); // 백업 생성 후 초기화
-			} catch (historyError) {
-				console.warn('히스토리 초기화 실패:', historyError);
-				// 히스토리 초기화 실패는 전체 업로드를 실패시키지 않음
-			}
-		}
+		// 단어집이 교체되는 경우 히스토리도 초기화 (해당 파일에 대해서만?)
+		// TODO: 파일별 히스토리 초기화 로직이 필요할 수 있음. 현재는 전체 초기화만 구현되어 있음.
+		// 일단 파일별 초기화는 보류하고, 병합 모드 로그만 남김.
 
 		// 업로드 성공 히스토리 로그 추가 (병합 모드일 때만)
 		if (!replaceExisting) {
@@ -109,6 +104,7 @@ export async function POST({ request }: RequestEvent) {
 					targetId: 'vocabulary_file',
 					targetName: `${file.name} (${parsedEntries.length}개 단어)`,
 					timestamp: new Date().toISOString(),
+					filename: filename, // 대상 파일명 저장
 					details: {
 						fileName: file.name,
 						fileSize: file.size,

@@ -9,6 +9,7 @@
 		disabled = false,
 		apiEndpoint = '/api/upload', // 기본값은 vocabulary API
 		contentType = '단어집', // 표시할 데이터 타입 ('단어집' 또는 '도메인')
+		filename = 'vocabulary.json', // 대상 파일명
 		onuploadstart,
 		onuploadsuccess,
 		onuploaderror,
@@ -20,6 +21,7 @@
 		disabled?: boolean;
 		apiEndpoint?: string;
 		contentType?: string;
+		filename?: string;
 		onuploadstart: () => void;
 		onuploadsuccess: (detail: { result: UploadResult }) => void;
 		onuploaderror: (detail: { error: string }) => void;
@@ -150,6 +152,9 @@
 			const formData = new FormData();
 			formData.append('file', file);
 			formData.append('replace', (selectedMode === 'replace').toString());
+			if (filename) {
+				formData.append('filename', filename);
+			}
 
 			// 진행 상태 시뮬레이션 (실제로는 XMLHttpRequest로 진행률 추적 가능)
 			const progressInterval = setInterval(() => {
@@ -168,8 +173,9 @@
 			const result: ApiResponse = await response.json();
 
 			if (result.success && result.data) {
-				uploadResult = `✅ ${result.data.message}`;
-				onuploadsuccess({ result: result.data });
+				const data = result.data as UploadResult;
+				uploadResult = `✅ ${data.message}`;
+				onuploadsuccess({ result: data });
 			} else {
 				throw new Error(result.error || '업로드 처리 중 오류가 발생했습니다.');
 			}

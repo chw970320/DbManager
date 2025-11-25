@@ -1,21 +1,50 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
+	import { browser } from '$app/environment';
 	import type { HistoryLogEntry, ApiResponse } from '$lib/types/vocabulary';
+	import { vocabularyStore } from '$lib/stores/vocabularyStore';
 
 	// 상태 변수
-	let historyLogs = $state<HistoryLogEntry[]>([]);
+	let historyLogs: HistoryLogEntry[] = $state([]);
 	let isLoading = $state(false);
 	let isExpanded = $state(false);
 	let error = $state<string | null>(null);
 	let totalCount = $state(0);
 	let isHovered = $state(false);
+	let selectedFilename = $state('vocabulary.json');
 
-	// 컴포넌트 마운트 시 히스토리 데이터 로드
+	let unsubscribe: () => void;
+
+	// 컴포넌트 마운트 시 히스토리 데이터 로드 및 스토어 구독
 	onMount(() => {
-		loadHistoryData();
+		// 스토어 구독
+		unsubscribe = vocabularyStore.subscribe((value) => {
+			if (selectedFilename !== value.selectedFilename) {
+				selectedFilename = value.selectedFilename;
+				// 초기 로드 또는 파일 변경 시 데이터 로드
+				if (browser) {
+					loadHistoryData();
+				}
+			}
+		});
+
+		if (browser) {
+			loadHistoryData();
+		}
+
 		// 30초마다 자동 새로고침 (폴링)
-		const interval = setInterval(loadHistoryData, 30000);
-		return () => clearInterval(interval);
+		const interval = setInterval(() => {
+			if (browser) loadHistoryData();
+		}, 30000);
+
+		return () => {
+			clearInterval(interval);
+			if (unsubscribe) unsubscribe();
+		};
+	});
+
+	onDestroy(() => {
+		if (unsubscribe) unsubscribe();
 	});
 
 	/**
@@ -26,16 +55,21 @@
 		error = null;
 
 		try {
-			const response = await fetch('/api/history?limit=20');
+			const params = new URLSearchParams({
+				limit: '20',
+				filename: selectedFilename
+			});
+			const response = await fetch(`/api/history?${params}`);
 			const result: ApiResponse = await response.json();
 
 			if (
 				result.success &&
 				result.data &&
+				typeof result.data === 'object' &&
 				'logs' in result.data &&
-				Array.isArray(result.data.logs)
+				Array.isArray((result.data as { logs: unknown }).logs)
 			) {
-				historyLogs = result.data.logs;
+				historyLogs = (result.data as { logs: HistoryLogEntry[] }).logs;
 				const data = result.data as {
 					logs: HistoryLogEntry[];
 					pagination?: { totalCount?: number };

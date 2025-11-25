@@ -70,7 +70,7 @@ export async function saveHistoryData(data: HistoryData): Promise<void> {
  * 저장된 히스토리 데이터를 JSON 파일에서 로드
  * @returns 로드된 HistoryData 객체
  */
-export async function loadHistoryData(): Promise<HistoryData> {
+export async function loadHistoryData(filename?: string): Promise<HistoryData> {
 	try {
 		// 파일 존재 확인
 		if (!existsSync(HISTORY_PATH)) {
@@ -106,13 +106,18 @@ export async function loadHistoryData(): Promise<HistoryData> {
 		}
 
 		// 각 로그 엔트리 기본 유효성 검증 및 필터링
-		const validLogs = data.logs.filter((log) => {
+		let validLogs = data.logs.filter((log) => {
 			const isValid = log.id && log.action && log.targetId && log.targetName && log.timestamp;
 			if (!isValid) {
 				console.warn('로드 중 유효하지 않은 히스토리 로그 발견:', log);
 			}
 			return isValid;
 		});
+
+		// 파일명으로 필터링 (filename이 제공된 경우)
+		if (filename) {
+			validLogs = validLogs.filter((log) => !log.filename || log.filename === filename);
+		}
 
 		return {
 			logs: validLogs,

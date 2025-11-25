@@ -12,20 +12,7 @@
 	};
 
 	// 컴포넌트 속성
-	let {
-		entries = [] as VocabularyEntry[],
-		loading = false,
-		searchQuery = '',
-		totalCount = 0,
-		currentPage = 1,
-		totalPages = 1,
-		pageSize = 20,
-		sortColumn = '',
-		sortDirection = 'asc' as 'asc' | 'desc',
-		searchField = 'all',
-		onsort,
-		onpagechange
-	}: {
+	let props = $props<{
 		entries?: VocabularyEntry[];
 		loading?: boolean;
 		searchQuery?: string;
@@ -36,9 +23,25 @@
 		sortColumn?: string;
 		sortDirection?: 'asc' | 'desc';
 		searchField?: string;
+		selectedFilename?: string;
 		onsort: (detail: SortEvent) => void;
 		onpagechange: (detail: PageChangeEvent) => void;
-	} = $props();
+	}>();
+
+	// Default values using derived state
+	let entries = $derived(props.entries ?? []);
+	let loading = $derived(props.loading ?? false);
+	let searchQuery = $derived(props.searchQuery ?? '');
+	let totalCount = $derived(props.totalCount ?? 0);
+	let currentPage = $derived(props.currentPage ?? 1);
+	let totalPages = $derived(props.totalPages ?? 1);
+	let pageSize = $derived(props.pageSize ?? 20);
+	let sortColumn = $derived(props.sortColumn ?? '');
+	let sortDirection = $derived(props.sortDirection ?? 'asc');
+	let searchField = $derived(props.searchField ?? 'all');
+	let selectedFilename = $derived(props.selectedFilename ?? 'vocabulary.json');
+	let onsort = $derived(props.onsort);
+	let onpagechange = $derived(props.onpagechange);
 
 	// 상태 변수
 	let editingId = $state<string | null>(null);
@@ -52,7 +55,7 @@
 
 	async function fetchDuplicates() {
 		try {
-			const response = await fetch('/api/vocabulary/duplicates');
+			const response = await fetch(`/api/vocabulary/duplicates?filename=${selectedFilename}`);
 			const result = await response.json();
 			if (result.success) {
 				const duplicateIds = new Set<string>();
@@ -82,10 +85,11 @@
 		if (!editedEntry) return;
 
 		// 수정 전 데이터 백업
-		const originalEntry = entries.find((e) => e.id === id);
+		const originalEntry = entries.find((entry: VocabularyEntry) => entry.id === id);
 
 		try {
-			const response = await fetch(`/api/vocabulary`, {
+			const params = new URLSearchParams({ filename: selectedFilename });
+			const response = await fetch(`/api/vocabulary?${params}`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ ...editedEntry, id })
@@ -103,6 +107,7 @@
 							action: 'update',
 							targetId: id,
 							targetName: editedEntry.standardName || originalEntry?.standardName || '',
+							filename: selectedFilename,
 							details: {
 								before: originalEntry
 									? {
@@ -142,12 +147,12 @@
 	}
 
 	async function handleDelete(id: string) {
-		// 삭제할 엔트리 정보 백업
-		const entryToDelete = entries.find((e) => e.id === id);
+		const entryToDelete = entries.find((entry: VocabularyEntry) => entry.id === id);
 
 		if (confirm('정말로 이 항목을 삭제하시겠습니까?')) {
 			try {
-				const response = await fetch(`/api/vocabulary?id=${id}`, { method: 'DELETE' });
+				const params = new URLSearchParams({ id, filename: selectedFilename });
+				const response = await fetch(`/api/vocabulary?${params}`, { method: 'DELETE' });
 				if (response.ok) {
 					// 히스토리 로그 기록
 					if (entryToDelete) {
@@ -471,20 +476,37 @@
 										<div class="flex items-center space-x-2">
 											{#if isEditing}
 												<button
-													onclick={() => handleSave(entry.id)}
+													type="button"
+													onclick={(e: MouseEvent) => {
+														e.stopPropagation();
+														handleSave(entry.id);
+													}}
 													class="text-blue-600 hover:text-blue-900">저장</button
 												>
-												<button onclick={cancelEdit} class="text-gray-600 hover:text-gray-900"
-													>취소</button
+												<button
+													type="button"
+													onclick={(e: MouseEvent) => {
+														e.stopPropagation();
+														cancelEdit();
+													}}
+													class="text-gray-600 hover:text-gray-900">취소</button
 												>
 											{:else}
 												<button
-													onclick={() => handleEdit(entry)}
+													type="button"
+													onclick={(e: MouseEvent) => {
+														e.stopPropagation();
+														handleEdit(entry);
+													}}
 													class="whitespace-nowrap text-indigo-600 hover:text-indigo-900"
 													>편집</button
 												>
 												<button
-													onclick={() => handleDelete(entry.id)}
+													type="button"
+													onclick={(e: MouseEvent) => {
+														e.stopPropagation();
+														handleDelete(entry.id);
+													}}
 													class="whitespace-nowrap text-red-600 hover:text-red-900">삭제</button
 												>
 											{/if}

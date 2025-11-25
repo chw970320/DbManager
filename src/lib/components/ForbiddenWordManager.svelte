@@ -20,12 +20,15 @@
 	let error = $state('');
 	let successMessage = $state('');
 	let hasLoaded = $state(false); // 데이터 로드 완료 여부 추적
+	let vocabularyFiles = $state<string[]>([]); // 사용 가능한 단어집 파일 목록
+	let selectedScope = $state('global'); // 현재 선택된 범위 ('global' 또는 파일명)
 
 	// Form state
 	let formData = $state({
 		keyword: '',
 		type: 'standardName' as 'standardName' | 'abbreviation',
-		reason: ''
+		reason: '',
+		targetFile: undefined as string | undefined
 	});
 	let formErrors = $state({
 		keyword: ''
@@ -54,6 +57,19 @@
 		return !formErrors.keyword && !!formData.keyword.trim();
 	}
 
+	// Load vocabulary files
+	async function loadVocabularyFiles() {
+		try {
+			const response = await fetch('/api/vocabulary/files');
+			const result: ApiResponse = await response.json();
+			if (result.success && Array.isArray(result.data)) {
+				vocabularyFiles = result.data as string[];
+			}
+		} catch (error) {
+			console.error('파일 목록 로드 오류:', error);
+		}
+	}
+
 	// Load forbidden words
 	async function loadForbiddenWords() {
 		if (isLoading || hasLoaded) return; // 이미 로딩 중이거나 로드 완료된 경우 중복 요청 방지
@@ -62,18 +78,37 @@
 		error = '';
 
 		try {
-			const response = await fetch('/api/forbidden-words');
+			const params = new URLSearchParams();
+			if (selectedScope) {
+				params.set('scope', selectedScope);
+			}
+			const response = await fetch(`/api/forbidden-words?${params}`);
 			const result: ApiResponse = await response.json();
 
 			if (
 				result.success &&
 				result.data &&
-				'entries' in result.data &&
-				Array.isArray(result.data.entries) &&
-				(result.data.entries.length === 0 || 'keyword' in result.data.entries[0])
+				typeof result.data === 'object' &&
+				'entries' in result.data
 			) {
-				forbiddenWords = result.data.entries as ForbiddenWordEntry[];
-				hasLoaded = true; // 로드 완료 표시
+				const data = result.data as { entries: unknown };
+				if (Array.isArray(data.entries)) {
+					const entries = data.entries;
+					const isValid =
+						entries.length === 0 ||
+						(typeof entries[0] === 'object' &&
+							entries[0] !== null &&
+							'keyword' in (entries[0] as Record<string, unknown>));
+
+					if (isValid) {
+						forbiddenWords = entries as ForbiddenWordEntry[];
+						hasLoaded = true; // 로드 완료 표시
+					} else {
+						error = '잘못된 데이터 형식입니다.';
+					}
+				} else {
+					error = '잘못된 데이터 형식입니다.';
+				}
 			} else {
 				error = result.error || '금지어 목록을 불러오는데 실패했습니다.';
 			}
@@ -94,7 +129,13 @@
 
 		try {
 			const method = editingId ? 'PUT' : 'POST';
-			const body = editingId ? { id: editingId, ...formData } : formData;
+			const body = editingId
+				? {
+						id: editingId,
+						...formData,
+						targetFile: selectedScope === 'global' ? undefined : selectedScope
+					}
+				: { ...formData, targetFile: selectedScope === 'global' ? undefined : selectedScope };
 
 			const response = await fetch('/api/forbidden-words', {
 				method,
@@ -128,7 +169,8 @@
 		formData = {
 			keyword: word.keyword,
 			type: word.type,
-			reason: word.reason || ''
+			reason: word.reason || '',
+			targetFile: word.targetFile
 		};
 		successMessage = '';
 		error = '';
@@ -171,7 +213,8 @@
 		formData = {
 			keyword: '',
 			type: 'standardName',
-			reason: ''
+			reason: '',
+			targetFile: undefined
 		};
 		editingId = null;
 		formErrors = { keyword: '' };
@@ -197,6 +240,7 @@
 	// Load data when modal opens
 	$effect(() => {
 		if (isOpen && !hasLoaded) {
+			loadVocabularyFiles();
 			loadForbiddenWords();
 		}
 	});
@@ -241,6 +285,63 @@
 				</button>
 			</div>
 
+			<!-- Scope Selection -->
+			<div class="mb-8 rounded-xl border border-gray-100 bg-gray-50 p-5">
+				<label for="scope-select" class="mb-3 block text-sm font-semibold text-gray-700"
+					>관리 범위 선택</label
+				>
+				<div class="relative">
+					<select
+						id="scope-select"
+						bind:value={selectedScope}
+						onchange={() => {
+							hasLoaded = false;
+							resetForm();
+							loadForbiddenWords();
+						}}
+						class="block w-full appearance-none rounded-lg border-gray-300 bg-white py-3 pl-4 pr-10 text-gray-700 shadow-sm transition-all focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 sm:text-sm"
+						disabled={isLoading || isSubmitting}
+					>
+						<option value="global">전체 (Global)</option>
+						{#each vocabularyFiles as file}
+							<option value={file}>{file}</option>
+						{/each}
+					</select>
+					<div
+						class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"
+					>
+						<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M19 9l-7 7-7-7"
+							/>
+						</svg>
+					</div>
+				</div>
+				<div class="mt-3 flex items-start space-x-2">
+					<svg
+						class="mt-0.5 h-4 w-4 flex-shrink-0 text-blue-500"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+						/>
+					</svg>
+					<p class="text-xs leading-relaxed text-gray-600">
+						{selectedScope === 'global'
+							? '모든 파일에 공통으로 적용되는 금지어입니다. 특정 파일에만 적용하려면 파일을 선택하세요.'
+							: `'${selectedScope}' 파일에만 적용되는 금지어입니다. 전체 금지어는 포함되지 않습니다.`}
+					</p>
+				</div>
+			</div>
+
 			<!-- Error/Success Messages -->
 			{#if error}
 				<div class="mb-4 rounded-md bg-red-50 p-4">
@@ -257,7 +358,9 @@
 				<!-- Form Section -->
 				<div class="space-y-4">
 					<h3 class="text-lg font-semibold text-gray-900">
-						{editingId ? '금지어 수정' : '새 금지어 추가'}
+						{editingId ? '금지어 수정' : '새 금지어 추가'} ({selectedScope === 'global'
+							? '전체'
+							: selectedScope})
 					</h3>
 
 					<form
@@ -358,7 +461,9 @@
 				<!-- List Section -->
 				<div class="space-y-4">
 					<div class="flex items-center justify-between">
-						<h3 class="text-lg font-semibold text-gray-900">금지어 목록</h3>
+						<h3 class="text-lg font-semibold text-gray-900">
+							금지어 목록 ({selectedScope === 'global' ? '전체' : selectedScope})
+						</h3>
 						<button
 							onclick={() => {
 								hasLoaded = false; // 캐시 무효화

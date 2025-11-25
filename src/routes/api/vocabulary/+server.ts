@@ -20,6 +20,7 @@ export async function GET({ url }: RequestEvent) {
 		const sortBy = url.searchParams.get('sortBy') || 'standardName';
 		const sortOrder = url.searchParams.get('sortOrder') || 'asc';
 		const filter = url.searchParams.get('filter'); // 중복 필터링 파라미터 추가
+		const filename = url.searchParams.get('filename') || undefined; // 파일명 파라미터 추가
 
 		// 페이지네이션 유효성 검증
 		if (page < 1 || limit < 1 || limit > 1000) {
@@ -49,7 +50,7 @@ export async function GET({ url }: RequestEvent) {
 		// 데이터 로드
 		let vocabularyData: VocabularyData;
 		try {
-			vocabularyData = await loadVocabularyData();
+			vocabularyData = await loadVocabularyData(filename);
 		} catch (loadError) {
 			return json(
 				{
@@ -179,9 +180,10 @@ export async function GET({ url }: RequestEvent) {
  * 신규 단어 추가 API
  * POST /api/vocabulary
  */
-export async function POST({ request }: RequestEvent) {
+export async function POST({ request, url }: RequestEvent) {
 	try {
 		const newEntry: Partial<VocabularyEntry> = await request.json();
+		const filename = url.searchParams.get('filename') || undefined;
 
 		// 필수 필드 검증
 		if (!newEntry.standardName || !newEntry.abbreviation || !newEntry.englishName) {
@@ -195,7 +197,7 @@ export async function POST({ request }: RequestEvent) {
 			);
 		}
 
-		const vocabularyData = await loadVocabularyData();
+		const vocabularyData = await loadVocabularyData(filename);
 
 		// 금지어 검사
 		try {
@@ -274,7 +276,7 @@ export async function POST({ request }: RequestEvent) {
 		};
 
 		vocabularyData.entries.push(entryToSave);
-		await saveVocabularyData(vocabularyData);
+		await saveVocabularyData(vocabularyData, filename);
 
 		return json(
 			{
@@ -301,9 +303,10 @@ export async function POST({ request }: RequestEvent) {
  * 단어 수정 API
  * PUT /api/vocabulary/:id
  */
-export async function PUT({ request }: RequestEvent) {
+export async function PUT({ request, url }: RequestEvent) {
 	try {
 		const updatedEntry: VocabularyEntry = await request.json();
+		const filename = url.searchParams.get('filename') || undefined;
 
 		if (!updatedEntry.id) {
 			return json(
@@ -316,7 +319,7 @@ export async function PUT({ request }: RequestEvent) {
 			);
 		}
 
-		const vocabularyData = await loadVocabularyData();
+		const vocabularyData = await loadVocabularyData(filename);
 		const entryIndex = vocabularyData.entries.findIndex((e) => e.id === updatedEntry.id);
 
 		if (entryIndex === -1) {
@@ -337,7 +340,7 @@ export async function PUT({ request }: RequestEvent) {
 			updatedAt: new Date().toISOString()
 		};
 
-		await saveVocabularyData(vocabularyData);
+		await saveVocabularyData(vocabularyData, filename);
 
 		return json(
 			{
@@ -367,6 +370,8 @@ export async function PUT({ request }: RequestEvent) {
 export async function DELETE({ url }: RequestEvent) {
 	try {
 		const id = url.searchParams.get('id');
+		const filename = url.searchParams.get('filename') || undefined;
+		console.log(`[DELETE] Request received for id: ${id}, filename: ${filename}`);
 		if (!id) {
 			return json(
 				{
@@ -378,7 +383,7 @@ export async function DELETE({ url }: RequestEvent) {
 			);
 		}
 
-		const vocabularyData = await loadVocabularyData();
+		const vocabularyData = await loadVocabularyData(filename);
 		const initialLength = vocabularyData.entries.length;
 		vocabularyData.entries = vocabularyData.entries.filter((e) => e.id !== id);
 
@@ -393,7 +398,7 @@ export async function DELETE({ url }: RequestEvent) {
 			);
 		}
 
-		await saveVocabularyData(vocabularyData);
+		await saveVocabularyData(vocabularyData, filename);
 
 		return json({ success: true, message: '단어가 성공적으로 삭제되었습니다.' } as ApiResponse, {
 			status: 200

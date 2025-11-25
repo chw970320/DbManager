@@ -22,6 +22,7 @@ export async function GET({ url }: RequestEvent) {
 		const limit = parseInt(url.searchParams.get('limit') || '50');
 		const exact = url.searchParams.get('exact') === 'true';
 		const filter = url.searchParams.get('filter'); // 중복 필터링 파라미터 추가
+		const filename = url.searchParams.get('filename') || undefined; // 파일명 파라미터 추가
 
 		// 검색어 유효성 검증 및 정제
 		const sanitizedQuery = sanitizeSearchQuery(query);
@@ -64,7 +65,7 @@ export async function GET({ url }: RequestEvent) {
 		// 데이터 로드
 		let vocabularyData;
 		try {
-			vocabularyData = await loadVocabularyData();
+			vocabularyData = await loadVocabularyData(filename);
 		} catch (loadError) {
 			return json(
 				{
@@ -241,10 +242,11 @@ export async function GET({ url }: RequestEvent) {
  * 검색 제안 API (자동완성용)
  * POST /api/search
  */
-export async function POST({ request }: RequestEvent) {
+export async function POST({ request, url }: RequestEvent) {
 	try {
 		const body = await request.json();
 		const { query, limit = 10 } = body;
+		const filename = url.searchParams.get('filename') || undefined;
 
 		if (!query || typeof query !== 'string' || query.length < 1) {
 			return json(
@@ -270,7 +272,7 @@ export async function POST({ request }: RequestEvent) {
 		}
 
 		// 데이터 로드
-		const vocabularyData = await loadVocabularyData();
+		const vocabularyData = await loadVocabularyData(filename);
 
 		// 제안 검색 (시작 문자열 매칭)
 		const suggestions = new Set<string>();

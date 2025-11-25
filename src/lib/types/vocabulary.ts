@@ -32,12 +32,13 @@ export interface HistoryLogEntry {
 	targetId: string; // 대상 단어의 ID
 	targetName: string; // 대상 단어의 표준단어명
 	timestamp: string; // ISO 8601 날짜 문자열
+	filename?: string; // 대상 파일명 (다중 파일 지원)
 	details?: {
 		// 추가 세부 정보 (선택적)
 		before?: Partial<VocabularyEntry>; // 변경 전 데이터 (update/delete 시)
 		after?: Partial<VocabularyEntry>; // 변경 후 데이터 (add/update 시)
 		// 업로드 관련 추가 정보
-		fileName?: string; // 업로드된 파일명
+		fileName?: string; // 업로드된 파일명 (upload action 시)
 		fileSize?: number; // 파일 크기
 		processedCount?: number; // 처리된 항목 수
 		replaceMode?: boolean; // 교체 모드 여부
@@ -81,6 +82,7 @@ export interface ForbiddenWordEntry {
 	keyword: string; // 금지어 키워드
 	type: 'standardName' | 'abbreviation'; // 적용 타입
 	reason?: string; // 금지 사유 (선택적)
+	targetFile?: string; // 적용 대상 파일 (선택적, 없으면 전체 적용)
 	createdAt: string; // ISO 8601 날짜 문자열
 }
 

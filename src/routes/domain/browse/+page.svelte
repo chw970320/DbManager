@@ -59,10 +59,15 @@
 			const result: DomainApiResponse = await response.json();
 
 			if (result.success && result.data) {
-				entries = result.data.entries || [];
-				totalCount = result.data.pagination?.totalCount || 0;
-				totalPages = result.data.pagination?.totalPages || 1;
-				lastUpdated = result.data.lastUpdated || '';
+				const data = result.data as {
+					entries: DomainEntry[];
+					pagination: { totalCount: number; totalPages: number };
+					lastUpdated: string;
+				};
+				entries = data.entries || [];
+				totalCount = data.pagination?.totalCount || 0;
+				totalPages = data.pagination?.totalPages || 1;
+				lastUpdated = data.lastUpdated || '';
 			} else {
 				errorMessage = result.error || '데이터 로드 실패';
 			}
@@ -83,11 +88,16 @@
 			const result: DomainApiResponse = await response.json();
 
 			if (result.success && result.data) {
+				const data = result.data as {
+					totalEntries: number;
+					lastUpdated: string;
+					summary: { uniqueGroups: number; uniqueDataTypes: number };
+				};
 				statistics = {
-					totalEntries: result.data.totalEntries || 0,
-					lastUpdate: result.data.lastUpdated || '',
-					uniqueGroups: result.data.summary?.uniqueGroups || 0,
-					uniqueDataTypes: result.data.summary?.uniqueDataTypes || 0
+					totalEntries: data.totalEntries || 0,
+					lastUpdate: data.lastUpdated || '',
+					uniqueGroups: data.summary?.uniqueGroups || 0,
+					uniqueDataTypes: data.summary?.uniqueDataTypes || 0
 				};
 			}
 		} catch (error) {
@@ -129,10 +139,15 @@
 			const result: DomainApiResponse = await response.json();
 
 			if (result.success && result.data) {
-				entries = result.data.entries || [];
-				totalCount = result.data.pagination?.totalCount || 0;
-				totalPages = result.data.pagination?.totalPages || 1;
-				lastUpdated = result.data.lastUpdated || '';
+				const data = result.data as {
+					entries: DomainEntry[];
+					pagination: { totalCount: number; totalPages: number };
+					lastUpdated: string;
+				};
+				entries = data.entries || [];
+				totalCount = data.pagination?.totalCount || 0;
+				totalPages = data.pagination?.totalPages || 1;
+				lastUpdated = data.lastUpdated || '';
 			} else {
 				errorMessage = result.error || '검색 실패';
 			}
@@ -458,8 +473,6 @@
 				{searchField}
 				onsort={handleSort}
 				onpagechange={handlePageChange}
-				onrefresh={handleRefresh}
-				ondownload={handleDomainDownload}
 			/>
 		</div>
 
@@ -484,9 +497,5 @@
 			opacity: 1;
 			transform: translateY(0);
 		}
-	}
-
-	.animate-fade-in {
-		animation: fade-in 0.5s ease-out forwards;
 	}
 </style>

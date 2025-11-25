@@ -14,6 +14,7 @@ export async function GET({ url }: RequestEvent) {
 		const limit = parseInt(url.searchParams.get('limit') || '100');
 		const sortBy = url.searchParams.get('sortBy') || 'createdAt';
 		const sortOrder = url.searchParams.get('sortOrder') || 'desc';
+		const scope = url.searchParams.get('scope'); // 'global' or filename
 
 		// 페이지네이션 유효성 검증
 		if (page < 1 || limit < 1 || limit > 1000) {
@@ -55,8 +56,18 @@ export async function GET({ url }: RequestEvent) {
 			);
 		}
 
+		// 필터링 적용 (scope)
+		let filteredEntries = forbiddenWordsData.entries;
+		if (scope) {
+			if (scope === 'global') {
+				filteredEntries = filteredEntries.filter((entry) => !entry.targetFile);
+			} else {
+				filteredEntries = filteredEntries.filter((entry) => entry.targetFile === scope);
+			}
+		}
+
 		// 정렬 적용
-		const sortedEntries = [...forbiddenWordsData.entries].sort((a, b) => {
+		const sortedEntries = [...filteredEntries].sort((a, b) => {
 			let aVal = a[sortBy as keyof ForbiddenWordEntry];
 			let bVal = b[sortBy as keyof ForbiddenWordEntry];
 
@@ -83,10 +94,10 @@ export async function GET({ url }: RequestEvent) {
 			success: true,
 			data: {
 				entries: paginatedEntries,
-				totalCount: forbiddenWordsData.totalCount,
+				totalCount: filteredEntries.length,
 				page,
 				limit,
-				totalPages: Math.ceil(forbiddenWordsData.totalCount / limit),
+				totalPages: Math.ceil(filteredEntries.length / limit),
 				lastUpdated: forbiddenWordsData.lastUpdated
 			}
 		} as ApiResponse);
@@ -109,7 +120,7 @@ export async function GET({ url }: RequestEvent) {
  */
 export async function POST({ request }: RequestEvent) {
 	try {
-		const { keyword, type, reason } = await request.json();
+		const { keyword, type, reason, targetFile } = await request.json();
 
 		// 필수 필드 유효성 검사
 		if (!keyword || typeof keyword !== 'string' || keyword.trim().length === 0) {
@@ -149,9 +160,12 @@ export async function POST({ request }: RequestEvent) {
 		// 기존 데이터 로드
 		const forbiddenWordsData = await loadForbiddenWordsData();
 
-		// 중복 검사 (keyword와 type의 조합)
+		// 중복 검사 (keyword와 type의 조합 + targetFile)
 		const existingEntry = forbiddenWordsData.entries.find(
-			(entry) => entry.keyword.toLowerCase() === keyword.trim().toLowerCase() && entry.type === type
+			(entry) =>
+				entry.keyword.toLowerCase() === keyword.trim().toLowerCase() &&
+				entry.type === type &&
+				entry.targetFile === targetFile
 		);
 
 		if (existingEntry) {
@@ -171,6 +185,7 @@ export async function POST({ request }: RequestEvent) {
 			keyword: keyword.trim(),
 			type,
 			reason: reason ? reason.trim() : undefined,
+			targetFile: targetFile ? targetFile.trim() : undefined,
 			createdAt: new Date().toISOString()
 		};
 
@@ -215,7 +230,7 @@ export async function POST({ request }: RequestEvent) {
  */
 export async function PUT({ request }: RequestEvent) {
 	try {
-		const { id, keyword, type, reason } = await request.json();
+		const { id, keyword, type, reason, targetFile } = await request.json();
 
 		// ID 유효성 검사
 		if (!id || typeof id !== 'string') {
@@ -280,12 +295,13 @@ export async function PUT({ request }: RequestEvent) {
 			);
 		}
 
-		// 중복 검사 (자기 자신 제외)
+		// 중복 검사 (자기 자신 제외 + targetFile 고려)
 		const existingEntry = forbiddenWordsData.entries.find(
 			(entry) =>
 				entry.id !== id &&
 				entry.keyword.toLowerCase() === keyword.trim().toLowerCase() &&
-				entry.type === type
+				entry.type === type &&
+				entry.targetFile === targetFile
 		);
 
 		if (existingEntry) {
@@ -304,7 +320,8 @@ export async function PUT({ request }: RequestEvent) {
 			...forbiddenWordsData.entries[entryIndex],
 			keyword: keyword.trim(),
 			type,
-			reason: reason ? reason.trim() : undefined
+			reason: reason ? reason.trim() : undefined,
+			targetFile: targetFile ? targetFile.trim() : undefined
 		};
 
 		forbiddenWordsData.entries[entryIndex] = updatedEntry;

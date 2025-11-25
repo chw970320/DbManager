@@ -203,7 +203,9 @@
 							/>
 						</svg>
 					</div>
-					<h3 class="text-sm font-semibold text-gray-800">단어집 히스토리</h3>
+					<h3 class="text-sm font-semibold text-gray-800">
+						{selectedFilename.split('.')[0]} 히스토리
+					</h3>
 					{#if totalCount > 0}
 						<span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
 							{totalCount}

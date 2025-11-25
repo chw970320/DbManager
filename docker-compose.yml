@@ -11,6 +11,7 @@ services:
       - HOST=0.0.0.0
       - DATA_PATH=/app/static/data
       - ORIGIN=http://localhost:63000
+      - BODY_SIZE_LIMIT=10000000
     restart: unless-stopped
     networks:
       - dbmanager-network

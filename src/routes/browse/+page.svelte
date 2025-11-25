@@ -6,6 +6,7 @@
 	import TermGenerator from '$lib/components/TermGenerator.svelte';
 	import TermEditor from '$lib/components/TermEditor.svelte';
 	import ForbiddenWordManager from '$lib/components/ForbiddenWordManager.svelte';
+	import VocabularyFileManager from '$lib/components/VocabularyFileManager.svelte';
 	import type {
 		VocabularyEntry,
 		ApiResponse,
@@ -45,6 +46,7 @@
 	let showEditor = $state(false);
 	let editorServerError = $state('');
 	let showForbiddenWordManager = $state(false);
+	let isFileManagerOpen = $state(false);
 
 	let unsubscribe: () => void;
 
@@ -98,7 +100,33 @@
 			const response = await fetch('/api/vocabulary/files');
 			const result: ApiResponse = await response.json();
 			if (result.success && Array.isArray(result.data)) {
-				vocabularyFiles = result.data as string[];
+				const files = result.data as string[];
+				vocabularyFiles = files;
+
+				if (files.length === 0) {
+					// 파일이 하나도 없으면 기본 파일 생성
+					try {
+						const createResponse = await fetch('/api/vocabulary/files', {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify({ filename: 'vocabulary.json' })
+						});
+						if (createResponse.ok) {
+							vocabularyFiles = ['vocabulary.json'];
+							if (selectedFilename !== 'vocabulary.json') {
+								handleFileSelect('vocabulary.json');
+							}
+						}
+					} catch (e) {
+						console.error('기본 파일 생성 실패:', e);
+					}
+				} else {
+					// 파일이 존재할 때
+					if (!files.includes(selectedFilename)) {
+						// 현재 선택된 파일이 목록에 없으면 첫 번째 파일 선택
+						handleFileSelect(files[0]);
+					}
+				}
 			}
 		} catch (error) {
 			console.error('파일 목록 로드 오류:', error);
@@ -474,7 +502,29 @@
 				<div
 					class="sticky top-8 rounded-2xl border border-gray-200/50 bg-white/80 p-4 shadow-sm backdrop-blur-sm"
 				>
-					<h2 class="mb-4 text-lg font-bold text-gray-900">단어집 파일</h2>
+					<div class="mb-4 flex items-center justify-between">
+						<h2 class="text-lg font-bold text-gray-900">단어집 파일</h2>
+						<button
+							onclick={() => (isFileManagerOpen = true)}
+							class="text-gray-500 hover:text-blue-600"
+							title="파일 관리"
+						>
+							<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+								/>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+								/>
+							</svg>
+						</button>
+					</div>
 					<div class="space-y-2">
 						{#each vocabularyFiles as file}
 							<button
@@ -636,6 +686,13 @@
 					on:close={() => {
 						showForbiddenWordManager = false;
 					}}
+				/>
+
+				<!-- VocabularyFileManager 모달 -->
+				<VocabularyFileManager
+					isOpen={isFileManagerOpen}
+					on:close={() => (isFileManagerOpen = false)}
+					on:change={loadVocabularyFiles}
 				/>
 
 				<!-- 통계 카드 섹션 -->

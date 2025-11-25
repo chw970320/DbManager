@@ -2,6 +2,7 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { goto } from '$app/navigation';
 	import FileUpload from '$lib/components/FileUpload.svelte';
+	import VocabularyFileManager from '$lib/components/VocabularyFileManager.svelte';
 	import type { UploadResult, VocabularyEntry, ApiResponse } from '$lib/types/vocabulary.js';
 	import { vocabularyStore } from '$lib/stores/vocabularyStore';
 
@@ -11,6 +12,7 @@
 	let errorMessage = $state('');
 	let vocabularyFiles: string[] = $state([]);
 	let selectedFilename = $state('vocabulary.json');
+	let isFileManagerOpen = $state(false);
 
 	type UploadSuccessDetail = { result: UploadResult };
 	type UploadErrorDetail = { error: string };
@@ -130,15 +132,47 @@
 
 		<!-- 대상 파일 선택 -->
 		<div class="mx-auto mb-10 max-w-lg">
-			<div class="rounded-2xl bg-white p-6 shadow-lg border border-gray-100">
-				<label for="targetFile" class="mb-3 block text-sm font-semibold text-gray-800">
-					대상 파일 선택
-					<span class="ml-1 text-xs font-normal text-gray-500">(데이터가 병합될 파일)</span>
-				</label>
+			<div class="rounded-2xl border border-gray-100 bg-white p-6 shadow-lg">
+				<div class="mb-3 flex items-center justify-between">
+					<label for="targetFile" class="block text-sm font-semibold text-gray-800">
+						대상 파일 선택
+						<span class="ml-1 text-xs font-normal text-gray-500">(데이터가 병합될 파일)</span>
+					</label>
+					<button
+						onclick={() => (isFileManagerOpen = true)}
+						class="flex items-center text-xs text-blue-600 hover:text-blue-800"
+					>
+						<svg class="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+							/>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+							/>
+						</svg>
+						파일 관리
+					</button>
+				</div>
 				<div class="relative">
 					<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-						<svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+						<svg
+							class="h-5 w-5 text-gray-400"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+							/>
 						</svg>
 					</div>
 					<select
@@ -152,9 +186,16 @@
 							<option value={file}>{file}</option>
 						{/each}
 					</select>
-					<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+					<div
+						class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"
+					>
 						<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M19 9l-7 7-7-7"
+							/>
 						</svg>
 					</div>
 				</div>
@@ -316,6 +357,12 @@
 		</div>
 	</div>
 </div>
+
+<VocabularyFileManager
+	isOpen={isFileManagerOpen}
+	on:close={() => (isFileManagerOpen = false)}
+	on:change={loadVocabularyFiles}
+/>
 
 <style>
 	@keyframes fade-in {

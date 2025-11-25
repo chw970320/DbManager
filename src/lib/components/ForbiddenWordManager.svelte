@@ -287,9 +287,11 @@
 
 			<!-- Scope Selection -->
 			<div class="mb-8 rounded-xl border border-gray-100 bg-gray-50 p-5">
-				<label for="scope-select" class="mb-3 block text-sm font-semibold text-gray-700"
-					>관리 범위 선택</label
-				>
+				<div class="mb-3 flex items-center justify-between">
+					<label for="scope-select" class="block text-sm font-semibold text-gray-700"
+						>관리 범위 선택</label
+					>
+				</div>
 				<div class="relative">
 					<select
 						id="scope-select"
@@ -358,9 +360,7 @@
 				<!-- Form Section -->
 				<div class="space-y-4">
 					<h3 class="text-lg font-semibold text-gray-900">
-						{editingId ? '금지어 수정' : '새 금지어 추가'} ({selectedScope === 'global'
-							? '전체'
-							: selectedScope})
+						{editingId ? '금지어 수정' : '새 금지어 추가'}
 					</h3>
 
 					<form
@@ -461,9 +461,7 @@
 				<!-- List Section -->
 				<div class="space-y-4">
 					<div class="flex items-center justify-between">
-						<h3 class="text-lg font-semibold text-gray-900">
-							금지어 목록 ({selectedScope === 'global' ? '전체' : selectedScope})
-						</h3>
+						<h3 class="text-lg font-semibold text-gray-900">금지어 목록</h3>
 						<button
 							onclick={() => {
 								hasLoaded = false; // 캐시 무효화

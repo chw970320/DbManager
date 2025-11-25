@@ -1,4 +1,4 @@
-import { writeFile, readFile, mkdir, readdir } from 'fs/promises';
+import { writeFile, readFile, mkdir, readdir, rename } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import type { ForbiddenWordsData } from '$lib/types/vocabulary';
@@ -262,6 +262,88 @@ export async function listVocabularyFiles(): Promise<string[]> {
 	} catch (error) {
 		console.error('단어집 파일 목록 조회 실패:', error);
 		return [DEFAULT_DATA_FILE];
+	}
+}
+
+/**
+ * 새로운 단어집 파일 생성
+ * @param filename - 생성할 파일명 (확장자 .json 포함)
+ */
+export async function createVocabularyFile(filename: string): Promise<void> {
+	try {
+		await ensureDataDirectory();
+
+		// 파일명 유효성 검사
+		if (!filename.endsWith('.json')) {
+			throw new Error('파일명은 .json으로 끝나야 합니다.');
+		}
+		if (/[\\/:*?"<>|]/.test(filename)) {
+			throw new Error('파일명에 사용할 수 없는 문자가 포함되어 있습니다.');
+		}
+
+		const filePath = getDataPath(filename);
+
+		if (existsSync(filePath)) {
+			throw new Error('이미 존재하는 파일명입니다.');
+		}
+
+		// 빈 단어집 데이터 생성
+		const emptyData: import('../types/vocabulary.js').VocabularyData = {
+			entries: [],
+			lastUpdated: new Date().toISOString(),
+			totalCount: 0
+		};
+
+		await writeFile(filePath, JSON.stringify(emptyData, null, 2), 'utf-8');
+	} catch (error) {
+		console.error('단어집 파일 생성 실패:', error);
+		throw error;
+	}
+}
+
+/**
+ * 단어집 파일 이름 변경
+ * @param oldFilename - 변경할 기존 파일명
+ * @param newFilename - 새로운 파일명
+ */
+export async function renameVocabularyFile(
+	oldFilename: string,
+	newFilename: string
+): Promise<void> {
+	try {
+		await ensureDataDirectory();
+
+		// 파일명 유효성 검사
+		if (!newFilename.endsWith('.json')) {
+			throw new Error('새 파일명은 .json으로 끝나야 합니다.');
+		}
+		if (/[\\/:*?"<>|]/.test(newFilename)) {
+			throw new Error('파일명에 사용할 수 없는 문자가 포함되어 있습니다.');
+		}
+
+		const oldPath = getDataPath(oldFilename);
+		const newPath = getDataPath(newFilename);
+
+		if (!existsSync(oldPath)) {
+			throw new Error('변경할 파일이 존재하지 않습니다.');
+		}
+		if (existsSync(newPath)) {
+			throw new Error('이미 존재하는 파일명입니다.');
+		}
+
+		// 기본 파일 보호
+		if (
+			oldFilename === 'forbidden-words.json' ||
+			oldFilename === 'domain.json' ||
+			oldFilename === 'history.json'
+		) {
+			throw new Error('시스템 파일은 이름을 변경할 수 없습니다.');
+		}
+
+		await rename(oldPath, newPath);
+	} catch (error) {
+		console.error('단어집 파일 이름 변경 실패:', error);
+		throw error;
 	}
 }
 

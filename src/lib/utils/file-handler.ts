@@ -1,4 +1,4 @@
-import { writeFile, readFile, mkdir, readdir, rename } from 'fs/promises';
+import { writeFile, readFile, mkdir, readdir, rename, unlink } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import type { ForbiddenWordsData } from '$lib/types/vocabulary';
@@ -343,6 +343,44 @@ export async function renameVocabularyFile(
 		await rename(oldPath, newPath);
 	} catch (error) {
 		console.error('단어집 파일 이름 변경 실패:', error);
+		throw error;
+	}
+}
+
+/**
+ * 단어집 파일 삭제
+ * @param filename - 삭제할 파일명
+ */
+export async function deleteVocabularyFile(filename: string): Promise<void> {
+	try {
+		await ensureDataDirectory();
+
+		// 파일명 유효성 검사
+		if (!filename.endsWith('.json')) {
+			throw new Error('삭제할 파일명은 .json으로 끝나야 합니다.');
+		}
+		if (/[\\/:*?"<>|]/.test(filename)) {
+			throw new Error('파일명에 사용할 수 없는 문자가 포함되어 있습니다.');
+		}
+
+		// 기본 파일 보호
+		if (
+			filename === 'forbidden-words.json' ||
+			filename === 'domain.json' ||
+			filename === 'history.json'
+		) {
+			throw new Error('시스템 파일은 삭제할 수 없습니다.');
+		}
+
+		const filePath = getDataPath(filename);
+
+		if (!existsSync(filePath)) {
+			throw new Error('삭제할 파일이 존재하지 않습니다.');
+		}
+
+		await unlink(filePath);
+	} catch (error) {
+		console.error('단어집 파일 삭제 실패:', error);
 		throw error;
 	}
 }

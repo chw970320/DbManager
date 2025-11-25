@@ -3,7 +3,8 @@ import type { ApiResponse } from '$lib/types/vocabulary.js';
 import {
 	listVocabularyFiles,
 	createVocabularyFile,
-	renameVocabularyFile
+	renameVocabularyFile,
+	deleteVocabularyFile
 } from '$lib/utils/file-handler.js';
 
 /**
@@ -110,6 +111,46 @@ export async function PUT({ request }: RequestEvent) {
 				success: false,
 				error: error instanceof Error ? error.message : '파일 이름 변경 중 오류가 발생했습니다.',
 				message: 'Failed to rename file'
+			} as ApiResponse,
+			{ status: 500 }
+		);
+	}
+}
+
+/**
+ * 단어집 파일 삭제 API
+ * DELETE /api/vocabulary/files
+ */
+export async function DELETE({ request }: RequestEvent) {
+	try {
+		const { filename } = await request.json();
+
+		if (!filename) {
+			return json(
+				{
+					success: false,
+					error: '파일명이 제공되지 않았습니다.',
+					message: 'Filename is required'
+				} as ApiResponse,
+				{ status: 400 }
+			);
+		}
+
+		await deleteVocabularyFile(filename);
+
+		return json(
+			{
+				success: true,
+				message: 'Vocabulary file deleted successfully'
+			} as ApiResponse,
+			{ status: 200 }
+		);
+	} catch (error) {
+		return json(
+			{
+				success: false,
+				error: error instanceof Error ? error.message : '파일 삭제 중 오류가 발생했습니다.',
+				message: 'Failed to delete file'
 			} as ApiResponse,
 			{ status: 500 }
 		);

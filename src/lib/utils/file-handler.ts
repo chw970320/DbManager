@@ -4,7 +4,7 @@ import { join } from 'path';
 import type { ForbiddenWordsData } from '$lib/types/vocabulary';
 
 // 데이터 저장 경로 설정
-const DATA_DIR = 'static/data';
+const DATA_DIR = process.env.DATA_PATH || 'static/data';
 const DEFAULT_DATA_FILE = 'vocabulary.json';
 
 /**

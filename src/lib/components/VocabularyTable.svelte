@@ -200,10 +200,20 @@
 
 	// 테이블 컬럼 정의
 	const columns = [
-		{ key: 'standardName', label: '표준단어명', sortable: true, width: 'w-1/4' },
-		{ key: 'abbreviation', label: '영문약어', sortable: true, width: 'w-1/5' },
-		{ key: 'englishName', label: '영문명', sortable: true, width: 'w-1/4' },
-		{ key: 'description', label: '설명', sortable: false, width: 'w-1/3' },
+		{
+			key: 'standardName',
+			label: '표준단어명',
+			sortable: true,
+			width: 'min-w-[150px] max-w-[200px]'
+		},
+		{
+			key: 'abbreviation',
+			label: '영문약어',
+			sortable: true,
+			width: 'min-w-[150px] max-w-[200px]'
+		},
+		{ key: 'englishName', label: '영문명', sortable: true, width: 'min-w-[150px] max-w-[250px]' },
+		{ key: 'description', label: '설명', sortable: false, width: 'min-w-[200px]' },
 		{ key: 'actions', label: '관리', sortable: false, width: 'w-auto' }
 	];
 
@@ -323,7 +333,7 @@
 </script>
 
 <!-- 단어집 테이블 컴포넌트 -->
-<div class="overflow-x-auto rounded-lg border border-gray-300 shadow-md">
+<div class="max-w-full rounded-lg border border-gray-300 shadow-md">
 	<!-- 테이블 헤더 -->
 	<div class="border-b border-gray-200 px-6 py-4">
 		<div class="flex items-center justify-between">
@@ -344,18 +354,19 @@
 		</div>
 	</div>
 
-	<!-- 테이블 컨테이너 (가로 스크롤 지원) -->
-	<div class="overflow-x-auto">
-		<table class="min-w-full divide-y divide-gray-200">
+	<!-- 테이블 컨테이너 -->
+	<div class="overflow-hidden">
+		<table class="w-full table-auto divide-y divide-gray-200">
 			<!-- 테이블 헤더 -->
 			<thead class="bg-gray-100">
 				<tr>
 					{#each columns as column (column.key)}
+						{@const isActions = column.key === 'actions'}
 						<th
 							scope="col"
-							class="whitespace-nowrap px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 {column.width} {column.sortable
-								? 'cursor-pointer hover:bg-gray-200'
-								: ''}"
+							class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 {column.width} {isActions
+								? 'whitespace-nowrap'
+								: 'whitespace-normal'} {column.sortable ? 'cursor-pointer hover:bg-gray-200' : ''}"
 							class:bg-gray-200={sortColumn === column.key}
 							onclick={() => column.sortable && handleSort(column.key)}
 							onkeydown={(e) => {
@@ -469,9 +480,11 @@
 									entry.duplicateInfo,
 									column.key
 								)}
+								{@const isActions = column.key === 'actions'}
 								<td
-									class="whitespace-nowrap px-6 py-4 text-sm text-gray-700 {fieldBackgroundClass &&
-									!isEditing
+									class="px-6 py-4 text-sm text-gray-700 {isActions
+										? 'whitespace-nowrap'
+										: 'whitespace-normal break-words'} {fieldBackgroundClass && !isEditing
 										? fieldBackgroundClass
 										: ''}"
 								>
@@ -528,7 +541,7 @@
 											class="w-full rounded-md border-gray-300 px-2 py-1 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
 										/>
 									{:else}
-										<p class="px-2 py-1">
+										<p class="break-words px-2 py-1">
 											{@html sanitizeHtml(
 												highlightSearchTerm(
 													(entry[column.key as keyof VocabularyEntry] as string) || '',

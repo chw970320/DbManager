@@ -161,7 +161,6 @@
 		}
 	}
 
-
 	/**
 	 * 검색 실행
 	 */
@@ -317,7 +316,6 @@
 			loading = false;
 		}
 	}
-
 
 	/**
 	 * 파일 선택 변경 처리
@@ -523,18 +521,18 @@
 	<meta name="description" content="업로드된 도메인 정보를 검색하고 조회하세요." />
 </svelte:head>
 
-<div class="relative min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 py-8">
-	<div class="mx-auto w-full px-4 sm:px-6 lg:px-8">
-		<!-- Floating 사이드바 (파일 목록) -->
-		<aside
-			class="fixed left-4 top-24 z-40 w-64 transition-all duration-300 lg:left-8 {sidebarOpen
-				? 'translate-x-0 opacity-100'
-				: '-translate-x-full opacity-0 lg:translate-x-0 lg:opacity-100'}"
-		>
-			<div class="rounded-2xl border border-gray-200/50 bg-white/95 p-4 shadow-xl backdrop-blur-md">
-				<div class="mb-4 flex items-center justify-between">
-					<h2 class="text-lg font-bold text-gray-900">도메인 파일</h2>
-					<div class="flex items-center space-x-2">
+<div
+	class="relative min-h-screen overflow-x-hidden bg-gradient-to-br from-slate-50 via-white to-blue-50 py-8"
+>
+	<div class="mx-auto w-full min-w-0 px-4 sm:px-6 lg:px-8">
+		<div class="gap-8 lg:grid lg:min-w-0 lg:grid-cols-[16rem_1fr]">
+			<!-- 좌측 고정 사이드바 (데스크탑) -->
+			<aside class="hidden h-full w-64 lg:block">
+				<div
+					class="sticky top-24 rounded-2xl border border-gray-200/50 bg-white/95 p-4 shadow-xl backdrop-blur-md"
+				>
+					<div class="mb-4 flex items-center justify-between">
+						<h2 class="text-lg font-bold text-gray-900">도메인 파일</h2>
 						<button
 							onclick={() => (isFileManagerOpen = true)}
 							class="text-gray-500 hover:text-blue-600"
@@ -556,271 +554,324 @@
 								/>
 							</svg>
 						</button>
-						<button
-							onclick={() => (sidebarOpen = false)}
-							class="text-gray-500 hover:text-gray-700 lg:hidden"
-							title="사이드바 닫기"
-							aria-label="사이드바 닫기"
-						>
-							<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M6 18L18 6M6 6l12 12"
-								/>
-							</svg>
-						</button>
 					</div>
-				</div>
-				<div class="space-y-2">
-					{#each fileList as file}
-						<button
-							type="button"
-							onclick={() => handleFileSelect(file)}
-							class="w-full rounded-lg px-4 py-2 text-left text-sm font-medium transition-colors duration-200 {selectedFilename ===
-							file
-								? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
-								: 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}"
-						>
-							{file}
-						</button>
-					{/each}
-					{#if fileList.length === 0}
-						<div class="px-4 py-2 text-sm text-gray-500">파일이 없습니다.</div>
-					{/if}
-				</div>
-			</div>
-		</aside>
-
-		<!-- 사이드바 오버레이 (모바일용) -->
-		{#if sidebarOpen}
-			<button
-				type="button"
-				class="fixed inset-0 z-30 bg-black/20 backdrop-blur-sm lg:hidden"
-				onclick={() => (sidebarOpen = false)}
-				onkeydown={(e) => {
-					if (e.key === 'Escape') {
-						sidebarOpen = false;
-					}
-				}}
-				aria-label="사이드바 닫기"
-			></button>
-		{/if}
-
-		<!-- 메인 컨텐츠 -->
-		<main class="w-full lg:ml-0">
-			<!-- 페이지 헤더 -->
-			<div class="mb-10">
-				<div
-					class="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0"
-				>
-					<div class="flex items-center space-x-4">
-						<!-- 모바일 사이드바 토글 버튼 -->
-						<button
-							onclick={() => (sidebarOpen = true)}
-							class="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 lg:hidden"
-							title="사이드바 열기"
-							aria-label="사이드바 열기"
-						>
-							<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M4 6h16M4 12h16M4 18h16"
-								/>
-							</svg>
-						</button>
-						<div>
-							<h1
-								class="bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-4xl font-bold text-transparent"
+					<div class="space-y-2">
+						{#each fileList as file}
+							<button
+								type="button"
+								onclick={() => handleFileSelect(file)}
+								class="w-full rounded-lg px-4 py-2 text-left text-sm font-medium transition-colors duration-200 {selectedFilename ===
+								file
+									? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+									: 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}"
 							>
-								도메인
-							</h1>
-							<p class="mt-2 text-sm text-gray-500">
-								현재 파일: <span class="font-medium text-gray-900">{selectedFilename}</span>
-							</p>
-						</div>
-					</div>
-
-					<!-- 액션 버튼들 -->
-					<div class="mb-4 flex items-center space-x-3">
-						<!-- XLSX 다운로드 버튼 -->
-						<button
-							type="button"
-							onclick={handleDomainDownload}
-							disabled={loading}
-							class="group inline-flex items-center space-x-2 rounded-xl border border-green-200/50 bg-green-50/80 px-6 py-3 text-sm font-medium text-green-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-green-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-						>
-							<svg
-								class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-								/>
-							</svg>
-							<span>{loading ? '준비 중' : 'XLSX 다운로드'}</span>
-						</button>
-
-						<!-- 새로고침 버튼 -->
-						<button
-							type="button"
-							onclick={handleRefresh}
-							disabled={loading}
-							class="btn btn-secondary group space-x-2 rounded-xl px-6 py-3 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
-						>
-							<svg
-								class="h-5 w-5 transition-transform duration-200 {loading
-									? 'animate-spin'
-									: 'group-hover:rotate-180'}"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-								/>
-							</svg>
-							<span>{loading ? '로딩 중' : '새로고침'}</span>
-						</button>
+								{file}
+							</button>
+						{/each}
+						{#if fileList.length === 0}
+							<div class="px-4 py-2 text-sm text-gray-500">파일이 없습니다.</div>
+						{/if}
 					</div>
 				</div>
-			</div>
+			</aside>
 
-			<!-- DomainEditor 모달 -->
-			{#if showEditor}
-				<DomainEditor
-					entry={currentEditingEntry || {}}
-					isEditMode={!!currentEditingEntry}
-					serverError={editorServerError}
-					on:save={handleSave}
-					on:delete={handleDelete}
-					on:cancel={handleCancel}
-				/>
-			{/if}
-
-		<!-- DomainFileManager 모달 -->
-		<DomainFileManager
-			isOpen={isFileManagerOpen}
-			on:close={() => (isFileManagerOpen = false)}
-			on:change={handleFileChange}
-		/>
-
-		<!-- 히스토리 로그 -->
-		<HistoryLog type="domain" />
-
-			<!-- 에러 메시지 -->
-			{#if errorMessage}
-				<div
-					class="mb-8 rounded-2xl border border-red-200/50 bg-gradient-to-r from-red-50 to-pink-50 p-6 shadow-lg backdrop-blur-sm"
-				>
-					<div class="flex items-start">
-						<div class="rounded-full bg-red-100 p-2">
-							<svg class="h-6 w-6 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-								<path
-									fill-rule="evenodd"
-									d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-									clip-rule="evenodd"
-								/>
-							</svg>
+			<!-- 모바일 드로어 사이드바 -->
+			{#if sidebarOpen}
+				<div class="fixed inset-0 z-40 flex lg:hidden">
+					<div
+						class="w-64 transform bg-white p-4 shadow-2xl transition-transform duration-300"
+						role="dialog"
+						aria-modal="true"
+					>
+						<div class="mb-4 flex items-center justify-between">
+							<h2 class="text-lg font-bold text-gray-900">도메인 파일</h2>
+							<div class="flex items-center space-x-2">
+								<button
+									onclick={() => (isFileManagerOpen = true)}
+									class="text-gray-500 hover:text-blue-600"
+									title="파일 관리"
+									aria-label="파일 관리"
+								>
+									<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+										/>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+										/>
+									</svg>
+								</button>
+								<button
+									onclick={() => (sidebarOpen = false)}
+									class="text-gray-500 hover:text-gray-700"
+									title="사이드바 닫기"
+									aria-label="사이드바 닫기"
+								>
+									<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M6 18L18 6M6 6l12 12"
+										/>
+									</svg>
+								</button>
+							</div>
 						</div>
-						<div class="ml-4">
-							<h4 class="text-lg font-semibold text-red-800">오류 발생</h4>
-							<p class="text-red-700">{errorMessage}</p>
-						</div>
-					</div>
-				</div>
-			{/if}
-
-			<!-- 검색 영역 -->
-			<div
-				class="mb-8 rounded-2xl border border-gray-200/50 bg-white/80 p-4 shadow-sm backdrop-blur-sm"
-			>
-				<div class="mb-6">
-					<h2 class="text-2xl font-bold text-gray-900">통합검색</h2>
-					<p class="mt-2 text-gray-600">
-						도메인 그룹, 분류명, 표준 도메인명, 데이터타입으로 검색하세요
-					</p>
-				</div>
-
-				<div class="mb-6">
-					<SearchBar
-						placeholder="도메인 그룹, 분류명, 표준명, 데이터타입으로 검색하세요..."
-						searchFields={[
-							{ value: 'all', label: '전체' },
-							{ value: 'domainGroup', label: '도메인그룹' },
-							{ value: 'domainCategory', label: '도메인 분류명' },
-							{ value: 'standardDomainName', label: '표준 도메인명' },
-							{ value: 'physicalDataType', label: '데이터타입' }
-						]}
-						bind:query={searchQuery}
-						bind:field={searchField}
-						bind:exact={searchExact}
-						onsearch={handleSearch}
-						onclear={handleSearchClear}
-					/>
-				</div>
-			</div>
-
-			<!-- 결과 테이블 영역 -->
-			<div class="rounded-2xl border border-gray-200/50 bg-white/80 p-8 shadow-sm backdrop-blur-sm">
-				<div class="mb-6 flex items-center justify-between">
-					<div>
-						<h2 class="text-2xl font-bold text-gray-900">검색 결과</h2>
-						<p class="mt-1 text-gray-600">
-							{#if searchQuery}
-								"{searchQuery}"에 대한 검색 결과 {totalCount.toLocaleString()}건
-							{:else}
-								전체 도메인 {totalCount.toLocaleString()}건
+						<div class="space-y-2">
+							{#each fileList as file}
+								<button
+									type="button"
+									onclick={() => {
+										handleFileSelect(file);
+										sidebarOpen = false;
+									}}
+									class="w-full rounded-lg px-4 py-2 text-left text-sm font-medium transition-colors duration-200 {selectedFilename ===
+									file
+										? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+										: 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}"
+								>
+									{file}
+								</button>
+							{/each}
+							{#if fileList.length === 0}
+								<div class="px-4 py-2 text-sm text-gray-500">파일이 없습니다.</div>
 							{/if}
+						</div>
+					</div>
+					<button
+						type="button"
+						class="flex-1 bg-black/30 backdrop-blur-sm"
+						onclick={() => (sidebarOpen = false)}
+						aria-label="사이드바 닫기"
+					></button>
+				</div>
+			{/if}
+
+			<!-- 메인 컨텐츠 -->
+			<main class="w-full min-w-0 overflow-x-hidden">
+				<!-- 페이지 헤더 -->
+				<div class="mb-10">
+					<div
+						class="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0"
+					>
+						<div class="flex items-center space-x-4">
+							<!-- 모바일 사이드바 토글 버튼 -->
+							<button
+								onclick={() => (sidebarOpen = true)}
+								class="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 lg:hidden"
+								title="사이드바 열기"
+								aria-label="사이드바 열기"
+							>
+								<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M4 6h16M4 12h16M4 18h16"
+									/>
+								</svg>
+							</button>
+							<div>
+								<h1
+									class="bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-4xl font-bold text-transparent"
+								>
+									도메인
+								</h1>
+								<p class="mt-2 text-sm text-gray-500">
+									현재 파일: <span class="font-medium text-gray-900">{selectedFilename}</span>
+								</p>
+							</div>
+						</div>
+
+						<!-- 액션 버튼들 -->
+						<div class="mb-4 flex items-center space-x-3">
+							<!-- XLSX 다운로드 버튼 -->
+							<button
+								type="button"
+								onclick={handleDomainDownload}
+								disabled={loading}
+								class="group inline-flex items-center space-x-2 rounded-xl border border-green-200/50 bg-green-50/80 px-6 py-3 text-sm font-medium text-green-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-green-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+							>
+								<svg
+									class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+									/>
+								</svg>
+								<span>{loading ? '준비 중' : 'XLSX 다운로드'}</span>
+							</button>
+
+							<!-- 새로고침 버튼 -->
+							<button
+								type="button"
+								onclick={handleRefresh}
+								disabled={loading}
+								class="btn btn-secondary group space-x-2 rounded-xl px-6 py-3 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+							>
+								<svg
+									class="h-5 w-5 transition-transform duration-200 {loading
+										? 'animate-spin'
+										: 'group-hover:rotate-180'}"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+									/>
+								</svg>
+								<span>{loading ? '로딩 중' : '새로고침'}</span>
+							</button>
+						</div>
+					</div>
+				</div>
+
+				<!-- DomainEditor 모달 -->
+				{#if showEditor}
+					<DomainEditor
+						entry={currentEditingEntry || {}}
+						isEditMode={!!currentEditingEntry}
+						serverError={editorServerError}
+						on:save={handleSave}
+						on:delete={handleDelete}
+						on:cancel={handleCancel}
+					/>
+				{/if}
+
+				<!-- DomainFileManager 모달 -->
+				<DomainFileManager
+					isOpen={isFileManagerOpen}
+					on:close={() => (isFileManagerOpen = false)}
+					on:change={handleFileChange}
+				/>
+
+				<!-- 히스토리 로그 -->
+				<HistoryLog type="domain" />
+
+				<!-- 에러 메시지 -->
+				{#if errorMessage}
+					<div
+						class="mb-8 rounded-2xl border border-red-200/50 bg-gradient-to-r from-red-50 to-pink-50 p-6 shadow-lg backdrop-blur-sm"
+					>
+						<div class="flex items-start">
+							<div class="rounded-full bg-red-100 p-2">
+								<svg class="h-6 w-6 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+									<path
+										fill-rule="evenodd"
+										d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+										clip-rule="evenodd"
+									/>
+								</svg>
+							</div>
+							<div class="ml-4">
+								<h4 class="text-lg font-semibold text-red-800">오류 발생</h4>
+								<p class="text-red-700">{errorMessage}</p>
+							</div>
+						</div>
+					</div>
+				{/if}
+
+				<!-- 검색 영역 -->
+				<div
+					class="mb-8 rounded-2xl border border-gray-200/50 bg-white/80 p-4 shadow-sm backdrop-blur-sm"
+				>
+					<div class="mb-6">
+						<h2 class="text-2xl font-bold text-gray-900">통합검색</h2>
+						<p class="mt-2 text-gray-600">
+							도메인 그룹, 분류명, 표준 도메인명, 데이터타입으로 검색하세요
 						</p>
 					</div>
 
-					{#if entries.length > 0}
-						<div class="flex items-center space-x-2 text-sm text-gray-500">
-							<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-								/>
-							</svg>
-							<span>페이지 {currentPage} / {totalPages}</span>
-						</div>
-					{/if}
+					<div class="mb-6">
+						<SearchBar
+							placeholder="도메인 그룹, 분류명, 표준명, 데이터타입으로 검색하세요..."
+							searchFields={[
+								{ value: 'all', label: '전체' },
+								{ value: 'domainGroup', label: '도메인그룹' },
+								{ value: 'domainCategory', label: '도메인 분류명' },
+								{ value: 'standardDomainName', label: '표준 도메인명' },
+								{ value: 'physicalDataType', label: '데이터타입' }
+							]}
+							bind:query={searchQuery}
+							bind:field={searchField}
+							bind:exact={searchExact}
+							onsearch={handleSearch}
+							onclear={handleSearchClear}
+						/>
+					</div>
 				</div>
 
-				<div class="overflow-x-auto rounded-xl border border-gray-200">
-					<DomainTable
-						{entries}
-						{loading}
-						{searchQuery}
-						{totalCount}
-						{currentPage}
-						{totalPages}
-						{pageSize}
-						{sortColumn}
-						{sortDirection}
-						{searchField}
-						{selectedFilename}
-						onsort={handleSort}
-						onpagechange={handlePageChange}
-						onentryclick={handleEntryClick}
-					/>
+				<!-- 결과 테이블 영역 -->
+				<div
+					class="min-w-0 rounded-2xl border border-gray-200/50 bg-white/80 p-8 shadow-sm backdrop-blur-sm"
+				>
+					<div class="mb-6 flex items-center justify-between">
+						<div>
+							<h2 class="text-2xl font-bold text-gray-900">검색 결과</h2>
+							<p class="mt-1 text-gray-600">
+								{#if searchQuery}
+									"{searchQuery}"에 대한 검색 결과 {totalCount.toLocaleString()}건
+								{:else}
+									전체 도메인 {totalCount.toLocaleString()}건
+								{/if}
+							</p>
+						</div>
+
+						{#if entries.length > 0}
+							<div class="flex items-center space-x-2 text-sm text-gray-500">
+								<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+									/>
+								</svg>
+								<span>페이지 {currentPage} / {totalPages}</span>
+							</div>
+						{/if}
+					</div>
+
+					<div class="overflow-x-auto rounded-xl border border-gray-200">
+						<div class="min-w-[960px]">
+							<DomainTable
+								{entries}
+								{loading}
+								{searchQuery}
+								{totalCount}
+								{currentPage}
+								{totalPages}
+								{pageSize}
+								{sortColumn}
+								{sortDirection}
+								{searchField}
+								{selectedFilename}
+								onsort={handleSort}
+								onpagechange={handlePageChange}
+								onentryclick={handleEntryClick}
+							/>
+						</div>
+					</div>
 				</div>
-			</div>
-		</main>
+			</main>
+		</div>
 	</div>
 </div>
 

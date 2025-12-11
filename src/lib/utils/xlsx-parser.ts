@@ -177,9 +177,9 @@ export function exportJsonToXlsxBuffer(data: VocabularyEntry[]): Buffer {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const worksheet: Record<string, any> = {};
 
-		// 헤더 정의 (A=번호(비워둠), B=표준단어명, C=영문약어, D=영문명, E=설명, F=형식단어여부, G=도메인분류명, H=이음동의어, I=금칙어, J=출처)
+		// 헤더 정의 (A=번호, B=표준단어명, C=영문약어, D=영문명, E=설명, F=형식단어여부, G=도메인분류명, H=이음동의어, I=금칙어, J=출처)
 		const headers = [
-			'', // A: 번호 (비워둠)
+			'번호', // A
 			'표준단어명', // B
 			'영문약어', // C
 			'영문명', // D
@@ -225,7 +225,7 @@ export function exportJsonToXlsxBuffer(data: VocabularyEntry[]): Buffer {
 		data.forEach((entry, rowIndex) => {
 			const row = rowIndex + 1; // 헤더 다음 행부터 시작
 			const values = [
-				'', // A: 번호 (비워둠)
+				rowIndex + 1, // A: 번호
 				entry.standardName, // B
 				entry.abbreviation, // C
 				entry.englishName, // D
@@ -241,7 +241,7 @@ export function exportJsonToXlsxBuffer(data: VocabularyEntry[]): Buffer {
 				const cellAddress = getCellAddress(row, colIndex);
 				worksheet[cellAddress] = {
 					v: value,
-					t: 's',
+					t: colIndex === 0 ? 'n' : 's',
 					s: {
 						alignment: {
 							vertical: 'center',
@@ -456,8 +456,9 @@ export function exportDomainToXlsxBuffer(data: DomainEntry[]): Buffer {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const worksheet: Record<string, any> = {};
 
-		// 헤더 정의 (A열은 번호이므로 B열부터 시작)
+		// 헤더 정의 (A열은 번호)
 		const headers = [
+			'번호',
 			'재정차수',
 			'공통표준도메인그룹명',
 			'공통표준도메인분류명',
@@ -472,9 +473,9 @@ export function exportDomainToXlsxBuffer(data: DomainEntry[]): Buffer {
 			'허용값'
 		];
 
-		// 헤더 행 추가 (A열은 비워두고 B열부터 시작)
+		// 헤더 행 추가 (A열부터 시작)
 		headers.forEach((header, index) => {
-			const cellAddress = getCellAddress(0, index + 1); // B열부터 시작 (index + 1)
+			const cellAddress = getCellAddress(0, index); // A열부터 시작
 			worksheet[cellAddress] = {
 				v: header,
 				t: 's',
@@ -506,7 +507,7 @@ export function exportDomainToXlsxBuffer(data: DomainEntry[]): Buffer {
 		data.forEach((entry, rowIndex) => {
 			const row = rowIndex + 1; // 헤더 다음 행부터 시작
 			const values = [
-				'', // A열: 번호 (비워둠)
+				rowIndex + 1, // A열: 번호
 				entry.revision || '',
 				entry.domainGroup,
 				entry.domainCategory,
@@ -525,7 +526,7 @@ export function exportDomainToXlsxBuffer(data: DomainEntry[]): Buffer {
 				const cellAddress = getCellAddress(row, colIndex);
 				worksheet[cellAddress] = {
 					v: value,
-					t: 's',
+					t: colIndex === 0 ? 'n' : 's',
 					s: {
 						alignment: {
 							vertical: 'center',
@@ -544,7 +545,7 @@ export function exportDomainToXlsxBuffer(data: DomainEntry[]): Buffer {
 
 		// 워크시트 범위 설정 (A열부터 M열까지)
 		const lastRow = data.length;
-		const lastCol = headers.length; // A열 포함 (0부터 시작하므로 headers.length가 M열)
+		const lastCol = headers.length - 1; // 0부터 시작
 		worksheet['!ref'] = `A1:${getCellAddress(lastRow, lastCol)}`;
 
 		// 컬럼 너비 설정 (A~M열)

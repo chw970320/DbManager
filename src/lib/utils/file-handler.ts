@@ -723,7 +723,7 @@ export async function listDomainFiles(): Promise<string[]> {
 		await ensureDataDirectory();
 		const files = await readdir(DOMAIN_DIR);
 		return files.filter((file) => {
-			return file.endsWith('.json') && !file.includes('_backup_');
+			return file.endsWith('.json') && file !== HISTORY_FILE && !file.includes('_backup_');
 		});
 	} catch (error) {
 		console.error('도메인 파일 목록 조회 실패:', error);

@@ -67,7 +67,7 @@
 						const allFiles = result.data as string[];
 						const previousSelected = selectedFilename;
 						vocabularyFiles = filterVocabularyFiles(allFiles, settings.showVocabularySystemFiles);
-						
+
 						// 현재 선택된 파일이 필터링 후 목록에 없고 시스템 파일이면 첫 번째 파일로 자동 선택
 						if (
 							!vocabularyFiles.includes(previousSelected) &&
@@ -382,7 +382,9 @@
 	/**
 	 * 항목 클릭 처리 (팝업 열기)
 	 */
-	function handleEntryClick(event: CustomEvent<{ entry: VocabularyEntry }> | { entry: VocabularyEntry }) {
+	function handleEntryClick(
+		event: CustomEvent<{ entry: VocabularyEntry }> | { entry: VocabularyEntry }
+	) {
 		// CustomEvent인 경우와 직접 객체인 경우 모두 처리
 		const entry = 'detail' in event ? event.detail.entry : event.entry;
 		currentEditingEntry = entry;
@@ -424,7 +426,7 @@
 			) {
 				// 히스토리 로그 기록 (모달 닫기 전에 originalEntry 사용)
 				const originalEntry = currentEditingEntry;
-				
+
 				// 모달 닫기
 				showEditor = false;
 				editorServerError = ''; // 에러 상태 초기화
@@ -435,7 +437,7 @@
 				// 히스토리 로그 기록
 				try {
 					const action = isEditMode ? 'update' : 'add';
-					
+
 					await fetch('/api/history', {
 						method: 'POST',
 						headers: {
@@ -474,7 +476,8 @@
 				}
 			} else {
 				// 에러 발생 시 모달 내부에 표시
-				const errorMsg = result.error || (isEditMode ? '단어 수정에 실패했습니다.' : '단어 추가에 실패했습니다.');
+				const errorMsg =
+					result.error || (isEditMode ? '단어 수정에 실패했습니다.' : '단어 추가에 실패했습니다.');
 				editorServerError = errorMsg;
 			}
 		} catch (error) {
@@ -497,7 +500,7 @@
 		try {
 			const params = new URLSearchParams({ id: entryToDelete.id, filename: selectedFilename });
 			const response = await fetch(`/api/vocabulary?${params}`, { method: 'DELETE' });
-			
+
 			if (response.ok) {
 				// 모달 닫기
 				showEditor = false;
@@ -627,16 +630,14 @@
 
 <div class="relative min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 py-8">
 	<div class="mx-auto w-full px-4 sm:px-6 lg:px-8">
-		<!-- Floating 사이드바 (파일 목록) -->
-		<aside
-			class="fixed left-4 top-24 z-40 w-64 transition-all duration-300 lg:left-8 {sidebarOpen
-				? 'translate-x-0 opacity-100'
-				: '-translate-x-full opacity-0 lg:translate-x-0 lg:opacity-100'}"
-		>
-			<div class="rounded-2xl border border-gray-200/50 bg-white/95 p-4 shadow-xl backdrop-blur-md">
-				<div class="mb-4 flex items-center justify-between">
-					<h2 class="text-lg font-bold text-gray-900">단어집 파일</h2>
-					<div class="flex items-center space-x-2">
+		<div class="gap-8 lg:grid lg:grid-cols-[16rem_1fr]">
+			<!-- 좌측 고정 사이드바 (데스크탑) -->
+			<aside class="hidden h-full w-64 lg:block">
+				<div
+					class="sticky top-24 rounded-2xl border border-gray-200/50 bg-white/95 p-4 shadow-xl backdrop-blur-md"
+				>
+					<div class="mb-4 flex items-center justify-between">
+						<h2 class="text-lg font-bold text-gray-900">단어집 파일</h2>
 						<button
 							onclick={() => (isFileManagerOpen = true)}
 							class="text-gray-500 hover:text-blue-600"
@@ -658,417 +659,468 @@
 								/>
 							</svg>
 						</button>
-						<button
-							onclick={() => (sidebarOpen = false)}
-							class="text-gray-500 hover:text-gray-700 lg:hidden"
-							title="사이드바 닫기"
-							aria-label="사이드바 닫기"
-						>
-							<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M6 18L18 6M6 6l12 12"
-								/>
-							</svg>
-						</button>
 					</div>
-				</div>
-				<div class="space-y-2">
-					{#each vocabularyFiles as file}
-						<button
-							type="button"
-							onclick={() => handleFileSelect(file)}
-							class="w-full rounded-lg px-4 py-2 text-left text-sm font-medium transition-colors duration-200 {selectedFilename ===
-							file
-								? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
-								: 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}"
-						>
-							{file}
-						</button>
-					{/each}
-					{#if vocabularyFiles.length === 0}
-						<div class="px-4 py-2 text-sm text-gray-500">파일이 없습니다.</div>
-					{/if}
-				</div>
-			</div>
-		</aside>
-
-		<!-- 사이드바 오버레이 (모바일용) -->
-		{#if sidebarOpen}
-			<button
-				type="button"
-				class="fixed inset-0 z-30 bg-black/20 backdrop-blur-sm lg:hidden"
-				onclick={() => (sidebarOpen = false)}
-				onkeydown={(e) => {
-					if (e.key === 'Escape') {
-						sidebarOpen = false;
-					}
-				}}
-				aria-label="사이드바 닫기"
-			></button>
-		{/if}
-
-		<!-- 메인 컨텐츠 -->
-		<main class="w-full lg:ml-0">
-			<!-- 페이지 헤더 -->
-			<div class="mb-10">
-				<div
-					class="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0"
-				>
-					<div class="flex items-center space-x-4">
-						<!-- 모바일 사이드바 토글 버튼 -->
-						<button
-							onclick={() => (sidebarOpen = true)}
-							class="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 lg:hidden"
-							title="사이드바 열기"
-							aria-label="사이드바 열기"
-						>
-							<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M4 6h16M4 12h16M4 18h16"
-								/>
-							</svg>
-						</button>
-						<div>
-							<h1
-								class="bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-4xl font-bold text-transparent"
+					<div class="space-y-2">
+						{#each vocabularyFiles as file}
+							<button
+								type="button"
+								onclick={() => handleFileSelect(file)}
+								class="w-full rounded-lg px-4 py-2 text-left text-sm font-medium transition-colors duration-200 {selectedFilename ===
+								file
+									? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+									: 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}"
 							>
-								단어집
-							</h1>
-							<p class="mt-2 text-sm text-gray-500">
-								현재 파일: <span class="font-medium text-gray-900">{selectedFilename}</span>
-							</p>
-						</div>
-					</div>
-
-					<!-- 액션 버튼들 -->
-					<div class="mb-4 flex items-center space-x-3">
-						<!-- 금지어 관리 버튼 -->
-						<button
-							type="button"
-							onclick={() => {
-								showForbiddenWordManager = true;
-							}}
-							disabled={loading}
-							class="group inline-flex items-center space-x-2 rounded-xl border border-red-200/50 bg-red-50/80 px-6 py-3 text-sm font-medium text-red-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-red-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-						>
-							<svg
-								class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18 12l-2.364-2.364M5.636 5.636L12 12l2.364-2.364"
-								/>
-							</svg>
-							<span>금지어 관리</span>
-						</button>
-
-						<!-- 새 단어 추가 버튼 -->
-						<button
-							type="button"
-							onclick={() => {
-								currentEditingEntry = null;
-								editorServerError = '';
-								showEditor = true;
-							}}
-							disabled={loading}
-							class="btn btn-primary group space-x-2 rounded-xl px-6 py-3 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
-						>
-							<svg
-								class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-								/>
-							</svg>
-							<span>새 단어 추가</span>
-						</button>
-
-						<!-- XLSX 다운로드 버튼 -->
-						<button
-							type="button"
-							onclick={handleDownload}
-							disabled={loading}
-							class="group inline-flex items-center space-x-2 rounded-xl border border-green-200/50 bg-green-50/80 px-6 py-3 text-sm font-medium text-green-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-green-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-						>
-							<svg
-								class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-								/>
-							</svg>
-							<span>{loading ? '준비 중' : 'XLSX 다운로드'}</span>
-						</button>
-
-						<!-- 새로고침 버튼 -->
-						<button
-							type="button"
-							onclick={refreshData}
-							disabled={loading}
-							class="btn btn-secondary group space-x-2 rounded-xl px-6 py-3 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
-						>
-							<svg
-								class="h-5 w-5 transition-transform duration-200 {loading
-									? 'animate-spin'
-									: 'group-hover:rotate-180'}"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-								/>
-							</svg>
-							<span>{loading ? '로딩 중' : '새로고침'}</span>
-						</button>
-					</div>
-				</div>
-			</div>
-
-			<!-- TermEditor 모달 -->
-			{#if showEditor}
-				<TermEditor
-					entry={currentEditingEntry || {}}
-					isEditMode={!!currentEditingEntry}
-					serverError={editorServerError}
-					on:save={handleSave}
-					on:delete={handleDelete}
-					on:cancel={() => {
-						showEditor = false;
-						editorServerError = '';
-						currentEditingEntry = null;
-					}}
-				/>
-			{/if}
-
-			<!-- ForbiddenWordManager 모달 -->
-			<ForbiddenWordManager
-				isOpen={showForbiddenWordManager}
-				on:close={() => {
-					showForbiddenWordManager = false;
-				}}
-			/>
-
-			<!-- VocabularyFileManager 모달 -->
-			<VocabularyFileManager
-				isOpen={isFileManagerOpen}
-				on:close={() => (isFileManagerOpen = false)}
-				on:change={loadVocabularyFiles}
-			/>
-
-			<!-- 히스토리 로그 -->
-			<HistoryLog type="vocabulary" />
-
-			<!-- 통계 카드 섹션 -->
-			<div class="my-8">
-				<TermGenerator />
-			</div>
-
-			<!-- 검색 영역 -->
-			<div
-				class="mb-8 rounded-2xl border border-gray-200/50 bg-white/80 p-4 shadow-sm backdrop-blur-sm"
-			>
-				<div class="mb-6">
-					<h2 class="text-2xl font-bold text-gray-900">통합검색</h2>
-					<p class="mt-2 text-gray-600">표준단어명, 영문약어, 영문명으로 단어를 검색하세요</p>
-				</div>
-
-				<div class="mb-6">
-					<SearchBar
-						bind:query={searchQuery}
-						bind:field={searchField}
-						bind:exact={searchExact}
-						onsearch={handleSearch}
-						onclear={handleSearchClear}
-					/>
-				</div>
-
-				<!-- 고급 검색 옵션 -->
-				<div class="mb-4">
-					<div class="space-y-3">
-						<h3 class="text-sm font-medium text-gray-700">중복 필터</h3>
-
-						<div class="flex flex-wrap items-center gap-6">
-							<!-- 표준단어명 중복 필터 -->
-							<div class="flex items-center space-x-2">
-								<input
-									type="checkbox"
-									id="duplicateStandardName"
-									bind:checked={duplicateFilters.standardName}
-									onchange={handleDuplicateFilterChange}
-									class="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-								/>
-								<label
-									for="duplicateStandardName"
-									class="cursor-pointer select-none text-sm font-medium text-gray-700"
-								>
-									표준단어명 중복
-								</label>
-							</div>
-
-							<!-- 영문약어 중복 필터 -->
-							<div class="flex items-center space-x-2">
-								<input
-									type="checkbox"
-									id="duplicateAbbreviation"
-									bind:checked={duplicateFilters.abbreviation}
-									onchange={handleDuplicateFilterChange}
-									class="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
-								/>
-								<label
-									for="duplicateAbbreviation"
-									class="cursor-pointer select-none text-sm font-medium text-gray-700"
-								>
-									영문약어 중복
-								</label>
-							</div>
-
-							<!-- 영문명 중복 필터 -->
-							<div class="flex items-center space-x-2">
-								<input
-									type="checkbox"
-									id="duplicateEnglishName"
-									bind:checked={duplicateFilters.englishName}
-									onchange={handleDuplicateFilterChange}
-									class="h-4 w-4 rounded border-gray-300 text-yellow-600 focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
-								/>
-								<label
-									for="duplicateEnglishName"
-									class="cursor-pointer select-none text-sm font-medium text-gray-700"
-								>
-									영문명 중복
-								</label>
-							</div>
-						</div>
-
-						<!-- 필터 상태 표시 -->
-						{#if duplicateFilters.standardName || duplicateFilters.abbreviation || duplicateFilters.englishName}
-							<div class="flex flex-wrap items-center gap-2">
-								{#if duplicateFilters.standardName}
-									<div
-										class="flex items-center space-x-1 rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-800"
-									>
-										<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-											/>
-										</svg>
-										<span>표준단어명</span>
-									</div>
-								{/if}
-								{#if duplicateFilters.abbreviation}
-									<div
-										class="flex items-center space-x-1 rounded-md bg-orange-100 px-2 py-1 text-xs font-medium text-orange-800"
-									>
-										<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-											/>
-										</svg>
-										<span>영문약어</span>
-									</div>
-								{/if}
-								{#if duplicateFilters.englishName}
-									<div
-										class="flex items-center space-x-1 rounded-md bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800"
-									>
-										<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-											<path
-												stroke-linecap="round"
-												stroke-linejoin="round"
-												stroke-width="2"
-												d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-											/>
-										</svg>
-										<span>영문명</span>
-									</div>
-								{/if}
-							</div>
+								{file}
+							</button>
+						{/each}
+						{#if vocabularyFiles.length === 0}
+							<div class="px-4 py-2 text-sm text-gray-500">파일이 없습니다.</div>
 						{/if}
 					</div>
 				</div>
-			</div>
+			</aside>
 
-			<!-- 결과 테이블 영역 -->
-			<div class="rounded-2xl border border-gray-200/50 bg-white/80 p-8 shadow-sm backdrop-blur-sm">
-				<div class="mb-6 flex items-center justify-between">
-					<div>
-						<h2 class="text-2xl font-bold text-gray-900">검색 결과</h2>
-						<p class="mt-1 text-gray-600">
-							{#if searchQuery}
-								"{searchQuery}"에 대한 검색 결과 {totalCount.toLocaleString()}건
-							{:else}
-								전체 단어 {totalCount.toLocaleString()}건
+			<!-- 모바일 드로어 사이드바 -->
+			{#if sidebarOpen}
+				<div class="fixed inset-0 z-40 flex lg:hidden">
+					<div
+						class="w-64 transform bg-white p-4 shadow-2xl transition-transform duration-300"
+						role="dialog"
+						aria-modal="true"
+					>
+						<div class="mb-4 flex items-center justify-between">
+							<h2 class="text-lg font-bold text-gray-900">단어집 파일</h2>
+							<div class="flex items-center space-x-2">
+								<button
+									onclick={() => (isFileManagerOpen = true)}
+									class="text-gray-500 hover:text-blue-600"
+									title="파일 관리"
+									aria-label="파일 관리"
+								>
+									<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+										/>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+										/>
+									</svg>
+								</button>
+								<button
+									onclick={() => (sidebarOpen = false)}
+									class="text-gray-500 hover:text-gray-700"
+									title="사이드바 닫기"
+									aria-label="사이드바 닫기"
+								>
+									<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M6 18L18 6M6 6l12 12"
+										/>
+									</svg>
+								</button>
+							</div>
+						</div>
+						<div class="space-y-2">
+							{#each vocabularyFiles as file}
+								<button
+									type="button"
+									onclick={() => {
+										handleFileSelect(file);
+										sidebarOpen = false;
+									}}
+									class="w-full rounded-lg px-4 py-2 text-left text-sm font-medium transition-colors duration-200 {selectedFilename ===
+									file
+										? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+										: 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}"
+								>
+									{file}
+								</button>
+							{/each}
+							{#if vocabularyFiles.length === 0}
+								<div class="px-4 py-2 text-sm text-gray-500">파일이 없습니다.</div>
 							{/if}
-						</p>
+						</div>
+					</div>
+					<button
+						type="button"
+						class="flex-1 bg-black/30 backdrop-blur-sm"
+						onclick={() => (sidebarOpen = false)}
+						aria-label="사이드바 닫기"
+					></button>
+				</div>
+			{/if}
+
+			<!-- 메인 컨텐츠 -->
+			<main class="w-full">
+				<!-- 페이지 헤더 -->
+				<div class="mb-10">
+					<div
+						class="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0"
+					>
+						<div class="flex items-center space-x-4">
+							<!-- 모바일 사이드바 토글 버튼 -->
+							<button
+								onclick={() => (sidebarOpen = true)}
+								class="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 lg:hidden"
+								title="사이드바 열기"
+								aria-label="사이드바 열기"
+							>
+								<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M4 6h16M4 12h16M4 18h16"
+									/>
+								</svg>
+							</button>
+							<div>
+								<h1
+									class="bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-4xl font-bold text-transparent"
+								>
+									단어집
+								</h1>
+								<p class="mt-2 text-sm text-gray-500">
+									현재 파일: <span class="font-medium text-gray-900">{selectedFilename}</span>
+								</p>
+							</div>
+						</div>
+
+						<!-- 액션 버튼들 -->
+						<div class="mb-4 flex items-center space-x-3">
+							<!-- 금지어 관리 버튼 -->
+							<button
+								type="button"
+								onclick={() => {
+									showForbiddenWordManager = true;
+								}}
+								disabled={loading}
+								class="group inline-flex items-center space-x-2 rounded-xl border border-red-200/50 bg-red-50/80 px-6 py-3 text-sm font-medium text-red-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-red-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+							>
+								<svg
+									class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18 12l-2.364-2.364M5.636 5.636L12 12l2.364-2.364"
+									/>
+								</svg>
+								<span>금지어 관리</span>
+							</button>
+
+							<!-- 새 단어 추가 버튼 -->
+							<button
+								type="button"
+								onclick={() => {
+									currentEditingEntry = null;
+									editorServerError = '';
+									showEditor = true;
+								}}
+								disabled={loading}
+								class="btn btn-primary group space-x-2 rounded-xl px-6 py-3 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+							>
+								<svg
+									class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+									/>
+								</svg>
+								<span>새 단어 추가</span>
+							</button>
+
+							<!-- XLSX 다운로드 버튼 -->
+							<button
+								type="button"
+								onclick={handleDownload}
+								disabled={loading}
+								class="group inline-flex items-center space-x-2 rounded-xl border border-green-200/50 bg-green-50/80 px-6 py-3 text-sm font-medium text-green-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-green-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+							>
+								<svg
+									class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+									/>
+								</svg>
+								<span>{loading ? '준비 중' : 'XLSX 다운로드'}</span>
+							</button>
+
+							<!-- 새로고침 버튼 -->
+							<button
+								type="button"
+								onclick={refreshData}
+								disabled={loading}
+								class="btn btn-secondary group space-x-2 rounded-xl px-6 py-3 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+							>
+								<svg
+									class="h-5 w-5 transition-transform duration-200 {loading
+										? 'animate-spin'
+										: 'group-hover:rotate-180'}"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+									/>
+								</svg>
+								<span>{loading ? '로딩 중' : '새로고침'}</span>
+							</button>
+						</div>
+					</div>
+				</div>
+
+				<!-- TermEditor 모달 -->
+				{#if showEditor}
+					<TermEditor
+						entry={currentEditingEntry || {}}
+						isEditMode={!!currentEditingEntry}
+						serverError={editorServerError}
+						on:save={handleSave}
+						on:delete={handleDelete}
+						on:cancel={() => {
+							showEditor = false;
+							editorServerError = '';
+							currentEditingEntry = null;
+						}}
+					/>
+				{/if}
+
+				<!-- ForbiddenWordManager 모달 -->
+				<ForbiddenWordManager
+					isOpen={showForbiddenWordManager}
+					on:close={() => {
+						showForbiddenWordManager = false;
+					}}
+				/>
+
+				<!-- VocabularyFileManager 모달 -->
+				<VocabularyFileManager
+					isOpen={isFileManagerOpen}
+					on:close={() => (isFileManagerOpen = false)}
+					on:change={loadVocabularyFiles}
+				/>
+
+				<!-- 히스토리 로그 -->
+				<HistoryLog type="vocabulary" />
+
+				<!-- 통계 카드 섹션 -->
+				<div class="my-8">
+					<TermGenerator />
+				</div>
+
+				<!-- 검색 영역 -->
+				<div
+					class="mb-8 rounded-2xl border border-gray-200/50 bg-white/80 p-4 shadow-sm backdrop-blur-sm"
+				>
+					<div class="mb-6">
+						<h2 class="text-2xl font-bold text-gray-900">통합검색</h2>
+						<p class="mt-2 text-gray-600">표준단어명, 영문약어, 영문명으로 단어를 검색하세요</p>
 					</div>
 
-					{#if entries.length > 0}
-						<div class="flex items-center space-x-2 text-sm text-gray-500">
-							<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-								/>
-							</svg>
-							<span>페이지 {currentPage} / {totalPages}</span>
+					<div class="mb-6">
+						<SearchBar
+							bind:query={searchQuery}
+							bind:field={searchField}
+							bind:exact={searchExact}
+							onsearch={handleSearch}
+							onclear={handleSearchClear}
+						/>
+					</div>
+
+					<!-- 고급 검색 옵션 -->
+					<div class="mb-4">
+						<div class="space-y-3">
+							<h3 class="text-sm font-medium text-gray-700">중복 필터</h3>
+
+							<div class="flex flex-wrap items-center gap-6">
+								<!-- 표준단어명 중복 필터 -->
+								<div class="flex items-center space-x-2">
+									<input
+										type="checkbox"
+										id="duplicateStandardName"
+										bind:checked={duplicateFilters.standardName}
+										onchange={handleDuplicateFilterChange}
+										class="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+									/>
+									<label
+										for="duplicateStandardName"
+										class="cursor-pointer select-none text-sm font-medium text-gray-700"
+									>
+										표준단어명 중복
+									</label>
+								</div>
+
+								<!-- 영문약어 중복 필터 -->
+								<div class="flex items-center space-x-2">
+									<input
+										type="checkbox"
+										id="duplicateAbbreviation"
+										bind:checked={duplicateFilters.abbreviation}
+										onchange={handleDuplicateFilterChange}
+										class="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
+									/>
+									<label
+										for="duplicateAbbreviation"
+										class="cursor-pointer select-none text-sm font-medium text-gray-700"
+									>
+										영문약어 중복
+									</label>
+								</div>
+
+								<!-- 영문명 중복 필터 -->
+								<div class="flex items-center space-x-2">
+									<input
+										type="checkbox"
+										id="duplicateEnglishName"
+										bind:checked={duplicateFilters.englishName}
+										onchange={handleDuplicateFilterChange}
+										class="h-4 w-4 rounded border-gray-300 text-yellow-600 focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
+									/>
+									<label
+										for="duplicateEnglishName"
+										class="cursor-pointer select-none text-sm font-medium text-gray-700"
+									>
+										영문명 중복
+									</label>
+								</div>
+							</div>
+
+							<!-- 필터 상태 표시 -->
+							{#if duplicateFilters.standardName || duplicateFilters.abbreviation || duplicateFilters.englishName}
+								<div class="flex flex-wrap items-center gap-2">
+									{#if duplicateFilters.standardName}
+										<div
+											class="flex items-center space-x-1 rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-800"
+										>
+											<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+												/>
+											</svg>
+											<span>표준단어명</span>
+										</div>
+									{/if}
+									{#if duplicateFilters.abbreviation}
+										<div
+											class="flex items-center space-x-1 rounded-md bg-orange-100 px-2 py-1 text-xs font-medium text-orange-800"
+										>
+											<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+												/>
+											</svg>
+											<span>영문약어</span>
+										</div>
+									{/if}
+									{#if duplicateFilters.englishName}
+										<div
+											class="flex items-center space-x-1 rounded-md bg-yellow-100 px-2 py-1 text-xs font-medium text-yellow-800"
+										>
+											<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+												/>
+											</svg>
+											<span>영문명</span>
+										</div>
+									{/if}
+								</div>
+							{/if}
 						</div>
-					{/if}
+					</div>
 				</div>
 
-				<div class="overflow-x-auto rounded-xl border border-gray-200">
-					<VocabularyTable
-						{entries}
-						{loading}
-						{searchQuery}
-						{totalCount}
-						{currentPage}
-						{totalPages}
-						{pageSize}
-						{sortColumn}
-						{sortDirection}
-						{searchField}
-						{selectedFilename}
-						onsort={handleSort}
-						onpagechange={handlePageChange}
-						onentryclick={handleEntryClick}
-					/>
+				<!-- 결과 테이블 영역 -->
+				<div
+					class="rounded-2xl border border-gray-200/50 bg-white/80 p-8 shadow-sm backdrop-blur-sm"
+				>
+					<div class="mb-6 flex items-center justify-between">
+						<div>
+							<h2 class="text-2xl font-bold text-gray-900">검색 결과</h2>
+							<p class="mt-1 text-gray-600">
+								{#if searchQuery}
+									"{searchQuery}"에 대한 검색 결과 {totalCount.toLocaleString()}건
+								{:else}
+									전체 단어 {totalCount.toLocaleString()}건
+								{/if}
+							</p>
+						</div>
+
+						{#if entries.length > 0}
+							<div class="flex items-center space-x-2 text-sm text-gray-500">
+								<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+									/>
+								</svg>
+								<span>페이지 {currentPage} / {totalPages}</span>
+							</div>
+						{/if}
+					</div>
+
+					<div class="overflow-x-auto rounded-xl border border-gray-200">
+						<VocabularyTable
+							{entries}
+							{loading}
+							{searchQuery}
+							{totalCount}
+							{currentPage}
+							{totalPages}
+							{pageSize}
+							{sortColumn}
+							{sortDirection}
+							{searchField}
+							{selectedFilename}
+							onsort={handleSort}
+							onpagechange={handlePageChange}
+							onentryclick={handleEntryClick}
+						/>
+					</div>
 				</div>
-			</div>
-		</main>
+			</main>
+		</div>
 	</div>
 </div>

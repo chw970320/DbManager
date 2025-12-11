@@ -4,6 +4,8 @@
 	import DomainTable from '$lib/components/DomainTable.svelte';
 	import DomainFileManager from '$lib/components/DomainFileManager.svelte';
 	import type { DomainEntry, DomainApiResponse } from '$lib/types/domain.js';
+	import { settingsStore } from '$lib/stores/settings-store';
+	import { filterDomainFiles, isSystemDomainFile } from '$lib/utils/file-filter';
 
 	// 상태 변수
 	let entries = $state<DomainEntry[]>([]);
@@ -53,12 +55,46 @@
 			const response = await fetch('/api/domain/files');
 			const result = await response.json();
 			if (result.success && result.data) {
-				fileList = result.data;
+				const allFiles = result.data as string[];
+				// 설정에 따라 필터링
+				settingsStore.subscribe((settings) => {
+					fileList = filterDomainFiles(allFiles, settings.showDomainSystemFiles);
+				})();
 			}
 		} catch (error) {
 			console.error('파일 목록 로드 실패:', error);
 		}
 	}
+
+	// 설정 변경 시 파일 목록 재필터링
+	$effect(() => {
+		const unsubscribe = settingsStore.subscribe((settings) => {
+			if (fileList.length > 0 || fileList.length === 0) {
+				// 파일 목록이 로드된 경우에만 재필터링
+				fetch('/api/domain/files')
+					.then((res) => res.json())
+					.then((result) => {
+						if (result.success && result.data) {
+							const allFiles = result.data as string[];
+							const previousSelected = selectedFilename;
+							fileList = filterDomainFiles(allFiles, settings.showDomainSystemFiles);
+							
+							// 현재 선택된 파일이 필터링 후 목록에 없고 시스템 파일이면 첫 번째 파일로 자동 선택
+							if (
+								!fileList.includes(previousSelected) &&
+								isSystemDomainFile(previousSelected) &&
+								fileList.length > 0
+							) {
+								selectedFilename = fileList[0];
+								loadDomainData();
+							}
+						}
+					})
+					.catch((error) => console.error('파일 목록 로드 실패:', error));
+			}
+		});
+		return unsubscribe;
+	});
 
 	/**
 	 * 도메인 데이터 로드

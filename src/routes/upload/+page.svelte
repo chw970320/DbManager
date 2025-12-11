@@ -5,6 +5,8 @@
 	import VocabularyFileManager from '$lib/components/VocabularyFileManager.svelte';
 	import type { UploadResult, VocabularyEntry, ApiResponse } from '$lib/types/vocabulary.js';
 	import { vocabularyStore } from '$lib/stores/vocabularyStore';
+	import { settingsStore } from '$lib/stores/settings-store';
+	import { filterVocabularyFiles, isSystemVocabularyFile } from '$lib/utils/file-filter';
 
 	// 상태 변수
 	let uploading = $state(false);
@@ -42,12 +44,46 @@
 			const response = await fetch('/api/vocabulary/files');
 			const result: ApiResponse = await response.json();
 			if (result.success && Array.isArray(result.data)) {
-				vocabularyFiles = result.data as string[];
+				const allFiles = result.data as string[];
+				// 설정에 따라 필터링
+				settingsStore.subscribe((settings) => {
+					vocabularyFiles = filterVocabularyFiles(allFiles, settings.showVocabularySystemFiles);
+				})();
 			}
 		} catch (error) {
 			console.error('파일 목록 로드 오류:', error);
 		}
 	}
+
+	// 설정 변경 시 파일 목록 재필터링
+	$effect(() => {
+		const unsubscribe = settingsStore.subscribe((settings) => {
+			if (vocabularyFiles.length > 0 || vocabularyFiles.length === 0) {
+				// 파일 목록이 로드된 경우에만 재필터링
+				const response = fetch('/api/vocabulary/files')
+					.then((res) => res.json())
+					.then((result: ApiResponse) => {
+						if (result.success && Array.isArray(result.data)) {
+							const allFiles = result.data as string[];
+							const previousSelected = selectedFilename;
+							vocabularyFiles = filterVocabularyFiles(allFiles, settings.showVocabularySystemFiles);
+							
+							// 현재 선택된 파일이 필터링 후 목록에 없고 시스템 파일이면 첫 번째 파일로 자동 선택
+							if (
+								!vocabularyFiles.includes(previousSelected) &&
+								isSystemVocabularyFile(previousSelected) &&
+								vocabularyFiles.length > 0
+							) {
+								selectedFilename = vocabularyFiles[0];
+								vocabularyStore.set({ selectedFilename: vocabularyFiles[0] });
+							}
+						}
+					})
+					.catch((error) => console.error('파일 목록 로드 오류:', error));
+			}
+		});
+		return unsubscribe;
+	});
 
 	/**
 	 * 파일 선택 변경 처리

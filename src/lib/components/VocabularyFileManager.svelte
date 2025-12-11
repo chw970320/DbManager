@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import type { ApiResponse } from '$lib/types/vocabulary';
+	import { settingsStore } from '$lib/stores/settings-store';
+	import { filterVocabularyFiles } from '$lib/utils/file-filter';
 
 	interface Props {
 		isOpen?: boolean;
@@ -13,7 +15,10 @@
 		change: void;
 	}>();
 
+	const SYSTEM_FILE = 'vocabulary.json';
+
 	let files = $state<string[]>([]);
+	let allFiles = $state<string[]>([]);
 	let isLoading = $state(false);
 	let error = $state('');
 	let successMessage = $state('');
@@ -21,6 +26,36 @@
 	let editingFile = $state<string | null>(null);
 	let renameValue = $state('');
 	let isSubmitting = $state(false);
+	let showSystemFiles = $state(true);
+
+	// Settings store 구독
+	$effect(() => {
+		const unsubscribe = settingsStore.subscribe((settings) => {
+			showSystemFiles = settings.showVocabularySystemFiles;
+			if (allFiles.length > 0) {
+				filterFiles();
+			}
+		});
+		return unsubscribe;
+	});
+
+	// Save settings
+	async function saveSettings(value: boolean) {
+		settingsStore.update((settings) => ({
+			...settings,
+			showVocabularySystemFiles: value
+		}));
+	}
+
+	// Check if file is system file
+	function isSystemFile(file: string): boolean {
+		return file === SYSTEM_FILE;
+	}
+
+	// Filter files based on settings
+	function filterFiles() {
+		files = filterVocabularyFiles(allFiles, showSystemFiles);
+	}
 
 	// Load files
 	async function loadFiles() {
@@ -29,13 +64,21 @@
 			const response = await fetch('/api/vocabulary/files');
 			const result: ApiResponse = await response.json();
 			if (result.success && Array.isArray(result.data)) {
-				files = result.data as string[];
+				allFiles = result.data as string[];
+				filterFiles();
 			}
 		} catch (err) {
 			error = '파일 목록을 불러오는데 실패했습니다.';
 		} finally {
 			isLoading = false;
 		}
+	}
+
+	// Toggle system files visibility
+	async function toggleSystemFiles() {
+		showSystemFiles = !showSystemFiles;
+		await saveSettings(showSystemFiles);
+		filterFiles();
 	}
 
 	// Create file
@@ -170,7 +213,17 @@
 
 	$effect(() => {
 		if (isOpen) {
+			// 초기 설정 로드
+			settingsStore.subscribe((settings) => {
+				showSystemFiles = settings.showVocabularySystemFiles;
+			})();
 			loadFiles();
+		}
+	});
+
+	$effect(() => {
+		if (allFiles.length > 0) {
+			filterFiles();
 		}
 	});
 
@@ -251,7 +304,18 @@
 
 			<!-- File List -->
 			<div class="max-h-60 overflow-y-auto">
-				<h3 class="mb-2 text-sm font-medium text-gray-700">파일 목록</h3>
+				<div class="mb-2 flex items-center justify-between">
+					<h3 class="text-sm font-medium text-gray-700">파일 목록</h3>
+					<label class="flex cursor-pointer items-center gap-2 text-xs text-gray-600">
+						<input
+							type="checkbox"
+							checked={showSystemFiles}
+							onchange={toggleSystemFiles}
+							class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+						/>
+						<span>시스템 파일 표시</span>
+					</label>
+				</div>
 				{#if isLoading}
 					<div class="py-4 text-center text-sm text-gray-500">로딩 중...</div>
 				{:else if files.length === 0}
@@ -272,11 +336,12 @@
 											}}
 											use:focus
 											class="flex-1 rounded-md border-gray-300 px-2 py-1 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+											disabled={isSystemFile(file)}
 										/>
 										<button
 											onclick={handleRename}
-											class="text-green-600 hover:text-green-800"
-											disabled={isSubmitting}
+											class="text-green-600 hover:text-green-800 disabled:opacity-50"
+											disabled={isSubmitting || isSystemFile(file)}
 											aria-label="Save"
 										>
 											<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -306,10 +371,20 @@
 									</div>
 								{:else}
 									<div class="flex flex-1 items-center gap-2 px-1">
-										<span class="flex-1 text-sm text-gray-700">{file}</span>
+										<div class="flex flex-1 items-center gap-2">
+											<span class="text-sm text-gray-700">{file}</span>
+											{#if isSystemFile(file)}
+												<span
+													class="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800"
+												>
+													시스템 파일
+												</span>
+											{/if}
+										</div>
 										<button
 											onclick={() => startEditing(file)}
-											class="text-gray-400 hover:text-blue-600"
+											class="text-gray-400 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+											disabled={isSystemFile(file)}
 											aria-label="Rename"
 										>
 											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -323,7 +398,8 @@
 										</button>
 										<button
 											onclick={() => handleDelete(file)}
-											class="text-gray-400 hover:text-red-600"
+											class="text-gray-400 hover:text-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
+											disabled={isSystemFile(file)}
 											aria-label="Delete"
 										>
 											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -3,6 +3,7 @@
 	import SearchBar from '$lib/components/SearchBar.svelte';
 	import DomainTable from '$lib/components/DomainTable.svelte';
 	import DomainFileManager from '$lib/components/DomainFileManager.svelte';
+	import DomainEditor from '$lib/components/DomainEditor.svelte';
 	import type { DomainEntry, DomainApiResponse } from '$lib/types/domain.js';
 	import { get } from 'svelte/store';
 	import { settingsStore } from '$lib/stores/settings-store';
@@ -27,6 +28,11 @@
 	let isFileManagerOpen = $state(false);
 	let selectedFilename = $state('domain.json');
 	let fileList = $state<string[]>([]);
+
+	// 편집기 상태
+	let showEditor = $state(false);
+	let editorServerError = $state('');
+	let currentEditingEntry = $state<DomainEntry | null>(null);
 
 	// 통계 정보
 	let statistics = $state({
@@ -333,6 +339,183 @@
 		// 일단은 새로고침.
 		handleRefresh();
 	}
+
+	/**
+	 * 항목 클릭 처리 (팝업 열기)
+	 */
+	function handleEntryClick(event: CustomEvent<{ entry: DomainEntry }> | { entry: DomainEntry }) {
+		// CustomEvent인 경우와 직접 객체인 경우 모두 처리
+		const entry = 'detail' in event ? event.detail.entry : event.entry;
+		currentEditingEntry = entry;
+		editorServerError = '';
+		showEditor = true;
+	}
+
+	/**
+	 * 도메인 저장 처리
+	 */
+	async function handleSave(event: CustomEvent<DomainEntry>) {
+		const editedEntry = event.detail;
+		loading = true;
+		editorServerError = '';
+
+		try {
+			const params = new URLSearchParams({ filename: selectedFilename });
+			const response = await fetch(`/api/domain?${params}`, {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify(editedEntry)
+			});
+
+			const result: DomainApiResponse = await response.json();
+
+			if (result.success && result.data) {
+				// 히스토리 로그 기록 (모달 닫기 전에 originalEntry 사용)
+				const originalEntry = currentEditingEntry;
+
+				// 모달 닫기
+				showEditor = false;
+				editorServerError = '';
+				currentEditingEntry = null;
+				// 데이터 새로고침
+				await loadDomainData();
+
+				// 히스토리 로그 기록
+				try {
+					await fetch('/api/history', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({
+							action: 'update',
+							targetId: editedEntry.id,
+							targetName: editedEntry.standardDomainName,
+							filename: selectedFilename,
+							details: {
+								before: originalEntry
+									? {
+											domainGroup: originalEntry.domainGroup,
+											domainCategory: originalEntry.domainCategory,
+											standardDomainName: originalEntry.standardDomainName,
+											physicalDataType: originalEntry.physicalDataType
+										}
+									: undefined,
+								after: {
+									domainGroup: editedEntry.domainGroup,
+									domainCategory: editedEntry.domainCategory,
+									standardDomainName: editedEntry.standardDomainName,
+									physicalDataType: editedEntry.physicalDataType
+								}
+							}
+						})
+					});
+
+					// 히스토리 UI 새로고침
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					if (typeof window !== 'undefined' && (window as any).refreshHistoryLog) {
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any
+						(window as any).refreshHistoryLog();
+					}
+				} catch (historyError: unknown) {
+					console.warn('히스토리 로그 기록 실패:', historyError);
+				}
+			} else {
+				// 에러 발생 시 모달 내부에 표시
+				const errorMsg = result.error || '도메인 수정에 실패했습니다.';
+				editorServerError = errorMsg;
+			}
+		} catch (error) {
+			console.error('도메인 수정 중 오류:', error);
+			const errorMsg = '서버 연결 오류가 발생했습니다.';
+			editorServerError = errorMsg;
+		} finally {
+			loading = false;
+		}
+	}
+
+	/**
+	 * 도메인 삭제 처리
+	 */
+	async function handleDelete(event: CustomEvent<DomainEntry>) {
+		const entryToDelete = event.detail;
+		loading = true;
+		editorServerError = '';
+
+		try {
+			const params = new URLSearchParams({ id: entryToDelete.id, filename: selectedFilename });
+			const response = await fetch(`/api/domain?${params}`, { method: 'DELETE' });
+
+			const result: DomainApiResponse = await response.json();
+
+			if (result.success) {
+				// 히스토리 로그 기록 (모달 닫기 전에 originalEntry 사용)
+				const originalEntry = currentEditingEntry;
+
+				// 모달 닫기
+				showEditor = false;
+				editorServerError = '';
+				currentEditingEntry = null;
+				// 데이터 새로고침
+				await loadDomainData();
+
+				// 히스토리 로그 기록
+				try {
+					await fetch('/api/history', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({
+							action: 'delete',
+							targetId: entryToDelete.id,
+							targetName: entryToDelete.standardDomainName,
+							filename: selectedFilename,
+							details: {
+								before: originalEntry
+									? {
+											domainGroup: originalEntry.domainGroup,
+											domainCategory: originalEntry.domainCategory,
+											standardDomainName: originalEntry.standardDomainName,
+											physicalDataType: originalEntry.physicalDataType
+										}
+									: undefined
+							}
+						})
+					});
+
+					// 히스토리 UI 새로고침
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					if (typeof window !== 'undefined' && (window as any).refreshHistoryLog) {
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any
+						(window as any).refreshHistoryLog();
+					}
+				} catch (historyError: unknown) {
+					console.warn('히스토리 로그 기록 실패:', historyError);
+				}
+			} else {
+				const errorMsg = result.error || '도메인 삭제에 실패했습니다.';
+				editorServerError = errorMsg;
+			}
+		} catch (error) {
+			console.error('도메인 삭제 중 오류:', error);
+			const errorMsg = '서버 연결 오류가 발생했습니다.';
+			editorServerError = errorMsg;
+		} finally {
+			loading = false;
+		}
+	}
+
+	/**
+	 * 편집 취소 처리
+	 */
+	function handleCancel() {
+		showEditor = false;
+		editorServerError = '';
+		currentEditingEntry = null;
+	}
 </script>
 
 <svelte:head>
@@ -591,8 +774,21 @@
 				{selectedFilename}
 				onsort={handleSort}
 				onpagechange={handlePageChange}
+				onentryclick={handleEntryClick}
 			/>
 		</div>
+
+		<!-- 도메인 편집기 -->
+		{#if showEditor}
+			<DomainEditor
+				entry={currentEditingEntry || {}}
+				isEditMode={!!currentEditingEntry}
+				serverError={editorServerError}
+				on:save={handleSave}
+				on:cancel={handleCancel}
+				on:delete={handleDelete}
+			/>
+		{/if}
 
 		<DomainFileManager
 			isOpen={isFileManagerOpen}

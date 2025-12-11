@@ -5,16 +5,18 @@
 // 개별 도메인 엔트리 인터페이스
 export interface DomainEntry {
 	id: string;
-	domainGroup: string; // A: 도메인그룹
-	domainCategory: string; // B: 도메인 분류명
-	standardDomainName: string; // C: 표준 도메인명
-	logicalDataType: string; // D: 논리 데이터타입
-	physicalDataType: string; // E: 물리 데이터타입
-	dataLength?: number; // F: 데이터 길이 (선택적)
-	decimalPlaces?: number; // G: 소수점자리수 (선택적)
-	dataValue?: string; // H: 데이터값 (선택적)
-	measurementUnit?: string; // I: 측정단위 (선택적)
-	remarks?: string; // J: 비고 (선택적)
+	domainGroup: string; // C: 공통표준도메인그룹명
+	domainCategory: string; // D: 공통표준도메인분류명
+	standardDomainName: string; // E: 공통표준도메인명 (계산된 값)
+	physicalDataType: string; // G: 데이터타입 (물리 데이터타입)
+	dataLength?: string; // H: 데이터길이 (text 타입)
+	decimalPlaces?: string; // I: 데이터소수점길이 (text 타입)
+	measurementUnit?: string; // L: 단위
+	revision?: string; // B: 재정차수
+	description?: string; // F: 공통표준도메인설명
+	storageFormat?: string; // J: 저장 형식
+	displayFormat?: string; // K: 표현 형식
+	allowedValues?: string; // M: 허용값
 	createdAt: string; // ISO 8601 날짜 문자열
 	updatedAt: string; // ISO 8601 날짜 문자열
 }
@@ -71,7 +73,6 @@ export interface DomainSearchQuery {
 		| 'domainGroup'
 		| 'domainCategory'
 		| 'standardDomainName'
-		| 'logicalDataType'
 		| 'physicalDataType';
 }
 

@@ -1,6 +1,6 @@
 import XLSX from 'xlsx-js-style';
 import { v4 as uuidv4 } from 'uuid';
-import type { DomainEntry, RawDomainData } from '../types/domain.js';
+import type { DomainEntry } from '../types/domain.js';
 import { validateVocabularyEntry } from './validation.js';
 import type { VocabularyEntry, VocabularyData } from '../types/vocabulary.js';
 
@@ -323,11 +323,22 @@ export function parseDomainXlsxToJson(fileBuffer: Buffer, skipDuplicates: boolea
 		const headerRow = rawData[0];
 
 		// 헤더가 예상과 다른 경우 경고하지만 계속 진행
-		if (headerRow.length < 5) {
+		if (headerRow.length < 4) {
 			throw new Error(
-				'Excel 파일의 헤더가 부족합니다. 최소 5개 컬럼(도메인그룹, 도메인 분류명, 표준 도메인명, 논리 데이터타입, 물리 데이터타입)이 필요합니다.'
+				'Excel 파일의 헤더가 부족합니다. 최소 4개 컬럼(재정차수, 공통표준도메인그룹명, 공통표준도메인분류명, 공통표준도메인명)이 필요합니다.'
 			);
 		}
+
+		/**
+		 * 선택적 텍스트 필드 파싱 헬퍼 함수 ("-"는 undefined로 변환)
+		 */
+		const parseOptionalText = (
+			value: string | number | undefined
+		): string | undefined => {
+			if (!value) return undefined;
+			const str = String(value).trim();
+			return str === '-' || str === '' ? undefined : str;
+		};
 
 		// 첫 번째 행(헤더) 제외하고 데이터 처리
 		const dataRows = rawData.slice(1);
@@ -346,73 +357,51 @@ export function parseDomainXlsxToJson(fileBuffer: Buffer, skipDuplicates: boolea
 				continue;
 			}
 
-			// 컬럼 매핑: A=도메인그룹, B=도메인 분류명, C=표준 도메인명, D=논리 데이터타입, E=물리 데이터타입, F=데이터 길이, G=소수점자리수, H=데이터값, I=측정단위, J=비고
-			const rawEntry: RawDomainData = {
-				도메인그룹: row[0] ? String(row[0]).trim() : '',
-				'도메인 분류명': row[1] ? String(row[1]).trim() : '',
-				'표준 도메인명': row[2] ? String(row[2]).trim() : '',
-				'논리 데이터타입': row[3] ? String(row[3]).trim() : '',
-				'물리 데이터타입': row[4] ? String(row[4]).trim() : '',
-				'데이터 길이': row[5] ? row[5] : undefined,
-				소수점자리수: row[6] ? row[6] : undefined,
-				데이터값: row[7] ? String(row[7]).trim() : undefined,
-				측정단위: row[8] ? String(row[8]).trim() : undefined,
-				비고: row[9] ? String(row[9]).trim() : undefined
-			};
+			// 컬럼 매핑: A=번호(무시), B=재정차수, C=공통표준도메인그룹명, D=공통표준도메인분류명, E=공통표준도메인명, F=공통표준도메인설명, G=데이터타입, H=데이터길이, I=데이터소수점길이, J=저장 형식, K=표현 형식, L=단위, M=허용값
+			const domainGroup = row[2] ? String(row[2]).trim() : '';
+			const domainCategory = row[3] ? String(row[3]).trim() : '';
+			const standardDomainName = row[4] ? String(row[4]).trim() : '';
+			const physicalDataType = row[6] ? String(row[6]).trim() : '';
 
 			// 필수 필드 검증
-			if (
-				!rawEntry.도메인그룹 ||
-				!rawEntry['도메인 분류명'] ||
-				!rawEntry['표준 도메인명'] ||
-				!rawEntry['논리 데이터타입'] ||
-				!rawEntry['물리 데이터타입']
-			) {
-				console.warn(`Row ${i + 2}: 필수 필드가 누락된 데이터 건너뜀 -`, rawEntry);
+			if (!domainGroup || !domainCategory || !standardDomainName || !physicalDataType) {
+				console.warn(`Row ${i + 2}: 필수 필드가 누락된 데이터 건너뜀 -`, {
+					domainGroup,
+					domainCategory,
+					standardDomainName,
+					physicalDataType
+				});
 				continue;
 			}
 
 			// 중복 체크 (도메인그룹 + 표준 도메인명 조합) - skipDuplicates가 true일 때만 실행
 			if (skipDuplicates && seenCombinations) {
-				const combination = `${rawEntry.도메인그룹}|${rawEntry['표준 도메인명']}`;
+				const combination = `${domainGroup}|${standardDomainName}`;
 				if (seenCombinations.has(combination)) {
-					console.warn(`Row ${i + 2}: 중복 데이터 건너뜀 -`, rawEntry);
+					console.warn(`Row ${i + 2}: 중복 데이터 건너뜀 -`, {
+						domainGroup,
+						standardDomainName
+					});
 					continue;
 				}
 				seenCombinations.add(combination);
 			}
 
-			// 데이터 타입 변환
-			let dataLength: number | undefined;
-			let decimalPlaces: number | undefined;
-
-			if (rawEntry['데이터 길이'] !== undefined && rawEntry['데이터 길이'] !== '') {
-				const lengthNum = Number(rawEntry['데이터 길이']);
-				if (!isNaN(lengthNum) && lengthNum > 0) {
-					dataLength = lengthNum;
-				}
-			}
-
-			if (rawEntry.소수점자리수 !== undefined && rawEntry.소수점자리수 !== '') {
-				const decimalNum = Number(rawEntry.소수점자리수);
-				if (!isNaN(decimalNum) && decimalNum >= 0) {
-					decimalPlaces = decimalNum;
-				}
-			}
-
 			// 최종 엔트리 생성
 			const entry: DomainEntry = {
 				id: uuidv4(),
-				domainGroup: rawEntry.도메인그룹,
-				domainCategory: rawEntry['도메인 분류명'],
-				standardDomainName: rawEntry['표준 도메인명'],
-				logicalDataType: rawEntry['논리 데이터타입'],
-				physicalDataType: rawEntry['물리 데이터타입'],
-				dataLength,
-				decimalPlaces,
-				dataValue: rawEntry.데이터값 || undefined,
-				measurementUnit: rawEntry.측정단위 || undefined,
-				remarks: rawEntry.비고 || undefined,
+				domainGroup,
+				domainCategory,
+				standardDomainName,
+				physicalDataType,
+				dataLength: parseOptionalText(row[7]),
+				decimalPlaces: parseOptionalText(row[8]),
+				measurementUnit: parseOptionalText(row[11]),
+				revision: parseOptionalText(row[1]),
+				description: parseOptionalText(row[5]),
+				storageFormat: parseOptionalText(row[9]),
+				displayFormat: parseOptionalText(row[10]),
+				allowedValues: parseOptionalText(row[12]),
 				createdAt: new Date().toISOString(),
 				updatedAt: new Date().toISOString()
 			};
@@ -444,23 +433,25 @@ export function exportDomainToXlsxBuffer(data: DomainEntry[]): Buffer {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const worksheet: Record<string, any> = {};
 
-		// 헤더 정의
+		// 헤더 정의 (A열은 번호이므로 B열부터 시작)
 		const headers = [
-			'도메인그룹',
-			'도메인 분류명',
-			'표준 도메인명',
-			'논리 데이터타입',
-			'물리 데이터타입',
-			'데이터 길이',
-			'소수점자리수',
-			'데이터값',
-			'측정단위',
-			'비고'
+			'재정차수',
+			'공통표준도메인그룹명',
+			'공통표준도메인분류명',
+			'공통표준도메인명',
+			'공통표준도메인설명',
+			'데이터타입',
+			'데이터길이',
+			'데이터소수점길이',
+			'저장 형식',
+			'표현 형식',
+			'단위',
+			'허용값'
 		];
 
-		// 헤더 행 추가
+		// 헤더 행 추가 (A열은 비워두고 B열부터 시작)
 		headers.forEach((header, index) => {
-			const cellAddress = getCellAddress(0, index);
+			const cellAddress = getCellAddress(0, index + 1); // B열부터 시작 (index + 1)
 			worksheet[cellAddress] = {
 				v: header,
 				t: 's',
@@ -492,16 +483,19 @@ export function exportDomainToXlsxBuffer(data: DomainEntry[]): Buffer {
 		data.forEach((entry, rowIndex) => {
 			const row = rowIndex + 1; // 헤더 다음 행부터 시작
 			const values = [
+				'', // A열: 번호 (비워둠)
+				entry.revision || '',
 				entry.domainGroup,
 				entry.domainCategory,
 				entry.standardDomainName,
-				entry.logicalDataType,
+				entry.description || '',
 				entry.physicalDataType,
-				entry.dataLength?.toString() || '',
-				entry.decimalPlaces?.toString() || '',
-				entry.dataValue || '',
+				entry.dataLength || '',
+				entry.decimalPlaces || '',
+				entry.storageFormat || '',
+				entry.displayFormat || '',
 				entry.measurementUnit || '',
-				entry.remarks || ''
+				entry.allowedValues || ''
 			];
 
 			values.forEach((value, colIndex) => {
@@ -525,21 +519,26 @@ export function exportDomainToXlsxBuffer(data: DomainEntry[]): Buffer {
 			});
 		});
 
-		// 워크시트 범위 설정
+		// 워크시트 범위 설정 (A열부터 M열까지)
 		const lastRow = data.length;
-		const lastCol = headers.length - 1;
+		const lastCol = headers.length; // A열 포함 (0부터 시작하므로 headers.length가 M열)
 		worksheet['!ref'] = `A1:${getCellAddress(lastRow, lastCol)}`;
 
-		// 컬럼 너비 설정
+		// 컬럼 너비 설정 (A~M열)
 		worksheet['!cols'] = [
-			{ wch: 15 }, // 도메인그룹
-			{ wch: 20 }, // 도메인 분류명
-			{ wch: 25 }, // 표준 도메인명
-			{ wch: 15 }, // 데이터타입
-			{ wch: 12 }, // 데이터길이
-			{ wch: 12 }, // 소수점자리
-			{ wch: 20 }, // 데이터 값
-			{ wch: 30 } // 비고
+			{ wch: 8 }, // A: 번호
+			{ wch: 10 }, // B: 재정차수
+			{ wch: 20 }, // C: 공통표준도메인그룹명
+			{ wch: 20 }, // D: 공통표준도메인분류명
+			{ wch: 25 }, // E: 공통표준도메인명
+			{ wch: 30 }, // F: 공통표준도메인설명
+			{ wch: 15 }, // G: 데이터타입
+			{ wch: 12 }, // H: 데이터길이
+			{ wch: 15 }, // I: 데이터소수점길이
+			{ wch: 20 }, // J: 저장 형식
+			{ wch: 20 }, // K: 표현 형식
+			{ wch: 12 }, // L: 단위
+			{ wch: 30 } // M: 허용값
 		];
 
 		// 행 높이 설정

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { DomainEntry } from '$lib/types/domain.js';
+	import { createEventDispatcher } from 'svelte';
 
 	type SortEvent = {
 		column: string;
@@ -8,6 +9,10 @@
 
 	type PageChangeEvent = {
 		page: number;
+	};
+
+	type EntryClickEvent = {
+		entry: DomainEntry;
 	};
 
 	// 컴포넌트 속성
@@ -24,7 +29,8 @@
 		searchField = 'all',
 		selectedFilename = 'domain.json',
 		onsort,
-		onpagechange
+		onpagechange,
+		onentryclick
 	}: {
 		entries?: DomainEntry[];
 		loading?: boolean;
@@ -39,55 +45,26 @@
 		selectedFilename?: string;
 		onsort: (detail: SortEvent) => void;
 		onpagechange: (detail: PageChangeEvent) => void;
+		onentryclick?: (detail: EntryClickEvent) => void;
 	} = $props();
 
-	let editingId = $state<string | null>(null);
-	let editedEntry = $state<Partial<DomainEntry>>({});
+	// Event dispatcher
+	const dispatch = createEventDispatcher<{
+		entryclick: EntryClickEvent;
+	}>();
 
-	function handleEdit(entry: DomainEntry) {
-		editingId = entry.id;
-		editedEntry = { ...entry };
-	}
-
-	function cancelEdit() {
-		editingId = null;
-		editedEntry = {};
-	}
-
-	async function handleSave(id: string) {
-		if (!editedEntry) return;
-		try {
-			const response = await fetch(`/api/domain`, {
-				method: 'PUT',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ ...editedEntry, id, filename: selectedFilename })
-			});
-			if (response.ok) {
-				cancelEdit();
-				onpagechange({ page: currentPage }); // 데이터 새로고침
-			} else {
-				alert('수정에 실패했습니다.');
-			}
-		} catch (error) {
-			console.error('수정 오류:', error);
+	// 행 클릭 핸들러
+	function handleRowClick(entry: DomainEntry, event: MouseEvent) {
+		// 버튼이나 링크 클릭 시에는 이벤트 전파 방지
+		const target = event.target as HTMLElement;
+		if (target.tagName === 'BUTTON' || target.closest('button')) {
+			return;
 		}
-	}
 
-	async function handleDelete(id: string) {
-		if (confirm('정말로 이 항목을 삭제하시겠습니까?')) {
-			try {
-				const response = await fetch(`/api/domain?id=${id}&filename=${selectedFilename}`, {
-					method: 'DELETE'
-				});
-				if (response.ok) {
-					onpagechange({ page: currentPage });
-				} else {
-					alert('삭제에 실패했습니다.');
-				}
-			} catch (error) {
-				console.error('삭제 오류:', error);
-			}
+		if (onentryclick) {
+			onentryclick({ entry });
 		}
+		dispatch('entryclick', { entry });
 	}
 
 	// 테이블 컬럼 정의
@@ -101,8 +78,7 @@
 		{ key: 'decimalPlaces', label: '소수점자리수', sortable: false, width: 'w-24' },
 		{ key: 'dataValue', label: '데이터값', sortable: false, width: 'w-28' },
 		{ key: 'measurementUnit', label: '측정단위', sortable: false, width: 'w-24' },
-		{ key: 'remarks', label: '비고', sortable: false, width: 'w-32' },
-		{ key: 'actions', label: '관리', sortable: false, width: 'w-auto' }
+		{ key: 'remarks', label: '비고', sortable: false, width: 'w-32' }
 	];
 
 	// 파생 상태 (페이지네이션)
@@ -125,6 +101,15 @@
 		if (!loading && page !== currentPage && page >= 1 && page <= totalPages) {
 			onpagechange({ page });
 		}
+	}
+
+	/**
+	 * logicalDataType 필드 값 가져오기 (타입에 없지만 테이블에 표시하기 위해)
+	 */
+	function getLogicalDataType(entry: DomainEntry): string {
+		// 타입에 logicalDataType이 없으므로 빈 문자열 반환
+		// 실제 데이터에 있다면 entry.logicalDataType으로 접근 가능
+		return (entry as unknown as { logicalDataType?: string }).logicalDataType || '-';
 	}
 
 	/**
@@ -336,38 +321,34 @@
 				{:else}
 					<!-- 데이터 행 -->
 					{#each entries as entry (entry.id)}
-						{@const isEditing = editingId === entry.id}
-						<tr class:bg-blue-50={isEditing} class="border-t border-gray-300 hover:bg-gray-50">
+						<tr
+							class="border-t border-gray-300 cursor-pointer transition-colors hover:bg-blue-50"
+							onclick={(e: MouseEvent) => handleRowClick(entry, e)}
+							role="button"
+							tabindex="0"
+							onkeydown={(e: KeyboardEvent) => {
+								if (e.key === 'Enter' || e.key === ' ') {
+									e.preventDefault();
+									handleRowClick(entry, e as unknown as MouseEvent);
+								}
+							}}
+							aria-label="항목 클릭하여 상세 정보 보기"
+						>
 							{#each columns as column (column.key)}
-								<td class="px-6 py-4 text-sm text-gray-700">
-									{#if column.key === 'actions'}
-										<div class="flex items-center space-x-2">
-											{#if isEditing}
-												<button
-													onclick={() => handleSave(entry.id)}
-													class="text-blue-600 hover:text-blue-900">저장</button
-												>
-												<button onclick={cancelEdit} class="text-gray-600 hover:text-gray-900"
-													>취소</button
-												>
-											{:else}
-												<button
-													onclick={() => handleEdit(entry)}
-													class="whitespace-nowrap text-indigo-600 hover:text-indigo-900"
-													>편집</button
-												>
-												<button
-													onclick={() => handleDelete(entry.id)}
-													class="whitespace-nowrap text-red-600 hover:text-red-900">삭제</button
-												>
-											{/if}
+								<td class="whitespace-nowrap px-6 py-4 text-sm text-gray-700">
+									{#if column.key === 'logicalDataType'}
+										<div
+											class="max-w-xs truncate"
+											title={getLogicalDataType(entry)}
+										>
+											{@html sanitizeHtml(
+												highlightSearchTerm(
+													getLogicalDataType(entry),
+													searchQuery,
+													column.key
+												)
+											)}
 										</div>
-									{:else if isEditing}
-										<input
-											type="text"
-											bind:value={editedEntry[column.key as keyof DomainEntry]}
-											class="w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-										/>
 									{:else if column.key === 'dataLength' || column.key === 'decimalPlaces'}
 										<span class="block text-center">
 											{@html sanitizeHtml(

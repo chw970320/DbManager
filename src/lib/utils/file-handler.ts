@@ -606,7 +606,6 @@ export async function saveDomainData(
 				entry.domainGroup &&
 				entry.domainCategory &&
 				entry.standardDomainName &&
-				entry.logicalDataType &&
 				entry.physicalDataType &&
 				entry.createdAt;
 			return isValid;

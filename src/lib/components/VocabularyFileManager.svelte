@@ -214,10 +214,11 @@
 	$effect(() => {
 		if (isOpen) {
 			// 초기 설정 로드
-			settingsStore.subscribe((settings) => {
+			const unsubscribe = settingsStore.subscribe((settings) => {
 				showSystemFiles = settings.showVocabularySystemFiles;
-			})();
+			});
 			loadFiles();
+			return unsubscribe;
 		}
 	});
 

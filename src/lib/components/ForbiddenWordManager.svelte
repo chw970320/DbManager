@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import type { ForbiddenWordEntry, ApiResponse } from '$lib/types/vocabulary';
+	import { get } from 'svelte/store';
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { filterVocabularyFiles, isSystemVocabularyFile } from '$lib/utils/file-filter';
 
@@ -66,10 +67,9 @@
 			const result: ApiResponse = await response.json();
 			if (result.success && Array.isArray(result.data)) {
 				const allFiles = result.data as string[];
-				// 설정에 따라 필터링
-				settingsStore.subscribe((settings) => {
-					vocabularyFiles = filterVocabularyFiles(allFiles, settings.showVocabularySystemFiles);
-				})();
+				// 설정에 따라 필터링 - 초기값만 가져오기 위해 get() 사용
+				const settings = get(settingsStore);
+				vocabularyFiles = filterVocabularyFiles(allFiles, settings.showVocabularySystemFiles);
 			}
 		} catch (error) {
 			console.error('파일 목록 로드 오류:', error);
@@ -79,36 +79,34 @@
 	// 설정 변경 시 파일 목록 재필터링
 	$effect(() => {
 		const unsubscribe = settingsStore.subscribe((settings) => {
-			if (vocabularyFiles.length > 0 || vocabularyFiles.length === 0) {
-				// 파일 목록이 로드된 경우에만 재필터링
-				fetch('/api/vocabulary/files')
-					.then((res) => res.json())
-					.then((result: ApiResponse) => {
-						if (result.success && Array.isArray(result.data)) {
-							const allFiles = result.data as string[];
-							const previousScope = selectedScope;
-							vocabularyFiles = filterVocabularyFiles(allFiles, settings.showVocabularySystemFiles);
-							
-							// selectedScope가 파일명이고 시스템 파일이며 필터링 후 목록에 없으면 변경
-							if (
-								previousScope !== 'global' &&
-								!vocabularyFiles.includes(previousScope) &&
-								isSystemVocabularyFile(previousScope)
-							) {
-								if (vocabularyFiles.length > 0) {
-									selectedScope = vocabularyFiles[0];
-									hasLoaded = false;
-									loadForbiddenWords();
-								} else {
-									selectedScope = 'global';
-									hasLoaded = false;
-									loadForbiddenWords();
-								}
+			// 파일 목록이 로드된 경우에만 재필터링
+			fetch('/api/vocabulary/files')
+				.then((res) => res.json())
+				.then((result: ApiResponse) => {
+					if (result.success && Array.isArray(result.data)) {
+						const allFiles = result.data as string[];
+						const previousScope = selectedScope;
+						vocabularyFiles = filterVocabularyFiles(allFiles, settings.showVocabularySystemFiles);
+						
+						// selectedScope가 파일명이고 시스템 파일이며 필터링 후 목록에 없으면 변경
+						if (
+							previousScope !== 'global' &&
+							!vocabularyFiles.includes(previousScope) &&
+							isSystemVocabularyFile(previousScope)
+						) {
+							if (vocabularyFiles.length > 0) {
+								selectedScope = vocabularyFiles[0];
+								hasLoaded = false;
+								loadForbiddenWords();
+							} else {
+								selectedScope = 'global';
+								hasLoaded = false;
+								loadForbiddenWords();
 							}
 						}
-					})
-					.catch((error) => console.error('파일 목록 로드 오류:', error));
-			}
+					}
+				})
+				.catch((error) => console.error('파일 목록 로드 오류:', error));
 		});
 		return unsubscribe;
 	});

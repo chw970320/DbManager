@@ -4,6 +4,7 @@
 	import FileUpload from '$lib/components/FileUpload.svelte';
 	import DomainFileManager from '$lib/components/DomainFileManager.svelte';
 	import type { UploadResult } from '$lib/types/vocabulary.js';
+	import { get } from 'svelte/store';
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { filterDomainFiles, isSystemDomainFile } from '$lib/utils/file-filter';
 
@@ -31,23 +32,22 @@
 			const result = await response.json();
 			if (result.success && result.data) {
 				const allFiles = result.data as string[];
-				// 설정에 따라 필터링
-				settingsStore.subscribe((settings) => {
-					const previousSelected = selectedFilename;
-					fileList = filterDomainFiles(allFiles, settings.showDomainSystemFiles);
-					
-					// 현재 선택된 파일이 필터링 후 목록에 없고 시스템 파일이면 첫 번째 파일로 자동 선택
-					if (
-						!fileList.includes(previousSelected) &&
-						isSystemDomainFile(previousSelected) &&
-						fileList.length > 0
-					) {
-						selectedFilename = fileList[0];
-					} else if (fileList.length > 0 && !fileList.includes(selectedFilename)) {
-						// 초기 로드 시 선택된 파일이 목록에 없으면 첫 번째 파일 선택
-						selectedFilename = fileList[0];
-					}
-				})();
+				// 설정에 따라 필터링 - 초기값만 가져오기 위해 get() 사용
+				const settings = get(settingsStore);
+				const previousSelected = selectedFilename;
+				fileList = filterDomainFiles(allFiles, settings.showDomainSystemFiles);
+				
+				// 현재 선택된 파일이 필터링 후 목록에 없고 시스템 파일이면 첫 번째 파일로 자동 선택
+				if (
+					!fileList.includes(previousSelected) &&
+					isSystemDomainFile(previousSelected) &&
+					fileList.length > 0
+				) {
+					selectedFilename = fileList[0];
+				} else if (fileList.length > 0 && !fileList.includes(selectedFilename)) {
+					// 초기 로드 시 선택된 파일이 목록에 없으면 첫 번째 파일 선택
+					selectedFilename = fileList[0];
+				}
 			}
 		} catch (error) {
 			console.error('파일 목록 로드 실패:', error);

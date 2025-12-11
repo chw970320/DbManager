@@ -13,6 +13,7 @@
 		SearchQuery,
 		SearchResult
 	} from '$lib/types/vocabulary.js';
+	import { get } from 'svelte/store';
 	import { vocabularyStore } from '$lib/stores/vocabularyStore';
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { filterVocabularyFiles, isSystemVocabularyFile } from '$lib/utils/file-filter';
@@ -56,32 +57,30 @@
 	// 설정 변경 시 파일 목록 재필터링
 	$effect(() => {
 		const unsubscribe = settingsStore.subscribe((settings) => {
-			if (vocabularyFiles.length > 0 || vocabularyFiles.length === 0) {
-				// 파일 목록이 로드된 경우에만 재필터링
-				fetch('/api/vocabulary/files')
-					.then((res) => res.json())
-					.then((result: ApiResponse) => {
-						if (result.success && Array.isArray(result.data)) {
-							const allFiles = result.data as string[];
-							const previousSelected = selectedFilename;
-							vocabularyFiles = filterVocabularyFiles(allFiles, settings.showVocabularySystemFiles);
-							
-							// 현재 선택된 파일이 필터링 후 목록에 없고 시스템 파일이면 첫 번째 파일로 자동 선택
-							if (
-								!vocabularyFiles.includes(previousSelected) &&
-								isSystemVocabularyFile(previousSelected) &&
-								vocabularyFiles.length > 0
-							) {
-								selectedFilename = vocabularyFiles[0];
-								vocabularyStore.set({ selectedFilename: vocabularyFiles[0] });
-								if (browser) {
-									loadVocabularyData();
-								}
+			// 파일 목록이 로드된 경우에만 재필터링
+			fetch('/api/vocabulary/files')
+				.then((res) => res.json())
+				.then((result: ApiResponse) => {
+					if (result.success && Array.isArray(result.data)) {
+						const allFiles = result.data as string[];
+						const previousSelected = selectedFilename;
+						vocabularyFiles = filterVocabularyFiles(allFiles, settings.showVocabularySystemFiles);
+						
+						// 현재 선택된 파일이 필터링 후 목록에 없고 시스템 파일이면 첫 번째 파일로 자동 선택
+						if (
+							!vocabularyFiles.includes(previousSelected) &&
+							isSystemVocabularyFile(previousSelected) &&
+							vocabularyFiles.length > 0
+						) {
+							selectedFilename = vocabularyFiles[0];
+							vocabularyStore.set({ selectedFilename: vocabularyFiles[0] });
+							if (browser) {
+								loadVocabularyData();
 							}
 						}
-					})
-					.catch((error) => console.error('파일 목록 로드 오류:', error));
-			}
+					}
+				})
+				.catch((error) => console.error('파일 목록 로드 오류:', error));
 		});
 		return unsubscribe;
 	});
@@ -137,10 +136,9 @@
 			const result: ApiResponse = await response.json();
 			if (result.success && Array.isArray(result.data)) {
 				const files = result.data as string[];
-				// 설정에 따라 필터링
-				settingsStore.subscribe((settings) => {
-					vocabularyFiles = filterVocabularyFiles(files, settings.showVocabularySystemFiles);
-				})();
+				// 설정에 따라 필터링 - 초기값만 가져오기 위해 get() 사용
+				const settings = get(settingsStore);
+				vocabularyFiles = filterVocabularyFiles(files, settings.showVocabularySystemFiles);
 
 				if (files.length === 0) {
 					// 파일이 하나도 없으면 기본 파일 생성

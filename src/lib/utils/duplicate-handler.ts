@@ -1,9 +1,7 @@
-// vocabulary 기준으로 주석 정리
-
 import type { VocabularyEntry } from '../types/vocabulary';
 
 /**
- * 단어 데이터에서 중복된 항목의 ID를 찾아 반환하는 유틸리티 함수 (하위 호환성)
+ * 단어 데이터에서 중복된 항목의 ID를 찾아 반환하는 유틸리티 함수
  * standardName, abbreviation, englishName을 기준으로 중복을 검사합니다.
  *
  * @param entries - 검사할 단어 데이터 배열

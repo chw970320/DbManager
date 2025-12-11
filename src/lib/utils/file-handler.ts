@@ -95,7 +95,7 @@ async function migrateDataFiles(): Promise<void> {
 					console.log(`Migrated ${file} to vocabulary directory (empty/unknown)`);
 				}
 			} catch (e) {
-				console.warn(`Failed to parse ${file} during migration, skipping.`);
+				console.warn(`Failed to parse ${file} during migration, skipping: ${e}`);
 			}
 		}
 	} catch (error) {

@@ -67,18 +67,20 @@
 		dispatch('entryclick', { entry });
 	}
 
-	// 테이블 컬럼 정의
+	// 테이블 컬럼 정의 (사용자 요구사항에 맞게 구성)
 	const columns = [
-		{ key: 'domainGroup', label: '도메인그룹', sortable: true, width: 'w-24' },
-		{ key: 'domainCategory', label: '도메인 분류명', sortable: true, width: 'w-32' },
-		{ key: 'standardDomainName', label: '표준 도메인명', sortable: true, width: 'w-40' },
-		{ key: 'logicalDataType', label: '논리 데이터타입', sortable: true, width: 'w-32' },
-		{ key: 'physicalDataType', label: '물리 데이터타입', sortable: true, width: 'w-32' },
-		{ key: 'dataLength', label: '데이터 길이', sortable: false, width: 'w-20' },
-		{ key: 'decimalPlaces', label: '소수점자리수', sortable: false, width: 'w-24' },
-		{ key: 'dataValue', label: '데이터값', sortable: false, width: 'w-28' },
-		{ key: 'measurementUnit', label: '측정단위', sortable: false, width: 'w-24' },
-		{ key: 'remarks', label: '비고', sortable: false, width: 'w-32' }
+		{ key: 'revision', label: '제정차수', sortable: false, width: 'w-20' },
+		{ key: 'domainGroup', label: '공통표준도메인그룹명', sortable: true, width: 'w-32' },
+		{ key: 'domainCategory', label: '공통표준도메인분류명', sortable: true, width: 'w-32' },
+		{ key: 'standardDomainName', label: '공통표준도메인명', sortable: true, width: 'w-40' },
+		{ key: 'description', label: '공통표준도메인설명', sortable: false, width: 'w-40' },
+		{ key: 'physicalDataType', label: '데이터타입', sortable: true, width: 'w-24' },
+		{ key: 'dataLength', label: '데이터길이', sortable: false, width: 'w-20' },
+		{ key: 'decimalPlaces', label: '데이터소수점길이', sortable: false, width: 'w-24' },
+		{ key: 'storageFormat', label: '저장 형식', sortable: false, width: 'w-24' },
+		{ key: 'displayFormat', label: '표현 형식', sortable: false, width: 'w-24' },
+		{ key: 'measurementUnit', label: '단위', sortable: false, width: 'w-20' },
+		{ key: 'allowedValues', label: '허용값', sortable: false, width: 'w-32' }
 	];
 
 	// 파생 상태 (페이지네이션)
@@ -103,14 +105,6 @@
 		}
 	}
 
-	/**
-	 * logicalDataType 필드 값 가져오기 (타입에 없지만 테이블에 표시하기 위해)
-	 */
-	function getLogicalDataType(entry: DomainEntry): string {
-		// 타입에 logicalDataType이 없으므로 빈 문자열 반환
-		// 실제 데이터에 있다면 entry.logicalDataType으로 접근 가능
-		return (entry as unknown as { logicalDataType?: string }).logicalDataType || '-';
-	}
 
 	/**
 	 * 검색어 하이라이팅
@@ -335,21 +329,8 @@
 							aria-label="항목 클릭하여 상세 정보 보기"
 						>
 							{#each columns as column (column.key)}
-								<td class="whitespace-nowrap px-6 py-4 text-sm text-gray-700">
-									{#if column.key === 'logicalDataType'}
-										<div
-											class="max-w-xs truncate"
-											title={getLogicalDataType(entry)}
-										>
-											{@html sanitizeHtml(
-												highlightSearchTerm(
-													getLogicalDataType(entry),
-													searchQuery,
-													column.key
-												)
-											)}
-										</div>
-									{:else if column.key === 'dataLength' || column.key === 'decimalPlaces'}
+								<td class="whitespace-normal px-6 py-4 text-sm text-gray-700 break-words">
+									{#if column.key === 'dataLength' || column.key === 'decimalPlaces'}
 										<span class="block text-center">
 											{@html sanitizeHtml(
 												highlightSearchTerm(
@@ -361,7 +342,7 @@
 										</span>
 									{:else}
 										<div
-											class="max-w-xs truncate"
+											class="max-w-xs break-words"
 											title={formatValue(entry[column.key as keyof DomainEntry])}
 										>
 											{@html sanitizeHtml(

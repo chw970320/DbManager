@@ -7,6 +7,7 @@
 	import TermEditor from '$lib/components/TermEditor.svelte';
 	import ForbiddenWordManager from '$lib/components/ForbiddenWordManager.svelte';
 	import VocabularyFileManager from '$lib/components/VocabularyFileManager.svelte';
+	import HistoryLog from '$lib/components/HistoryLog.svelte';
 	import type {
 		VocabularyEntry,
 		ApiResponse,
@@ -620,12 +621,12 @@
 </script>
 
 <svelte:head>
-	<title>단어집 관리 - 모던한 단어 관리 시스템</title>
+	<title>단어집 - 모던한 단어 관리 시스템</title>
 	<meta name="description" content="AI 기반 검색으로 등록된 단어집을 빠르게 찾아보세요." />
 </svelte:head>
 
 <div class="relative min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 py-8">
-	<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+	<div class="mx-auto w-full px-4 sm:px-6 lg:px-8">
 		<!-- Floating 사이드바 (파일 목록) -->
 		<aside
 			class="fixed left-4 top-24 z-40 w-64 transition-all duration-300 lg:left-8 {sidebarOpen
@@ -737,7 +738,7 @@
 							<h1
 								class="bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-4xl font-bold text-transparent"
 							>
-								단어집 관리
+								단어집
 							</h1>
 							<p class="mt-2 text-sm text-gray-500">
 								현재 파일: <span class="font-medium text-gray-900">{selectedFilename}</span>
@@ -880,6 +881,9 @@
 				on:close={() => (isFileManagerOpen = false)}
 				on:change={loadVocabularyFiles}
 			/>
+
+			<!-- 히스토리 로그 -->
+			<HistoryLog type="vocabulary" />
 
 			<!-- 통계 카드 섹션 -->
 			<div class="my-8">
@@ -1046,7 +1050,7 @@
 					{/if}
 				</div>
 
-				<div class="overflow-hidden rounded-xl border border-gray-200">
+				<div class="overflow-x-auto rounded-xl border border-gray-200">
 					<VocabularyTable
 						{entries}
 						{loading}

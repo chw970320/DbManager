@@ -220,12 +220,6 @@
 
 <!-- 파일 업로드 컴포넌트 -->
 <div class="shadow%-md mx-auto w-full rounded-lg bg-white p-6">
-	<!-- 제목 -->
-	<div class="mb-6">
-		<h2 class="mb-2 text-2xl font-bold text-gray-800">파일 업로드</h2>
-		<p class="text-sm text-gray-600">Excel 파일(.xlsx)을 업로드하세요.</p>
-	</div>
-
 	<!-- 업로드 모드 선택 -->
 	<div class="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
 		<h3 class="mb-3 text-sm font-semibold text-gray-700">업로드 모드 선택</h3>

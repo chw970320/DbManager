@@ -23,7 +23,12 @@
 		standardName: entry.standardName || '',
 		abbreviation: entry.abbreviation || '',
 		englishName: entry.englishName || '',
-		description: entry.description || ''
+		description: entry.description || '',
+		isFormalWord: entry.isFormalWord ? 'Y' : 'N',
+		domainCategory: entry.domainCategory || '',
+		synonyms: entry.synonyms?.join(', ') || '',
+		forbiddenWords: entry.forbiddenWords?.join(', ') || '',
+		source: entry.source || ''
 	});
 
 	// Validation errors
@@ -35,6 +40,21 @@
 
 	// Form state
 	let isSubmitting = $state(false);
+
+	// Update formData when entry prop changes
+	$effect(() => {
+		if (entry) {
+			formData.standardName = entry.standardName || '';
+			formData.abbreviation = entry.abbreviation || '';
+			formData.englishName = entry.englishName || '';
+			formData.description = entry.description || '';
+			formData.isFormalWord = entry.isFormalWord ? 'Y' : 'N';
+			formData.domainCategory = entry.domainCategory || '';
+			formData.synonyms = entry.synonyms?.join(', ') || '';
+			formData.forbiddenWords = entry.forbiddenWords?.join(', ') || '';
+			formData.source = entry.source || '';
+		}
+	});
 
 	// Validation functions
 	function validateStandardName(value: string): string {
@@ -89,6 +109,16 @@
 		);
 	}
 
+	// Helper function to parse comma-separated string to array
+	function parseArrayField(value: string): string[] | undefined {
+		if (!value || !value.trim()) return undefined;
+		const items = value
+			.split(',')
+			.map((item) => item.trim())
+			.filter((item) => item.length > 0);
+		return items.length > 0 ? items : undefined;
+	}
+
 	// Handle save
 	function handleSave() {
 		if (!isFormValid()) {
@@ -103,6 +133,11 @@
 			abbreviation: formData.abbreviation.trim(),
 			englishName: formData.englishName.trim(),
 			description: formData.description.trim(),
+			isFormalWord: formData.isFormalWord === 'Y',
+			domainCategory: formData.domainCategory.trim() || undefined,
+			synonyms: parseArrayField(formData.synonyms),
+			forbiddenWords: parseArrayField(formData.forbiddenWords),
+			source: formData.source.trim() || undefined,
 			createdAt: entry.createdAt || '',
 			updatedAt: entry.updatedAt || ''
 		};
@@ -129,6 +164,12 @@
 				abbreviation: formData.abbreviation.trim() || entry.abbreviation || '',
 				englishName: formData.englishName.trim() || entry.englishName || '',
 				description: formData.description.trim() || entry.description || '',
+				isFormalWord: formData.isFormalWord === 'Y' || entry.isFormalWord || false,
+				domainCategory: formData.domainCategory.trim() || entry.domainCategory || undefined,
+				synonyms: parseArrayField(formData.synonyms) || entry.synonyms || undefined,
+				forbiddenWords:
+					parseArrayField(formData.forbiddenWords) || entry.forbiddenWords || undefined,
+				source: formData.source.trim() || entry.source || undefined,
 				createdAt: entry.createdAt || '',
 				updatedAt: entry.updatedAt || ''
 			};
@@ -156,7 +197,7 @@
 	onclick={handleBackgroundClick}
 >
 	<div
-		class="w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+		class="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl"
 		onclick={(e) => e.stopPropagation()}
 	>
 		<div class="mb-4 flex items-center justify-between">
@@ -277,6 +318,82 @@
 					class="input resize-none"
 					disabled={isSubmitting}
 				></textarea>
+			</div>
+
+			<!-- 형식단어여부 -->
+			<div>
+				<label for="isFormalWord" class="mb-1 block text-sm font-medium text-gray-900">
+					형식단어여부
+				</label>
+				<select
+					id="isFormalWord"
+					bind:value={formData.isFormalWord}
+					class="input"
+					disabled={isSubmitting}
+				>
+					<option value="N">N</option>
+					<option value="Y">Y</option>
+				</select>
+			</div>
+
+			<!-- 도메인분류명 -->
+			<div>
+				<label for="domainCategory" class="mb-1 block text-sm font-medium text-gray-900">
+					도메인분류명
+				</label>
+				<input
+					id="domainCategory"
+					type="text"
+					bind:value={formData.domainCategory}
+					placeholder="예: 데이터베이스"
+					class="input"
+					disabled={isSubmitting}
+				/>
+			</div>
+
+			<!-- 이음동의어 -->
+			<div>
+				<label for="synonyms" class="mb-1 block text-sm font-medium text-gray-900">
+					이음동의어
+				</label>
+				<input
+					id="synonyms"
+					type="text"
+					bind:value={formData.synonyms}
+					placeholder="쉼표로 구분하여 입력 (예: 동의어1, 동의어2)"
+					class="input"
+					disabled={isSubmitting}
+				/>
+				<p class="mt-1 text-xs text-gray-500">여러 개의 동의어를 쉼표로 구분하여 입력하세요</p>
+			</div>
+
+			<!-- 금칙어 -->
+			<div>
+				<label for="forbiddenWords" class="mb-1 block text-sm font-medium text-gray-900">
+					금칙어
+				</label>
+				<input
+					id="forbiddenWords"
+					type="text"
+					bind:value={formData.forbiddenWords}
+					placeholder="쉼표로 구분하여 입력 (예: 금칙어1, 금칙어2)"
+					class="input"
+					disabled={isSubmitting}
+				/>
+				<p class="mt-1 text-xs text-gray-500">여러 개의 금칙어를 쉼표로 구분하여 입력하세요</p>
+			</div>
+
+			<!-- 출처 -->
+			<div>
+				<label for="source" class="mb-1 block text-sm font-medium text-gray-900"> 출처 </label>
+				<input
+					id="source"
+					type="text"
+					bind:value={formData.source}
+					placeholder="예: 출처명 또는 URL"
+					class="input"
+					disabled={isSubmitting}
+				/>
 			</div>
 
 			<!-- 버튼 그룹 -->

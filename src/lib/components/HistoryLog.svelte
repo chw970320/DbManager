@@ -2,43 +2,85 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { browser } from '$app/environment';
 	import type { HistoryLogEntry, ApiResponse } from '$lib/types/vocabulary';
+	import type { DomainHistoryLogEntry } from '$lib/types/domain';
 	import { vocabularyStore } from '$lib/stores/vocabularyStore';
+	import { domainStore } from '$lib/stores/domain-store';
+
+	// Props
+	interface Props {
+		type?: 'vocabulary' | 'domain';
+	}
+
+	let { type = 'vocabulary' }: Props = $props();
 
 	// 상태 변수
-	let historyLogs: HistoryLogEntry[] = $state([]);
+	let historyLogs: (HistoryLogEntry | DomainHistoryLogEntry)[] = $state([]);
 	let isLoading = $state(false);
 	let isExpanded = $state(false);
 	let error = $state<string | null>(null);
 	let totalCount = $state(0);
 	let isHovered = $state(false);
-	let selectedFilename = $state('vocabulary.json');
+	let selectedFilename = $state(type === 'domain' ? 'domain.json' : 'vocabulary.json');
 
 	let unsubscribe: () => void;
+	let intervalId: ReturnType<typeof setInterval> | null = null;
+
+	// 스토어 구독 설정
+	function setupStoreSubscription() {
+		// 기존 구독 해제
+		if (unsubscribe) {
+			unsubscribe();
+		}
+
+		// 타입에 따라 적절한 스토어 구독
+		if (type === 'domain') {
+			// domainStore 구독
+			unsubscribe = domainStore.subscribe((value: { selectedFilename: string }) => {
+				if (value && value.selectedFilename) {
+					const newFilename = value.selectedFilename;
+					if (selectedFilename !== newFilename) {
+						selectedFilename = newFilename;
+						// 파일 변경 시 데이터 로드
+						if (browser) {
+							loadHistoryData();
+						}
+					}
+				}
+			});
+		} else {
+			// vocabularyStore 구독
+			unsubscribe = vocabularyStore.subscribe((value: { selectedFilename: string }) => {
+				if (value && value.selectedFilename) {
+					const newFilename = value.selectedFilename;
+					if (selectedFilename !== newFilename) {
+						selectedFilename = newFilename;
+						// 파일 변경 시 데이터 로드
+						if (browser) {
+							loadHistoryData();
+						}
+					}
+				}
+			});
+		}
+	}
 
 	// 컴포넌트 마운트 시 히스토리 데이터 로드 및 스토어 구독
 	onMount(() => {
-		// 스토어 구독
-		unsubscribe = vocabularyStore.subscribe((value) => {
-			if (selectedFilename !== value.selectedFilename) {
-				selectedFilename = value.selectedFilename;
-				// 초기 로드 또는 파일 변경 시 데이터 로드
-				if (browser) {
-					loadHistoryData();
-				}
-			}
-		});
+		setupStoreSubscription();
 
 		if (browser) {
 			loadHistoryData();
 		}
 
 		// 30초마다 자동 새로고침 (폴링)
-		const interval = setInterval(() => {
+		intervalId = setInterval(() => {
 			if (browser) loadHistoryData();
 		}, 30000);
 
 		return () => {
-			clearInterval(interval);
+			if (intervalId) {
+				clearInterval(intervalId);
+			}
 			if (unsubscribe) unsubscribe();
 		};
 	});
@@ -57,8 +99,12 @@
 		try {
 			const params = new URLSearchParams({
 				limit: '20',
-				filename: selectedFilename
+				type: type
 			});
+			// domain 타입일 때는 filename 파라미터를 전달하지 않음 (도메인 히스토리는 파일별로 구분하지 않음)
+			if (type === 'vocabulary' && selectedFilename) {
+				params.append('filename', selectedFilename);
+			}
 			const response = await fetch(`/api/history?${params}`);
 			const result: ApiResponse = await response.json();
 
@@ -69,9 +115,9 @@
 				'logs' in result.data &&
 				Array.isArray((result.data as { logs: unknown }).logs)
 			) {
-				historyLogs = (result.data as { logs: HistoryLogEntry[] }).logs;
+				historyLogs = (result.data as { logs: (HistoryLogEntry | DomainHistoryLogEntry)[] }).logs;
 				const data = result.data as {
-					logs: HistoryLogEntry[];
+					logs: (HistoryLogEntry | DomainHistoryLogEntry)[];
 					pagination?: { totalCount?: number };
 				};
 				totalCount = data.pagination?.totalCount || 0;
@@ -160,7 +206,8 @@
 
 	// 외부에서 새로고침을 트리거할 수 있도록 전역 함수 등록
 	if (typeof window !== 'undefined') {
-		(window as unknown as { refreshHistoryLog: () => void }).refreshHistoryLog = loadHistoryData;
+		const functionName = type === 'domain' ? 'refreshDomainHistoryLog' : 'refreshHistoryLog';
+		(window as unknown as { [key: string]: () => void })[functionName] = loadHistoryData;
 	}
 
 	/**
@@ -204,7 +251,7 @@
 						</svg>
 					</div>
 					<h3 class="text-sm font-semibold text-gray-800">
-						{selectedFilename.split('.')[0]} 히스토리
+						{type === 'domain' ? '도메인' : selectedFilename.split('.')[0]} 히스토리
 					</h3>
 					{#if totalCount > 0}
 						<span class="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-600">

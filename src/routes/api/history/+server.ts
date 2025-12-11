@@ -1,6 +1,7 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse, HistoryData, HistoryLogEntry } from '$lib/types/vocabulary.js';
-import { loadHistoryData, addHistoryLog } from '$lib/utils/history-handler.js';
+import type { DomainHistoryData, DomainHistoryLogEntry } from '$lib/types/domain.js';
+import { loadHistoryData, addHistoryLog, type HistoryType } from '$lib/utils/history-handler.js';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -13,6 +14,8 @@ export async function GET({ url }: RequestEvent) {
 		const limit = parseInt(url.searchParams.get('limit') || '50');
 		const offset = parseInt(url.searchParams.get('offset') || '0');
 		const filename = url.searchParams.get('filename') || undefined;
+		const typeParam = url.searchParams.get('type') || 'vocabulary';
+		const type: HistoryType = typeParam === 'domain' ? 'domain' : 'vocabulary';
 
 		// 파라미터 유효성 검증
 		if (limit < 1 || limit > 200) {
@@ -38,9 +41,9 @@ export async function GET({ url }: RequestEvent) {
 		}
 
 		// 히스토리 데이터 로드
-		let historyData: HistoryData;
+		let historyData: HistoryData | DomainHistoryData;
 		try {
-			historyData = await loadHistoryData(filename);
+			historyData = await loadHistoryData(filename, type);
 		} catch (loadError) {
 			return json(
 				{
@@ -93,9 +96,11 @@ export async function GET({ url }: RequestEvent) {
  * 새로운 히스토리 로그 추가 API
  * POST /api/history
  */
-export async function POST({ request }: RequestEvent) {
+export async function POST({ request, url }: RequestEvent) {
 	try {
-		const logData: Partial<HistoryLogEntry> = await request.json();
+		const logData: Partial<HistoryLogEntry | DomainHistoryLogEntry> = await request.json();
+		const typeParam = url.searchParams.get('type') || 'vocabulary';
+		const type: HistoryType = typeParam === 'domain' ? 'domain' : 'vocabulary';
 
 		// 필수 필드 검증
 		if (!logData.action || !logData.targetId || !logData.targetName) {
@@ -110,11 +115,11 @@ export async function POST({ request }: RequestEvent) {
 		}
 
 		// action 타입 검증
-		if (!['add', 'update', 'delete'].includes(logData.action)) {
+		if (!['add', 'update', 'delete', 'UPLOAD_MERGE'].includes(logData.action)) {
 			return json(
 				{
 					success: false,
-					error: 'action은 add, update, delete 중 하나여야 합니다.',
+					error: 'action은 add, update, delete, UPLOAD_MERGE 중 하나여야 합니다.',
 					message: 'Invalid action type'
 				} as ApiResponse,
 				{ status: 400 }
@@ -122,20 +127,20 @@ export async function POST({ request }: RequestEvent) {
 		}
 
 		// 히스토리 로그 엔트리 생성
-		const newLogEntry: HistoryLogEntry = {
+		const newLogEntry = {
 			id: uuidv4(),
-			action: logData.action as 'add' | 'update' | 'delete',
+			action: logData.action as 'add' | 'update' | 'delete' | 'UPLOAD_MERGE',
 			targetId: logData.targetId,
 			targetName: logData.targetName,
 			timestamp: new Date().toISOString(),
-			filename: logData.filename, // 파일명 저장
+			...(type === 'vocabulary' && { filename: (logData as Partial<HistoryLogEntry>).filename }),
 			details: logData.details || undefined
 		};
 
 		// 히스토리 로그 추가
-		let updatedHistoryData: HistoryData;
+		let updatedHistoryData: HistoryData | DomainHistoryData;
 		try {
-			updatedHistoryData = await addHistoryLog(newLogEntry);
+			updatedHistoryData = await addHistoryLog(newLogEntry, type);
 		} catch (addError) {
 			return json(
 				{

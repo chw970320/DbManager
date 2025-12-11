@@ -2,7 +2,6 @@
 	import '../app.css';
 	import { page } from '$app/stores';
 	import ScrollToTop from '$lib/components/ScrollToTop.svelte';
-	import HistoryLog from '$lib/components/HistoryLog.svelte';
 
 	let { children } = $props();
 
@@ -11,10 +10,8 @@
 
 	// 네비게이션 메뉴 아이템
 	const menuItems = [
-		{ href: '/browse', label: '단어집 관리', icon: 'search' },
-		{ href: '/upload', label: '단어집 업로드', icon: 'upload' },
-		{ href: '/domain/browse', label: '도메인 조회', icon: 'database' },
-		{ href: '/domain/upload', label: '도메인 업로드', icon: 'cloud-upload' }
+		{ href: '/browse', label: '단어집', icon: 'search' },
+		{ href: '/domain/browse', label: '도메인', icon: 'database' }
 	];
 
 	// 모바일 메뉴 토글
@@ -186,5 +183,4 @@
 	</footer>
 
 	<ScrollToTop />
-	<HistoryLog />
 </div>

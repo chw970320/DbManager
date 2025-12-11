@@ -82,7 +82,12 @@
 			width: 'min-w-[150px] max-w-[200px]'
 		},
 		{ key: 'englishName', label: '영문명', sortable: true, width: 'min-w-[150px] max-w-[250px]' },
-		{ key: 'description', label: '설명', sortable: false, width: 'min-w-[200px]' }
+		{ key: 'description', label: '단어 설명', sortable: false, width: 'min-w-[200px]' },
+		{ key: 'isFormalWord', label: '형식단어여부', sortable: false, width: 'min-w-[100px]' },
+		{ key: 'domainCategory', label: '도메인분류명', sortable: false, width: 'min-w-[150px]' },
+		{ key: 'synonyms', label: '이음동의어', sortable: false, width: 'min-w-[200px]' },
+		{ key: 'forbiddenWords', label: '금칙어', sortable: false, width: 'min-w-[200px]' },
+		{ key: 'source', label: '출처', sortable: false, width: 'min-w-[150px]' }
 	];
 
 	// 파생 상태 (페이지네이션)
@@ -159,6 +164,30 @@
 	}
 
 	/**
+	 * 필드 값 포맷팅 (boolean, 배열 등)
+	 */
+	function formatFieldValue(entry: VocabularyEntry, columnKey: string): string {
+		const value = entry[columnKey as keyof VocabularyEntry];
+		
+		if (columnKey === 'isFormalWord') {
+			return value ? 'Y' : 'N';
+		}
+		
+		if (columnKey === 'synonyms' || columnKey === 'forbiddenWords') {
+			if (Array.isArray(value) && value.length > 0) {
+				return value.join(', ');
+			}
+			return '-';
+		}
+		
+		if (value === null || value === undefined || value === '') {
+			return '-';
+		}
+		
+		return String(value);
+	}
+
+	/**
 	 * 페이지네이션 번호 생성
 	 */
 	function getPageNumbers(): (number | string)[] {
@@ -220,8 +249,8 @@
 	</div>
 
 	<!-- 테이블 컨테이너 -->
-	<div class="overflow-hidden">
-		<table class="w-full table-auto divide-y divide-gray-200">
+	<div class="overflow-x-auto">
+		<table class="min-w-full table-auto divide-y divide-gray-200">
 			<!-- 테이블 헤더 -->
 			<thead class="bg-gray-100">
 				<tr>
@@ -357,13 +386,14 @@
 									entry.duplicateInfo,
 									column.key
 								)}
+								{@const formattedValue = formatFieldValue(entry, column.key)}
 								<td
 									class="px-6 py-4 text-sm text-gray-700 whitespace-normal break-words {cellBackgroundClass}"
 								>
 									<p class="break-words px-2 py-1">
 										{@html sanitizeHtml(
 											highlightSearchTerm(
-												(entry[column.key as keyof VocabularyEntry] as string) || '',
+												formattedValue,
 												searchQuery,
 												column.key
 											)

@@ -2,19 +2,31 @@ import { writeFile, readFile, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join } from 'path';
 import type { HistoryData, HistoryLogEntry } from '$lib/types/vocabulary';
+import type { DomainHistoryData, DomainHistoryLogEntry } from '$lib/types/domain';
+
+// 히스토리 타입 정의
+export type HistoryType = 'vocabulary' | 'domain';
 
 // 히스토리 데이터 저장 경로 설정
 const DATA_DIR = 'static/data';
-const HISTORY_FILE = 'history.json';
-const HISTORY_PATH = join(DATA_DIR, HISTORY_FILE);
+
+/**
+ * 히스토리 타입에 따른 파일 경로 반환
+ */
+function getHistoryPath(type: HistoryType = 'vocabulary'): string {
+	const subDir = type === 'domain' ? 'domain' : 'vocabulary';
+	return join(DATA_DIR, subDir, 'history.json');
+}
 
 /**
  * 데이터 디렉토리가 존재하는지 확인하고 없으면 생성
  */
-export async function ensureDataDirectory(): Promise<void> {
+export async function ensureDataDirectory(type: HistoryType = 'vocabulary'): Promise<void> {
 	try {
-		if (!existsSync(DATA_DIR)) {
-			await mkdir(DATA_DIR, { recursive: true });
+		const historyPath = getHistoryPath(type);
+		const dirPath = join(historyPath, '..');
+		if (!existsSync(dirPath)) {
+			await mkdir(dirPath, { recursive: true });
 		}
 	} catch (error) {
 		console.error('데이터 디렉토리 생성 실패:', error);
@@ -26,12 +38,16 @@ export async function ensureDataDirectory(): Promise<void> {
 
 /**
  * 히스토리 데이터를 JSON 파일로 저장
- * @param data - 저장할 HistoryData 객체
+ * @param data - 저장할 HistoryData 또는 DomainHistoryData 객체
+ * @param type - 히스토리 타입 ('vocabulary' | 'domain', 기본값: 'vocabulary')
  */
-export async function saveHistoryData(data: HistoryData): Promise<void> {
+export async function saveHistoryData(
+	data: HistoryData | DomainHistoryData,
+	type: HistoryType = 'vocabulary'
+): Promise<void> {
 	try {
 		// 데이터 디렉토리 확인 및 생성
-		await ensureDataDirectory();
+		await ensureDataDirectory(type);
 
 		// 데이터 유효성 검증
 		if (!data || !Array.isArray(data.logs)) {
@@ -48,7 +64,7 @@ export async function saveHistoryData(data: HistoryData): Promise<void> {
 		});
 
 		// 최종 데이터 객체 구성
-		const finalData: HistoryData = {
+		const finalData = {
 			logs: validLogs,
 			lastUpdated: new Date().toISOString(),
 			totalCount: validLogs.length
@@ -56,7 +72,8 @@ export async function saveHistoryData(data: HistoryData): Promise<void> {
 
 		// JSON 파일로 저장 (들여쓰기 포함)
 		const jsonString = JSON.stringify(finalData, null, 2);
-		await writeFile(HISTORY_PATH, jsonString, 'utf-8');
+		const historyPath = getHistoryPath(type);
+		await writeFile(historyPath, jsonString, 'utf-8');
 	} catch (error) {
 		console.error('히스토리 데이터 저장 실패:', error);
 		throw new Error(
@@ -67,12 +84,19 @@ export async function saveHistoryData(data: HistoryData): Promise<void> {
 
 /**
  * 저장된 히스토리 데이터를 JSON 파일에서 로드
- * @returns 로드된 HistoryData 객체
+ * @param filename - 필터링할 파일명 (선택사항)
+ * @param type - 히스토리 타입 ('vocabulary' | 'domain', 기본값: 'vocabulary')
+ * @returns 로드된 HistoryData 또는 DomainHistoryData 객체
  */
-export async function loadHistoryData(filename?: string): Promise<HistoryData> {
+export async function loadHistoryData(
+	filename?: string,
+	type: HistoryType = 'vocabulary'
+): Promise<HistoryData | DomainHistoryData> {
 	try {
+		const historyPath = getHistoryPath(type);
+
 		// 파일 존재 확인
-		if (!existsSync(HISTORY_PATH)) {
+		if (!existsSync(historyPath)) {
 			return {
 				logs: [],
 				lastUpdated: new Date().toISOString(),
@@ -81,7 +105,7 @@ export async function loadHistoryData(filename?: string): Promise<HistoryData> {
 		}
 
 		// 파일 읽기
-		const jsonString = await readFile(HISTORY_PATH, 'utf-8');
+		const jsonString = await readFile(historyPath, 'utf-8');
 
 		if (!jsonString.trim()) {
 			console.warn('히스토리 데이터 파일이 비어있습니다.');
@@ -93,7 +117,7 @@ export async function loadHistoryData(filename?: string): Promise<HistoryData> {
 		}
 
 		// JSON 파싱
-		const data = JSON.parse(jsonString) as HistoryData;
+		const data = JSON.parse(jsonString) as HistoryData | DomainHistoryData;
 
 		// 데이터 구조 검증
 		if (!data || typeof data !== 'object') {
@@ -115,7 +139,11 @@ export async function loadHistoryData(filename?: string): Promise<HistoryData> {
 
 		// 파일명으로 필터링 (filename이 제공된 경우)
 		if (filename) {
-			validLogs = validLogs.filter((log) => !log.filename || log.filename === filename);
+			validLogs = validLogs.filter((log) => {
+				// HistoryLogEntry에는 filename이 있고, DomainHistoryLogEntry에는 없을 수 있음
+				const logFilename = 'filename' in log ? log.filename : undefined;
+				return !logFilename || logFilename === filename;
+			});
 		}
 
 		return {
@@ -140,25 +168,29 @@ export async function loadHistoryData(filename?: string): Promise<HistoryData> {
 /**
  * 새로운 히스토리 로그 엔트리를 추가
  * @param newLog - 추가할 새로운 히스토리 로그 엔트리
- * @returns 업데이트된 HistoryData 객체
+ * @param type - 히스토리 타입 ('vocabulary' | 'domain', 기본값: 'vocabulary')
+ * @returns 업데이트된 HistoryData 또는 DomainHistoryData 객체
  */
-export async function addHistoryLog(newLog: HistoryLogEntry): Promise<HistoryData> {
+export async function addHistoryLog(
+	newLog: HistoryLogEntry | DomainHistoryLogEntry,
+	type: HistoryType = 'vocabulary'
+): Promise<HistoryData | DomainHistoryData> {
 	try {
 		// 기존 히스토리 데이터 로드
-		const existingData = await loadHistoryData();
+		const existingData = await loadHistoryData(undefined, type);
 
 		// 새 로그를 배열 맨 앞에 추가 (최신 로그가 먼저 오도록)
 		const updatedLogs = [newLog, ...existingData.logs];
 
 		// 업데이트된 데이터 객체 생성
-		const updatedData: HistoryData = {
+		const updatedData = {
 			logs: updatedLogs,
 			lastUpdated: new Date().toISOString(),
 			totalCount: updatedLogs.length
 		};
 
 		// 업데이트된 데이터 저장
-		await saveHistoryData(updatedData);
+		await saveHistoryData(updatedData, type);
 
 		return updatedData;
 	} catch (error) {
@@ -171,19 +203,22 @@ export async function addHistoryLog(newLog: HistoryLogEntry): Promise<HistoryDat
 
 /**
  * 히스토리 데이터 파일의 백업 생성
+ * @param type - 히스토리 타입 ('vocabulary' | 'domain', 기본값: 'vocabulary')
  * @returns 백업 파일 경로
  */
-export async function createHistoryBackup(): Promise<string> {
+export async function createHistoryBackup(type: HistoryType = 'vocabulary'): Promise<string> {
 	try {
-		if (!existsSync(HISTORY_PATH)) {
+		const historyPath = getHistoryPath(type);
+		if (!existsSync(historyPath)) {
 			throw new Error('백업할 히스토리 데이터 파일이 존재하지 않습니다.');
 		}
 
 		const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-		const backupFileName = `history_backup_${timestamp}.json`;
-		const backupPath = join(DATA_DIR, backupFileName);
+		const backupFileName = `${type}_history_backup_${timestamp}.json`;
+		const dirPath = join(historyPath, '..');
+		const backupPath = join(dirPath, backupFileName);
 
-		const originalData = await readFile(HISTORY_PATH, 'utf-8');
+		const originalData = await readFile(historyPath, 'utf-8');
 		await writeFile(backupPath, originalData, 'utf-8');
 
 		return backupPath;
@@ -198,24 +233,30 @@ export async function createHistoryBackup(): Promise<string> {
 /**
  * 히스토리 데이터를 초기화 (모든 로그 삭제)
  * @param createBackup - 초기화 전 백업 생성 여부 (기본값: true)
- * @returns 초기화된 빈 HistoryData 객체
+ * @param type - 히스토리 타입 ('vocabulary' | 'domain', 기본값: 'vocabulary')
+ * @returns 초기화된 빈 HistoryData 또는 DomainHistoryData 객체
  */
-export async function clearHistoryData(createBackup: boolean = true): Promise<HistoryData> {
+export async function clearHistoryData(
+	createBackup: boolean = true,
+	type: HistoryType = 'vocabulary'
+): Promise<HistoryData | DomainHistoryData> {
 	try {
+		const historyPath = getHistoryPath(type);
+
 		// 백업 생성 (요청된 경우)
-		if (createBackup && existsSync(HISTORY_PATH)) {
-			await createHistoryBackup();
+		if (createBackup && existsSync(historyPath)) {
+			await createHistoryBackup(type);
 		}
 
 		// 빈 히스토리 데이터 생성
-		const emptyData: HistoryData = {
+		const emptyData = {
 			logs: [],
 			lastUpdated: new Date().toISOString(),
 			totalCount: 0
 		};
 
 		// 빈 데이터로 파일 저장
-		await saveHistoryData(emptyData);
+		await saveHistoryData(emptyData, type);
 
 		return emptyData;
 	} catch (error) {

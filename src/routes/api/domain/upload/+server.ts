@@ -4,6 +4,7 @@ import type { DomainData, DomainEntry } from '$lib/types/domain.js';
 import { loadDomainData, mergeDomainData } from '$lib/utils/file-handler.js';
 import { validateXlsxFile } from '$lib/utils/validation.js';
 import { parseDomainXlsxToJson } from '$lib/utils/xlsx-parser.js';
+import { addHistoryLog } from '$lib/utils/history-handler.js';
 
 /**
  * 도메인 업로드 정보 조회 API
@@ -141,6 +142,31 @@ export async function POST({ request }: RequestEvent) {
 				} as ApiResponse,
 				{ status: 500 }
 			);
+		}
+
+		// 업로드 성공 히스토리 로그 추가 (병합 모드일 때만)
+		if (!replaceExisting) {
+			try {
+				await addHistoryLog(
+					{
+						id: `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+						action: 'UPLOAD_MERGE',
+						targetId: 'domain_file',
+						targetName: `${file.name} (${parsedEntries.length}개 도메인)`,
+						timestamp: new Date().toISOString(),
+						details: {
+							fileName: file.name,
+							fileSize: file.size,
+							processedCount: parsedEntries.length,
+							replaceMode: replaceExisting
+						}
+					},
+					'domain'
+				);
+			} catch (historyError) {
+				console.warn('업로드 히스토리 로그 추가 실패:', historyError);
+				// 히스토리 로그 실패는 전체 업로드를 실패시키지 않음
+			}
 		}
 
 		// 성공 응답

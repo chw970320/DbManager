@@ -22,7 +22,8 @@ export function isSystemVocabularyFile(file: string): boolean {
  * @returns 시스템 파일 여부
  */
 export function isSystemDomainFile(file: string): boolean {
-	return file === DOMAIN_SYSTEM_FILE;
+	// 도메인 기본 파일(domain.json)은 사용자 관리 대상이므로 시스템 파일에서 제외
+	return file === HISTORY_FILE;
 }
 
 /**

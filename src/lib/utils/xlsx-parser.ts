@@ -177,10 +177,21 @@ export function exportJsonToXlsxBuffer(data: VocabularyEntry[]): Buffer {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const worksheet: Record<string, any> = {};
 
-		// 헤더 정의
-		const headers = ['표준단어명', '영문약어', '영문명', '설명'];
+		// 헤더 정의 (A=번호(비워둠), B=표준단어명, C=영문약어, D=영문명, E=설명, F=형식단어여부, G=도메인분류명, H=이음동의어, I=금칙어, J=출처)
+		const headers = [
+			'', // A: 번호 (비워둠)
+			'표준단어명', // B
+			'영문약어', // C
+			'영문명', // D
+			'단어 설명', // E
+			'형식단어여부', // F
+			'도메인분류명', // G
+			'이음동의어', // H
+			'금칙어', // I
+			'출처' // J
+		];
 
-		// 헤더 행 추가 (A1, B1, C1, D1)
+		// 헤더 행 추가 (A1부터 J1까지)
 		headers.forEach((header, index) => {
 			const cellAddress = getCellAddress(0, index);
 			worksheet[cellAddress] = {
@@ -214,10 +225,16 @@ export function exportJsonToXlsxBuffer(data: VocabularyEntry[]): Buffer {
 		data.forEach((entry, rowIndex) => {
 			const row = rowIndex + 1; // 헤더 다음 행부터 시작
 			const values = [
-				entry.standardName,
-				entry.abbreviation,
-				entry.englishName,
-				entry.description || ''
+				'', // A: 번호 (비워둠)
+				entry.standardName, // B
+				entry.abbreviation, // C
+				entry.englishName, // D
+				entry.description || '', // E
+				entry.isFormalWord ? 'Y' : 'N', // F
+				entry.domainCategory || '', // G
+				entry.synonyms?.join(', ') || '', // H
+				entry.forbiddenWords?.join(', ') || '', // I
+				entry.source || '' // J
 			];
 
 			values.forEach((value, colIndex) => {
@@ -241,17 +258,23 @@ export function exportJsonToXlsxBuffer(data: VocabularyEntry[]): Buffer {
 			});
 		});
 
-		// 워크시트 범위 설정
+		// 워크시트 범위 설정 (A열부터 J열까지)
 		const lastRow = data.length;
 		const lastCol = headers.length - 1;
 		worksheet['!ref'] = `A1:${getCellAddress(lastRow, lastCol)}`;
 
-		// 컬럼 너비 설정
+		// 컬럼 너비 설정 (A~J열)
 		worksheet['!cols'] = [
-			{ wch: 25 }, // 표준단어명
-			{ wch: 20 }, // 영문약어
-			{ wch: 30 }, // 영문명
-			{ wch: 40 } // 설명
+			{ wch: 8 }, // A: 번호
+			{ wch: 25 }, // B: 표준단어명
+			{ wch: 20 }, // C: 영문약어
+			{ wch: 30 }, // D: 영문명
+			{ wch: 40 }, // E: 단어 설명
+			{ wch: 12 }, // F: 형식단어여부
+			{ wch: 20 }, // G: 도메인분류명
+			{ wch: 30 }, // H: 이음동의어
+			{ wch: 30 }, // I: 금칙어
+			{ wch: 25 } // J: 출처
 		];
 
 		// 행 높이 설정

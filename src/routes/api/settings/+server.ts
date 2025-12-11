@@ -13,23 +13,14 @@ import {
  * GET /api/settings
  */
 export async function GET() {
-	// #region agent log
-	fetch('http://127.0.0.1:7243/ingest/96f8572e-efc8-49db-b3c0-8dba0f2c9491',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/settings/+server.ts:GET:entry',message:'GET 요청 시작',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-	// #endregion
 	try {
 		const allSettings = await getAllSettings();
-		// #region agent log
-		fetch('http://127.0.0.1:7243/ingest/96f8572e-efc8-49db-b3c0-8dba0f2c9491',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/settings/+server.ts:GET:afterGetAll',message:'설정 로드 완료',data:{settings:allSettings},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-		// #endregion
 
 		return json({
 			success: true,
 			data: allSettings
 		});
 	} catch (error) {
-		// #region agent log
-		fetch('http://127.0.0.1:7243/ingest/96f8572e-efc8-49db-b3c0-8dba0f2c9491',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'api/settings/+server.ts:GET:error',message:'GET 요청 실패',data:{error:error instanceof Error?error.message:String(error),stack:error instanceof Error?error.stack:undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-		// #endregion
 		return json(
 			{
 				success: false,

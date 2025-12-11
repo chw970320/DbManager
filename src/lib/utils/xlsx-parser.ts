@@ -7,9 +7,10 @@ import type { VocabularyEntry, VocabularyData } from '../types/vocabulary.js';
 /**
  * xlsx 파일 버퍼를 파싱하여 단어집 엔트리 배열로 변환
  * @param fileBuffer - xlsx 파일의 Buffer 데이터
+ * @param skipDuplicates - 파일 내 중복 데이터 건너뛰기 여부 (기본값: true)
  * @returns VocabularyEntry 배열
  */
-export function parseXlsxToJson(fileBuffer: Buffer): VocabularyEntry[] {
+export function parseXlsxToJson(fileBuffer: Buffer, skipDuplicates: boolean = true): VocabularyEntry[] {
 	try {
 		// xlsx 파일을 워크북으로 읽기
 		const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
@@ -35,7 +36,17 @@ export function parseXlsxToJson(fileBuffer: Buffer): VocabularyEntry[] {
 		// 첫 번째 행(헤더) 제외하고 데이터 처리
 		const dataRows = rawData.slice(1);
 		const entries: VocabularyEntry[] = [];
-		const seenCombinations = new Set<string>(); // 중복 체크용
+		const seenCombinations = skipDuplicates ? new Set<string>() : null; // 중복 체크용 (skipDuplicates가 false면 null)
+
+		/**
+		 * 배열 필드 파싱 헬퍼 함수 (이음동의어, 금칙어)
+		 */
+		const parseArrayField = (value: string | number | undefined): string[] => {
+			if (!value) return [];
+			const str = String(value).trim();
+			if (str === '-' || str === '') return [];
+			return str.split(',').map((item) => item.trim()).filter((item) => item.length > 0);
+		};
 
 		for (let i = 0; i < dataRows.length; i++) {
 			const row = dataRows[i];
@@ -49,14 +60,14 @@ export function parseXlsxToJson(fileBuffer: Buffer): VocabularyEntry[] {
 				continue;
 			}
 
-			// 컬럼 매핑: A=표준단어명, B=영문약어, C=영문명
+			// 컬럼 매핑: A=번호(무시), B=표준단어명, C=영문약어, D=영문명, E=단어 설명, F=형식단어여부, G=도메인분류명, H=이음동의어 목록, I=금칙어, J=출처
 			const rawEntry = {
-				standardName: row[0] ? String(row[0]).trim() : '',
-				abbreviation: row[1] ? String(row[1]).trim() : '',
-				englishName: row[2] ? String(row[2]).trim() : '',
-				description: row[3] ? String(row[3]).trim() : '', // 설명 필드 추가 (D열)
+				standardName: row[1] ? String(row[1]).trim() : '',
+				abbreviation: row[2] ? String(row[2]).trim() : '',
+				englishName: row[3] ? String(row[3]).trim() : '',
+				description: row[4] ? String(row[4]).trim() : '',
 				createdAt: new Date().toISOString(),
-				updatedAt: new Date().toISOString() // updatedAt 필드 추가
+				updatedAt: new Date().toISOString()
 			};
 
 			// 유효성 검증
@@ -74,13 +85,33 @@ export function parseXlsxToJson(fileBuffer: Buffer): VocabularyEntry[] {
 				continue;
 			}
 
-			// 중복 체크 (표준단어명 + 영문약어 조합)
-			const combination = `${validatedEntry.standardName}|${validatedEntry.abbreviation}`;
-			if (seenCombinations.has(combination)) {
-				console.warn(`Row ${i + 2}: 중복 데이터 건너뜀 -`, validatedEntry);
-				continue;
+			// 중복 체크 (표준단어명 + 영문약어 조합) - skipDuplicates가 true일 때만 실행
+			if (skipDuplicates && seenCombinations) {
+				const combination = `${validatedEntry.standardName}|${validatedEntry.abbreviation}`;
+				if (seenCombinations.has(combination)) {
+					console.warn(`Row ${i + 2}: 중복 데이터 건너뜀 -`, validatedEntry);
+					continue;
+				}
+				seenCombinations.add(combination);
 			}
-			seenCombinations.add(combination);
+
+			// 형식단어여부 변환 (Y/N → boolean)
+			const isFormalWord = row[5]
+				? String(row[5]).trim().toUpperCase() === 'Y'
+				: false;
+
+			// 도메인분류명 처리 ("-"는 빈값)
+			const domainCategory =
+				row[6] && String(row[6]).trim() !== '-' ? String(row[6]).trim() : undefined;
+
+			// 이음동의어 목록 파싱
+			const synonyms = parseArrayField(row[7]);
+
+			// 금칙어 파싱
+			const forbiddenWords = parseArrayField(row[8]);
+
+			// 출처 처리
+			const source = row[9] ? String(row[9]).trim() : undefined;
 
 			// 최종 엔트리 생성
 			const entry: VocabularyEntry = {
@@ -88,9 +119,14 @@ export function parseXlsxToJson(fileBuffer: Buffer): VocabularyEntry[] {
 				standardName: validatedEntry.standardName,
 				abbreviation: validatedEntry.abbreviation,
 				englishName: validatedEntry.englishName,
-				description: row[3] ? String(row[3]).trim() : '', // 설명 필드 추가 (D열)
+				description: rawEntry.description,
+				isFormalWord,
+				domainCategory,
+				synonyms: synonyms.length > 0 ? synonyms : undefined,
+				forbiddenWords: forbiddenWords.length > 0 ? forbiddenWords : undefined,
+				source,
 				createdAt: new Date().toISOString(),
-				updatedAt: new Date().toISOString() // updatedAt 필드 추가
+				updatedAt: new Date().toISOString()
 			};
 
 			entries.push(entry);
@@ -257,9 +293,10 @@ export function exportJsonToXlsxBuffer(data: VocabularyEntry[]): Buffer {
 /**
  * xlsx 파일 버퍼를 파싱하여 도메인 엔트리 배열로 변환
  * @param fileBuffer - xlsx 파일의 Buffer 데이터
+ * @param skipDuplicates - 파일 내 중복 데이터 건너뛰기 여부 (기본값: true)
  * @returns DomainEntry 배열
  */
-export function parseDomainXlsxToJson(fileBuffer: Buffer): DomainEntry[] {
+export function parseDomainXlsxToJson(fileBuffer: Buffer, skipDuplicates: boolean = true): DomainEntry[] {
 	try {
 		// xlsx 파일을 워크북으로 읽기
 		const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
@@ -295,7 +332,7 @@ export function parseDomainXlsxToJson(fileBuffer: Buffer): DomainEntry[] {
 		// 첫 번째 행(헤더) 제외하고 데이터 처리
 		const dataRows = rawData.slice(1);
 		const entries: DomainEntry[] = [];
-		const seenCombinations = new Set<string>(); // 중복 체크용
+		const seenCombinations = skipDuplicates ? new Set<string>() : null; // 중복 체크용 (skipDuplicates가 false면 null)
 
 		for (let i = 0; i < dataRows.length; i++) {
 			const row = dataRows[i];
@@ -335,13 +372,15 @@ export function parseDomainXlsxToJson(fileBuffer: Buffer): DomainEntry[] {
 				continue;
 			}
 
-			// 중복 체크 (도메인그룹 + 표준 도메인명 조합)
-			const combination = `${rawEntry.도메인그룹}|${rawEntry['표준 도메인명']}`;
-			if (seenCombinations.has(combination)) {
-				console.warn(`Row ${i + 2}: 중복 데이터 건너뜀 -`, rawEntry);
-				continue;
+			// 중복 체크 (도메인그룹 + 표준 도메인명 조합) - skipDuplicates가 true일 때만 실행
+			if (skipDuplicates && seenCombinations) {
+				const combination = `${rawEntry.도메인그룹}|${rawEntry['표준 도메인명']}`;
+				if (seenCombinations.has(combination)) {
+					console.warn(`Row ${i + 2}: 중복 데이터 건너뜀 -`, rawEntry);
+					continue;
+				}
+				seenCombinations.add(combination);
 			}
-			seenCombinations.add(combination);
 
 			// 데이터 타입 변환
 			let dataLength: number | undefined;

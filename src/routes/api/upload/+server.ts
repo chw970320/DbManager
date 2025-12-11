@@ -59,10 +59,13 @@ export async function POST({ request }: RequestEvent) {
 		const arrayBuffer = await file.arrayBuffer();
 		const buffer = Buffer.from(arrayBuffer);
 
-		// xlsx 파일 파싱
+		// 기존 데이터와 병합 (replace 옵션 확인)
+		const replaceExisting = formData.get('replace') === 'true';
+		
+		// xlsx 파일 파싱 (교체 모드일 때는 파일 내 중복 체크 건너뛰기)
 		let parsedEntries;
 		try {
-			parsedEntries = parseXlsxToJson(buffer);
+			parsedEntries = parseXlsxToJson(buffer, !replaceExisting);
 		} catch (parseError) {
 			return json(
 				{
@@ -74,8 +77,6 @@ export async function POST({ request }: RequestEvent) {
 			);
 		}
 
-		// 기존 데이터와 병합 (replace 옵션 확인)
-		const replaceExisting = formData.get('replace') === 'true';
 		let finalData: VocabularyData;
 
 		try {

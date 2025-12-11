@@ -11,6 +11,11 @@ export interface VocabularyEntry {
 	description: string; // 설명
 	createdAt: string; // ISO 8601 날짜 문자열
 	updatedAt: string; // ISO 8601 날짜 문자열
+	isFormalWord?: boolean; // 형식단어여부 (Y/N → true/false)
+	domainCategory?: string; // 도메인분류명
+	synonyms?: string[]; // 이음동의어 목록
+	forbiddenWords?: string[]; // 금칙어 목록
+	source?: string; // 출처
 	duplicateInfo?: {
 		standardName: boolean;
 		abbreviation: boolean;

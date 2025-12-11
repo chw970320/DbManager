@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { VocabularyEntry } from '$lib/types/vocabulary.js';
-	import { onMount } from 'svelte';
+	import { createEventDispatcher } from 'svelte';
 
 	type SortEvent = {
 		column: string;
@@ -9,6 +9,10 @@
 
 	type PageChangeEvent = {
 		page: number;
+	};
+
+	type EntryClickEvent = {
+		entry: VocabularyEntry;
 	};
 
 	// 컴포넌트 속성
@@ -26,6 +30,12 @@
 		selectedFilename?: string;
 		onsort: (detail: SortEvent) => void;
 		onpagechange: (detail: PageChangeEvent) => void;
+		onentryclick?: (detail: EntryClickEvent) => void;
+	}>();
+
+	// Event dispatcher
+	const dispatch = createEventDispatcher<{
+		entryclick: EntryClickEvent;
 	}>();
 
 	// Default values using derived state
@@ -43,159 +53,18 @@
 	let onsort = $derived(props.onsort);
 	let onpagechange = $derived(props.onpagechange);
 
-	// 상태 변수
-	let editingId = $state<string | null>(null);
-	let editedEntry = $state<Partial<VocabularyEntry>>({});
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
-	let duplicates = $state<Set<string>>(new Set());
-
-	onMount(() => {
-		fetchDuplicates();
-	});
-
-	async function fetchDuplicates() {
-		try {
-			const response = await fetch(`/api/vocabulary/duplicates?filename=${selectedFilename}`);
-			const result = await response.json();
-			if (result.success) {
-				const duplicateIds = new Set<string>();
-				for (const group of result.data.duplicates) {
-					for (const entry of group) {
-						duplicateIds.add(entry.id);
-					}
-				}
-				duplicates = duplicateIds;
-			}
-		} catch (error) {
-			console.error('중복 데이터 로드 실패:', error);
+	// 행 클릭 핸들러
+	function handleRowClick(entry: VocabularyEntry, event: MouseEvent) {
+		// 버튼이나 링크 클릭 시에는 이벤트 전파 방지
+		const target = event.target as HTMLElement;
+		if (target.tagName === 'BUTTON' || target.closest('button')) {
+			return;
 		}
-	}
-
-	function handleEdit(entry: VocabularyEntry) {
-		editingId = entry.id;
-		editedEntry = { ...entry };
-	}
-
-	function cancelEdit() {
-		editingId = null;
-		editedEntry = {};
-	}
-
-	async function handleSave(id: string) {
-		if (!editedEntry) return;
-
-		// 수정 전 데이터 백업
-		const originalEntry = entries.find((entry: VocabularyEntry) => entry.id === id);
-
-		try {
-			const params = new URLSearchParams({ filename: selectedFilename });
-			const response = await fetch(`/api/vocabulary?${params}`, {
-				method: 'PUT',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ ...editedEntry, id })
-			});
-
-			if (response.ok) {
-				// 히스토리 로그 기록
-				try {
-					await fetch('/api/history', {
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json'
-						},
-						body: JSON.stringify({
-							action: 'update',
-							targetId: id,
-							targetName: editedEntry.standardName || originalEntry?.standardName || '',
-							filename: selectedFilename,
-							details: {
-								before: originalEntry
-									? {
-											standardName: originalEntry.standardName,
-											abbreviation: originalEntry.abbreviation,
-											englishName: originalEntry.englishName
-										}
-									: undefined,
-								after: {
-									standardName: editedEntry.standardName,
-									abbreviation: editedEntry.abbreviation,
-									englishName: editedEntry.englishName
-								}
-							}
-						})
-					});
-
-					// 히스토리 UI 새로고침
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					if (typeof window !== 'undefined' && (window as any).refreshHistoryLog) {
-						// eslint-disable-next-line @typescript-eslint/no-explicit-any
-						(window as any).refreshHistoryLog();
-					}
-				} catch (historyError: unknown) {
-					console.warn('히스토리 로그 기록 실패:', historyError);
-				}
-
-				cancelEdit();
-				onpagechange({ page: currentPage }); // 데이터 새로고침
-				fetchDuplicates(); // 중복 데이터 다시 확인
-			} else {
-				alert('수정에 실패했습니다.');
-			}
-		} catch (error) {
-			console.error('수정 오류:', error);
+		
+		if (props.onentryclick) {
+			props.onentryclick({ entry });
 		}
-	}
-
-	async function handleDelete(id: string) {
-		const entryToDelete = entries.find((entry: VocabularyEntry) => entry.id === id);
-
-		if (confirm('정말로 이 항목을 삭제하시겠습니까?')) {
-			try {
-				const params = new URLSearchParams({ id, filename: selectedFilename });
-				const response = await fetch(`/api/vocabulary?${params}`, { method: 'DELETE' });
-				if (response.ok) {
-					// 히스토리 로그 기록
-					if (entryToDelete) {
-						try {
-							await fetch('/api/history', {
-								method: 'POST',
-								headers: {
-									'Content-Type': 'application/json'
-								},
-								body: JSON.stringify({
-									action: 'delete',
-									targetId: id,
-									targetName: entryToDelete.standardName,
-									details: {
-										before: {
-											standardName: entryToDelete.standardName,
-											abbreviation: entryToDelete.abbreviation,
-											englishName: entryToDelete.englishName
-										}
-									}
-								})
-							});
-
-							// 히스토리 UI 새로고침
-							// eslint-disable-next-line @typescript-eslint/no-explicit-any
-							if (typeof window !== 'undefined' && (window as any).refreshHistoryLog) {
-								// eslint-disable-next-line @typescript-eslint/no-explicit-any
-								(window as any).refreshHistoryLog();
-							}
-						} catch (historyError: unknown) {
-							console.warn('히스토리 로그 기록 실패:', historyError);
-						}
-					}
-
-					onpagechange({ page: currentPage });
-					fetchDuplicates();
-				} else {
-					alert('삭제에 실패했습니다.');
-				}
-			} catch (error) {
-				console.error('삭제 오류:', error);
-			}
-		}
+		dispatch('entryclick', { entry });
 	}
 
 	// 테이블 컬럼 정의
@@ -213,8 +82,7 @@
 			width: 'min-w-[150px] max-w-[200px]'
 		},
 		{ key: 'englishName', label: '영문명', sortable: true, width: 'min-w-[150px] max-w-[250px]' },
-		{ key: 'description', label: '설명', sortable: false, width: 'min-w-[200px]' },
-		{ key: 'actions', label: '관리', sortable: false, width: 'w-auto' }
+		{ key: 'description', label: '설명', sortable: false, width: 'min-w-[200px]' }
 	];
 
 	// 파생 상태 (페이지네이션)
@@ -248,7 +116,7 @@
 	 * 컬럼 정렬 처리
 	 */
 	function handleSort(column: string) {
-		if (!loading && !editingId) {
+		if (!loading) {
 			const newDirection = sortColumn === column && sortDirection === 'asc' ? 'desc' : 'asc';
 			onsort({ column, direction: newDirection });
 		}
@@ -258,7 +126,7 @@
 	 * 페이지 변경 처리
 	 */
 	function handlePageChange(page: number) {
-		if (!loading && !editingId && page !== currentPage && page >= 1 && page <= totalPages) {
+		if (!loading && page !== currentPage && page >= 1 && page <= totalPages) {
 			onpagechange({ page });
 		}
 	}
@@ -327,9 +195,6 @@
 
 		return pages;
 	}
-	function focus(el: HTMLElement, shouldFocus: boolean) {
-		if (shouldFocus) el.focus();
-	}
 </script>
 
 <!-- 단어집 테이블 컴포넌트 -->
@@ -361,12 +226,9 @@
 			<thead class="bg-gray-100">
 				<tr>
 					{#each columns as column (column.key)}
-						{@const isActions = column.key === 'actions'}
 						<th
 							scope="col"
-							class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 {column.width} {isActions
-								? 'whitespace-nowrap'
-								: 'whitespace-normal'} {column.sortable ? 'cursor-pointer hover:bg-gray-200' : ''}"
+							class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 {column.width} whitespace-normal {column.sortable ? 'cursor-pointer hover:bg-gray-200' : ''}"
 							class:bg-gray-200={sortColumn === column.key}
 							onclick={() => column.sortable && handleSort(column.key)}
 							onkeydown={(e) => {
@@ -473,84 +335,40 @@
 				{:else}
 					<!-- 데이터 행 -->
 					{#each entries as entry (entry.id)}
-						{@const isEditing = editingId === entry.id}
-						<tr class:bg-blue-50={isEditing} class="border-t border-gray-300">
+						{@const fieldBackgroundClass = getFieldDuplicateBackgroundClass(
+							entry.duplicateInfo,
+							'standardName'
+						)}
+						<tr
+							class="border-t border-gray-300 cursor-pointer transition-colors hover:bg-blue-50 {fieldBackgroundClass}"
+							onclick={(e: MouseEvent) => handleRowClick(entry, e)}
+							role="button"
+							tabindex="0"
+							onkeydown={(e: KeyboardEvent) => {
+								if (e.key === 'Enter' || e.key === ' ') {
+									e.preventDefault();
+									handleRowClick(entry, e as unknown as MouseEvent);
+								}
+							}}
+							aria-label="항목 클릭하여 상세 정보 보기"
+						>
 							{#each columns as column (column.key)}
-								{@const fieldBackgroundClass = getFieldDuplicateBackgroundClass(
+								{@const cellBackgroundClass = getFieldDuplicateBackgroundClass(
 									entry.duplicateInfo,
 									column.key
 								)}
-								{@const isActions = column.key === 'actions'}
 								<td
-									class="px-6 py-4 text-sm text-gray-700 {isActions
-										? 'whitespace-nowrap'
-										: 'whitespace-normal break-words'} {fieldBackgroundClass && !isEditing
-										? fieldBackgroundClass
-										: ''}"
+									class="px-6 py-4 text-sm text-gray-700 whitespace-normal break-words {cellBackgroundClass}"
 								>
-									{#if column.key === 'actions'}
-										<div class="flex items-center space-x-2">
-											{#if isEditing}
-												<button
-													type="button"
-													onclick={(e: MouseEvent) => {
-														e.stopPropagation();
-														handleSave(entry.id);
-													}}
-													class="text-blue-600 hover:text-blue-900">저장</button
-												>
-												<button
-													type="button"
-													onclick={(e: MouseEvent) => {
-														e.stopPropagation();
-														cancelEdit();
-													}}
-													class="text-gray-600 hover:text-gray-900">취소</button
-												>
-											{:else}
-												<button
-													type="button"
-													onclick={(e: MouseEvent) => {
-														e.stopPropagation();
-														handleEdit(entry);
-													}}
-													class="whitespace-nowrap text-indigo-600 hover:text-indigo-900"
-													>편집</button
-												>
-												<button
-													type="button"
-													onclick={(e: MouseEvent) => {
-														e.stopPropagation();
-														handleDelete(entry.id);
-													}}
-													class="whitespace-nowrap text-red-600 hover:text-red-900">삭제</button
-												>
-											{/if}
-										</div>
-									{:else if isEditing}
-										<input
-											type="text"
-											bind:value={editedEntry[column.key as keyof VocabularyEntry]}
-											use:focus={column.key === 'standardName'}
-											onkeydown={(e: KeyboardEvent) => {
-												if (e.key === 'Enter') {
-													e.preventDefault();
-													handleSave(entry.id);
-												}
-											}}
-											class="w-full rounded-md border-gray-300 px-2 py-1 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-										/>
-									{:else}
-										<p class="break-words px-2 py-1">
-											{@html sanitizeHtml(
-												highlightSearchTerm(
-													(entry[column.key as keyof VocabularyEntry] as string) || '',
-													searchQuery,
-													column.key
-												)
-											)}
-										</p>
-									{/if}
+									<p class="break-words px-2 py-1">
+										{@html sanitizeHtml(
+											highlightSearchTerm(
+												(entry[column.key as keyof VocabularyEntry] as string) || '',
+												searchQuery,
+												column.key
+											)
+										)}
+									</p>
 								</td>
 							{/each}
 						</tr>

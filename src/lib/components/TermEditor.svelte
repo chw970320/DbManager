@@ -15,6 +15,7 @@
 	const dispatch = createEventDispatcher<{
 		save: VocabularyEntry;
 		cancel: void;
+		delete: VocabularyEntry;
 	}>();
 
 	// Form data
@@ -113,6 +114,26 @@
 	// Handle cancel
 	function handleCancel() {
 		dispatch('cancel');
+	}
+
+	// Handle delete
+	function handleDelete() {
+		if (!entry.id) {
+			return;
+		}
+
+		if (confirm('정말로 이 항목을 삭제하시겠습니까?')) {
+			const entryToDelete: VocabularyEntry = {
+				id: entry.id,
+				standardName: formData.standardName.trim() || entry.standardName || '',
+				abbreviation: formData.abbreviation.trim() || entry.abbreviation || '',
+				englishName: formData.englishName.trim() || entry.englishName || '',
+				description: formData.description.trim() || entry.description || '',
+				createdAt: entry.createdAt || '',
+				updatedAt: entry.updatedAt || ''
+			};
+			dispatch('delete', entryToDelete);
+		}
 	}
 
 	// Handle background click
@@ -259,26 +280,53 @@
 			</div>
 
 			<!-- 버튼 그룹 -->
-			<div class="flex justify-end space-x-3 pt-4">
-				<button
-					type="button"
-					onclick={handleCancel}
-					class="btn btn-secondary"
-					disabled={isSubmitting}
-				>
-					취소
-				</button>
-				<button
-					type="submit"
-					class="btn btn-primary disabled:cursor-not-allowed disabled:opacity-50"
-					disabled={!isFormValid() || isSubmitting}
-				>
-					{#if isSubmitting}
-						저장 중...
-					{:else}
-						{isEditMode ? '수정' : '저장'}
-					{/if}
-				</button>
+			<div class="flex justify-between pt-4">
+				{#if isEditMode && entry.id}
+					<button
+						type="button"
+						onclick={handleDelete}
+						class="group inline-flex items-center space-x-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 shadow-sm transition-all duration-200 hover:border-red-400 hover:bg-red-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-red-300 disabled:hover:bg-red-50 disabled:hover:shadow-sm"
+						disabled={isSubmitting}
+					>
+						<svg
+							class="h-4 w-4 transition-transform duration-200 group-hover:scale-110"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+							/>
+						</svg>
+						<span>삭제</span>
+					</button>
+				{:else}
+					<div></div>
+				{/if}
+				<div class="flex space-x-3">
+					<button
+						type="button"
+						onclick={handleCancel}
+						class="btn btn-secondary"
+						disabled={isSubmitting}
+					>
+						취소
+					</button>
+					<button
+						type="submit"
+						class="btn btn-primary disabled:cursor-not-allowed disabled:opacity-50"
+						disabled={!isFormValid() || isSubmitting}
+					>
+						{#if isSubmitting}
+							저장 중...
+						{:else}
+							{isEditMode ? '수정' : '저장'}
+						{/if}
+					</button>
+				</div>
 			</div>
 		</form>
 	</div>

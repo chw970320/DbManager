@@ -36,44 +36,26 @@ async function ensureSettingsDirectory(): Promise<void> {
  * 설정 파일 로드
  */
 async function loadSettings(): Promise<Settings> {
-	// #region agent log
-	fetch('http://127.0.0.1:7243/ingest/96f8572e-efc8-49db-b3c0-8dba0f2c9491',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'settings.ts:loadSettings:entry',message:'loadSettings 시작',data:{path:SETTINGS_PATH},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-	// #endregion
 	try {
 		await ensureSettingsDirectory();
-		// #region agent log
-		fetch('http://127.0.0.1:7243/ingest/96f8572e-efc8-49db-b3c0-8dba0f2c9491',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'settings.ts:loadSettings:afterEnsure',message:'디렉토리 확인 완료',data:{exists:existsSync(SETTINGS_PATH)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-		// #endregion
 
 		if (!existsSync(SETTINGS_PATH)) {
-			// #region agent log
-			fetch('http://127.0.0.1:7243/ingest/96f8572e-efc8-49db-b3c0-8dba0f2c9491',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'settings.ts:loadSettings:fileNotExists',message:'설정 파일 없음, 기본값 생성',data:{},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-			// #endregion
 			// 설정 파일이 없으면 기본값으로 생성
 			await saveSettings(DEFAULT_SETTINGS);
 			return DEFAULT_SETTINGS;
 		}
 
 		const content = await readFile(SETTINGS_PATH, 'utf-8');
-		// #region agent log
-		fetch('http://127.0.0.1:7243/ingest/96f8572e-efc8-49db-b3c0-8dba0f2c9491',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'settings.ts:loadSettings:afterRead',message:'파일 읽기 완료',data:{contentLength:content.length,isEmpty:!content.trim()},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-		// #endregion
 		if (!content.trim()) {
 			return DEFAULT_SETTINGS;
 		}
 
 		const settings = JSON.parse(content) as Settings;
-		// #region agent log
-		fetch('http://127.0.0.1:7243/ingest/96f8572e-efc8-49db-b3c0-8dba0f2c9491',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'settings.ts:loadSettings:afterParse',message:'JSON 파싱 완료',data:{parsed:settings},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-		// #endregion
 		return {
 			...DEFAULT_SETTINGS,
 			...settings
 		};
 	} catch (error) {
-		// #region agent log
-		fetch('http://127.0.0.1:7243/ingest/96f8572e-efc8-49db-b3c0-8dba0f2c9491',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'settings.ts:loadSettings:error',message:'설정 로드 실패',data:{error:error instanceof Error?error.message:String(error),stack:error instanceof Error?error.stack:undefined},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
-		// #endregion
 		console.error('설정 로드 실패:', error);
 		return DEFAULT_SETTINGS;
 	}

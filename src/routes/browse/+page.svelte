@@ -51,6 +51,7 @@
 	let showForbiddenWordManager = $state(false);
 	let isFileManagerOpen = $state(false);
 	let sidebarOpen = $state(false);
+	let currentEditingEntry = $state<VocabularyEntry | null>(null);
 
 	let unsubscribe: () => void;
 
@@ -378,6 +379,17 @@
 	}
 
 	/**
+	 * 항목 클릭 처리 (팝업 열기)
+	 */
+	function handleEntryClick(event: CustomEvent<{ entry: VocabularyEntry }> | { entry: VocabularyEntry }) {
+		// CustomEvent인 경우와 직접 객체인 경우 모두 처리
+		const entry = 'detail' in event ? event.detail.entry : event.entry;
+		currentEditingEntry = entry;
+		editorServerError = '';
+		showEditor = true;
+	}
+
+	/**
 	 * 새 단어 추가 처리
 	 */
 	async function handleSave(event: CustomEvent<VocabularyEntry>) {
@@ -385,10 +397,13 @@
 		loading = true;
 		editorServerError = ''; // 에러 상태 초기화
 
+		const isEditMode = !!currentEditingEntry;
+
 		try {
 			const params = new URLSearchParams({ filename: selectedFilename });
+			const method = isEditMode ? 'PUT' : 'POST';
 			const response = await fetch(`/api/vocabulary?${params}`, {
-				method: 'POST',
+				method,
 				headers: {
 					'Content-Type': 'application/json'
 				},
@@ -406,25 +421,38 @@
 				'abbreviation' in result.data &&
 				'englishName' in result.data
 			) {
+				// 히스토리 로그 기록 (모달 닫기 전에 originalEntry 사용)
+				const originalEntry = currentEditingEntry;
+				
 				// 모달 닫기
 				showEditor = false;
 				editorServerError = ''; // 에러 상태 초기화
+				currentEditingEntry = null;
 				// 데이터 새로고침
 				await loadVocabularyData();
 
 				// 히스토리 로그 기록
 				try {
+					const action = isEditMode ? 'update' : 'add';
+					
 					await fetch('/api/history', {
 						method: 'POST',
 						headers: {
 							'Content-Type': 'application/json'
 						},
 						body: JSON.stringify({
-							action: 'add',
+							action,
 							targetId: result.data.id,
 							targetName: result.data.standardName,
-							filename: selectedFilename, // 파일명 추가
+							filename: selectedFilename,
 							details: {
+								before: originalEntry
+									? {
+											standardName: originalEntry.standardName,
+											abbreviation: originalEntry.abbreviation,
+											englishName: originalEntry.englishName
+										}
+									: undefined,
 								after: {
 									standardName: result.data.standardName,
 									abbreviation: result.data.abbreviation,
@@ -445,11 +473,76 @@
 				}
 			} else {
 				// 에러 발생 시 모달 내부에 표시
-				const errorMsg = result.error || '단어 추가에 실패했습니다.';
+				const errorMsg = result.error || (isEditMode ? '단어 수정에 실패했습니다.' : '단어 추가에 실패했습니다.');
 				editorServerError = errorMsg;
 			}
 		} catch (error) {
-			console.error('단어 추가 중 오류:', error);
+			console.error(isEditMode ? '단어 수정 중 오류:' : '단어 추가 중 오류:', error);
+			const errorMsg = '서버 연결 오류가 발생했습니다.';
+			editorServerError = errorMsg;
+		} finally {
+			loading = false;
+		}
+	}
+
+	/**
+	 * 단어 삭제 처리
+	 */
+	async function handleDelete(event: CustomEvent<VocabularyEntry>) {
+		const entryToDelete = event.detail;
+		loading = true;
+		editorServerError = '';
+
+		try {
+			const params = new URLSearchParams({ id: entryToDelete.id, filename: selectedFilename });
+			const response = await fetch(`/api/vocabulary?${params}`, { method: 'DELETE' });
+			
+			if (response.ok) {
+				// 모달 닫기
+				showEditor = false;
+				editorServerError = '';
+				currentEditingEntry = null;
+				// 데이터 새로고침
+				await loadVocabularyData();
+
+				// 히스토리 로그 기록
+				try {
+					await fetch('/api/history', {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({
+							action: 'delete',
+							targetId: entryToDelete.id,
+							targetName: entryToDelete.standardName,
+							filename: selectedFilename,
+							details: {
+								before: {
+									standardName: entryToDelete.standardName,
+									abbreviation: entryToDelete.abbreviation,
+									englishName: entryToDelete.englishName
+								}
+							}
+						})
+					});
+
+					// 히스토리 UI 새로고침
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					if (typeof window !== 'undefined' && (window as any).refreshHistoryLog) {
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any
+						(window as any).refreshHistoryLog();
+					}
+				} catch (historyError: unknown) {
+					console.warn('히스토리 로그 기록 실패:', historyError);
+				}
+			} else {
+				const result: ApiResponse = await response.json();
+				const errorMsg = result.error || '삭제에 실패했습니다.';
+				editorServerError = errorMsg;
+			}
+		} catch (error) {
+			console.error('삭제 오류:', error);
 			const errorMsg = '서버 연결 오류가 발생했습니다.';
 			editorServerError = errorMsg;
 		} finally {
@@ -683,6 +776,7 @@
 						<button
 							type="button"
 							onclick={() => {
+								currentEditingEntry = null;
 								editorServerError = '';
 								showEditor = true;
 							}}
@@ -759,12 +853,15 @@
 			<!-- TermEditor 모달 -->
 			{#if showEditor}
 				<TermEditor
-					entry={{}}
+					entry={currentEditingEntry || {}}
+					isEditMode={!!currentEditingEntry}
 					serverError={editorServerError}
 					on:save={handleSave}
+					on:delete={handleDelete}
 					on:cancel={() => {
 						showEditor = false;
 						editorServerError = '';
+						currentEditingEntry = null;
 					}}
 				/>
 			{/if}
@@ -964,6 +1061,7 @@
 						{selectedFilename}
 						onsort={handleSort}
 						onpagechange={handlePageChange}
+						onentryclick={handleEntryClick}
 					/>
 				</div>
 			</div>

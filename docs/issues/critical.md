@@ -428,15 +428,22 @@ if (hasReferences) {
 
 ---
 
-## 이슈 #C7: Non-null Assertion 사용으로 인한 런타임 에러 가능성
+## ~~이슈 #C7: Non-null Assertion 사용으로 인한 런타임 에러 가능성~~ ✅ 해결됨
+
+> **해결일**: 2024-12-12
+> **해결 방법**: Non-null assertion 제거 및 안전한 패턴으로 교체
+>
+> - 변수 미리 추출하여 타입 안전성 확보
+> - nullish coalescing (`??`) 사용
+> - `Map.get()` 후 조건문으로 존재 확인
 
 **심각도**: Critical
 
 **위치**:
 
-- `src/routes/api/vocabulary/+server.ts:217, 239` - `newEntry.standardName!.toLowerCase()`
-- `src/lib/utils/file-handler.ts:307` - `mergedMap.get(compositeKey)!`
-- `src/routes/api/generator/+server.ts:24, 29` - `koToEnMap.get(koKey)!`
+- `src/routes/api/vocabulary/+server.ts` - 변수 추출로 해결
+- `src/lib/utils/file-handler.ts` - `Map.get()` + 조건문으로 해결
+- `src/routes/api/generator/+server.ts` - nullish coalescing으로 해결
 
 **문제 설명**:
 

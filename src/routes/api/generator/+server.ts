@@ -18,15 +18,14 @@ async function initializeCache() {
 			const koKey = entry.standardName.toLowerCase();
 			const enKey = entry.abbreviation.toLowerCase();
 
-			if (!koToEnMap.has(koKey)) {
-				koToEnMap.set(koKey, []);
-			}
-			koToEnMap.get(koKey)!.push(entry.abbreviation);
+			// Map에 키가 없으면 새 배열 생성
+			const koValues = koToEnMap.get(koKey) ?? [];
+			koValues.push(entry.abbreviation);
+			koToEnMap.set(koKey, koValues);
 
-			if (!enToKoMap.has(enKey)) {
-				enToKoMap.set(enKey, []);
-			}
-			enToKoMap.get(enKey)!.push(entry.standardName);
+			const enValues = enToKoMap.get(enKey) ?? [];
+			enValues.push(entry.standardName);
+			enToKoMap.set(enKey, enValues);
 		}
 	} catch (error) {
 		console.error('단어집 캐시 초기화 중 오류:', error);

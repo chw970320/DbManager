@@ -67,14 +67,13 @@
     - `src/routes/api/term/+server.ts` (PUT)
   - 완료: 2024-12-12
 
-- [ ] **#C7: Non-null assertion 남용**
+- [x] **#C7: Non-null assertion 남용** ✅
   - 설명: Non-null assertion(`!`) 사용으로 런타임 에러 가능성
   - 파일:
-    - `src/routes/api/vocabulary/+server.ts:217, 239`
-    - `src/lib/utils/file-handler.ts:307`
-    - `src/routes/api/generator/+server.ts:24, 29`
-  - 예상: 8시간
-  - 담당:
+    - `src/routes/api/vocabulary/+server.ts` (변수 추출로 해결)
+    - `src/lib/utils/file-handler.ts` (Map.get + 조건문으로 해결)
+    - `src/routes/api/generator/+server.ts` (nullish coalescing으로 해결)
+  - 완료: 2024-12-12
 
 - [ ] **#C8: 파일 읽기 실패 처리**
   - 설명: 파일 읽기 실패 시 예외 처리 및 에러 메시지 개선

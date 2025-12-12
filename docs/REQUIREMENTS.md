@@ -69,7 +69,7 @@ Critical 레벨의 이슈들을 해결하여 데이터 손실 위험, 보안 취
 | #C5  | 파일 쓰기 실패 시 롤백 없음  | ✅ 완료 |
 | #C3  | FormData null 체크 부족      | ✅ 완료 |
 | #C4  | 부분 업데이트 undefined 처리 | ✅ 완료 |
-| #C7  | Non-null assertion 남용      | ⬜ 대기 |
+| #C7  | Non-null assertion 남용      | ✅ 완료 |
 | #C8  | 파일 읽기 실패 처리          | ⬜ 대기 |
 | #C6  | 참조 무결성 검증 없음        | ⬜ 대기 |
 

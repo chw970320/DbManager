@@ -350,8 +350,8 @@ export async function mergeVocabularyData(
 			});
 			newEntries.forEach((entry) => {
 				const compositeKey = `${entry.standardName.toLowerCase()}|${entry.abbreviation.toLowerCase()}|${entry.englishName.toLowerCase()}`;
-				if (mergedMap.has(compositeKey)) {
-					const existingEntry = mergedMap.get(compositeKey)!;
+				const existingEntry = mergedMap.get(compositeKey);
+				if (existingEntry) {
 					const mergedEntry: import('../types/vocabulary.js').VocabularyEntry = {
 						...entry,
 						description: entry.description || existingEntry.description,
@@ -741,9 +741,8 @@ export async function mergeDomainData(
 			});
 			newEntries.forEach((entry) => {
 				const compositeKey = `${entry.domainGroup.toLowerCase()}|${entry.domainCategory.toLowerCase()}|${entry.standardDomainName.toLowerCase()}`;
-
-				if (mergedMap.has(compositeKey)) {
-					const existingEntry = mergedMap.get(compositeKey)!;
+				const existingEntry = mergedMap.get(compositeKey);
+				if (existingEntry) {
 					const mergedEntry: import('../types/domain.js').DomainEntry = {
 						...entry,
 						createdAt: existingEntry.createdAt,
@@ -1045,9 +1044,8 @@ export async function mergeTermData(
 			});
 			newEntries.forEach((entry) => {
 				const compositeKey = `${entry.termName.toLowerCase()}|${entry.columnName.toLowerCase()}|${entry.domainName.toLowerCase()}`;
-
-				if (mergedMap.has(compositeKey)) {
-					const existingEntry = mergedMap.get(compositeKey)!;
+				const existingEntry = mergedMap.get(compositeKey);
+				if (existingEntry) {
 					const mergedEntry: import('../types/term.js').TermEntry = {
 						...entry,
 						createdAt: existingEntry.createdAt,

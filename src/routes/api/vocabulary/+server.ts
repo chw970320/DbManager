@@ -208,6 +208,10 @@ export async function POST({ request, url }: RequestEvent) {
 
 		const vocabularyData = await loadVocabularyData(filename);
 
+		// 필수 필드가 검증되었으므로 안전하게 사용
+		const standardNameLower = newEntry.standardName.toLowerCase();
+		const abbreviationLower = newEntry.abbreviation.toLowerCase();
+
 		// 금지어 검사
 		try {
 			const forbiddenWordsData = await loadForbiddenWordsData();
@@ -215,8 +219,7 @@ export async function POST({ request, url }: RequestEvent) {
 			// 표준단어명이 금지어에 해당하는지 확인
 			const standardNameForbidden = forbiddenWordsData.entries.find(
 				(entry) =>
-					entry.keyword.toLowerCase() === newEntry.standardName!.toLowerCase() &&
-					entry.type === 'standardName'
+					entry.keyword.toLowerCase() === standardNameLower && entry.type === 'standardName'
 			);
 
 			if (standardNameForbidden) {
@@ -237,8 +240,7 @@ export async function POST({ request, url }: RequestEvent) {
 			// 영문약어가 금지어에 해당하는지 확인
 			const abbreviationForbidden = forbiddenWordsData.entries.find(
 				(entry) =>
-					entry.keyword.toLowerCase() === newEntry.abbreviation!.toLowerCase() &&
-					entry.type === 'abbreviation'
+					entry.keyword.toLowerCase() === abbreviationLower && entry.type === 'abbreviation'
 			);
 
 			if (abbreviationForbidden) {

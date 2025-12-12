@@ -10,6 +10,7 @@ import {
 	isTermHistoryData,
 	TypeValidationError
 } from './type-guards';
+import { withFileLock } from './file-lock';
 
 // 히스토리 타입 정의
 export type HistoryType = 'vocabulary' | 'domain' | 'term';
@@ -49,7 +50,7 @@ export async function ensureDataDirectory(type: HistoryType = 'vocabulary'): Pro
 }
 
 /**
- * 히스토리 데이터를 JSON 파일로 저장
+ * 히스토리 데이터를 JSON 파일로 저장 (파일 락 적용)
  * @param data - 저장할 HistoryData, DomainHistoryData 또는 TermHistoryData 객체
  * @param type - 히스토리 타입 ('vocabulary' | 'domain' | 'term', 기본값: 'vocabulary')
  */
@@ -82,10 +83,13 @@ export async function saveHistoryData(
 			totalCount: validLogs.length
 		};
 
-		// JSON 파일로 저장 (들여쓰기 포함)
-		const jsonString = JSON.stringify(finalData, null, 2);
 		const historyPath = getHistoryPath(type);
-		await writeFile(historyPath, jsonString, 'utf-8');
+
+		// 파일 락을 사용한 안전한 저장
+		await withFileLock(historyPath, async () => {
+			const jsonString = JSON.stringify(finalData, null, 2);
+			await writeFile(historyPath, jsonString, 'utf-8');
+		});
 	} catch (error) {
 		console.error('히스토리 데이터 저장 실패:', error);
 		throw new Error(

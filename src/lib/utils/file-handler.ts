@@ -12,6 +12,7 @@ import {
 	safeJsonParse,
 	TypeValidationError
 } from './type-guards';
+import { withFileLock } from './file-lock';
 
 // 데이터 저장 경로 설정
 const DATA_DIR = process.env.DATA_PATH || 'static/data';
@@ -206,12 +207,12 @@ export async function ensureDataDirectory(): Promise<void> {
 }
 
 /**
- * 단어집 데이터를 JSON 파일로 저장
+ * 단어집 데이터를 JSON 파일로 저장 (파일 락 적용)
  * @param data - 저장할 VocabularyData 객체
  * @param filename - 저장할 파일명 (기본값: vocabulary.json)
  */
 export async function saveVocabularyData(
-	data: import('../types/vocabulary.js').VocabularyData,
+	data: VocabularyData,
 	filename: string = DEFAULT_VOCABULARY_FILE
 ): Promise<void> {
 	try {
@@ -235,7 +236,7 @@ export async function saveVocabularyData(
 			throw new Error('저장할 유효한 단어집 데이터가 없습니다.');
 		}
 
-		const finalData: import('../types/vocabulary.js').VocabularyData = {
+		const finalData: VocabularyData = {
 			entries: validEntries,
 			lastUpdated: new Date().toISOString(),
 			totalCount: validEntries.length,
@@ -245,8 +246,13 @@ export async function saveVocabularyData(
 			mappedDomainFile: data.mapping?.domain || data.mappedDomainFile || 'domain.json' // 하위 호환성 유지
 		};
 
-		const jsonString = JSON.stringify(finalData, null, 2);
-		await writeFile(getDataPath(filename, 'vocabulary'), jsonString, 'utf-8');
+		const dataPath = getDataPath(filename, 'vocabulary');
+
+		// 파일 락을 사용한 안전한 저장
+		await withFileLock(dataPath, async () => {
+			const jsonString = JSON.stringify(finalData, null, 2);
+			await writeFile(dataPath, jsonString, 'utf-8');
+		});
 	} catch (error) {
 		console.error('단어집 데이터 저장 실패:', error);
 		throw new Error(
@@ -579,7 +585,7 @@ export async function loadForbiddenWordsData(): Promise<ForbiddenWordsData> {
 }
 
 /**
- * 금지어 데이터를 JSON 파일로 저장
+ * 금지어 데이터를 JSON 파일로 저장 (파일 락 적용)
  */
 export async function saveForbiddenWordsData(data: ForbiddenWordsData): Promise<void> {
 	try {
@@ -604,8 +610,13 @@ export async function saveForbiddenWordsData(data: ForbiddenWordsData): Promise<
 			totalCount: validEntries.length
 		};
 
-		const jsonData = JSON.stringify(finalData, null, 2);
-		await writeFile(getDataPath(FORBIDDEN_WORDS_FILE, 'forbidden'), jsonData, 'utf-8');
+		const dataPath = getDataPath(FORBIDDEN_WORDS_FILE, 'forbidden');
+
+		// 파일 락을 사용한 안전한 저장
+		await withFileLock(dataPath, async () => {
+			const jsonData = JSON.stringify(finalData, null, 2);
+			await writeFile(dataPath, jsonData, 'utf-8');
+		});
 	} catch (error) {
 		console.error('금지어 데이터 저장 실패:', error);
 		throw new Error(
@@ -665,10 +676,10 @@ export async function loadDomainData(filename: string = DEFAULT_DOMAIN_FILE): Pr
 }
 
 /**
- * 도메인 데이터를 JSON 파일로 저장
+ * 도메인 데이터를 JSON 파일로 저장 (파일 락 적용)
  */
 export async function saveDomainData(
-	data: import('../types/domain.js').DomainData,
+	data: DomainData,
 	filename: string = DEFAULT_DOMAIN_FILE
 ): Promise<void> {
 	try {
@@ -693,14 +704,19 @@ export async function saveDomainData(
 			throw new Error('저장할 유효한 도메인 데이터가 없습니다.');
 		}
 
-		const finalData: import('../types/domain.js').DomainData = {
+		const finalData: DomainData = {
 			entries: validEntries,
 			lastUpdated: new Date().toISOString(),
 			totalCount: validEntries.length
 		};
 
-		const jsonData = JSON.stringify(finalData, null, 2);
-		await writeFile(getDataPath(filename, 'domain'), jsonData, 'utf-8');
+		const dataPath = getDataPath(filename, 'domain');
+
+		// 파일 락을 사용한 안전한 저장
+		await withFileLock(dataPath, async () => {
+			const jsonData = JSON.stringify(finalData, null, 2);
+			await writeFile(dataPath, jsonData, 'utf-8');
+		});
 	} catch (error) {
 		console.error('도메인 데이터 저장 실패:', error);
 		throw new Error(
@@ -967,10 +983,10 @@ export async function loadTermData(filename: string = DEFAULT_TERM_FILE): Promis
 }
 
 /**
- * 용어 데이터를 JSON 파일로 저장
+ * 용어 데이터를 JSON 파일로 저장 (파일 락 적용)
  */
 export async function saveTermData(
-	data: import('../types/term.js').TermData,
+	data: TermData,
 	filename: string = DEFAULT_TERM_FILE
 ): Promise<void> {
 	try {
@@ -990,7 +1006,7 @@ export async function saveTermData(
 			throw new Error('저장할 유효한 용어 데이터가 없습니다.');
 		}
 
-		const finalData: import('../types/term.js').TermData = {
+		const finalData: TermData = {
 			entries: validEntries,
 			lastUpdated: new Date().toISOString(),
 			totalCount: validEntries.length,
@@ -1000,8 +1016,13 @@ export async function saveTermData(
 			}
 		};
 
-		const jsonData = JSON.stringify(finalData, null, 2);
-		await writeFile(getDataPath(filename, 'term'), jsonData, 'utf-8');
+		const dataPath = getDataPath(filename, 'term');
+
+		// 파일 락을 사용한 안전한 저장
+		await withFileLock(dataPath, async () => {
+			const jsonData = JSON.stringify(finalData, null, 2);
+			await writeFile(dataPath, jsonData, 'utf-8');
+		});
 	} catch (error) {
 		console.error('용어 데이터 저장 실패:', error);
 		throw new Error(

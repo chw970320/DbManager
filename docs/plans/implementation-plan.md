@@ -23,23 +23,15 @@
     - `src/lib/utils/history-handler.ts` (타입 가드 적용)
   - 완료: 2024-12-12
 
-- [ ] **#C1: 동시성 문제 (설계 및 시작)**
+- [x] **#C1: 동시성 문제 (파일 락)** ✅
   - 설명: 파일 기반 저장소의 동시 수정 시 데이터 손실 위험
   - 파일:
-    - `src/lib/utils/file-handler.ts` (전체 파일)
-    - `src/routes/api/vocabulary/+server.ts` (PUT, DELETE)
-    - `src/routes/api/domain/+server.ts` (PUT, DELETE)
-    - `src/routes/api/term/+server.ts` (PUT, DELETE)
-  - 예상: 8시간 (설계 및 시작)
-  - 담당:
+    - `src/lib/utils/file-lock.ts` (신규 생성)
+    - `src/lib/utils/file-handler.ts` (파일 락 적용)
+    - `src/lib/utils/history-handler.ts` (파일 락 적용)
+  - 완료: 2024-12-12
 
 ### Week 2
-
-- [ ] **#C1: 동시성 문제 (완료)**
-  - 설명: 파일 락 메커니즘 구현 완료
-  - 파일: `src/lib/utils/file-handler.ts`
-  - 예상: 16시간 (완료)
-  - 담당:
 
 - [ ] **#C5: 파일 쓰기 실패 시 롤백 없음**
   - 설명: 파일 쓰기 중 오류 시 원본 데이터 손실 가능

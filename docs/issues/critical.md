@@ -4,16 +4,24 @@
 
 ---
 
-## 이슈 #C1: 파일 기반 저장소의 동시성 문제로 인한 데이터 손실 위험
+## ~~이슈 #C1: 파일 기반 저장소의 동시성 문제로 인한 데이터 손실 위험~~ ✅ 해결됨
+
+> **해결일**: 2024-12-12
+> **해결 방법**: 파일 락 메커니즘 구현
+>
+> - `src/lib/utils/file-lock.ts` 신규 생성
+> - `acquireLock`, `withFileLock` 함수로 안전한 파일 접근 제공
+> - 모든 save 함수에 `withFileLock` 적용
+> - Stale 락 자동 감지 및 해제 (60초 타임아웃)
+> - 메모리 내 락 + 파일 기반 락 이중 보호
 
 **심각도**: Critical
 
 **위치**:
 
-- `src/lib/utils/file-handler.ts` (전체 파일)
-- `src/routes/api/vocabulary/+server.ts` (PUT, DELETE)
-- `src/routes/api/domain/+server.ts` (PUT, DELETE)
-- `src/routes/api/term/+server.ts` (PUT, DELETE)
+- `src/lib/utils/file-lock.ts` - 파일 락 유틸리티
+- `src/lib/utils/file-handler.ts` - 모든 save 함수
+- `src/lib/utils/history-handler.ts` - saveHistoryData 함수
 
 **문제 설명**:
 

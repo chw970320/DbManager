@@ -58,14 +58,14 @@
     - `src/routes/api/term/upload/+server.ts`
   - 완료: 2024-12-12
 
-- [ ] **#C4: 부분 업데이트 undefined 처리**
+- [x] **#C4: 부분 업데이트 undefined 처리** ✅
   - 설명: 스프레드 연산자로 병합 시 `undefined` 값이 기존 데이터 덮어쓰기
   - 파일:
-    - `src/routes/api/vocabulary/+server.ts:348-353` (PUT)
-    - `src/routes/api/domain/+server.ts:319-323` (PUT)
+    - `src/lib/utils/type-guards.ts` (`safeMerge` 추가)
+    - `src/routes/api/vocabulary/+server.ts` (PUT)
+    - `src/routes/api/domain/+server.ts` (PUT)
     - `src/routes/api/term/+server.ts` (PUT)
-  - 예상: 8시간
-  - 담당:
+  - 완료: 2024-12-12
 
 - [ ] **#C7: Non-null assertion 남용**
   - 설명: Non-null assertion(`!`) 사용으로 런타임 에러 가능성

@@ -7,6 +7,7 @@ import {
 	loadVocabularyData,
 	loadDomainData
 } from '$lib/utils/file-handler.js';
+import { safeMerge } from '$lib/utils/type-guards.js';
 
 /**
  * 용어 매핑 로직 (업로드 API와 동일)
@@ -381,8 +382,8 @@ export async function PUT({ request }: RequestEvent) {
 			domainMap
 		);
 
-		termData.entries[index] = {
-			...termData.entries[index],
+		// 기존 데이터와 안전하게 병합 (undefined 값은 무시)
+		const updates: Partial<TermEntry> = {
 			termName,
 			columnName,
 			domainName,
@@ -392,6 +393,7 @@ export async function PUT({ request }: RequestEvent) {
 			id: entry.id,
 			updatedAt: new Date().toISOString()
 		};
+		termData.entries[index] = safeMerge(termData.entries[index], updates);
 		termData.lastUpdated = new Date().toISOString();
 
 		await saveTermData(termData, filename);

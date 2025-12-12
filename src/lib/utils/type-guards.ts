@@ -619,3 +619,44 @@ export function getOptionalBoolean(
 
 	return value === 'true';
 }
+
+// ============================================================================
+// 객체 병합 유틸리티 (undefined 값 필터링)
+// ============================================================================
+
+/**
+ * 객체에서 undefined 값을 가진 속성 제거
+ * 부분 업데이트 시 undefined가 기존 값을 덮어쓰는 문제 방지
+ *
+ * @param obj - 필터링할 객체
+ * @returns undefined 값이 제거된 새 객체
+ */
+export function removeUndefinedValues<T>(obj: T): Partial<T> {
+	if (obj === null || typeof obj !== 'object') {
+		return obj as Partial<T>;
+	}
+
+	const result = {} as Partial<T>;
+	const entries = Object.entries(obj as object);
+
+	for (const [key, value] of entries) {
+		if (value !== undefined) {
+			(result as Record<string, unknown>)[key] = value;
+		}
+	}
+
+	return result;
+}
+
+/**
+ * 부분 업데이트를 위한 안전한 객체 병합
+ * undefined 값은 무시하고, 정의된 값만 기존 데이터에 덮어씀
+ *
+ * @param original - 원본 객체
+ * @param updates - 업데이트할 객체 (undefined 값 포함 가능)
+ * @returns 병합된 새 객체
+ */
+export function safeMerge<T>(original: T, updates: Partial<T>): T {
+	const filteredUpdates = removeUndefinedValues(updates);
+	return { ...original, ...filteredUpdates } as T;
+}

@@ -6,6 +6,7 @@ import {
 	loadForbiddenWordsData
 } from '$lib/utils/file-handler.js';
 import { getDuplicateDetails } from '$lib/utils/duplicate-handler.js';
+import { safeMerge } from '$lib/utils/type-guards.js';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -344,11 +345,13 @@ export async function PUT({ request, url }: RequestEvent) {
 			);
 		}
 
-		// 기존 데이터를 유지하면서 업데이트
+		// 기존 데이터를 유지하면서 업데이트 (undefined 값은 무시)
 		vocabularyData.entries[entryIndex] = {
-			...vocabularyData.entries[entryIndex],
-			...updatedEntry,
-			isDomainCategoryMapped: updatedEntry.isDomainCategoryMapped ?? false,
+			...safeMerge(vocabularyData.entries[entryIndex], updatedEntry),
+			isDomainCategoryMapped:
+				updatedEntry.isDomainCategoryMapped ??
+				vocabularyData.entries[entryIndex].isDomainCategoryMapped ??
+				false,
 			updatedAt: new Date().toISOString()
 		};
 

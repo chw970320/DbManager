@@ -2,6 +2,7 @@ import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse } from '$lib/types/vocabulary.js';
 import type { DomainData, DomainEntry } from '$lib/types/domain.js';
 import { saveDomainData, loadDomainData } from '$lib/utils/file-handler.js';
+import { safeMerge } from '$lib/utils/type-guards.js';
 
 /**
  * 저장된 도메인 데이터 조회 API
@@ -315,10 +316,9 @@ export async function PUT({ request }: RequestEvent) {
 			);
 		}
 
-		// 데이터 수정
+		// 데이터 수정 (undefined 값은 무시)
 		domainData.entries[entryIndex] = {
-			...domainData.entries[entryIndex],
-			...updateFields,
+			...safeMerge(domainData.entries[entryIndex], updateFields),
 			updatedAt: new Date().toISOString()
 		};
 

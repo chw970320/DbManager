@@ -219,14 +219,22 @@ const file = fileValue;
 
 ---
 
-## 이슈 #C4: 부분 업데이트 시 undefined 값이 기존 데이터를 덮어쓸 수 있음
+## ~~이슈 #C4: 부분 업데이트 시 undefined 값이 기존 데이터를 덮어쓸 수 있음~~ ✅ 해결됨
+
+> **해결일**: 2024-12-12
+> **해결 방법**: 안전한 객체 병합 유틸리티 구현
+>
+> - `removeUndefinedValues()`: undefined 값 속성 제거
+> - `safeMerge()`: undefined 무시하고 기존 값 유지
+> - 모든 PUT 핸들러에 적용
 
 **심각도**: Critical
 
 **위치**:
 
-- `src/routes/api/vocabulary/+server.ts:348-353` (PUT)
-- `src/routes/api/domain/+server.ts:319-323` (PUT)
+- `src/lib/utils/type-guards.ts` - `safeMerge` 함수
+- `src/routes/api/vocabulary/+server.ts` (PUT)
+- `src/routes/api/domain/+server.ts` (PUT)
 - `src/routes/api/term/+server.ts` (PUT)
 
 **문제 설명**:

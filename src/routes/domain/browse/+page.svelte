@@ -517,15 +517,15 @@
 </script>
 
 <svelte:head>
-	<title>도메인</title>
-	<meta name="description" content="업로드된 도메인 정보를 검색하고 조회하세요." />
+	<title>데이터 관리 | 도메인</title>
+	<meta name="description" content="도메인을 관리하고 검색하세요." />
 </svelte:head>
 
 <div
 	class="relative min-h-screen overflow-x-hidden bg-gradient-to-br from-slate-50 via-white to-blue-50 py-8"
 >
-	<div class="mx-auto w-full min-w-0 px-4 sm:px-6 lg:px-8">
-		<div class="gap-8 lg:grid lg:min-w-0 lg:grid-cols-[16rem_1fr]">
+	<div class="mx-auto w-full px-4 sm:px-6 lg:px-8">
+		<div class="gap-8 lg:grid lg:grid-cols-[16rem_1fr] lg:items-start">
 			<!-- 좌측 고정 사이드바 (데스크탑) -->
 			<aside class="hidden h-full w-64 lg:block">
 				<div
@@ -655,7 +655,7 @@
 			{/if}
 
 			<!-- 메인 컨텐츠 -->
-			<main class="w-full min-w-0 overflow-x-hidden">
+			<main class="w-full overflow-x-hidden">
 				<!-- 페이지 헤더 -->
 				<div class="mb-10">
 					<div
@@ -849,8 +849,8 @@
 						{/if}
 					</div>
 
-					<div class="overflow-x-auto rounded-xl border border-gray-200">
-						<div class="min-w-[960px]">
+					<div class="rounded-xl border border-gray-200">
+						<div>
 							<DomainTable
 								{entries}
 								{loading}

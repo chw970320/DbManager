@@ -60,7 +60,7 @@
 		if (target.tagName === 'BUTTON' || target.closest('button')) {
 			return;
 		}
-		
+
 		if (props.onentryclick) {
 			props.onentryclick({ entry });
 		}
@@ -68,26 +68,77 @@
 	}
 
 	// 테이블 컬럼 정의
-	const columns = [
+	type ColumnAlignment = 'left' | 'center' | 'right';
+	const columns: Array<{
+		key: string;
+		label: string;
+		sortable: boolean;
+		width: string;
+		align: ColumnAlignment;
+	}> = [
 		{
 			key: 'standardName',
 			label: '표준단어명',
 			sortable: true,
-			width: 'min-w-[150px] max-w-[200px]'
+			width: 'min-w-[150px] max-w-[200px]',
+			align: 'left'
 		},
 		{
 			key: 'abbreviation',
 			label: '영문약어',
 			sortable: true,
-			width: 'min-w-[150px] max-w-[200px]'
+			width: 'min-w-[150px] max-w-[200px]',
+			align: 'left'
 		},
-		{ key: 'englishName', label: '영문명', sortable: true, width: 'min-w-[150px] max-w-[250px]' },
-		{ key: 'description', label: '단어 설명', sortable: false, width: 'min-w-[200px]' },
-		{ key: 'isFormalWord', label: '형식단어여부', sortable: false, width: 'min-w-[100px]' },
-		{ key: 'domainCategory', label: '도메인분류명', sortable: false, width: 'min-w-[150px]' },
-		{ key: 'synonyms', label: '이음동의어', sortable: false, width: 'min-w-[200px]' },
-		{ key: 'forbiddenWords', label: '금칙어', sortable: false, width: 'min-w-[200px]' },
-		{ key: 'source', label: '출처', sortable: false, width: 'min-w-[150px]' }
+		{
+			key: 'englishName',
+			label: '영문명',
+			sortable: true,
+			width: 'min-w-[150px] max-w-[250px]',
+			align: 'left'
+		},
+		{
+			key: 'description',
+			label: '단어설명',
+			sortable: false,
+			width: 'min-w-[300px]',
+			align: 'left'
+		},
+		{
+			key: 'isFormalWord',
+			label: '형식단어여부',
+			sortable: false,
+			width: 'min-w-[100px]',
+			align: 'center'
+		},
+		{
+			key: 'domainCategory',
+			label: '도메인분류명',
+			sortable: false,
+			width: 'min-w-[100px]',
+			align: 'left'
+		},
+		{
+			key: 'synonyms',
+			label: '이음동의어',
+			sortable: false,
+			width: 'min-w-[200px]',
+			align: 'left'
+		},
+		{
+			key: 'forbiddenWords',
+			label: '금칙어',
+			sortable: false,
+			width: 'min-w-[200px]',
+			align: 'left'
+		},
+		{
+			key: 'source',
+			label: '출처',
+			sortable: false,
+			width: 'min-w-[200px]',
+			align: 'left'
+		}
 	];
 
 	// 파생 상태 (페이지네이션)
@@ -168,23 +219,30 @@
 	 */
 	function formatFieldValue(entry: VocabularyEntry, columnKey: string): string {
 		const value = entry[columnKey as keyof VocabularyEntry];
-		
+
 		if (columnKey === 'isFormalWord') {
 			return value ? 'Y' : 'N';
 		}
-		
+
 		if (columnKey === 'synonyms' || columnKey === 'forbiddenWords') {
 			if (Array.isArray(value) && value.length > 0) {
 				return value.join(', ');
 			}
 			return '-';
 		}
-		
+
 		if (value === null || value === undefined || value === '') {
 			return '-';
 		}
-		
+
 		return String(value);
+	}
+
+	/**
+	 * 도메인 미매핑 여부 확인
+	 */
+	function isDomainUnmapped(entry: VocabularyEntry): boolean {
+		return !entry.domainGroup || entry.isDomainCategoryMapped === false;
 	}
 
 	/**
@@ -257,7 +315,12 @@
 					{#each columns as column (column.key)}
 						<th
 							scope="col"
-							class="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 {column.width} whitespace-normal {column.sortable ? 'cursor-pointer hover:bg-gray-200' : ''}"
+							class="text-nowrap px-6 py-3 text-xs font-medium uppercase tracking-wider text-gray-700 {column.width} whitespace-normal {column.align ===
+							'center'
+								? 'text-center'
+								: column.align === 'right'
+									? 'text-right'
+									: 'text-left'} {column.sortable ? 'cursor-pointer hover:bg-gray-200' : ''}"
 							class:bg-gray-200={sortColumn === column.key}
 							onclick={() => column.sortable && handleSort(column.key)}
 							onkeydown={(e) => {
@@ -270,7 +333,7 @@
 							role={column.sortable ? 'button' : 'columnheader'}
 							aria-label={column.sortable ? `${column.label}로 정렬` : column.label}
 						>
-							<div class="flex items-center space-x-1">
+							<div class="flex items-center justify-center space-x-1">
 								<span>{column.label}</span>
 								{#if column.sortable}
 									<svg
@@ -364,12 +427,9 @@
 				{:else}
 					<!-- 데이터 행 -->
 					{#each entries as entry (entry.id)}
-						{@const fieldBackgroundClass = getFieldDuplicateBackgroundClass(
-							entry.duplicateInfo,
-							'standardName'
-						)}
+						{@const isUnmapped = isDomainUnmapped(entry)}
 						<tr
-							class="border-t border-gray-300 cursor-pointer transition-colors hover:bg-blue-50 {fieldBackgroundClass}"
+							class="cursor-pointer border-t border-gray-300 transition-colors hover:bg-blue-50"
 							onclick={(e: MouseEvent) => handleRowClick(entry, e)}
 							role="button"
 							tabindex="0"
@@ -387,16 +447,20 @@
 									column.key
 								)}
 								{@const formattedValue = formatFieldValue(entry, column.key)}
+								{@const isDomainCategoryCell = column.key === 'domainCategory'}
 								<td
-									class="px-6 py-4 text-sm text-gray-700 whitespace-normal break-words {cellBackgroundClass}"
+									class="whitespace-normal break-words px-6 py-4 text-sm text-gray-700 {column.align ===
+									'center'
+										? 'text-center'
+										: column.align === 'right'
+											? 'text-right'
+											: 'text-left'} {cellBackgroundClass} {isDomainCategoryCell && isUnmapped
+										? 'bg-red-100'
+										: ''}"
 								>
 									<p class="break-words px-2 py-1">
 										{@html sanitizeHtml(
-											highlightSearchTerm(
-												formattedValue,
-												searchQuery,
-												column.key
-											)
+											highlightSearchTerm(formattedValue, searchQuery, column.key)
 										)}
 									</p>
 								</td>

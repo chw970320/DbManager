@@ -1,9 +1,11 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
+import { createEventDispatcher } from 'svelte';
+import { get } from 'svelte/store';
 	import FileUpload from './FileUpload.svelte';
 	import type { ApiResponse, UploadResult } from '$lib/types/vocabulary';
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { filterVocabularyFiles } from '$lib/utils/file-filter';
+import { vocabularyStore } from '$lib/stores/vocabularyStore';
 
 	interface Props {
 		isOpen?: boolean;
@@ -29,7 +31,13 @@
 	let isSubmitting = $state(false);
 	let showSystemFiles = $state(true);
 	let activeTab = $state<'files' | 'upload'>('files');
-	
+
+	// 도메인 파일 매핑 상태
+	let domainFiles = $state<string[]>([]);
+	let selectedDomainFile = $state('domain.json');
+	let isDomainLoading = $state(false);
+	let syncMessage = $state('');
+
 	// 업로드 관련 상태
 	let selectedUploadFile = $state('vocabulary.json');
 	let uploadMode = $state<'replace' | 'merge'>('merge');
@@ -69,7 +77,13 @@
 	async function loadFiles() {
 		isLoading = true;
 		try {
-			const response = await fetch('/api/vocabulary/files');
+			// 캐시를 무시하여 최신 파일 목록을 가져옴
+			const response = await fetch('/api/vocabulary/files', {
+				cache: 'no-store',
+				headers: {
+					'Cache-Control': 'no-cache'
+				}
+			});
 			const result: ApiResponse = await response.json();
 			if (result.success && Array.isArray(result.data)) {
 				allFiles = result.data as string[];
@@ -79,6 +93,69 @@
 			error = '파일 목록을 불러오는데 실패했습니다.';
 		} finally {
 			isLoading = false;
+		}
+	}
+
+	// Load domain files for mapping
+	async function loadDomainFiles() {
+		isDomainLoading = true;
+		try {
+			const response = await fetch('/api/domain/files');
+			const result: ApiResponse = await response.json();
+			if (result.success && Array.isArray(result.data)) {
+				domainFiles = result.data as string[];
+				if (!domainFiles.includes(selectedDomainFile) && domainFiles.length > 0) {
+					handleDomainFileSelect(domainFiles[0]);
+				}
+			}
+		} catch (err) {
+			console.error('도메인 파일 목록 로드 실패:', err);
+		} finally {
+			isDomainLoading = false;
+		}
+	}
+
+	// Sync domainGroup mapping into vocabulary file
+	async function handleDomainSync() {
+		const { selectedFilename, selectedDomainFilename } = get(vocabularyStore);
+		const vocabFile = selectedFilename || selectedUploadFile;
+		const domainFile = selectedDomainFilename || selectedDomainFile;
+
+		if (!domainFile) {
+			syncMessage = '도메인 파일을 선택하세요.';
+			return;
+		}
+
+		isSubmitting = true;
+		syncMessage = '';
+		error = '';
+		successMessage = '';
+
+		try {
+			const response = await fetch('/api/vocabulary/sync-domain', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					vocabularyFilename: vocabFile,
+					domainFilename: domainFile
+				})
+			});
+			const result: ApiResponse = await response.json();
+			if (response.ok && result.success) {
+				successMessage =
+					(result.message as string) ||
+					`동기화 완료 (matched: ${(result.data as Record<string, unknown>)?.matched})`;
+				syncMessage = '';
+				await loadFiles();
+				dispatch('change');
+			} else {
+				error = result.error || '동기화에 실패했습니다.';
+			}
+		} catch (syncError) {
+			console.error('동기화 오류:', syncError);
+			error = '동기화 중 오류가 발생했습니다.';
+		} finally {
+			isSubmitting = false;
 		}
 	}
 
@@ -211,6 +288,11 @@
 		renameValue = '';
 	}
 
+	function handleDomainFileSelect(file: string) {
+		selectedDomainFile = file;
+		vocabularyStore.update((state) => ({ ...state, selectedDomainFilename: file }));
+	}
+
 	function handleClose() {
 		error = '';
 		successMessage = '';
@@ -229,6 +311,8 @@
 	async function handleUploadSuccess(detail: UploadSuccessDetail) {
 		const { result } = detail;
 		successMessage = result.message || '업로드가 완료되었습니다.';
+		// 파일 목록 새로고침 (약간의 지연을 두어 서버가 파일을 완전히 처리할 시간을 줌)
+		await new Promise((resolve) => setTimeout(resolve, 300));
 		await loadFiles();
 		dispatch('change');
 	}
@@ -258,7 +342,17 @@
 				showSystemFiles = settings.showVocabularySystemFiles;
 			});
 			loadFiles();
-			return unsubscribe;
+			// 도메인 파일 로드 및 스토어 동기화
+			const unsubscribeDomain = vocabularyStore.subscribe((state) => {
+				if (state.selectedDomainFilename) {
+					selectedDomainFile = state.selectedDomainFilename;
+				}
+			});
+			loadDomainFiles();
+			return () => {
+				unsubscribe();
+				unsubscribeDomain();
+			};
 		}
 	});
 
@@ -344,6 +438,46 @@
 				{#if activeTab === 'files'}
 					<!-- 파일 목록 탭 -->
 					<div class="space-y-6">
+						<!-- 도메인 파일 매핑 -->
+						<div class="rounded-lg border border-gray-200 bg-white/70 p-4">
+							<div class="mb-3 flex items-center justify-between">
+								<div>
+									<h3 class="text-sm font-semibold text-gray-800">도메인 파일 매핑</h3>
+									<p class="text-xs text-gray-500">도메인분류명 ↔ 도메인그룹 동기화</p>
+								</div>
+								<button
+									onclick={handleDomainSync}
+									class="rounded-md bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+									disabled={isSubmitting || isDomainLoading}
+								>
+									{isSubmitting ? '동기화 중...' : '동기화'}
+								</button>
+							</div>
+							<div class="space-y-2">
+								<label class="block text-xs font-medium text-gray-700" for="domainFileSelect">
+									매핑할 도메인 파일
+								</label>
+								<select
+									id="domainFileSelect"
+									class="w-full rounded-md border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+									disabled={isDomainLoading}
+									bind:value={selectedDomainFile}
+									onchange={(e) => handleDomainFileSelect((e.target as HTMLSelectElement).value)}
+								>
+									{#if domainFiles.length === 0}
+										<option value="domain.json">domain.json</option>
+									{:else}
+										{#each domainFiles as file}
+											<option value={file}>{file}</option>
+										{/each}
+									{/if}
+								</select>
+								{#if syncMessage}
+									<p class="text-xs text-gray-600">{syncMessage}</p>
+								{/if}
+							</div>
+						</div>
+
 						<!-- Create New File -->
 						<div class="rounded-lg bg-gray-50 p-4">
 							<h3 class="mb-3 text-sm font-medium text-gray-700">새 파일 생성</h3>

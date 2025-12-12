@@ -3,8 +3,8 @@
 
 <!-- 페이지 헤드 설정 -->
 <svelte:head>
-	<title>데이터 관리 시스템</title>
-	<meta name="description" content="데이터 관리 시스템" />
+	<title>데이터 관리</title>
+	<meta name="description" content="데이터를 관리하고 검색하세요." />
 </svelte:head>
 
 <div class="overflow-hidden">
@@ -80,17 +80,13 @@
 	<section class="bg-gray-50 py-20 sm:py-32">
 		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 			<div class="mx-auto max-w-2xl text-center">
-				<h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-					주요 기능
-				</h2>
+				<h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">주요 기능</h2>
 				<p class="mt-4 text-lg leading-8 text-gray-600">
 					데이터 관리 시스템은 다음과 같은 핵심 기능을 통해 사용자의 데이터 관리 효율성을
 					극대화합니다.
 				</p>
 			</div>
-			<div
-				class="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none"
-			>
+			<div class="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
 				<dl class="grid max-w-xl grid-cols-1 gap-x-8 gap-y-16 lg:max-w-none lg:grid-cols-3">
 					<div class="flex flex-col">
 						<dt class="flex items-center gap-x-3 text-base font-semibold leading-7 text-gray-900">

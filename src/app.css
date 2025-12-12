@@ -124,7 +124,7 @@
 
 	/* 입력 필드 개선 */
 	.input {
-		@apply block w-full rounded-md border border-gray-400 bg-white px-3 py-2 text-gray-900 placeholder-gray-600 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600;
+		@apply block w-full rounded-md border border-gray-400 bg-white px-3 py-2 text-gray-900 placeholder-gray-400 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600;
 	}
 
 	.input:disabled {
@@ -133,6 +133,39 @@
 
 	.input-error {
 		@apply border-red-500 focus:border-red-600 focus:ring-red-600;
+	}
+
+	/* datalist 화살표 제거 */
+	input[list]::-webkit-calendar-picker-indicator {
+		display: none !important;
+		opacity: 0;
+		pointer-events: none;
+		position: absolute;
+		width: 0;
+		height: 0;
+	}
+
+	input[list]::-webkit-list-button {
+		display: none !important;
+		opacity: 0;
+		pointer-events: none;
+		position: absolute;
+		width: 0;
+		height: 0;
+	}
+
+	input[list] {
+		appearance: none !important;
+		-webkit-appearance: none !important;
+		-moz-appearance: textfield !important;
+	}
+
+	/* Chrome/Edge에서 datalist 화살표 제거 */
+	input[list]::-webkit-inner-spin-button,
+	input[list]::-webkit-outer-spin-button {
+		display: none !important;
+		-webkit-appearance: none !important;
+		margin: 0;
 	}
 
 	/* 링크 개선 */

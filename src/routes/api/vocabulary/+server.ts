@@ -20,6 +20,7 @@ export async function GET({ url }: RequestEvent) {
 		const sortBy = url.searchParams.get('sortBy') || 'standardName';
 		const sortOrder = url.searchParams.get('sortOrder') || 'asc';
 		const filter = url.searchParams.get('filter'); // 중복 필터링 파라미터 추가
+		const unmappedDomain = url.searchParams.get('unmappedDomain') === 'true';
 		const filename = url.searchParams.get('filename') || undefined; // 파일명 파라미터 추가
 
 		// 페이지네이션 유효성 검증
@@ -75,7 +76,7 @@ export async function GET({ url }: RequestEvent) {
 			}
 		}));
 
-		// 세분화된 중복 필터링 적용
+		// 세분화된 중복/미매핑 필터링 적용
 		let filteredEntries = entriesWithDuplicateInfo;
 		if (filter && filter.startsWith('duplicates:')) {
 			// filter=duplicates:standardName,abbreviation 형태 파싱
@@ -102,6 +103,13 @@ export async function GET({ url }: RequestEvent) {
 					(entry.duplicateInfo.standardName ||
 						entry.duplicateInfo.abbreviation ||
 						entry.duplicateInfo.englishName)
+			);
+		}
+
+		// 도메인 미매핑 필터
+		if (unmappedDomain) {
+			filteredEntries = filteredEntries.filter(
+				(entry) => !entry.domainGroup || entry.isDomainCategoryMapped === false
 			);
 		}
 
@@ -271,6 +279,9 @@ export async function POST({ request, url }: RequestEvent) {
 			abbreviation: newEntry.abbreviation,
 			englishName: newEntry.englishName,
 			description: newEntry.description || '',
+			domainCategory: newEntry.domainCategory || undefined,
+			domainGroup: newEntry.domainGroup || undefined,
+			isDomainCategoryMapped: newEntry.isDomainCategoryMapped ?? false,
 			createdAt: new Date().toISOString(),
 			updatedAt: new Date().toISOString()
 		};
@@ -337,6 +348,7 @@ export async function PUT({ request, url }: RequestEvent) {
 		vocabularyData.entries[entryIndex] = {
 			...vocabularyData.entries[entryIndex],
 			...updatedEntry,
+			isDomainCategoryMapped: updatedEntry.isDomainCategoryMapped ?? false,
 			updatedAt: new Date().toISOString()
 		};
 

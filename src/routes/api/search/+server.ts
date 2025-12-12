@@ -22,6 +22,7 @@ export async function GET({ url }: RequestEvent) {
 		const limit = parseInt(url.searchParams.get('limit') || '50');
 		const exact = url.searchParams.get('exact') === 'true';
 		const filter = url.searchParams.get('filter'); // 중복 필터링 파라미터 추가
+		const unmappedDomain = url.searchParams.get('unmappedDomain') === 'true';
 		const filename = url.searchParams.get('filename') || undefined; // 파일명 파라미터 추가
 
 		// 검색어 유효성 검증 및 정제
@@ -116,6 +117,12 @@ export async function GET({ url }: RequestEvent) {
 						entry.duplicateInfo.abbreviation ||
 						entry.duplicateInfo.englishName);
 				if (!hasDuplicate) return false;
+			}
+
+			// 도메인 미매핑 필터
+			if (unmappedDomain) {
+				const isUnmapped = entry.isDomainCategoryMapped === false || !entry.domainGroup;
+				if (!isUnmapped) return false;
 			}
 
 			const searchTargets: string[] = [];

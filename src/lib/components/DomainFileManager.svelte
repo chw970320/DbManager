@@ -69,7 +69,13 @@
 	async function loadFiles() {
 		isLoading = true;
 		try {
-			const response = await fetch('/api/domain/files');
+			// 캐시를 무시하여 최신 파일 목록을 가져옴
+			const response = await fetch('/api/domain/files', {
+				cache: 'no-store',
+				headers: {
+					'Cache-Control': 'no-cache'
+				}
+			});
 			const result: ApiResponse = await response.json();
 			if (result.success && Array.isArray(result.data)) {
 				allFiles = result.data as string[];
@@ -229,6 +235,8 @@
 	async function handleUploadSuccess(detail: UploadSuccessDetail) {
 		const { result } = detail;
 		successMessage = result.message || '업로드가 완료되었습니다.';
+		// 파일 목록 새로고침 (약간의 지연을 두어 서버가 파일을 완전히 처리할 시간을 줌)
+		await new Promise((resolve) => setTimeout(resolve, 300));
 		await loadFiles();
 		dispatch('change');
 	}

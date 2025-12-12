@@ -200,10 +200,10 @@
 	onclick={handleBackgroundClick}
 >
 	<div
-		class="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl"
+		class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl"
 		onclick={(e) => e.stopPropagation()}
 	>
-		<div class="mb-4 flex items-center justify-between">
+		<div class="flex flex-shrink-0 items-center justify-between border-b p-6">
 			<h2 class="text-xl font-bold text-gray-900">도메인 수정</h2>
 			<button
 				onclick={handleCancel}
@@ -221,251 +221,14 @@
 			</button>
 		</div>
 
-		<!-- 서버 에러 메시지 -->
-		{#if serverError}
-			<div class="bg-error mb-4 rounded-md p-3">
-				<div class="flex items-center">
-					<svg
-						class="mr-2 h-5 w-5 text-red-700"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-						/>
-					</svg>
-					<p class="text-error text-sm font-medium">{serverError}</p>
-				</div>
-			</div>
-		{/if}
-
-		<form
-			onsubmit={(e) => {
-				e.preventDefault();
-				handleSave();
-			}}
-			class="space-y-4"
-		>
-			<!-- 필수 필드 섹션 -->
-			<div class="space-y-4 border-b border-gray-200 pb-4">
-				<h3 class="text-sm font-semibold text-gray-700">필수 정보</h3>
-
-				<!-- 도메인그룹 -->
-				<div>
-					<label for="domainGroup" class="mb-1 block text-sm font-medium text-gray-900">
-						도메인그룹 <span class="text-red-700">*</span>
-					</label>
-					<input
-						id="domainGroup"
-						type="text"
-						bind:value={formData.domainGroup}
-						placeholder="예: 공통표준도메인그룹명"
-						class="input"
-						class:input-error={errors.domainGroup}
-						disabled={isSubmitting}
-					/>
-					{#if errors.domainGroup}
-						<p class="text-error mt-1 text-sm">{errors.domainGroup}</p>
-					{/if}
-				</div>
-
-				<!-- 도메인 분류명 -->
-				<div>
-					<label for="domainCategory" class="mb-1 block text-sm font-medium text-gray-900">
-						도메인 분류명 <span class="text-red-700">*</span>
-					</label>
-					<input
-						id="domainCategory"
-						type="text"
-						bind:value={formData.domainCategory}
-						placeholder="예: 공통표준도메인분류명"
-						class="input"
-						class:input-error={errors.domainCategory}
-						disabled={isSubmitting}
-					/>
-					{#if errors.domainCategory}
-						<p class="text-error mt-1 text-sm">{errors.domainCategory}</p>
-					{/if}
-				</div>
-
-				<!-- 표준 도메인명 -->
-				<div>
-					<label for="standardDomainName" class="mb-1 block text-sm font-medium text-gray-900">
-						표준 도메인명 <span class="text-red-700">*</span>
-					</label>
-					<input
-						id="standardDomainName"
-						type="text"
-						bind:value={formData.standardDomainName}
-						placeholder="예: 공통표준도메인명"
-						class="input"
-						class:input-error={errors.standardDomainName}
-						disabled={isSubmitting}
-					/>
-					{#if errors.standardDomainName}
-						<p class="text-error mt-1 text-sm">{errors.standardDomainName}</p>
-					{/if}
-				</div>
-
-				<!-- 물리 데이터타입 -->
-				<div>
-					<label for="physicalDataType" class="mb-1 block text-sm font-medium text-gray-900">
-						물리 데이터타입 <span class="text-red-700">*</span>
-					</label>
-					<input
-						id="physicalDataType"
-						type="text"
-						bind:value={formData.physicalDataType}
-						placeholder="예: VARCHAR, NUMBER 등"
-						class="input"
-						class:input-error={errors.physicalDataType}
-						disabled={isSubmitting}
-					/>
-					{#if errors.physicalDataType}
-						<p class="text-error mt-1 text-sm">{errors.physicalDataType}</p>
-					{/if}
-				</div>
-			</div>
-
-			<!-- 선택 필드 섹션 -->
-			<div class="space-y-4 border-b border-gray-200 pb-4 pt-4">
-				<h3 class="text-sm font-semibold text-gray-700">데이터 타입 정보</h3>
-
-				<!-- 데이터 길이 -->
-				<div>
-					<label for="dataLength" class="mb-1 block text-sm font-medium text-gray-900">
-						데이터 길이
-					</label>
-					<input
-						id="dataLength"
-						type="text"
-						bind:value={formData.dataLength}
-						placeholder="예: 255"
-						class="input"
-						disabled={isSubmitting}
-					/>
-				</div>
-
-				<!-- 소수점자리수 -->
-				<div>
-					<label for="decimalPlaces" class="mb-1 block text-sm font-medium text-gray-900">
-						소수점자리수
-					</label>
-					<input
-						id="decimalPlaces"
-						type="text"
-						bind:value={formData.decimalPlaces}
-						placeholder="예: 2"
-						class="input"
-						disabled={isSubmitting}
-					/>
-				</div>
-
-				<!-- 측정단위 -->
-				<div>
-					<label for="measurementUnit" class="mb-1 block text-sm font-medium text-gray-900">
-						측정단위
-					</label>
-					<input
-						id="measurementUnit"
-						type="text"
-						bind:value={formData.measurementUnit}
-						placeholder="예: kg, m 등"
-						class="input"
-						disabled={isSubmitting}
-					/>
-				</div>
-			</div>
-
-			<!-- 추가 정보 섹션 -->
-			<div class="space-y-4 pt-4">
-				<h3 class="text-sm font-semibold text-gray-700">추가 정보</h3>
-
-				<!-- 재정차수 -->
-				<div>
-					<label for="revision" class="mb-1 block text-sm font-medium text-gray-900"> 재정차수 </label>
-					<input
-						id="revision"
-						type="text"
-						bind:value={formData.revision}
-						placeholder="예: 1"
-						class="input"
-						disabled={isSubmitting}
-					/>
-				</div>
-
-				<!-- 설명 -->
-				<div>
-					<label for="description" class="mb-1 block text-sm font-medium text-gray-900"> 설명 </label>
-					<textarea
-						id="description"
-						bind:value={formData.description}
-						placeholder="도메인에 대한 상세 설명을 입력하세요"
-						rows="3"
-						class="input resize-none"
-						disabled={isSubmitting}
-					></textarea>
-				</div>
-
-				<!-- 저장 형식 -->
-				<div>
-					<label for="storageFormat" class="mb-1 block text-sm font-medium text-gray-900">
-						저장 형식
-					</label>
-					<input
-						id="storageFormat"
-						type="text"
-						bind:value={formData.storageFormat}
-						placeholder="예: YYYY-MM-DD"
-						class="input"
-						disabled={isSubmitting}
-					/>
-				</div>
-
-				<!-- 표현 형식 -->
-				<div>
-					<label for="displayFormat" class="mb-1 block text-sm font-medium text-gray-900">
-						표현 형식
-					</label>
-					<input
-						id="displayFormat"
-						type="text"
-						bind:value={formData.displayFormat}
-						placeholder="예: YYYY년 MM월 DD일"
-						class="input"
-						disabled={isSubmitting}
-					/>
-				</div>
-
-				<!-- 허용값 -->
-				<div>
-					<label for="allowedValues" class="mb-1 block text-sm font-medium text-gray-900"> 허용값 </label>
-					<textarea
-						id="allowedValues"
-						bind:value={formData.allowedValues}
-						placeholder="예: Y, N 또는 값1, 값2, 값3"
-						rows="2"
-						class="input resize-none"
-						disabled={isSubmitting}
-					></textarea>
-				</div>
-			</div>
-
-			<!-- 버튼 그룹 -->
-			<div class="flex justify-between border-t border-gray-200 pt-4">
-				{#if isEditMode && entry.id}
-					<button
-						type="button"
-						onclick={handleDelete}
-						class="group inline-flex items-center space-x-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 shadow-sm transition-all duration-200 hover:border-red-400 hover:bg-red-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-red-300 disabled:hover:bg-red-50 disabled:hover:shadow-sm"
-						disabled={isSubmitting}
-					>
+		<!-- 스크롤 가능한 내부 컨텐츠 -->
+		<div class="flex-1 overflow-y-auto p-6">
+			<!-- 서버 에러 메시지 -->
+			{#if serverError}
+				<div class="bg-error mb-4 rounded-md p-3">
+					<div class="flex items-center">
 						<svg
-							class="h-4 w-4 transition-transform duration-200 group-hover:scale-110"
+							class="mr-2 h-5 w-5 text-red-700"
 							fill="none"
 							stroke="currentColor"
 							viewBox="0 0 24 24"
@@ -474,37 +237,282 @@
 								stroke-linecap="round"
 								stroke-linejoin="round"
 								stroke-width="2"
-								d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+								d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
 							/>
 						</svg>
-						<span>삭제</span>
-					</button>
-				{:else}
-					<div></div>
-				{/if}
-				<div class="flex space-x-3">
-					<button
-						type="button"
-						onclick={handleCancel}
-						class="btn btn-secondary"
-						disabled={isSubmitting}
-					>
-						취소
-					</button>
-					<button
-						type="submit"
-						class="btn btn-primary disabled:cursor-not-allowed disabled:opacity-50"
-						disabled={!isFormValid() || isSubmitting}
-					>
-						{#if isSubmitting}
-							저장 중...
-						{:else}
-							수정
-						{/if}
-					</button>
+						<p class="text-error text-sm font-medium">{serverError}</p>
+					</div>
 				</div>
-			</div>
-		</form>
+			{/if}
+
+			<form
+				onsubmit={(e) => {
+					e.preventDefault();
+					handleSave();
+				}}
+				class="space-y-4"
+			>
+				<!-- 필수 필드 섹션 -->
+				<div class="space-y-4 border-b border-gray-200 pb-4">
+					<h3 class="text-sm font-semibold text-gray-700">필수 정보</h3>
+
+					<!-- 도메인그룹 -->
+					<div>
+						<label for="domainGroup" class="mb-1 block text-sm font-medium text-gray-900">
+							도메인그룹 <span class="text-red-700">*</span>
+						</label>
+						<input
+							id="domainGroup"
+							type="text"
+							bind:value={formData.domainGroup}
+							placeholder="예: 공통표준도메인그룹명"
+							class="input"
+							class:input-error={errors.domainGroup}
+							disabled={isSubmitting}
+						/>
+						{#if errors.domainGroup}
+							<p class="text-error mt-1 text-sm">{errors.domainGroup}</p>
+						{/if}
+					</div>
+
+					<!-- 도메인 분류명 -->
+					<div>
+						<label for="domainCategory" class="mb-1 block text-sm font-medium text-gray-900">
+							도메인 분류명 <span class="text-red-700">*</span>
+						</label>
+						<input
+							id="domainCategory"
+							type="text"
+							bind:value={formData.domainCategory}
+							placeholder="예: 공통표준도메인분류명"
+							class="input"
+							class:input-error={errors.domainCategory}
+							disabled={isSubmitting}
+						/>
+						{#if errors.domainCategory}
+							<p class="text-error mt-1 text-sm">{errors.domainCategory}</p>
+						{/if}
+					</div>
+
+					<!-- 표준 도메인명 -->
+					<div>
+						<label for="standardDomainName" class="mb-1 block text-sm font-medium text-gray-900">
+							표준 도메인명 <span class="text-red-700">*</span>
+						</label>
+						<input
+							id="standardDomainName"
+							type="text"
+							bind:value={formData.standardDomainName}
+							placeholder="예: 공통표준도메인명"
+							class="input"
+							class:input-error={errors.standardDomainName}
+							disabled={isSubmitting}
+						/>
+						{#if errors.standardDomainName}
+							<p class="text-error mt-1 text-sm">{errors.standardDomainName}</p>
+						{/if}
+					</div>
+
+					<!-- 물리 데이터타입 -->
+					<div>
+						<label for="physicalDataType" class="mb-1 block text-sm font-medium text-gray-900">
+							물리 데이터타입 <span class="text-red-700">*</span>
+						</label>
+						<input
+							id="physicalDataType"
+							type="text"
+							bind:value={formData.physicalDataType}
+							placeholder="예: VARCHAR, NUMBER 등"
+							class="input"
+							class:input-error={errors.physicalDataType}
+							disabled={isSubmitting}
+						/>
+						{#if errors.physicalDataType}
+							<p class="text-error mt-1 text-sm">{errors.physicalDataType}</p>
+						{/if}
+					</div>
+				</div>
+
+				<!-- 선택 필드 섹션 -->
+				<div class="space-y-4 border-b border-gray-200 pb-4 pt-4">
+					<h3 class="text-sm font-semibold text-gray-700">데이터 타입 정보</h3>
+
+					<!-- 데이터 길이 -->
+					<div>
+						<label for="dataLength" class="mb-1 block text-sm font-medium text-gray-900">
+							데이터 길이
+						</label>
+						<input
+							id="dataLength"
+							type="text"
+							bind:value={formData.dataLength}
+							placeholder="예: 255"
+							class="input"
+							disabled={isSubmitting}
+						/>
+					</div>
+
+					<!-- 소수점자리수 -->
+					<div>
+						<label for="decimalPlaces" class="mb-1 block text-sm font-medium text-gray-900">
+							소수점자리수
+						</label>
+						<input
+							id="decimalPlaces"
+							type="text"
+							bind:value={formData.decimalPlaces}
+							placeholder="예: 2"
+							class="input"
+							disabled={isSubmitting}
+						/>
+					</div>
+
+					<!-- 측정단위 -->
+					<div>
+						<label for="measurementUnit" class="mb-1 block text-sm font-medium text-gray-900">
+							측정단위
+						</label>
+						<input
+							id="measurementUnit"
+							type="text"
+							bind:value={formData.measurementUnit}
+							placeholder="예: kg, m 등"
+							class="input"
+							disabled={isSubmitting}
+						/>
+					</div>
+				</div>
+
+				<!-- 추가 정보 섹션 -->
+				<div class="space-y-4 pt-4">
+					<h3 class="text-sm font-semibold text-gray-700">추가 정보</h3>
+
+					<!-- 재정차수 -->
+					<div>
+						<label for="revision" class="mb-1 block text-sm font-medium text-gray-900">
+							재정차수
+						</label>
+						<input
+							id="revision"
+							type="text"
+							bind:value={formData.revision}
+							placeholder="예: 1"
+							class="input"
+							disabled={isSubmitting}
+						/>
+					</div>
+
+					<!-- 설명 -->
+					<div>
+						<label for="description" class="mb-1 block text-sm font-medium text-gray-900">
+							설명
+						</label>
+						<textarea
+							id="description"
+							bind:value={formData.description}
+							placeholder="도메인에 대한 상세 설명을 입력하세요"
+							rows="3"
+							class="input resize-none"
+							disabled={isSubmitting}
+						></textarea>
+					</div>
+
+					<!-- 저장 형식 -->
+					<div>
+						<label for="storageFormat" class="mb-1 block text-sm font-medium text-gray-900">
+							저장 형식
+						</label>
+						<input
+							id="storageFormat"
+							type="text"
+							bind:value={formData.storageFormat}
+							placeholder="예: YYYY-MM-DD"
+							class="input"
+							disabled={isSubmitting}
+						/>
+					</div>
+
+					<!-- 표현 형식 -->
+					<div>
+						<label for="displayFormat" class="mb-1 block text-sm font-medium text-gray-900">
+							표현 형식
+						</label>
+						<input
+							id="displayFormat"
+							type="text"
+							bind:value={formData.displayFormat}
+							placeholder="예: YYYY년 MM월 DD일"
+							class="input"
+							disabled={isSubmitting}
+						/>
+					</div>
+
+					<!-- 허용값 -->
+					<div>
+						<label for="allowedValues" class="mb-1 block text-sm font-medium text-gray-900">
+							허용값
+						</label>
+						<textarea
+							id="allowedValues"
+							bind:value={formData.allowedValues}
+							placeholder="예: Y, N 또는 값1, 값2, 값3"
+							rows="2"
+							class="input resize-none"
+							disabled={isSubmitting}
+						></textarea>
+					</div>
+				</div>
+
+				<!-- 버튼 그룹 -->
+				<div class="flex justify-between border-t border-gray-200 pt-4">
+					{#if isEditMode && entry.id}
+						<button
+							type="button"
+							onclick={handleDelete}
+							class="group inline-flex items-center space-x-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 shadow-sm transition-all duration-200 hover:border-red-400 hover:bg-red-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-red-300 disabled:hover:bg-red-50 disabled:hover:shadow-sm"
+							disabled={isSubmitting}
+						>
+							<svg
+								class="h-4 w-4 transition-transform duration-200 group-hover:scale-110"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+								/>
+							</svg>
+							<span>삭제</span>
+						</button>
+					{:else}
+						<div></div>
+					{/if}
+					<div class="flex space-x-3">
+						<button
+							type="button"
+							onclick={handleCancel}
+							class="btn btn-secondary"
+							disabled={isSubmitting}
+						>
+							취소
+						</button>
+						<button
+							type="submit"
+							class="btn btn-primary disabled:cursor-not-allowed disabled:opacity-50"
+							disabled={!isFormValid() || isSubmitting}
+						>
+							{#if isSubmitting}
+								저장 중...
+							{:else}
+								수정
+							{/if}
+						</button>
+					</div>
+				</div>
+			</form>
+		</div>
 	</div>
 </div>
-

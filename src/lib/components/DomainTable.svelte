@@ -68,19 +68,98 @@
 	}
 
 	// 테이블 컬럼 정의 (사용자 요구사항에 맞게 구성)
-	const columns = [
-		{ key: 'revision', label: '제정차수', sortable: false, width: 'w-20' },
-		{ key: 'domainGroup', label: '공통표준도메인그룹명', sortable: true, width: 'w-32' },
-		{ key: 'domainCategory', label: '공통표준도메인분류명', sortable: true, width: 'w-32' },
-		{ key: 'standardDomainName', label: '공통표준도메인명', sortable: true, width: 'w-40' },
-		{ key: 'description', label: '공통표준도메인설명', sortable: false, width: 'w-40' },
-		{ key: 'physicalDataType', label: '데이터타입', sortable: true, width: 'w-24' },
-		{ key: 'dataLength', label: '데이터길이', sortable: false, width: 'w-20' },
-		{ key: 'decimalPlaces', label: '데이터소수점길이', sortable: false, width: 'w-24' },
-		{ key: 'storageFormat', label: '저장 형식', sortable: false, width: 'w-24' },
-		{ key: 'displayFormat', label: '표현 형식', sortable: false, width: 'w-24' },
-		{ key: 'measurementUnit', label: '단위', sortable: false, width: 'w-20' },
-		{ key: 'allowedValues', label: '허용값', sortable: false, width: 'w-32' }
+	type ColumnAlignment = 'left' | 'center' | 'right';
+	const columns: Array<{
+		key: string;
+		label: string;
+		sortable: boolean;
+		width: string;
+		align: ColumnAlignment;
+	}> = [
+		{
+			key: 'revision',
+			label: '제정차수',
+			sortable: false,
+			width: 'min-w-[100px]',
+			align: 'center'
+		},
+		{
+			key: 'domainGroup',
+			label: '도메인그룹명',
+			sortable: true,
+			width: 'min-w-[150px]',
+			align: 'left' as const
+		},
+		{
+			key: 'domainCategory',
+			label: '도메인분류명',
+			sortable: true,
+			width: 'min-w-[150px]',
+			align: 'left' as const
+		},
+		{
+			key: 'standardDomainName',
+			label: '도메인명',
+			sortable: true,
+			width: 'min-w-[150px]',
+			align: 'left'
+		},
+		{
+			key: 'description',
+			label: '도메인설명',
+			sortable: false,
+			width: 'min-w-[300px]',
+			align: 'left'
+		},
+		{
+			key: 'physicalDataType',
+			label: '데이터타입',
+			sortable: true,
+			width: 'min-w-[150px]',
+			align: 'left'
+		},
+		{
+			key: 'dataLength',
+			label: '데이터길이',
+			sortable: false,
+			width: 'min-w-[100px]',
+			align: 'center'
+		},
+		{
+			key: 'decimalPlaces',
+			label: '데이터소수점길이',
+			sortable: false,
+			width: 'min-w-[100px]',
+			align: 'center'
+		},
+		{
+			key: 'storageFormat',
+			label: '저장 형식',
+			sortable: false,
+			width: 'min-w-[150px]',
+			align: 'left'
+		},
+		{
+			key: 'displayFormat',
+			label: '표현 형식',
+			sortable: false,
+			width: 'min-w-[150px]',
+			align: 'left'
+		},
+		{
+			key: 'measurementUnit',
+			label: '단위',
+			sortable: false,
+			width: 'min-w-[150px]',
+			align: 'center'
+		},
+		{
+			key: 'allowedValues',
+			label: '허용값',
+			sortable: false,
+			width: 'min-w-[150px]',
+			align: 'left'
+		}
 	];
 
 	// 파생 상태 (페이지네이션)
@@ -104,7 +183,6 @@
 			onpagechange({ page });
 		}
 	}
-
 
 	/**
 	 * 검색어 하이라이팅
@@ -203,7 +281,7 @@
 	</div>
 
 	<!-- 테이블 컨테이너 (가로 스크롤 지원) -->
-	<div class="overflow-x-auto">
+	<div>
 		<table class="min-w-full divide-y divide-gray-200">
 			<!-- 테이블 헤더 -->
 			<thead class="bg-gray-100">
@@ -211,9 +289,12 @@
 					{#each columns as column (column.key)}
 						<th
 							scope="col"
-							class="whitespace-nowrap px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-700 {column.width} {column.sortable
-								? 'cursor-pointer hover:bg-gray-200'
-								: ''}"
+							class=" whitespace-nowrap px-6 py-3 text-xs font-medium uppercase tracking-wider text-gray-700 {column.width} {column.align ===
+							'center'
+								? 'text-center'
+								: column.align === 'right'
+									? 'text-right'
+									: 'text-left'} {column.sortable ? 'cursor-pointer hover:bg-gray-200' : ''}"
 							class:bg-gray-200={sortColumn === column.key}
 							onclick={() => column.sortable && handleSort(column.key)}
 							onkeydown={(e) => {
@@ -226,7 +307,7 @@
 							role={column.sortable ? 'button' : 'columnheader'}
 							aria-label={column.sortable ? `${column.label}로 정렬` : column.label}
 						>
-							<div class="flex items-center space-x-1">
+							<div class="flex items-center justify-center space-x-1">
 								<span>{column.label}</span>
 								{#if column.sortable}
 									<svg
@@ -316,7 +397,7 @@
 					<!-- 데이터 행 -->
 					{#each entries as entry (entry.id)}
 						<tr
-							class="border-t border-gray-300 cursor-pointer transition-colors hover:bg-blue-50"
+							class="cursor-pointer border-t border-gray-300 transition-colors hover:bg-blue-50"
 							onclick={(e: MouseEvent) => handleRowClick(entry, e)}
 							role="button"
 							tabindex="0"
@@ -329,9 +410,16 @@
 							aria-label="항목 클릭하여 상세 정보 보기"
 						>
 							{#each columns as column (column.key)}
-								<td class="whitespace-normal px-6 py-4 text-sm text-gray-700 break-words">
+								<td
+									class="whitespace-normal break-words px-6 py-4 text-sm text-gray-700 {column.align ===
+									'center'
+										? 'text-center'
+										: column.align === 'right'
+											? 'text-right'
+											: 'text-left'}"
+								>
 									{#if column.key === 'dataLength' || column.key === 'decimalPlaces'}
-										<span class="block text-center">
+										<span class="block">
 											{@html sanitizeHtml(
 												highlightSearchTerm(
 													formatValue(entry[column.key as keyof DomainEntry]),

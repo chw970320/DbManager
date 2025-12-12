@@ -41,6 +41,7 @@
 		abbreviation: false,
 		englishName: false
 	}); // 세부 중복 필터 상태
+	let unmappedDomainOnly = $state(false);
 
 	// 파일 관리 상태
 	let vocabularyFiles = $state<string[]>([]);
@@ -75,7 +76,11 @@
 							vocabularyFiles.length > 0
 						) {
 							selectedFilename = vocabularyFiles[0];
-							vocabularyStore.set({ selectedFilename: vocabularyFiles[0] });
+							const current = get(vocabularyStore);
+							vocabularyStore.set({
+								selectedFilename: vocabularyFiles[0],
+								selectedDomainFilename: current.selectedDomainFilename || 'domain.json'
+							});
 							if (browser) {
 								loadVocabularyData();
 							}
@@ -200,6 +205,9 @@
 			if (filterParam) {
 				params.set('filter', filterParam);
 			}
+			if (unmappedDomainOnly) {
+				params.set('unmappedDomain', 'true');
+			}
 
 			const response = await fetch(`/api/vocabulary?${params}`);
 			const result: ApiResponse = await response.json();
@@ -268,6 +276,9 @@
 			const filterParam = getDuplicateFilterParam();
 			if (filterParam) {
 				params.set('filter', filterParam);
+			}
+			if (unmappedDomainOnly) {
+				params.set('unmappedDomain', 'true');
 			}
 
 			const response = await fetch(`/api/search?${params}`);
@@ -368,6 +379,18 @@
 			}
 		} catch (error) {
 			console.error('필터 변경 중 오류:', error);
+		}
+	}
+
+	/**
+	 * 도메인 미매핑 필터 변경
+	 */
+	async function handleUnmappedToggle() {
+		currentPage = 1;
+		if (searchQuery) {
+			await executeSearch();
+		} else {
+			await loadVocabularyData();
 		}
 	}
 
@@ -580,6 +603,9 @@
 			if (filterParam) {
 				params.set('filter', filterParam);
 			}
+			if (unmappedDomainOnly) {
+				params.set('unmappedDomain', 'true');
+			}
 
 			// 다운로드 API 호출
 			const response = await fetch(`/api/vocabulary/download?${params}`);
@@ -624,13 +650,15 @@
 </script>
 
 <svelte:head>
-	<title>단어집 - 모던한 단어 관리 시스템</title>
-	<meta name="description" content="AI 기반 검색으로 등록된 단어집을 빠르게 찾아보세요." />
+	<title>데이터 관리 | 단어집</title>
+	<meta name="description" content="단어집을 관리하고 검색하세요." />
 </svelte:head>
 
-<div class="relative min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 py-8">
+<div
+	class="relative min-h-screen overflow-x-hidden bg-gradient-to-br from-slate-50 via-white to-blue-50 py-8"
+>
 	<div class="mx-auto w-full px-4 sm:px-6 lg:px-8">
-		<div class="gap-8 lg:grid lg:grid-cols-[16rem_1fr]">
+		<div class="gap-8 lg:grid lg:grid-cols-[16rem_1fr] lg:items-start">
 			<!-- 좌측 고정 사이드바 (데스크탑) -->
 			<aside class="hidden h-full w-64 lg:block">
 				<div
@@ -760,7 +788,7 @@
 			{/if}
 
 			<!-- 메인 컨텐츠 -->
-			<main class="w-full">
+			<main class="w-full min-w-0 overflow-x-hidden">
 				<!-- 페이지 헤더 -->
 				<div class="mb-10">
 					<div
@@ -959,7 +987,27 @@
 					</div>
 
 					<!-- 고급 검색 옵션 -->
-					<div class="mb-4">
+					<div class="mb-4 flex flex-col space-y-4">
+						<div class="space-y-3">
+							<h3 class="text-sm font-medium text-gray-700">도메인 미매핑 필터</h3>
+
+							<!-- 도메인 미매핑 필터 -->
+							<div class="flex items-center space-x-2">
+								<input
+									type="checkbox"
+									id="unmappedDomainOnly"
+									bind:checked={unmappedDomainOnly}
+									onchange={handleUnmappedToggle}
+									class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+								/>
+								<label
+									for="unmappedDomainOnly"
+									class="cursor-pointer select-none text-sm font-medium text-gray-700"
+								>
+									도메인 미매핑
+								</label>
+							</div>
+						</div>
 						<div class="space-y-3">
 							<h3 class="text-sm font-medium text-gray-700">중복 필터</h3>
 
@@ -1072,7 +1120,7 @@
 
 				<!-- 결과 테이블 영역 -->
 				<div
-					class="rounded-2xl border border-gray-200/50 bg-white/80 p-8 shadow-sm backdrop-blur-sm"
+					class="min-w-0 rounded-2xl border border-gray-200/50 bg-white/80 p-8 shadow-sm backdrop-blur-sm"
 				>
 					<div class="mb-6 flex items-center justify-between">
 						<div>
@@ -1101,23 +1149,25 @@
 						{/if}
 					</div>
 
-					<div class="overflow-x-auto rounded-xl border border-gray-200">
-						<VocabularyTable
-							{entries}
-							{loading}
-							{searchQuery}
-							{totalCount}
-							{currentPage}
-							{totalPages}
-							{pageSize}
-							{sortColumn}
-							{sortDirection}
-							{searchField}
-							{selectedFilename}
-							onsort={handleSort}
-							onpagechange={handlePageChange}
-							onentryclick={handleEntryClick}
-						/>
+					<div class="rounded-xl border border-gray-200">
+						<div>
+							<VocabularyTable
+								{entries}
+								{loading}
+								{searchQuery}
+								{totalCount}
+								{currentPage}
+								{totalPages}
+								{pageSize}
+								{sortColumn}
+								{sortDirection}
+								{searchField}
+								{selectedFilename}
+								onsort={handleSort}
+								onpagechange={handlePageChange}
+								onentryclick={handleEntryClick}
+							/>
+						</div>
 					</div>
 				</div>
 			</main>

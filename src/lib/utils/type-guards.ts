@@ -1,0 +1,512 @@
+/**
+ * 런타임 타입 검증을 위한 타입 가드 함수들
+ * JSON 파싱 결과의 안전한 타입 검증을 제공합니다.
+ */
+
+import type {
+	VocabularyEntry,
+	VocabularyData,
+	HistoryLogEntry,
+	HistoryData,
+	ForbiddenWordEntry,
+	ForbiddenWordsData
+} from '$lib/types/vocabulary';
+import type {
+	DomainEntry,
+	DomainData,
+	DomainHistoryLogEntry,
+	DomainHistoryData
+} from '$lib/types/domain';
+import type { TermEntry, TermData, TermHistoryLogEntry, TermHistoryData } from '$lib/types/term';
+
+// ============================================================================
+// 기본 유틸리티 함수
+// ============================================================================
+
+/**
+ * 값이 객체인지 확인 (null 제외)
+ */
+function isObject(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * 값이 문자열인지 확인
+ */
+function isString(value: unknown): value is string {
+	return typeof value === 'string';
+}
+
+/**
+ * 값이 숫자인지 확인
+ */
+function isNumber(value: unknown): value is number {
+	return typeof value === 'number' && !isNaN(value);
+}
+
+/**
+ * 값이 boolean인지 확인
+ */
+function isBoolean(value: unknown): value is boolean {
+	return typeof value === 'boolean';
+}
+
+/**
+ * 값이 배열인지 확인
+ */
+function isArray(value: unknown): value is unknown[] {
+	return Array.isArray(value);
+}
+
+/**
+ * ISO 8601 날짜 문자열인지 확인 (간단한 검증)
+ */
+function isISODateString(value: unknown): value is string {
+	if (!isString(value)) return false;
+	// 간단한 ISO 8601 형식 체크
+	const isoDateRegex = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?)?$/;
+	return isoDateRegex.test(value) || !isNaN(Date.parse(value));
+}
+
+// ============================================================================
+// Vocabulary 타입 가드
+// ============================================================================
+
+/**
+ * VocabularyEntry 타입 가드
+ */
+export function isVocabularyEntry(value: unknown): value is VocabularyEntry {
+	if (!isObject(value)) return false;
+
+	// 필수 필드 검증
+	const required =
+		isString(value.id) &&
+		isString(value.standardName) &&
+		isString(value.abbreviation) &&
+		isString(value.englishName) &&
+		isString(value.description) &&
+		isString(value.createdAt) &&
+		isString(value.updatedAt);
+
+	if (!required) return false;
+
+	// 선택적 필드 검증 (존재하면 타입 체크)
+	if (value.isFormalWord !== undefined && !isBoolean(value.isFormalWord)) return false;
+	if (value.domainGroup !== undefined && !isString(value.domainGroup)) return false;
+	if (value.domainCategory !== undefined && !isString(value.domainCategory)) return false;
+	if (value.isDomainCategoryMapped !== undefined && !isBoolean(value.isDomainCategoryMapped))
+		return false;
+	if (value.source !== undefined && !isString(value.source)) return false;
+
+	// 배열 필드 검증
+	if (value.synonyms !== undefined) {
+		if (!isArray(value.synonyms) || !value.synonyms.every(isString)) return false;
+	}
+	if (value.forbiddenWords !== undefined) {
+		if (!isArray(value.forbiddenWords) || !value.forbiddenWords.every(isString)) return false;
+	}
+
+	// duplicateInfo 객체 검증
+	if (value.duplicateInfo !== undefined) {
+		if (!isObject(value.duplicateInfo)) return false;
+		const di = value.duplicateInfo;
+		if (di.standardName !== undefined && !isBoolean(di.standardName)) return false;
+		if (di.abbreviation !== undefined && !isBoolean(di.abbreviation)) return false;
+		if (di.englishName !== undefined && !isBoolean(di.englishName)) return false;
+	}
+
+	return true;
+}
+
+/**
+ * VocabularyData 타입 가드
+ */
+export function isVocabularyData(value: unknown): value is VocabularyData {
+	if (!isObject(value)) return false;
+
+	// 필수 필드 검증
+	if (!isArray(value.entries)) return false;
+	if (!isString(value.lastUpdated)) return false;
+	if (!isNumber(value.totalCount)) return false;
+
+	// entries 배열의 각 항목 검증
+	if (!value.entries.every(isVocabularyEntry)) return false;
+
+	// 선택적 필드 검증
+	if (value.mappedDomainFile !== undefined && !isString(value.mappedDomainFile)) return false;
+	if (value.mapping !== undefined) {
+		if (!isObject(value.mapping)) return false;
+		if (!isString(value.mapping.domain)) return false;
+	}
+
+	return true;
+}
+
+// ============================================================================
+// Domain 타입 가드
+// ============================================================================
+
+/**
+ * DomainEntry 타입 가드
+ */
+export function isDomainEntry(value: unknown): value is DomainEntry {
+	if (!isObject(value)) return false;
+
+	// 필수 필드 검증
+	const required =
+		isString(value.id) &&
+		isString(value.domainGroup) &&
+		isString(value.domainCategory) &&
+		isString(value.standardDomainName) &&
+		isString(value.physicalDataType) &&
+		isString(value.createdAt) &&
+		isString(value.updatedAt);
+
+	if (!required) return false;
+
+	// 선택적 필드 검증
+	if (value.dataLength !== undefined && !isString(value.dataLength)) return false;
+	if (value.decimalPlaces !== undefined && !isString(value.decimalPlaces)) return false;
+	if (value.measurementUnit !== undefined && !isString(value.measurementUnit)) return false;
+	if (value.revision !== undefined && !isString(value.revision)) return false;
+	if (value.description !== undefined && !isString(value.description)) return false;
+	if (value.storageFormat !== undefined && !isString(value.storageFormat)) return false;
+	if (value.displayFormat !== undefined && !isString(value.displayFormat)) return false;
+	if (value.allowedValues !== undefined && !isString(value.allowedValues)) return false;
+
+	return true;
+}
+
+/**
+ * DomainData 타입 가드
+ */
+export function isDomainData(value: unknown): value is DomainData {
+	if (!isObject(value)) return false;
+
+	// 필수 필드 검증
+	if (!isArray(value.entries)) return false;
+	if (!isString(value.lastUpdated)) return false;
+	if (!isNumber(value.totalCount)) return false;
+
+	// entries 배열의 각 항목 검증
+	if (!value.entries.every(isDomainEntry)) return false;
+
+	return true;
+}
+
+// ============================================================================
+// Term 타입 가드
+// ============================================================================
+
+/**
+ * TermEntry 타입 가드
+ */
+export function isTermEntry(value: unknown): value is TermEntry {
+	if (!isObject(value)) return false;
+
+	// 필수 필드 검증
+	return (
+		isString(value.id) &&
+		isString(value.termName) &&
+		isString(value.columnName) &&
+		isString(value.domainName) &&
+		isBoolean(value.isMappedTerm) &&
+		isBoolean(value.isMappedColumn) &&
+		isBoolean(value.isMappedDomain) &&
+		isString(value.createdAt) &&
+		isString(value.updatedAt)
+	);
+}
+
+/**
+ * TermData 타입 가드
+ */
+export function isTermData(value: unknown): value is TermData {
+	if (!isObject(value)) return false;
+
+	// 필수 필드 검증
+	if (!isArray(value.entries)) return false;
+	if (!isString(value.lastUpdated)) return false;
+	if (!isNumber(value.totalCount)) return false;
+
+	// entries 배열의 각 항목 검증
+	if (!value.entries.every(isTermEntry)) return false;
+
+	// 선택적 필드 검증
+	if (value.mapping !== undefined) {
+		if (!isObject(value.mapping)) return false;
+		if (!isString(value.mapping.vocabulary)) return false;
+		if (!isString(value.mapping.domain)) return false;
+	}
+
+	return true;
+}
+
+// ============================================================================
+// History 타입 가드
+// ============================================================================
+
+const VALID_ACTIONS = ['add', 'update', 'delete', 'UPLOAD_MERGE'] as const;
+
+function isValidAction(value: unknown): value is 'add' | 'update' | 'delete' | 'UPLOAD_MERGE' {
+	return isString(value) && VALID_ACTIONS.includes(value as (typeof VALID_ACTIONS)[number]);
+}
+
+/**
+ * HistoryLogEntry (Vocabulary) 타입 가드
+ */
+export function isHistoryLogEntry(value: unknown): value is HistoryLogEntry {
+	if (!isObject(value)) return false;
+
+	// 필수 필드 검증
+	const required =
+		isString(value.id) &&
+		isValidAction(value.action) &&
+		isString(value.targetId) &&
+		isString(value.targetName) &&
+		isString(value.timestamp);
+
+	if (!required) return false;
+
+	// 선택적 필드 검증
+	if (value.filename !== undefined && !isString(value.filename)) return false;
+	if (value.details !== undefined && !isObject(value.details)) return false;
+
+	return true;
+}
+
+/**
+ * HistoryData (Vocabulary) 타입 가드
+ */
+export function isHistoryData(value: unknown): value is HistoryData {
+	if (!isObject(value)) return false;
+
+	// 필수 필드 검증
+	if (!isArray(value.logs)) return false;
+	if (!isString(value.lastUpdated)) return false;
+	if (!isNumber(value.totalCount)) return false;
+
+	// logs 배열의 각 항목 검증
+	if (!value.logs.every(isHistoryLogEntry)) return false;
+
+	return true;
+}
+
+/**
+ * DomainHistoryLogEntry 타입 가드
+ */
+export function isDomainHistoryLogEntry(value: unknown): value is DomainHistoryLogEntry {
+	if (!isObject(value)) return false;
+
+	// 필수 필드 검증
+	const required =
+		isString(value.id) &&
+		isValidAction(value.action) &&
+		isString(value.targetId) &&
+		isString(value.targetName) &&
+		isString(value.timestamp);
+
+	if (!required) return false;
+
+	// 선택적 필드 검증
+	if (value.details !== undefined && !isObject(value.details)) return false;
+
+	return true;
+}
+
+/**
+ * DomainHistoryData 타입 가드
+ */
+export function isDomainHistoryData(value: unknown): value is DomainHistoryData {
+	if (!isObject(value)) return false;
+
+	// 필수 필드 검증
+	if (!isArray(value.logs)) return false;
+	if (!isString(value.lastUpdated)) return false;
+	if (!isNumber(value.totalCount)) return false;
+
+	// logs 배열의 각 항목 검증
+	if (!value.logs.every(isDomainHistoryLogEntry)) return false;
+
+	return true;
+}
+
+/**
+ * TermHistoryLogEntry 타입 가드
+ */
+export function isTermHistoryLogEntry(value: unknown): value is TermHistoryLogEntry {
+	if (!isObject(value)) return false;
+
+	// 필수 필드 검증
+	const required =
+		isString(value.id) &&
+		isValidAction(value.action) &&
+		isString(value.targetId) &&
+		isString(value.targetName) &&
+		isString(value.timestamp);
+
+	if (!required) return false;
+
+	// 선택적 필드 검증
+	if (value.filename !== undefined && !isString(value.filename)) return false;
+	if (value.details !== undefined && !isObject(value.details)) return false;
+
+	return true;
+}
+
+/**
+ * TermHistoryData 타입 가드
+ */
+export function isTermHistoryData(value: unknown): value is TermHistoryData {
+	if (!isObject(value)) return false;
+
+	// 필수 필드 검증
+	if (!isArray(value.logs)) return false;
+	if (!isString(value.lastUpdated)) return false;
+	if (!isNumber(value.totalCount)) return false;
+
+	// logs 배열의 각 항목 검증
+	if (!value.logs.every(isTermHistoryLogEntry)) return false;
+
+	return true;
+}
+
+// ============================================================================
+// ForbiddenWords 타입 가드
+// ============================================================================
+
+const VALID_FORBIDDEN_TYPES = ['standardName', 'abbreviation'] as const;
+
+function isValidForbiddenType(value: unknown): value is 'standardName' | 'abbreviation' {
+	return (
+		isString(value) &&
+		VALID_FORBIDDEN_TYPES.includes(value as (typeof VALID_FORBIDDEN_TYPES)[number])
+	);
+}
+
+/**
+ * ForbiddenWordEntry 타입 가드
+ */
+export function isForbiddenWordEntry(value: unknown): value is ForbiddenWordEntry {
+	if (!isObject(value)) return false;
+
+	// 필수 필드 검증
+	const required =
+		isString(value.id) &&
+		isString(value.keyword) &&
+		isValidForbiddenType(value.type) &&
+		isString(value.createdAt);
+
+	if (!required) return false;
+
+	// 선택적 필드 검증
+	if (value.reason !== undefined && !isString(value.reason)) return false;
+	if (value.targetFile !== undefined && !isString(value.targetFile)) return false;
+
+	return true;
+}
+
+/**
+ * ForbiddenWordsData 타입 가드
+ */
+export function isForbiddenWordsData(value: unknown): value is ForbiddenWordsData {
+	if (!isObject(value)) return false;
+
+	// 필수 필드 검증
+	if (!isArray(value.entries)) return false;
+	if (!isString(value.lastUpdated)) return false;
+	if (!isNumber(value.totalCount)) return false;
+
+	// entries 배열의 각 항목 검증
+	if (!value.entries.every(isForbiddenWordEntry)) return false;
+
+	return true;
+}
+
+// ============================================================================
+// 안전한 JSON 파싱 헬퍼
+// ============================================================================
+
+/**
+ * 타입 검증 에러 클래스
+ */
+export class TypeValidationError extends Error {
+	constructor(
+		message: string,
+		public readonly expectedType: string,
+		public readonly actualValue?: unknown
+	) {
+		super(message);
+		this.name = 'TypeValidationError';
+	}
+}
+
+/**
+ * 안전한 JSON 파싱 및 타입 검증
+ * @param jsonString - 파싱할 JSON 문자열
+ * @param typeGuard - 타입 가드 함수
+ * @param typeName - 예상 타입 이름 (에러 메시지용)
+ * @returns 검증된 데이터
+ * @throws TypeValidationError - 타입 검증 실패 시
+ */
+export function safeJsonParse<T>(
+	jsonString: string,
+	typeGuard: (value: unknown) => value is T,
+	typeName: string
+): T {
+	let parsed: unknown;
+
+	try {
+		parsed = JSON.parse(jsonString);
+	} catch (error) {
+		throw new TypeValidationError(
+			`JSON 파싱 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
+			typeName
+		);
+	}
+
+	if (!typeGuard(parsed)) {
+		throw new TypeValidationError(
+			`타입 검증 실패: ${typeName} 형식과 일치하지 않습니다.`,
+			typeName,
+			parsed
+		);
+	}
+
+	return parsed;
+}
+
+/**
+ * 안전한 request.json() 파싱 및 타입 검증
+ * @param request - Request 객체
+ * @param typeGuard - 타입 가드 함수
+ * @param typeName - 예상 타입 이름 (에러 메시지용)
+ * @returns 검증된 데이터
+ * @throws TypeValidationError - 타입 검증 실패 시
+ */
+export async function safeRequestJson<T>(
+	request: Request,
+	typeGuard: (value: unknown) => value is T,
+	typeName: string
+): Promise<T> {
+	let parsed: unknown;
+
+	try {
+		parsed = await request.json();
+	} catch (error) {
+		throw new TypeValidationError(
+			`요청 JSON 파싱 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
+			typeName
+		);
+	}
+
+	if (!typeGuard(parsed)) {
+		throw new TypeValidationError(
+			`요청 타입 검증 실패: ${typeName} 형식과 일치하지 않습니다.`,
+			typeName,
+			parsed
+		);
+	}
+
+	return parsed;
+}

@@ -1,7 +1,17 @@
 import { writeFile, readFile, mkdir, readdir, rename, unlink, stat } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join, resolve, basename } from 'path';
-import type { ForbiddenWordsData } from '$lib/types/vocabulary';
+import type { ForbiddenWordsData, VocabularyData, VocabularyEntry } from '$lib/types/vocabulary';
+import type { DomainData, DomainEntry } from '$lib/types/domain';
+import type { TermData, TermEntry } from '$lib/types/term';
+import {
+	isVocabularyData,
+	isDomainData,
+	isTermData,
+	isForbiddenWordsData,
+	safeJsonParse,
+	TypeValidationError
+} from './type-guards';
 
 // 데이터 저장 경로 설정
 const DATA_DIR = process.env.DATA_PATH || 'static/data';
@@ -248,14 +258,16 @@ export async function saveVocabularyData(
 /**
  * 저장된 단어집 데이터를 JSON 파일에서 로드
  * @param filename - 로드할 파일명 (기본값: vocabulary.json)
+ * @throws TypeValidationError - 타입 검증 실패 시
  */
 export async function loadVocabularyData(
 	filename: string = DEFAULT_VOCABULARY_FILE
-): Promise<import('../types/vocabulary.js').VocabularyData> {
+): Promise<VocabularyData> {
 	try {
 		await ensureDataDirectory(); // 마이그레이션 확인을 위해 호출
 		const dataPath = getDataPath(filename, 'vocabulary');
 
+		// 파일이 없으면 빈 데이터 반환
 		if (!existsSync(dataPath)) {
 			return {
 				entries: [],
@@ -266,6 +278,7 @@ export async function loadVocabularyData(
 
 		const jsonString = await readFile(dataPath, 'utf-8');
 
+		// 빈 파일이면 빈 데이터 반환
 		if (!jsonString.trim()) {
 			return {
 				entries: [],
@@ -274,25 +287,8 @@ export async function loadVocabularyData(
 			};
 		}
 
-		const data = JSON.parse(jsonString) as import('../types/vocabulary.js').VocabularyData;
-
-		if (!data || typeof data !== 'object') {
-			throw new Error('단어집 데이터 형식이 올바르지 않습니다.');
-		}
-
-		if (!Array.isArray(data.entries)) {
-			throw new Error('단어집 엔트리 데이터가 배열이 아닙니다.');
-		}
-
-		const validEntries = data.entries.filter((entry) => {
-			const isValid =
-				entry.id &&
-				entry.standardName &&
-				entry.abbreviation &&
-				entry.englishName &&
-				entry.createdAt;
-			return isValid;
-		});
+		// 타입 가드를 사용한 안전한 JSON 파싱
+		const data = safeJsonParse(jsonString, isVocabularyData, 'VocabularyData');
 
 		// 매핑 정보 처리 (하위 호환성 유지)
 		let mapping = data.mapping;
@@ -309,14 +305,17 @@ export async function loadVocabularyData(
 		}
 
 		return {
-			entries: validEntries,
+			entries: data.entries,
 			lastUpdated: data.lastUpdated || new Date().toISOString(),
-			totalCount: validEntries.length,
+			totalCount: data.entries.length,
 			mapping,
 			mappedDomainFile: mapping.domain // 하위 호환성 유지
 		};
 	} catch (error) {
 		console.error('단어집 데이터 로드 실패:', error);
+		if (error instanceof TypeValidationError) {
+			throw new Error(`단어집 데이터 형식 오류: ${error.message}`);
+		}
 		if (error instanceof SyntaxError) {
 			throw new Error('단어집 데이터 파일 형식이 손상되었습니다.');
 		}
@@ -542,6 +541,7 @@ export async function deleteVocabularyFile(filename: string): Promise<void> {
 
 /**
  * 금지어 데이터를 JSON 파일에서 불러오기
+ * @throws TypeValidationError - 타입 검증 실패 시
  */
 export async function loadForbiddenWordsData(): Promise<ForbiddenWordsData> {
 	try {
@@ -559,17 +559,19 @@ export async function loadForbiddenWordsData(): Promise<ForbiddenWordsData> {
 		}
 
 		const fileContent = await readFile(dataPath, 'utf-8');
-		const data: ForbiddenWordsData = JSON.parse(fileContent);
 
-		if (!data || !Array.isArray(data.entries)) {
-			throw new Error('유효하지 않은 금지어 데이터 형식입니다.');
-		}
+		// 타입 가드를 사용한 안전한 JSON 파싱
+		const data = safeJsonParse(fileContent, isForbiddenWordsData, 'ForbiddenWordsData');
 
-		data.totalCount = data.entries.length;
-
-		return data;
+		return {
+			...data,
+			totalCount: data.entries.length
+		};
 	} catch (error) {
 		console.error('금지어 데이터 로드 실패:', error);
+		if (error instanceof TypeValidationError) {
+			throw new Error(`금지어 데이터 형식 오류: ${error.message}`);
+		}
 		throw new Error(
 			`금지어 데이터 로드 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`
 		);
@@ -614,16 +616,15 @@ export async function saveForbiddenWordsData(data: ForbiddenWordsData): Promise<
 
 /**
  * 도메인 데이터를 JSON 파일에서 불러오기
+ * @throws TypeValidationError - 타입 검증 실패 시
  */
-export async function loadDomainData(
-	filename: string = DEFAULT_DOMAIN_FILE
-): Promise<import('../types/domain.js').DomainData> {
+export async function loadDomainData(filename: string = DEFAULT_DOMAIN_FILE): Promise<DomainData> {
 	try {
 		await ensureDataDirectory();
 		const dataPath = getDataPath(filename, 'domain');
 
 		if (!existsSync(dataPath)) {
-			const defaultData: import('../types/domain.js').DomainData = {
+			const defaultData: DomainData = {
 				entries: [],
 				lastUpdated: new Date().toISOString(),
 				totalCount: 0
@@ -637,7 +638,7 @@ export async function loadDomainData(
 		const fileContent = await readFile(dataPath, 'utf-8');
 
 		if (!fileContent.trim()) {
-			const defaultData: import('../types/domain.js').DomainData = {
+			const defaultData: DomainData = {
 				entries: [],
 				lastUpdated: new Date().toISOString(),
 				totalCount: 0
@@ -645,17 +646,18 @@ export async function loadDomainData(
 			return defaultData;
 		}
 
-		const data: import('../types/domain.js').DomainData = JSON.parse(fileContent);
+		// 타입 가드를 사용한 안전한 JSON 파싱
+		const data = safeJsonParse(fileContent, isDomainData, 'DomainData');
 
-		if (!data || !Array.isArray(data.entries)) {
-			throw new Error('유효하지 않은 도메인 데이터 형식입니다.');
-		}
-
-		data.totalCount = data.entries.length;
-
-		return data;
+		return {
+			...data,
+			totalCount: data.entries.length
+		};
 	} catch (error) {
 		console.error('도메인 데이터 로드 실패:', error);
+		if (error instanceof TypeValidationError) {
+			throw new Error(`도메인 데이터 형식 오류: ${error.message}`);
+		}
 		throw new Error(
 			`도메인 데이터 로드 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`
 		);
@@ -907,23 +909,24 @@ export async function deleteDomainFile(filename: string): Promise<void> {
 
 /**
  * 용어 데이터를 JSON 파일에서 불러오기
+ * @throws TypeValidationError - 타입 검증 실패 시
  */
-export async function loadTermData(
-	filename: string = DEFAULT_TERM_FILE
-): Promise<import('../types/term.js').TermData> {
+export async function loadTermData(filename: string = DEFAULT_TERM_FILE): Promise<TermData> {
 	try {
 		await ensureDataDirectory();
 		const dataPath = getDataPath(filename, 'term');
 
+		const defaultMapping = {
+			vocabulary: 'vocabulary.json',
+			domain: 'domain.json'
+		};
+
 		if (!existsSync(dataPath)) {
-			const defaultData: import('../types/term.js').TermData = {
+			const defaultData: TermData = {
 				entries: [],
 				lastUpdated: new Date().toISOString(),
 				totalCount: 0,
-				mapping: {
-					vocabulary: 'vocabulary.json',
-					domain: 'domain.json'
-				}
+				mapping: defaultMapping
 			};
 			if (filename === DEFAULT_TERM_FILE) {
 				await saveTermData(defaultData, filename);
@@ -934,37 +937,29 @@ export async function loadTermData(
 		const fileContent = await readFile(dataPath, 'utf-8');
 
 		if (!fileContent.trim()) {
-			const defaultData: import('../types/term.js').TermData = {
+			const defaultData: TermData = {
 				entries: [],
 				lastUpdated: new Date().toISOString(),
 				totalCount: 0,
-				mapping: {
-					vocabulary: 'vocabulary.json',
-					domain: 'domain.json'
-				}
+				mapping: defaultMapping
 			};
 			return defaultData;
 		}
 
-		const data: import('../types/term.js').TermData = JSON.parse(fileContent);
+		// 타입 가드를 사용한 안전한 JSON 파싱
+		const data = safeJsonParse(fileContent, isTermData, 'TermData');
 
-		if (!data || !Array.isArray(data.entries)) {
-			throw new Error('유효하지 않은 용어 데이터 형식입니다.');
-		}
-
-		data.totalCount = data.entries.length;
-
-		// 매핑 정보가 없으면 기본값 설정
-		if (!data.mapping) {
-			data.mapping = {
-				vocabulary: 'vocabulary.json',
-				domain: 'domain.json'
-			};
-		}
-
-		return data;
+		return {
+			...data,
+			totalCount: data.entries.length,
+			// 매핑 정보가 없으면 기본값 설정
+			mapping: data.mapping || defaultMapping
+		};
 	} catch (error) {
 		console.error('용어 데이터 로드 실패:', error);
+		if (error instanceof TypeValidationError) {
+			throw new Error(`용어 데이터 형식 오류: ${error.message}`);
+		}
 		throw new Error(
 			`용어 데이터 로드 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`
 		);

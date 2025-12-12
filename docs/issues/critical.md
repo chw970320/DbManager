@@ -62,15 +62,24 @@
 
 ---
 
-## 이슈 #C2: JSON 파싱 결과에 대한 런타임 타입 검증 없음
+## ~~이슈 #C2: JSON 파싱 결과에 대한 런타임 타입 검증 없음~~ ✅ 해결됨
+
+> **해결일**: 2024-12-12
+> **해결 방법**: 타입 가드 유틸리티 모듈 생성 및 모든 load 함수에 적용
+>
+> - `src/lib/utils/type-guards.ts` 신규 생성
+> - `isVocabularyData`, `isDomainData`, `isTermData` 등 타입 가드 함수 구현
+> - `safeJsonParse` 헬퍼 함수로 안전한 JSON 파싱 제공
+> - `TypeValidationError` 커스텀 에러 클래스 추가
+> - `file-handler.ts`, `history-handler.ts`의 모든 load 함수에 적용
 
 **심각도**: Critical
 
 **위치**:
 
-- `src/lib/utils/file-handler.ts:233` - `loadVocabularyData()`
-- `src/lib/utils/file-handler.ts:126` - `loadHistoryData()` (history-handler.ts)
-- 모든 `await request.json()` 호출 지점
+- `src/lib/utils/type-guards.ts` - 타입 가드 유틸리티
+- `src/lib/utils/file-handler.ts` - `loadVocabularyData()`, `loadDomainData()`, `loadTermData()`, `loadForbiddenWordsData()`
+- `src/lib/utils/history-handler.ts` - `loadHistoryData()`
 
 **문제 설명**:
 

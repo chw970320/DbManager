@@ -4,6 +4,12 @@ import { join } from 'path';
 import type { HistoryData, HistoryLogEntry } from '$lib/types/vocabulary';
 import type { DomainHistoryData, DomainHistoryLogEntry } from '$lib/types/domain';
 import type { TermHistoryData, TermHistoryLogEntry } from '$lib/types/term';
+import {
+	isHistoryData,
+	isDomainHistoryData,
+	isTermHistoryData,
+	TypeValidationError
+} from './type-guards';
 
 // 히스토리 타입 정의
 export type HistoryType = 'vocabulary' | 'domain' | 'term';
@@ -93,6 +99,7 @@ export async function saveHistoryData(
  * @param filename - 필터링할 파일명 (선택사항)
  * @param type - 히스토리 타입 ('vocabulary' | 'domain' | 'term', 기본값: 'vocabulary')
  * @returns 로드된 HistoryData, DomainHistoryData 또는 TermHistoryData 객체
+ * @throws TypeValidationError - 타입 검증 실패 시
  */
 export async function loadHistoryData(
 	filename?: string,
@@ -123,29 +130,54 @@ export async function loadHistoryData(
 		}
 
 		// JSON 파싱
-		const data = JSON.parse(jsonString) as HistoryData | DomainHistoryData | TermHistoryData;
-
-		// 데이터 구조 검증
-		if (!data || typeof data !== 'object') {
-			throw new Error('히스토리 데이터 형식이 올바르지 않습니다.');
+		let parsed: unknown;
+		try {
+			parsed = JSON.parse(jsonString);
+		} catch (error) {
+			throw new Error('히스토리 데이터 파일 형식이 손상되었습니다.');
 		}
 
-		if (!Array.isArray(data.logs)) {
-			throw new Error('히스토리 로그 데이터가 배열이 아닙니다.');
-		}
+		// 타입별 타입 가드로 검증
+		let data: HistoryData | DomainHistoryData | TermHistoryData;
+		const typeNames: Record<HistoryType, string> = {
+			vocabulary: 'HistoryData',
+			domain: 'DomainHistoryData',
+			term: 'TermHistoryData'
+		};
 
-		// 각 로그 엔트리 기본 유효성 검증 및 필터링
-		let validLogs = data.logs.filter((log) => {
-			const isValid = log.id && log.action && log.targetId && log.targetName && log.timestamp;
-			if (!isValid) {
-				console.warn('로드 중 유효하지 않은 히스토리 로그 발견:', log);
+		if (type === 'vocabulary') {
+			if (!isHistoryData(parsed)) {
+				throw new TypeValidationError(
+					`타입 검증 실패: ${typeNames[type]} 형식과 일치하지 않습니다.`,
+					typeNames[type],
+					parsed
+				);
 			}
-			return isValid;
-		});
+			data = parsed;
+		} else if (type === 'domain') {
+			if (!isDomainHistoryData(parsed)) {
+				throw new TypeValidationError(
+					`타입 검증 실패: ${typeNames[type]} 형식과 일치하지 않습니다.`,
+					typeNames[type],
+					parsed
+				);
+			}
+			data = parsed;
+		} else {
+			if (!isTermHistoryData(parsed)) {
+				throw new TypeValidationError(
+					`타입 검증 실패: ${typeNames[type]} 형식과 일치하지 않습니다.`,
+					typeNames[type],
+					parsed
+				);
+			}
+			data = parsed;
+		}
 
 		// 파일명으로 필터링 (filename이 제공된 경우)
+		let filteredLogs = data.logs;
 		if (filename) {
-			validLogs = validLogs.filter((log) => {
+			filteredLogs = data.logs.filter((log) => {
 				// HistoryLogEntry에는 filename이 있고, DomainHistoryLogEntry에는 없을 수 있음
 				const logFilename = 'filename' in log ? log.filename : undefined;
 				return !logFilename || logFilename === filename;
@@ -153,16 +185,15 @@ export async function loadHistoryData(
 		}
 
 		return {
-			logs: validLogs,
+			logs: filteredLogs,
 			lastUpdated: data.lastUpdated || new Date().toISOString(),
-			totalCount: validLogs.length
+			totalCount: filteredLogs.length
 		};
 	} catch (error) {
 		console.error('히스토리 데이터 로드 실패:', error);
 
-		// JSON 파싱 오류인 경우 더 구체적인 메시지
-		if (error instanceof SyntaxError) {
-			throw new Error('히스토리 데이터 파일 형식이 손상되었습니다.');
+		if (error instanceof TypeValidationError) {
+			throw new Error(`히스토리 데이터 형식 오류: ${error.message}`);
 		}
 
 		throw new Error(

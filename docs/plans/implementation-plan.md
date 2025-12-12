@@ -15,14 +15,13 @@
   - 파일: `src/lib/utils/file-handler.ts:23-69` (`validateFilename`, `getDataPath` 함수)
   - 완료: 2024-12-12
 
-- [ ] **#C2: JSON 파싱 타입 검증 없음**
+- [x] **#C2: JSON 파싱 타입 검증 없음** ✅
   - 설명: JSON 파싱 결과에 타입 단언만 사용, 런타임 검증 없음
   - 파일:
-    - `src/lib/utils/file-handler.ts:233` (`loadVocabularyData`)
-    - `src/lib/utils/history-handler.ts:126` (`loadHistoryData`)
-    - 모든 `await request.json()` 호출 지점
-  - 예상: 16시간
-  - 담당:
+    - `src/lib/utils/type-guards.ts` (신규 생성)
+    - `src/lib/utils/file-handler.ts` (타입 가드 적용)
+    - `src/lib/utils/history-handler.ts` (타입 가드 적용)
+  - 완료: 2024-12-12
 
 - [ ] **#C1: 동시성 문제 (설계 및 시작)**
   - 설명: 파일 기반 저장소의 동시 수정 시 데이터 손실 위험

@@ -13,7 +13,15 @@ export async function POST({ request }: RequestEvent) {
 		const { vocabularyFilename, domainFilename }: SyncRequest = await request.json();
 
 		const vocabFile = vocabularyFilename || 'vocabulary.json';
-		const domainFile = domainFilename || 'domain.json';
+
+		// 단어집 로드
+		const vocabularyData = await loadVocabularyData(vocabFile);
+
+		// 매핑 정보 로드 (mapping 필드 또는 mappedDomainFile 하위 호환성)
+		const mapping = vocabularyData.mapping || {
+			domain: vocabularyData.mappedDomainFile || 'domain.json'
+		};
+		const domainFile = domainFilename || mapping.domain || 'domain.json';
 
 		// 도메인 데이터 로드
 		const domainData = await loadDomainData(domainFile);
@@ -23,9 +31,6 @@ export async function POST({ request }: RequestEvent) {
 				domainMap.set(entry.domainCategory.trim().toLowerCase(), entry.domainGroup);
 			}
 		});
-
-		// 단어집 로드
-		const vocabularyData = await loadVocabularyData(vocabFile);
 
 		let updated = 0;
 		let matched = 0;
@@ -64,8 +69,11 @@ export async function POST({ request }: RequestEvent) {
 		const finalData: VocabularyData = {
 			...vocabularyData,
 			entries: mappedEntries,
-			mappedDomainFile: domainFile,
-			lastUpdated: vocabularyData.lastUpdated
+			mapping: {
+				domain: domainFile
+			},
+			mappedDomainFile: domainFile, // 하위 호환성
+			lastUpdated: new Date().toISOString()
 		};
 		await saveVocabularyData(finalData, vocabFile);
 

@@ -2,11 +2,14 @@
 	import { createEventDispatcher } from 'svelte';
 	import { get } from 'svelte/store';
 	import { vocabularyStore } from '$lib/stores/vocabularyStore';
-	import type { VocabularyEntry } from '$lib/types/vocabulary';
+	import { domainStore } from '$lib/stores/domain-store';
+	import { termStore } from '$lib/stores/term-store';
+	import type { TermEntry } from '$lib/types/term';
+	import { debounce } from '$lib/utils/debounce';
 
 	// Props
 	interface Props {
-		entry?: Partial<VocabularyEntry>;
+		entry?: Partial<TermEntry>;
 		isEditMode?: boolean;
 		serverError?: string;
 	}
@@ -15,224 +18,320 @@
 
 	// Event dispatcher
 	const dispatch = createEventDispatcher<{
-		save: VocabularyEntry;
+		save: TermEntry;
 		cancel: void;
-		delete: VocabularyEntry;
+		delete: TermEntry;
 	}>();
 
 	// Form data
 	let formData = $state({
-		standardName: entry.standardName || '',
-		abbreviation: entry.abbreviation || '',
-		englishName: entry.englishName || '',
-		description: entry.description || '',
-		isFormalWord: entry.isFormalWord ? 'Y' : 'N',
-		domainCategory: entry.domainCategory || '',
-		domainGroup: entry.domainGroup || '',
-		synonyms: entry.synonyms?.join(', ') || '',
-		forbiddenWords: entry.forbiddenWords?.join(', ') || '',
-		source: entry.source || ''
+		termName: entry.termName || '',
+		columnName: entry.columnName || '',
+		domainName: entry.domainName || ''
 	});
 
 	// Validation errors
 	let errors = $state({
-		standardName: '',
-		abbreviation: '',
-		englishName: ''
+		termName: '',
+		columnName: '',
+		domainName: ''
 	});
 
 	// Form state
 	let isSubmitting = $state(false);
 
-	// Domain autocomplete state
-	let domainOptions = $state<{ category: string; group: string }[]>([]);
-	let domainWarning = $state('');
-	let _isLoadingDomains = $state(false);
-	let selectedDomainFilename = $state('domain.json');
+	// Autocomplete state
+	let termNameSuggestions = $state<string[]>([]);
+	let columnNameSuggestions = $state<string[]>([]);
+	let domainNameSuggestions = $state<string[]>([]);
+	let showTermNameSuggestions = $state(false);
+	let showColumnNameSuggestions = $state(false);
+	let showDomainNameSuggestions = $state(false);
+
+	// Mapping info state
+	let termMapping = $state<{ vocabulary: string; domain: string } | null>(null);
+	let isMappingLoading = $state(false);
+
+	// Input refs
+	let termNameInput: HTMLInputElement | undefined;
+	let columnNameInput: HTMLInputElement | undefined;
+	let domainNameInput: HTMLInputElement | undefined;
 
 	// Update formData when entry prop changes
 	$effect(() => {
 		if (entry) {
-			formData.standardName = entry.standardName || '';
-			formData.abbreviation = entry.abbreviation || '';
-			formData.englishName = entry.englishName || '';
-			formData.description = entry.description || '';
-			formData.isFormalWord = entry.isFormalWord ? 'Y' : 'N';
-			formData.domainCategory = entry.domainCategory || '';
-			formData.domainGroup = entry.domainGroup || '';
-			formData.synonyms = entry.synonyms?.join(', ') || '';
-			formData.forbiddenWords = entry.forbiddenWords?.join(', ') || '';
-			formData.source = entry.source || '';
+			formData.termName = entry.termName || '';
+			formData.columnName = entry.columnName || '';
+			formData.domainName = entry.domainName || '';
 		}
 	});
 
-	// Validation functions
-	function validateStandardName(value: string): string {
-		if (!value.trim()) {
-			return '표준단어명은 필수 입력 항목입니다.';
-		}
-		return '';
-	}
-
-	function validateAbbreviation(value: string): string {
-		if (!value.trim()) {
-			return '영문약어는 필수 입력 항목입니다.';
-		}
-		if (!/^[A-Z][A-Z0-9_]*$/.test(value.trim())) {
-			return '영문약어는 대문자와 숫자, 언더스코어(_)만 사용 가능하며 대문자로 시작해야 합니다.';
-		}
-		return '';
-	}
-
-	function validateEnglishName(value: string): string {
-		if (!value.trim()) {
-			return '영문명은 필수 입력 항목입니다.';
-		}
-		if (value.trim().length < 2) {
-			return '영문명은 최소 2자 이상 입력해야 합니다.';
-		}
-		return '';
-	}
-
-	async function loadDomainOptions() {
-		_isLoadingDomains = true;
-		try {
-			const storeValue = get(vocabularyStore);
-			const currentDomainFilename = storeValue.selectedDomainFilename || 'domain.json';
-
-			// 도메인 파일이 변경되었거나 옵션이 비어있을 때만 로드
-			if (domainOptions.length > 0 && selectedDomainFilename === currentDomainFilename) {
-				_isLoadingDomains = false;
-				return;
-			}
-
-			selectedDomainFilename = currentDomainFilename;
-
-			// 모든 페이지를 순회하여 데이터 수집
-			const allEntries: { domainCategory: string; domainGroup: string }[] = [];
-			let page = 1;
-			let hasMore = true;
-			const limit = 100; // API 최대 제한
-
-			while (hasMore) {
-				const params = new URLSearchParams({
-					filename: selectedDomainFilename,
-					page: page.toString(),
-					limit: limit.toString()
-				});
-				const response = await fetch(`/api/domain?${params}`);
-				const result = await response.json();
-
-				if (result.success && result.data && Array.isArray(result.data.entries)) {
-					const entries = result.data.entries as { domainCategory: string; domainGroup: string }[];
-					allEntries.push(...entries);
-
-					// 다음 페이지가 있는지 확인
-					hasMore = result.data.pagination?.hasNextPage || false;
-					page++;
-				} else {
-					hasMore = false;
-				}
-			}
-
-			// 중복 제거: domainCategory를 키로 사용하여 Map으로 관리
-			// key: 소문자 category, value: { originalCategory, group }
-			const categoryMap = new Map<string, { originalCategory: string; group: string }>();
-			allEntries
-				.filter((d) => d.domainCategory && d.domainGroup)
-				.forEach((d) => {
-					const key = d.domainCategory.trim().toLowerCase();
-					// 이미 존재하지 않으면 추가 (첫 번째 매칭 항목 사용)
-					if (!categoryMap.has(key)) {
-						categoryMap.set(key, {
-							originalCategory: d.domainCategory.trim(),
-							group: d.domainGroup.trim()
-						});
-					}
-				});
-
-			// Map을 배열로 변환
-			domainOptions = Array.from(categoryMap.values()).map((item) => ({
-				category: item.originalCategory,
-				group: item.group
-			}));
-		} catch (err) {
-			console.warn('도메인 목록 로드 실패:', err);
-		} finally {
-			_isLoadingDomains = false;
-		}
-	}
-
-	function applyDomainMapping() {
-		if (!formData.domainCategory) {
-			formData.domainGroup = '';
-			domainWarning = '';
-			return;
-		}
-		const key = formData.domainCategory.trim().toLowerCase();
-		const matched = domainOptions.find(
-			(opt) => opt.category && opt.category.trim().toLowerCase() === key
-		);
-		if (matched) {
-			formData.domainGroup = matched.group;
-			domainWarning = '';
-		} else {
-			formData.domainGroup = '';
-			domainWarning = '매핑된 도메인 그룹을 찾지 못했습니다 (저장은 가능)';
-		}
-	}
-
-	// Real-time validation
+	// Load mapping info when component mounts or term file changes
 	$effect(() => {
-		errors.standardName = validateStandardName(formData.standardName);
+		loadTermMapping();
 	});
 
+	// Subscribe to termStore changes
 	$effect(() => {
-		errors.abbreviation = validateAbbreviation(formData.abbreviation);
-	});
-
-	$effect(() => {
-		errors.englishName = validateEnglishName(formData.englishName);
-	});
-
-	// 도메인 파일명이 변경될 때만 도메인 옵션 로드
-	$effect(() => {
-		// vocabularyStore의 selectedDomainFilename을 구독하여 추적
-		const unsubscribe = vocabularyStore.subscribe((_storeValue) => {
-			// selectedDomainFilename이 변경될 때만 로드 (loadDomainOptions 내부에서도 중복 체크)
-			void loadDomainOptions();
+		const unsubscribe = termStore.subscribe(() => {
+			loadTermMapping();
 		});
 		return unsubscribe;
 	});
 
-	// domainCategory 또는 domainOptions가 변경될 때만 도메인 매핑 적용
+	// Load term mapping info
+	async function loadTermMapping() {
+		const storeValue = get(termStore);
+		const termFilename = storeValue.selectedFilename || 'term.json';
+
+		isMappingLoading = true;
+		try {
+			const response = await fetch(
+				`/api/term/files/mapping?filename=${encodeURIComponent(termFilename)}`
+			);
+			const result = await response.json();
+			if (result.success && result.data && result.data.mapping) {
+				termMapping = result.data.mapping;
+			} else {
+				// 기본값 설정
+				termMapping = {
+					vocabulary: 'vocabulary.json',
+					domain: 'domain.json'
+				};
+			}
+		} catch (err) {
+			console.warn('매핑 정보 로드 실패:', err);
+			// 기본값 설정
+			termMapping = {
+				vocabulary: 'vocabulary.json',
+				domain: 'domain.json'
+			};
+		} finally {
+			isMappingLoading = false;
+		}
+	}
+
+	// Load vocabulary filename from mapping
+	function getVocabularyFilename(): string {
+		if (termMapping) {
+			return termMapping.vocabulary;
+		}
+		return 'vocabulary.json';
+	}
+
+	// Load domain filename from mapping
+	function getDomainFilename(): string {
+		if (termMapping) {
+			return termMapping.domain;
+		}
+		return 'domain.json';
+	}
+
+	// Load term name suggestions (from vocabulary standardName)
+	async function loadTermNameSuggestions(query: string) {
+		if (!query || query.trim().length < 1) {
+			termNameSuggestions = [];
+			showTermNameSuggestions = false;
+			return;
+		}
+
+		try {
+			const filename = getVocabularyFilename();
+			const response = await fetch(`/api/search?filename=${encodeURIComponent(filename)}`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ query: query.trim(), limit: 20 })
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				if (result.success && Array.isArray(result.data)) {
+					// standardName만 필터링
+					const suggestions = new Set<string>();
+					result.data.forEach((item: string) => {
+						suggestions.add(item);
+					});
+					termNameSuggestions = Array.from(suggestions).slice(0, 20);
+					showTermNameSuggestions = termNameSuggestions.length > 0;
+				} else {
+					termNameSuggestions = [];
+					showTermNameSuggestions = false;
+				}
+			}
+		} catch (err) {
+			console.warn('용어명 자동완성 로드 실패:', err);
+			termNameSuggestions = [];
+			showTermNameSuggestions = false;
+		}
+	}
+
+	// Load column name suggestions (from vocabulary abbreviation)
+	async function loadColumnNameSuggestions(query: string) {
+		if (!query || query.trim().length < 1) {
+			columnNameSuggestions = [];
+			showColumnNameSuggestions = false;
+			return;
+		}
+
+		try {
+			const filename = getVocabularyFilename();
+			const response = await fetch(`/api/search?filename=${encodeURIComponent(filename)}`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ query: query.trim(), limit: 20 })
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				if (result.success && Array.isArray(result.data)) {
+					// abbreviation만 필터링
+					const suggestions = new Set<string>();
+					result.data.forEach((item: string) => {
+						suggestions.add(item);
+					});
+					columnNameSuggestions = Array.from(suggestions).slice(0, 20);
+					showColumnNameSuggestions = columnNameSuggestions.length > 0;
+				} else {
+					columnNameSuggestions = [];
+					showColumnNameSuggestions = false;
+				}
+			}
+		} catch (err) {
+			console.warn('칼럼명 자동완성 로드 실패:', err);
+			columnNameSuggestions = [];
+			showColumnNameSuggestions = false;
+		}
+	}
+
+	// Load domain name suggestions (from domain standardDomainName)
+	async function loadDomainNameSuggestions(query: string) {
+		if (!query || query.trim().length < 1) {
+			domainNameSuggestions = [];
+			showDomainNameSuggestions = false;
+			return;
+		}
+
+		try {
+			const filename = getDomainFilename();
+			const params = new URLSearchParams({
+				filename,
+				query: query.trim(),
+				field: 'standardDomainName',
+				page: '1',
+				limit: '20'
+			});
+			const response = await fetch(`/api/domain?${params}`);
+
+			if (response.ok) {
+				const result = await response.json();
+				if (result.success && result.data && Array.isArray(result.data.entries)) {
+					const suggestions = result.data.entries.map(
+						(entry: { standardDomainName: string }) => entry.standardDomainName
+					);
+					domainNameSuggestions = [...new Set(suggestions)].slice(0, 20);
+					showDomainNameSuggestions = domainNameSuggestions.length > 0;
+				} else {
+					domainNameSuggestions = [];
+					showDomainNameSuggestions = false;
+				}
+			}
+		} catch (err) {
+			console.warn('도메인명 자동완성 로드 실패:', err);
+			domainNameSuggestions = [];
+			showDomainNameSuggestions = false;
+		}
+	}
+
+	// Debounced autocomplete functions
+	const debouncedTermNameSearch = debounce(loadTermNameSuggestions, 300);
+	const debouncedColumnNameSearch = debounce(loadColumnNameSuggestions, 300);
+	const debouncedDomainNameSearch = debounce(loadDomainNameSuggestions, 300);
+
+	// Handle term name input
+	function handleTermNameInput() {
+		const query = formData.termName;
+		debouncedTermNameSearch(query);
+		showTermNameSuggestions = true;
+	}
+
+	// Handle column name input
+	function handleColumnNameInput() {
+		const query = formData.columnName;
+		debouncedColumnNameSearch(query);
+		showColumnNameSuggestions = true;
+	}
+
+	// Handle domain name input
+	function handleDomainNameInput() {
+		const query = formData.domainName;
+		debouncedDomainNameSearch(query);
+		showDomainNameSuggestions = true;
+	}
+
+	// Select suggestion
+	function selectTermNameSuggestion(suggestion: string) {
+		formData.termName = suggestion;
+		showTermNameSuggestions = false;
+		termNameSuggestions = [];
+	}
+
+	function selectColumnNameSuggestion(suggestion: string) {
+		formData.columnName = suggestion;
+		showColumnNameSuggestions = false;
+		columnNameSuggestions = [];
+	}
+
+	function selectDomainNameSuggestion(suggestion: string) {
+		formData.domainName = suggestion;
+		showDomainNameSuggestions = false;
+		domainNameSuggestions = [];
+	}
+
+	// Validation functions
+	function validateTermName(value: string): string {
+		if (!value.trim()) {
+			return '용어명은 필수 입력 항목입니다.';
+		}
+		return '';
+	}
+
+	function validateColumnName(value: string): string {
+		if (!value.trim()) {
+			return '칼럼명은 필수 입력 항목입니다.';
+		}
+		return '';
+	}
+
+	function validateDomainName(value: string): string {
+		if (!value.trim()) {
+			return '도메인명은 필수 입력 항목입니다.';
+		}
+		return '';
+	}
+
+	// Real-time validation
 	$effect(() => {
-		// formData.domainCategory와 domainOptions를 읽어서 의존성으로 추적
-		const _category = formData.domainCategory;
-		const _options = domainOptions;
-		applyDomainMapping();
+		errors.termName = validateTermName(formData.termName);
+	});
+
+	$effect(() => {
+		errors.columnName = validateColumnName(formData.columnName);
+	});
+
+	$effect(() => {
+		errors.domainName = validateDomainName(formData.domainName);
 	});
 
 	// Form validation
 	function isFormValid(): boolean {
 		return (
-			!errors.standardName &&
-			!errors.abbreviation &&
-			!errors.englishName &&
-			!!formData.standardName.trim() &&
-			!!formData.abbreviation.trim() &&
-			!!formData.englishName.trim()
+			!errors.termName &&
+			!errors.columnName &&
+			!errors.domainName &&
+			!!formData.termName.trim() &&
+			!!formData.columnName.trim() &&
+			!!formData.domainName.trim()
 		);
-	}
-
-	// Helper function to parse comma-separated string to array
-	function parseArrayField(value: string): string[] | undefined {
-		if (!value || !value.trim()) return undefined;
-		const items = value
-			.split(',')
-			.map((item) => item.trim())
-			.filter((item) => item.length > 0);
-		return items.length > 0 ? items : undefined;
 	}
 
 	// Handle save
@@ -243,20 +342,16 @@
 
 		isSubmitting = true;
 
-		const editedEntry: VocabularyEntry = {
+		const editedEntry: TermEntry = {
 			id: entry.id || '',
-			standardName: formData.standardName.trim(),
-			abbreviation: formData.abbreviation.trim(),
-			englishName: formData.englishName.trim(),
-			description: formData.description.trim(),
-			isFormalWord: formData.isFormalWord === 'Y',
-			domainCategory: formData.domainCategory.trim() || undefined,
-			domainGroup: formData.domainGroup.trim() || undefined,
-			synonyms: parseArrayField(formData.synonyms),
-			forbiddenWords: parseArrayField(formData.forbiddenWords),
-			source: formData.source.trim() || undefined,
-			createdAt: entry.createdAt || '',
-			updatedAt: entry.updatedAt || ''
+			termName: formData.termName.trim(),
+			columnName: formData.columnName.trim(),
+			domainName: formData.domainName.trim(),
+			isMappedTerm: entry.isMappedTerm || false,
+			isMappedColumn: entry.isMappedColumn || false,
+			isMappedDomain: entry.isMappedDomain || false,
+			createdAt: entry.createdAt || new Date().toISOString(),
+			updatedAt: new Date().toISOString()
 		};
 
 		dispatch('save', editedEntry);
@@ -275,19 +370,14 @@
 		}
 
 		if (confirm('정말로 이 항목을 삭제하시겠습니까?')) {
-			const entryToDelete: VocabularyEntry = {
+			const entryToDelete: TermEntry = {
 				id: entry.id,
-				standardName: formData.standardName.trim() || entry.standardName || '',
-				abbreviation: formData.abbreviation.trim() || entry.abbreviation || '',
-				englishName: formData.englishName.trim() || entry.englishName || '',
-				description: formData.description.trim() || entry.description || '',
-				isFormalWord: formData.isFormalWord === 'Y' || entry.isFormalWord || false,
-				domainCategory: formData.domainCategory.trim() || entry.domainCategory || undefined,
-				domainGroup: formData.domainGroup.trim() || entry.domainGroup || undefined,
-				synonyms: parseArrayField(formData.synonyms) || entry.synonyms || undefined,
-				forbiddenWords:
-					parseArrayField(formData.forbiddenWords) || entry.forbiddenWords || undefined,
-				source: formData.source.trim() || entry.source || undefined,
+				termName: formData.termName.trim() || entry.termName || '',
+				columnName: formData.columnName.trim() || entry.columnName || '',
+				domainName: formData.domainName.trim() || entry.domainName || '',
+				isMappedTerm: entry.isMappedTerm || false,
+				isMappedColumn: entry.isMappedColumn || false,
+				isMappedDomain: entry.isMappedDomain || false,
 				createdAt: entry.createdAt || '',
 				updatedAt: entry.updatedAt || ''
 			};
@@ -297,18 +387,35 @@
 
 	// Handle background click
 	function handleBackgroundClick(event: MouseEvent) {
-		// 배경을 클릭했을 때만 모달 닫기 (이벤트 타켓이 배경 div인 경우)
 		if (event.target === event.currentTarget) {
 			handleCancel();
 		}
 	}
 
-	// Handle input changes with uppercase conversion for abbreviation
-	function handleAbbreviationInput(event: Event) {
-		const target = event.target as HTMLInputElement;
-		formData.abbreviation = target.value.toUpperCase();
+	// Close suggestions when clicking outside
+	function handleClickOutside(event: MouseEvent) {
+		const target = event.target as HTMLElement;
+		if (
+			!target.closest('.autocomplete-container') &&
+			!target.closest('.autocomplete-input')
+		) {
+			showTermNameSuggestions = false;
+			showColumnNameSuggestions = false;
+			showDomainNameSuggestions = false;
+		}
+	}
+
+	// Close suggestions on escape
+	function handleKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape') {
+			showTermNameSuggestions = false;
+			showColumnNameSuggestions = false;
+			showDomainNameSuggestions = false;
+		}
 	}
 </script>
+
+<svelte:window onclick={handleClickOutside} onkeydown={handleKeydown} />
 
 <div
 	class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
@@ -320,7 +427,7 @@
 	>
 		<div class="flex flex-shrink-0 items-center justify-between border-b p-6">
 			<h2 class="text-xl font-bold text-gray-900">
-				{isEditMode ? '단어 수정' : '새 단어 추가'}
+				{isEditMode ? '용어 수정' : '새 용어 추가'}
 			</h2>
 			<button
 				onclick={handleCancel}
@@ -369,175 +476,138 @@
 				}}
 				class="space-y-4"
 			>
-				<!-- 표준단어명 -->
-				<div>
-					<label for="standardName" class="mb-1 block text-sm font-medium text-gray-900">
-						표준단어명 <span class="text-red-700">*</span>
+				<!-- 용어명 -->
+				<div class="autocomplete-container relative">
+					<label for="termName" class="mb-1 block text-sm font-medium text-gray-900">
+						용어명 <span class="text-red-700">*</span>
 					</label>
 					<input
-						id="standardName"
+						id="termName"
+						bind:this={termNameInput}
 						type="text"
-						bind:value={formData.standardName}
-						placeholder="예: 데이터베이스"
-						class="input"
-						class:input-error={errors.standardName}
+						bind:value={formData.termName}
+						oninput={handleTermNameInput}
+						onfocus={() => {
+							if (formData.termName.trim()) {
+								handleTermNameInput();
+							}
+						}}
+						placeholder="예: 데이터베이스_관리자"
+						class="autocomplete-input input"
+						class:input-error={errors.termName}
 						disabled={isSubmitting}
 					/>
-					{#if errors.standardName}
-						<p class="text-error mt-1 text-sm">{errors.standardName}</p>
+					{#if errors.termName}
+						<p class="text-error mt-1 text-sm">{errors.termName}</p>
 					{/if}
-				</div>
-
-				<!-- 영문약어 -->
-				<div>
-					<label for="abbreviation" class="mb-1 block text-sm font-medium text-gray-900">
-						영문약어 <span class="text-red-700">*</span>
-					</label>
-					<input
-						id="abbreviation"
-						type="text"
-						value={formData.abbreviation}
-						oninput={handleAbbreviationInput}
-						placeholder="예: DB"
-						class="input"
-						class:input-error={errors.abbreviation}
-						disabled={isSubmitting}
-					/>
-					{#if errors.abbreviation}
-						<p class="text-error mt-1 text-sm">{errors.abbreviation}</p>
-					{/if}
-				</div>
-
-				<!-- 영문명 -->
-				<div>
-					<label for="englishName" class="mb-1 block text-sm font-medium text-gray-900">
-						영문명 <span class="text-red-700">*</span>
-					</label>
-					<input
-						id="englishName"
-						type="text"
-						bind:value={formData.englishName}
-						placeholder="예: Database"
-						class="input"
-						class:input-error={errors.englishName}
-						disabled={isSubmitting}
-					/>
-					{#if errors.englishName}
-						<p class="text-error mt-1 text-sm">{errors.englishName}</p>
-					{/if}
-				</div>
-
-				<!-- 설명 -->
-				<div>
-					<label for="description" class="mb-1 block text-sm font-medium text-gray-900">
-						설명
-					</label>
-					<textarea
-						id="description"
-						bind:value={formData.description}
-						placeholder="단어에 대한 상세 설명을 입력하세요 (선택사항)"
-						rows="3"
-						class="input resize-none"
-						disabled={isSubmitting}
-					></textarea>
-				</div>
-
-				<!-- 형식단어여부 -->
-				<div>
-					<label for="isFormalWord" class="mb-1 block text-sm font-medium text-gray-900">
-						형식단어여부
-					</label>
-					<select
-						id="isFormalWord"
-						bind:value={formData.isFormalWord}
-						class="input"
-						disabled={isSubmitting}
-					>
-						<option value="N">N</option>
-						<option value="Y">Y</option>
-					</select>
-				</div>
-
-				<!-- 도메인분류명 -->
-				<div>
-					<label for="domainCategory" class="mb-1 block text-sm font-medium text-gray-900">
-						도메인분류명
-					</label>
-					<div class="relative">
-						<input
-							id="domainCategory"
-							type="text"
-							bind:value={formData.domainCategory}
-							list="domainCategoryOptions"
-							placeholder="예: 데이터베이스"
-							class="input pr-8"
-							disabled={isSubmitting}
-						/>
-						<!-- 화살표 영역을 덮는 요소 (input의 border와 배경색과 일치) -->
+					{#if showTermNameSuggestions && termNameSuggestions.length > 0}
 						<div
-							class="pointer-events-none absolute right-0 top-0 flex h-full w-0 items-center justify-center border-l border-gray-400 bg-white"
-							class:bg-gray-100={isSubmitting}
-						></div>
-					</div>
-					<datalist id="domainCategoryOptions">
-						{#each domainOptions as option (option.category)}
-							<option value={option.category}>{option.category}</option>
-						{/each}
-					</datalist>
-					{#if formData.domainGroup}
-						<p class="mt-1 text-xs text-green-700">매핑된 도메인그룹: {formData.domainGroup}</p>
-					{:else if domainWarning}
-						<p class="mt-1 text-xs text-amber-700">{domainWarning}</p>
+							class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-300 bg-white shadow-lg"
+						>
+							{#each termNameSuggestions as suggestion}
+								<button
+									type="button"
+									class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100"
+									onclick={() => selectTermNameSuggestion(suggestion)}
+								>
+									{suggestion}
+								</button>
+							{/each}
+						</div>
 					{/if}
+					<p class="mt-1 text-xs text-gray-500">
+						단어집의 표준단어명을 언더스코어(_)로 연결하여 입력하세요
+					</p>
 				</div>
 
-				<!-- 이음동의어 -->
-				<div>
-					<label for="synonyms" class="mb-1 block text-sm font-medium text-gray-900">
-						이음동의어
+				<!-- 칼럼명 -->
+				<div class="autocomplete-container relative">
+					<label for="columnName" class="mb-1 block text-sm font-medium text-gray-900">
+						칼럼명 <span class="text-red-700">*</span>
 					</label>
 					<input
-						id="synonyms"
+						id="columnName"
+						bind:this={columnNameInput}
 						type="text"
-						bind:value={formData.synonyms}
-						placeholder="쉼표로 구분하여 입력 (예: 동의어1, 동의어2)"
-						class="input"
+						bind:value={formData.columnName}
+						oninput={handleColumnNameInput}
+						onfocus={() => {
+							if (formData.columnName.trim()) {
+								handleColumnNameInput();
+							}
+						}}
+						placeholder="예: DB_ADMIN"
+						class="autocomplete-input input uppercase"
+						class:input-error={errors.columnName}
 						disabled={isSubmitting}
 					/>
-					<p class="mt-1 text-xs text-gray-500">여러 개의 동의어를 쉼표로 구분하여 입력하세요</p>
+					{#if errors.columnName}
+						<p class="text-error mt-1 text-sm">{errors.columnName}</p>
+					{/if}
+					{#if showColumnNameSuggestions && columnNameSuggestions.length > 0}
+						<div
+							class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-300 bg-white shadow-lg"
+						>
+							{#each columnNameSuggestions as suggestion}
+								<button
+									type="button"
+									class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100"
+									onclick={() => selectColumnNameSuggestion(suggestion)}
+								>
+									{suggestion}
+								</button>
+							{/each}
+						</div>
+					{/if}
+					<p class="mt-1 text-xs text-gray-500">
+						단어집의 영문약어를 언더스코어(_)로 연결하여 입력하세요
+					</p>
 				</div>
 
-				<!-- 금칙어 -->
-				<div>
-					<label for="forbiddenWords" class="mb-1 block text-sm font-medium text-gray-900">
-						금칙어
+				<!-- 도메인명 -->
+				<div class="autocomplete-container relative">
+					<label for="domainName" class="mb-1 block text-sm font-medium text-gray-900">
+						도메인명 <span class="text-red-700">*</span>
 					</label>
 					<input
-						id="forbiddenWords"
+						id="domainName"
+						bind:this={domainNameInput}
 						type="text"
-						bind:value={formData.forbiddenWords}
-						placeholder="쉼표로 구분하여 입력 (예: 금칙어1, 금칙어2)"
-						class="input"
+						bind:value={formData.domainName}
+						oninput={handleDomainNameInput}
+						onfocus={() => {
+							if (formData.domainName.trim()) {
+								handleDomainNameInput();
+							}
+						}}
+						placeholder="예: VARCHAR(255)"
+						class="autocomplete-input input"
+						class:input-error={errors.domainName}
 						disabled={isSubmitting}
 					/>
-					<p class="mt-1 text-xs text-gray-500">여러 개의 금칙어를 쉼표로 구분하여 입력하세요</p>
-				</div>
-
-				<!-- 출처 -->
-				<div>
-					<label for="source" class="mb-1 block text-sm font-medium text-gray-900"> 출처 </label>
-					<input
-						id="source"
-						type="text"
-						bind:value={formData.source}
-						placeholder="예: 출처명 또는 URL"
-						class="input"
-						disabled={isSubmitting}
-					/>
+					{#if errors.domainName}
+						<p class="text-error mt-1 text-sm">{errors.domainName}</p>
+					{/if}
+					{#if showDomainNameSuggestions && domainNameSuggestions.length > 0}
+						<div
+							class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-300 bg-white shadow-lg"
+						>
+							{#each domainNameSuggestions as suggestion}
+								<button
+									type="button"
+									class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100"
+									onclick={() => selectDomainNameSuggestion(suggestion)}
+								>
+									{suggestion}
+								</button>
+							{/each}
+						</div>
+					{/if}
+					<p class="mt-1 text-xs text-gray-500">도메인의 표준도메인명을 입력하세요</p>
 				</div>
 
 				<!-- 버튼 그룹 -->
-				<div class="flex justify-between pt-4">
+				<div class="flex justify-between border-t border-gray-200 pt-4">
 					{#if isEditMode && entry.id}
 						<button
 							type="button"
@@ -589,3 +659,9 @@
 		</div>
 	</div>
 </div>
+
+<style>
+	.uppercase {
+		text-transform: uppercase;
+	}
+</style>

@@ -3,7 +3,6 @@
 	import { browser } from '$app/environment';
 	import SearchBar from '$lib/components/SearchBar.svelte';
 	import VocabularyTable from '$lib/components/VocabularyTable.svelte';
-	import TermGenerator from '$lib/components/TermGenerator.svelte';
 	import TermEditor from '$lib/components/TermEditor.svelte';
 	import ForbiddenWordManager from '$lib/components/ForbiddenWordManager.svelte';
 	import VocabularyFileManager from '$lib/components/VocabularyFileManager.svelte';
@@ -854,7 +853,7 @@
 									showEditor = true;
 								}}
 								disabled={loading}
-								class="btn btn-primary group space-x-2 rounded-xl px-6 py-3 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
+								class="group inline-flex items-center space-x-2 rounded-xl border border-purple-200/50 bg-purple-50/80 px-6 py-3 text-sm font-medium text-purple-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-purple-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
 							>
 								<svg
 									class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
@@ -866,7 +865,7 @@
 										stroke-linecap="round"
 										stroke-linejoin="round"
 										stroke-width="2"
-										d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+										d="M12 4v16m8-8H4"
 									/>
 								</svg>
 								<span>새 단어 추가</span>
@@ -956,11 +955,6 @@
 
 				<!-- 히스토리 로그 -->
 				<HistoryLog type="vocabulary" />
-
-				<!-- 통계 카드 섹션 -->
-				<div class="my-8">
-					<TermGenerator />
-				</div>
 
 				<!-- 검색 영역 -->
 				<div

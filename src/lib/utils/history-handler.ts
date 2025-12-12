@@ -3,9 +3,10 @@ import { existsSync } from 'fs';
 import { join } from 'path';
 import type { HistoryData, HistoryLogEntry } from '$lib/types/vocabulary';
 import type { DomainHistoryData, DomainHistoryLogEntry } from '$lib/types/domain';
+import type { TermHistoryData, TermHistoryLogEntry } from '$lib/types/term';
 
 // 히스토리 타입 정의
-export type HistoryType = 'vocabulary' | 'domain';
+export type HistoryType = 'vocabulary' | 'domain' | 'term';
 
 // 히스토리 데이터 저장 경로 설정
 const DATA_DIR = 'static/data';
@@ -14,7 +15,12 @@ const DATA_DIR = 'static/data';
  * 히스토리 타입에 따른 파일 경로 반환
  */
 function getHistoryPath(type: HistoryType = 'vocabulary'): string {
-	const subDir = type === 'domain' ? 'domain' : 'vocabulary';
+	let subDir = 'vocabulary';
+	if (type === 'domain') {
+		subDir = 'domain';
+	} else if (type === 'term') {
+		subDir = 'term';
+	}
 	return join(DATA_DIR, subDir, 'history.json');
 }
 
@@ -38,11 +44,11 @@ export async function ensureDataDirectory(type: HistoryType = 'vocabulary'): Pro
 
 /**
  * 히스토리 데이터를 JSON 파일로 저장
- * @param data - 저장할 HistoryData 또는 DomainHistoryData 객체
- * @param type - 히스토리 타입 ('vocabulary' | 'domain', 기본값: 'vocabulary')
+ * @param data - 저장할 HistoryData, DomainHistoryData 또는 TermHistoryData 객체
+ * @param type - 히스토리 타입 ('vocabulary' | 'domain' | 'term', 기본값: 'vocabulary')
  */
 export async function saveHistoryData(
-	data: HistoryData | DomainHistoryData,
+	data: HistoryData | DomainHistoryData | TermHistoryData,
 	type: HistoryType = 'vocabulary'
 ): Promise<void> {
 	try {
@@ -85,13 +91,13 @@ export async function saveHistoryData(
 /**
  * 저장된 히스토리 데이터를 JSON 파일에서 로드
  * @param filename - 필터링할 파일명 (선택사항)
- * @param type - 히스토리 타입 ('vocabulary' | 'domain', 기본값: 'vocabulary')
- * @returns 로드된 HistoryData 또는 DomainHistoryData 객체
+ * @param type - 히스토리 타입 ('vocabulary' | 'domain' | 'term', 기본값: 'vocabulary')
+ * @returns 로드된 HistoryData, DomainHistoryData 또는 TermHistoryData 객체
  */
 export async function loadHistoryData(
 	filename?: string,
 	type: HistoryType = 'vocabulary'
-): Promise<HistoryData | DomainHistoryData> {
+): Promise<HistoryData | DomainHistoryData | TermHistoryData> {
 	try {
 		const historyPath = getHistoryPath(type);
 
@@ -117,7 +123,7 @@ export async function loadHistoryData(
 		}
 
 		// JSON 파싱
-		const data = JSON.parse(jsonString) as HistoryData | DomainHistoryData;
+		const data = JSON.parse(jsonString) as HistoryData | DomainHistoryData | TermHistoryData;
 
 		// 데이터 구조 검증
 		if (!data || typeof data !== 'object') {
@@ -168,13 +174,13 @@ export async function loadHistoryData(
 /**
  * 새로운 히스토리 로그 엔트리를 추가
  * @param newLog - 추가할 새로운 히스토리 로그 엔트리
- * @param type - 히스토리 타입 ('vocabulary' | 'domain', 기본값: 'vocabulary')
- * @returns 업데이트된 HistoryData 또는 DomainHistoryData 객체
+ * @param type - 히스토리 타입 ('vocabulary' | 'domain' | 'term', 기본값: 'vocabulary')
+ * @returns 업데이트된 HistoryData, DomainHistoryData 또는 TermHistoryData 객체
  */
 export async function addHistoryLog(
-	newLog: HistoryLogEntry | DomainHistoryLogEntry,
+	newLog: HistoryLogEntry | DomainHistoryLogEntry | TermHistoryLogEntry,
 	type: HistoryType = 'vocabulary'
-): Promise<HistoryData | DomainHistoryData> {
+): Promise<HistoryData | DomainHistoryData | TermHistoryData> {
 	try {
 		// 기존 히스토리 데이터 로드
 		const existingData = await loadHistoryData(undefined, type);
@@ -203,7 +209,7 @@ export async function addHistoryLog(
 
 /**
  * 히스토리 데이터 파일의 백업 생성
- * @param type - 히스토리 타입 ('vocabulary' | 'domain', 기본값: 'vocabulary')
+ * @param type - 히스토리 타입 ('vocabulary' | 'domain' | 'term', 기본값: 'vocabulary')
  * @returns 백업 파일 경로
  */
 export async function createHistoryBackup(type: HistoryType = 'vocabulary'): Promise<string> {
@@ -233,13 +239,13 @@ export async function createHistoryBackup(type: HistoryType = 'vocabulary'): Pro
 /**
  * 히스토리 데이터를 초기화 (모든 로그 삭제)
  * @param createBackup - 초기화 전 백업 생성 여부 (기본값: true)
- * @param type - 히스토리 타입 ('vocabulary' | 'domain', 기본값: 'vocabulary')
- * @returns 초기화된 빈 HistoryData 또는 DomainHistoryData 객체
+ * @param type - 히스토리 타입 ('vocabulary' | 'domain' | 'term', 기본값: 'vocabulary')
+ * @returns 초기화된 빈 HistoryData, DomainHistoryData 또는 TermHistoryData 객체
  */
 export async function clearHistoryData(
 	createBackup: boolean = true,
 	type: HistoryType = 'vocabulary'
-): Promise<HistoryData | DomainHistoryData> {
+): Promise<HistoryData | DomainHistoryData | TermHistoryData> {
 	try {
 		const historyPath = getHistoryPath(type);
 

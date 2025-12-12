@@ -1,6 +1,7 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse, HistoryData, HistoryLogEntry } from '$lib/types/vocabulary.js';
 import type { DomainHistoryData, DomainHistoryLogEntry } from '$lib/types/domain.js';
+import type { TermHistoryData, TermHistoryLogEntry } from '$lib/types/term.js';
 import { loadHistoryData, addHistoryLog, type HistoryType } from '$lib/utils/history-handler.js';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -15,7 +16,8 @@ export async function GET({ url }: RequestEvent) {
 		const offset = parseInt(url.searchParams.get('offset') || '0');
 		const filename = url.searchParams.get('filename') || undefined;
 		const typeParam = url.searchParams.get('type') || 'vocabulary';
-		const type: HistoryType = typeParam === 'domain' ? 'domain' : 'vocabulary';
+		const type: HistoryType =
+			typeParam === 'domain' ? 'domain' : typeParam === 'term' ? 'term' : 'vocabulary';
 
 		// 파라미터 유효성 검증
 		if (limit < 1 || limit > 200) {
@@ -41,7 +43,7 @@ export async function GET({ url }: RequestEvent) {
 		}
 
 		// 히스토리 데이터 로드
-		let historyData: HistoryData | DomainHistoryData;
+		let historyData: HistoryData | DomainHistoryData | TermHistoryData;
 		try {
 			historyData = await loadHistoryData(filename, type);
 		} catch (loadError) {
@@ -98,9 +100,11 @@ export async function GET({ url }: RequestEvent) {
  */
 export async function POST({ request, url }: RequestEvent) {
 	try {
-		const logData: Partial<HistoryLogEntry | DomainHistoryLogEntry> = await request.json();
+		const logData: Partial<HistoryLogEntry | DomainHistoryLogEntry | TermHistoryLogEntry> =
+			await request.json();
 		const typeParam = url.searchParams.get('type') || 'vocabulary';
-		const type: HistoryType = typeParam === 'domain' ? 'domain' : 'vocabulary';
+		const type: HistoryType =
+			typeParam === 'domain' ? 'domain' : typeParam === 'term' ? 'term' : 'vocabulary';
 
 		// 필수 필드 검증
 		if (!logData.action || !logData.targetId || !logData.targetName) {
@@ -138,7 +142,7 @@ export async function POST({ request, url }: RequestEvent) {
 		};
 
 		// 히스토리 로그 추가
-		let updatedHistoryData: HistoryData | DomainHistoryData;
+		let updatedHistoryData: HistoryData | DomainHistoryData | TermHistoryData;
 		try {
 			updatedHistoryData = await addHistoryLog(newLogEntry, type);
 		} catch (addError) {

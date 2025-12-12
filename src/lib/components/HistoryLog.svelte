@@ -3,24 +3,28 @@
 	import { browser } from '$app/environment';
 	import type { HistoryLogEntry, ApiResponse } from '$lib/types/vocabulary';
 	import type { DomainHistoryLogEntry } from '$lib/types/domain';
+	import type { TermHistoryLogEntry } from '$lib/types/term';
 	import { vocabularyStore } from '$lib/stores/vocabularyStore';
 	import { domainStore } from '$lib/stores/domain-store';
+	import { termStore } from '$lib/stores/term-store';
 
 	// Props
 	interface Props {
-		type?: 'vocabulary' | 'domain';
+		type?: 'vocabulary' | 'domain' | 'term';
 	}
 
 	let { type = 'vocabulary' }: Props = $props();
 
 	// 상태 변수
-	let historyLogs: (HistoryLogEntry | DomainHistoryLogEntry)[] = $state([]);
+	let historyLogs: (HistoryLogEntry | DomainHistoryLogEntry | TermHistoryLogEntry)[] = $state([]);
 	let isLoading = $state(false);
 	let isExpanded = $state(false);
 	let error = $state<string | null>(null);
 	let totalCount = $state(0);
 	let isHovered = $state(false);
-	let selectedFilename = $state(type === 'domain' ? 'domain.json' : 'vocabulary.json');
+	let selectedFilename = $state(
+		type === 'domain' ? 'domain.json' : type === 'term' ? 'term.json' : 'vocabulary.json'
+	);
 
 	let unsubscribe: () => void;
 	let intervalId: ReturnType<typeof setInterval> | null = null;
@@ -36,6 +40,20 @@
 		if (type === 'domain') {
 			// domainStore 구독
 			unsubscribe = domainStore.subscribe((value: { selectedFilename: string }) => {
+				if (value && value.selectedFilename) {
+					const newFilename = value.selectedFilename;
+					if (selectedFilename !== newFilename) {
+						selectedFilename = newFilename;
+						// 파일 변경 시 데이터 로드
+						if (browser) {
+							loadHistoryData();
+						}
+					}
+				}
+			});
+		} else if (type === 'term') {
+			// termStore 구독
+			unsubscribe = termStore.subscribe((value: { selectedFilename: string }) => {
 				if (value && value.selectedFilename) {
 					const newFilename = value.selectedFilename;
 					if (selectedFilename !== newFilename) {
@@ -101,7 +119,7 @@
 				limit: '20',
 				type: type
 			});
-			// domain 타입일 때는 filename 파라미터를 전달하지 않음 (도메인 히스토리는 파일별로 구분하지 않음)
+			// domain과 term 타입일 때는 filename 파라미터를 전달하지 않음 (히스토리는 파일별로 구분하지 않음)
 			if (type === 'vocabulary' && selectedFilename) {
 				params.append('filename', selectedFilename);
 			}
@@ -115,9 +133,11 @@
 				'logs' in result.data &&
 				Array.isArray((result.data as { logs: unknown }).logs)
 			) {
-				historyLogs = (result.data as { logs: (HistoryLogEntry | DomainHistoryLogEntry)[] }).logs;
+				historyLogs = (result.data as {
+					logs: (HistoryLogEntry | DomainHistoryLogEntry | TermHistoryLogEntry)[];
+				}).logs;
 				const data = result.data as {
-					logs: (HistoryLogEntry | DomainHistoryLogEntry)[];
+					logs: (HistoryLogEntry | DomainHistoryLogEntry | TermHistoryLogEntry)[];
 					pagination?: { totalCount?: number };
 				};
 				totalCount = data.pagination?.totalCount || 0;
@@ -206,7 +226,12 @@
 
 	// 외부에서 새로고침을 트리거할 수 있도록 전역 함수 등록
 	if (typeof window !== 'undefined') {
-		const functionName = type === 'domain' ? 'refreshDomainHistoryLog' : 'refreshHistoryLog';
+		const functionName =
+			type === 'domain'
+				? 'refreshDomainHistoryLog'
+				: type === 'term'
+					? 'refreshTermHistoryLog'
+					: 'refreshHistoryLog';
 		(window as unknown as { [key: string]: () => void })[functionName] = loadHistoryData;
 	}
 

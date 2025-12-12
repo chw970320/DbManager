@@ -30,7 +30,10 @@ export interface VocabularyData {
 	entries: VocabularyEntry[];
 	lastUpdated: string; // ISO 8601 날짜 문자열
 	totalCount: number;
-	mappedDomainFile?: string; // 매핑에 사용된 도메인 파일명
+	mappedDomainFile?: string; // 매핑에 사용된 도메인 파일명 (하위 호환성 유지)
+	mapping?: {
+		domain: string; // 매핑된 도메인 파일명
+	};
 }
 
 // 히스토리 로그 엔트리 인터페이스

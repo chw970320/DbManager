@@ -7,26 +7,30 @@ import type { ForbiddenWordsData } from '$lib/types/vocabulary';
 const DATA_DIR = process.env.DATA_PATH || 'static/data';
 const VOCABULARY_DIR = join(DATA_DIR, 'vocabulary');
 const DOMAIN_DIR = join(DATA_DIR, 'domain');
+const TERM_DIR = join(DATA_DIR, 'term');
 
 const DEFAULT_VOCABULARY_FILE = 'vocabulary.json';
 const DEFAULT_DOMAIN_FILE = 'domain.json';
+const DEFAULT_TERM_FILE = 'term.json';
 const FORBIDDEN_WORDS_FILE = 'forbidden-words.json';
 const HISTORY_FILE = 'history.json';
 
 /**
  * 데이터 파일 경로 가져오기
  * @param filename - 파일명
- * @param type - 데이터 타입 ('vocabulary' | 'domain' | 'forbidden' | 'history')
+ * @param type - 데이터 타입 ('vocabulary' | 'domain' | 'term' | 'forbidden' | 'history')
  */
 function getDataPath(
 	filename: string,
-	type: 'vocabulary' | 'domain' | 'forbidden' | 'history' = 'vocabulary'
+	type: 'vocabulary' | 'domain' | 'term' | 'forbidden' | 'history' = 'vocabulary'
 ): string {
 	// 파일명에 경로 구분자가 포함되어 있으면 제거 (보안)
 	const safeFilename = filename.replace(/^.*[\\/]/, '');
 
 	if (type === 'domain') {
 		return join(DOMAIN_DIR, safeFilename);
+	} else if (type === 'term') {
+		return join(TERM_DIR, safeFilename);
 	} else {
 		// vocabulary, forbidden, history는 vocabulary 폴더에 저장
 		return join(VOCABULARY_DIR, safeFilename);
@@ -117,6 +121,7 @@ export async function ensureDataDirectory(): Promise<void> {
 		// 2. 하위 디렉토리 확인
 		const vocabDirExists = existsSync(VOCABULARY_DIR);
 		const domainDirExists = existsSync(DOMAIN_DIR);
+		const termDirExists = existsSync(TERM_DIR);
 
 		// 3. 하위 디렉토리가 하나라도 없으면 생성
 		if (!vocabDirExists) {
@@ -124,6 +129,9 @@ export async function ensureDataDirectory(): Promise<void> {
 		}
 		if (!domainDirExists) {
 			await mkdir(DOMAIN_DIR, { recursive: true });
+		}
+		if (!termDirExists) {
+			await mkdir(TERM_DIR, { recursive: true });
 		}
 
 		// 4. 마이그레이션 필요 여부 확인 (루트 데이터 디렉토리에 json 파일이 남아있는지)
@@ -176,7 +184,11 @@ export async function saveVocabularyData(
 		const finalData: import('../types/vocabulary.js').VocabularyData = {
 			entries: validEntries,
 			lastUpdated: new Date().toISOString(),
-			totalCount: validEntries.length
+			totalCount: validEntries.length,
+			mapping: data.mapping || {
+				domain: data.mappedDomainFile || 'domain.json'
+			},
+			mappedDomainFile: data.mapping?.domain || data.mappedDomainFile || 'domain.json' // 하위 호환성 유지
 		};
 
 		const jsonString = JSON.stringify(finalData, null, 2);
@@ -238,10 +250,26 @@ export async function loadVocabularyData(
 			return isValid;
 		});
 
+		// 매핑 정보 처리 (하위 호환성 유지)
+		let mapping = data.mapping;
+		if (!mapping && data.mappedDomainFile) {
+			// 기존 mappedDomainFile이 있으면 mapping으로 변환
+			mapping = {
+				domain: data.mappedDomainFile
+			};
+		} else if (!mapping) {
+			// 기본값 설정
+			mapping = {
+				domain: 'domain.json'
+			};
+		}
+
 		return {
 			entries: validEntries,
 			lastUpdated: data.lastUpdated || new Date().toISOString(),
-			totalCount: validEntries.length
+			totalCount: validEntries.length,
+			mapping,
+			mappedDomainFile: mapping.domain // 하위 호환성 유지
 		};
 	} catch (error) {
 		console.error('단어집 데이터 로드 실패:', error);
@@ -377,7 +405,11 @@ export async function createVocabularyFile(filename: string): Promise<void> {
 		const emptyData: import('../types/vocabulary.js').VocabularyData = {
 			entries: [],
 			lastUpdated: new Date().toISOString(),
-			totalCount: 0
+			totalCount: 0,
+			mapping: {
+				domain: 'domain.json'
+			},
+			mappedDomainFile: 'domain.json' // 하위 호환성 유지
 		};
 
 		await writeFile(filePath, JSON.stringify(emptyData, null, 2), 'utf-8');
@@ -658,7 +690,6 @@ export async function mergeDomainData(
 					const existingEntry = mergedMap.get(compositeKey)!;
 					const mergedEntry: import('../types/domain.js').DomainEntry = {
 						...entry,
-						remarks: entry.remarks || existingEntry.remarks,
 						createdAt: existingEntry.createdAt,
 						updatedAt: new Date().toISOString()
 					};
@@ -826,6 +857,319 @@ export async function deleteDomainFile(filename: string): Promise<void> {
 		await unlink(filePath);
 	} catch (error) {
 		console.error('도메인 파일 삭제 실패:', error);
+		throw error;
+	}
+}
+
+/**
+ * 용어 데이터를 JSON 파일에서 불러오기
+ */
+export async function loadTermData(
+	filename: string = DEFAULT_TERM_FILE
+): Promise<import('../types/term.js').TermData> {
+	try {
+		await ensureDataDirectory();
+		const dataPath = getDataPath(filename, 'term');
+
+		if (!existsSync(dataPath)) {
+			const defaultData: import('../types/term.js').TermData = {
+				entries: [],
+				lastUpdated: new Date().toISOString(),
+				totalCount: 0,
+				mapping: {
+					vocabulary: 'vocabulary.json',
+					domain: 'domain.json'
+				}
+			};
+			if (filename === DEFAULT_TERM_FILE) {
+				await saveTermData(defaultData, filename);
+			}
+			return defaultData;
+		}
+
+		const fileContent = await readFile(dataPath, 'utf-8');
+
+		if (!fileContent.trim()) {
+			const defaultData: import('../types/term.js').TermData = {
+				entries: [],
+				lastUpdated: new Date().toISOString(),
+				totalCount: 0,
+				mapping: {
+					vocabulary: 'vocabulary.json',
+					domain: 'domain.json'
+				}
+			};
+			return defaultData;
+		}
+
+		const data: import('../types/term.js').TermData = JSON.parse(fileContent);
+
+		if (!data || !Array.isArray(data.entries)) {
+			throw new Error('유효하지 않은 용어 데이터 형식입니다.');
+		}
+
+		data.totalCount = data.entries.length;
+
+		// 매핑 정보가 없으면 기본값 설정
+		if (!data.mapping) {
+			data.mapping = {
+				vocabulary: 'vocabulary.json',
+				domain: 'domain.json'
+			};
+		}
+
+		return data;
+	} catch (error) {
+		console.error('용어 데이터 로드 실패:', error);
+		throw new Error(
+			`용어 데이터 로드 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`
+		);
+	}
+}
+
+/**
+ * 용어 데이터를 JSON 파일로 저장
+ */
+export async function saveTermData(
+	data: import('../types/term.js').TermData,
+	filename: string = DEFAULT_TERM_FILE
+): Promise<void> {
+	try {
+		await ensureDataDirectory();
+
+		if (!data || !Array.isArray(data.entries)) {
+			throw new Error('유효하지 않은 용어 데이터입니다.');
+		}
+
+		const validEntries = data.entries.filter((entry) => {
+			const isValid =
+				entry.id && entry.termName && entry.columnName && entry.domainName && entry.createdAt;
+			return isValid;
+		});
+
+		if (validEntries.length === 0 && data.entries.length > 0) {
+			throw new Error('저장할 유효한 용어 데이터가 없습니다.');
+		}
+
+		const finalData: import('../types/term.js').TermData = {
+			entries: validEntries,
+			lastUpdated: new Date().toISOString(),
+			totalCount: validEntries.length,
+			mapping: data.mapping || {
+				vocabulary: 'vocabulary.json',
+				domain: 'domain.json'
+			}
+		};
+
+		const jsonData = JSON.stringify(finalData, null, 2);
+		await writeFile(getDataPath(filename, 'term'), jsonData, 'utf-8');
+	} catch (error) {
+		console.error('용어 데이터 저장 실패:', error);
+		throw new Error(
+			`용어 데이터 저장 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`
+		);
+	}
+}
+
+/**
+ * 기존 용어 데이터에 새로운 엔트리들을 병합
+ */
+export async function mergeTermData(
+	newEntries: import('../types/term.js').TermEntry[],
+	replaceExisting: boolean = true,
+	filename: string = DEFAULT_TERM_FILE
+): Promise<import('../types/term.js').TermData> {
+	try {
+		const existingData = await loadTermData(filename);
+		let finalEntries: import('../types/term.js').TermEntry[];
+
+		if (replaceExisting || existingData.entries.length === 0) {
+			finalEntries = [...newEntries];
+		} else {
+			const mergedMap = new Map<string, import('../types/term.js').TermEntry>();
+			existingData.entries.forEach((entry) => {
+				const compositeKey = `${entry.termName.toLowerCase()}|${entry.columnName.toLowerCase()}|${entry.domainName.toLowerCase()}`;
+				mergedMap.set(compositeKey, entry);
+			});
+			newEntries.forEach((entry) => {
+				const compositeKey = `${entry.termName.toLowerCase()}|${entry.columnName.toLowerCase()}|${entry.domainName.toLowerCase()}`;
+
+				if (mergedMap.has(compositeKey)) {
+					const existingEntry = mergedMap.get(compositeKey)!;
+					const mergedEntry: import('../types/term.js').TermEntry = {
+						...entry,
+						createdAt: existingEntry.createdAt,
+						updatedAt: new Date().toISOString()
+					};
+					mergedMap.set(compositeKey, mergedEntry);
+				} else {
+					mergedMap.set(compositeKey, entry);
+				}
+			});
+			finalEntries = Array.from(mergedMap.values());
+		}
+
+		const mergedData: import('../types/term.js').TermData = {
+			entries: finalEntries,
+			lastUpdated: new Date().toISOString(),
+			totalCount: finalEntries.length
+		};
+
+		await saveTermData(mergedData, filename);
+		return mergedData;
+	} catch (error) {
+		console.error('용어 데이터 병합 실패:', error);
+		throw new Error(
+			`용어 데이터 병합 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`
+		);
+	}
+}
+
+/**
+ * 용어 데이터 백업 생성
+ */
+export async function createTermBackup(filename: string = DEFAULT_TERM_FILE): Promise<string> {
+	try {
+		await ensureDataDirectory();
+		const dataPath = getDataPath(filename, 'term');
+
+		if (!existsSync(dataPath)) {
+			throw new Error('백업할 파일이 존재하지 않습니다.');
+		}
+
+		const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+		const safeFilename = filename.replace(/\.json$/, '');
+		const backupFileName = `${safeFilename}_backup_${timestamp}.json`;
+		const backupPath = join(TERM_DIR, backupFileName);
+
+		const originalData = await readFile(dataPath, 'utf-8');
+		await writeFile(backupPath, originalData, 'utf-8');
+
+		return backupPath;
+	} catch (error) {
+		console.error('용어 백업 생성 실패:', error);
+		throw new Error(
+			`용어 백업 생성 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`
+		);
+	}
+}
+
+/**
+ * 사용 가능한 용어 파일 목록 조회
+ */
+export async function listTermFiles(): Promise<string[]> {
+	try {
+		await ensureDataDirectory();
+		const files = await readdir(TERM_DIR);
+		return files.filter((file) => {
+			return file.endsWith('.json') && file !== HISTORY_FILE && !file.includes('_backup_');
+		});
+	} catch (error) {
+		console.error('용어 파일 목록 조회 실패:', error);
+		return [DEFAULT_TERM_FILE];
+	}
+}
+
+/**
+ * 새로운 용어 파일 생성
+ */
+export async function createTermFile(filename: string): Promise<void> {
+	try {
+		await ensureDataDirectory();
+
+		if (!filename.endsWith('.json')) {
+			throw new Error('파일명은 .json으로 끝나야 합니다.');
+		}
+		if (/[\\/:*?"<>|]/.test(filename)) {
+			throw new Error('파일명에 사용할 수 없는 문자가 포함되어 있습니다.');
+		}
+
+		const filePath = getDataPath(filename, 'term');
+
+		if (existsSync(filePath)) {
+			throw new Error('이미 존재하는 파일명입니다.');
+		}
+
+		const emptyData: import('../types/term.js').TermData = {
+			entries: [],
+			lastUpdated: new Date().toISOString(),
+			totalCount: 0,
+			mapping: {
+				vocabulary: 'vocabulary.json',
+				domain: 'domain.json'
+			}
+		};
+
+		await writeFile(filePath, JSON.stringify(emptyData, null, 2), 'utf-8');
+	} catch (error) {
+		console.error('용어 파일 생성 실패:', error);
+		throw error;
+	}
+}
+
+/**
+ * 용어 파일 이름 변경
+ */
+export async function renameTermFile(oldFilename: string, newFilename: string): Promise<void> {
+	try {
+		await ensureDataDirectory();
+
+		if (!newFilename.endsWith('.json')) {
+			throw new Error('새 파일명은 .json으로 끝나야 합니다.');
+		}
+		if (/[\\/:*?"<>|]/.test(newFilename)) {
+			throw new Error('파일명에 사용할 수 없는 문자가 포함되어 있습니다.');
+		}
+
+		const oldPath = getDataPath(oldFilename, 'term');
+		const newPath = getDataPath(newFilename, 'term');
+
+		if (!existsSync(oldPath)) {
+			throw new Error('이름을 변경할 파일이 존재하지 않습니다.');
+		}
+
+		if (existsSync(newPath)) {
+			throw new Error('이미 존재하는 파일명입니다.');
+		}
+
+		if (oldFilename === DEFAULT_TERM_FILE) {
+			throw new Error('시스템 파일은 이름을 변경할 수 없습니다.');
+		}
+
+		await rename(oldPath, newPath);
+	} catch (error) {
+		console.error('용어 파일 이름 변경 실패:', error);
+		throw error;
+	}
+}
+
+/**
+ * 용어 파일 삭제
+ */
+export async function deleteTermFile(filename: string): Promise<void> {
+	try {
+		await ensureDataDirectory();
+
+		if (!filename.endsWith('.json')) {
+			throw new Error('삭제할 파일명은 .json으로 끝나야 합니다.');
+		}
+		if (/[\\/:*?"<>|]/.test(filename)) {
+			throw new Error('파일명에 사용할 수 없는 문자가 포함되어 있습니다.');
+		}
+
+		if (filename === DEFAULT_TERM_FILE) {
+			throw new Error('시스템 파일은 삭제할 수 없습니다.');
+		}
+
+		const filePath = getDataPath(filename, 'term');
+
+		if (!existsSync(filePath)) {
+			throw new Error('삭제할 파일이 존재하지 않습니다.');
+		}
+
+		await unlink(filePath);
+	} catch (error) {
+		console.error('용어 파일 삭제 실패:', error);
 		throw error;
 	}
 }

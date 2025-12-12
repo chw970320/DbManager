@@ -1,24 +1,23 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
-	import { get } from 'svelte/store';
 	import FileUpload from './FileUpload.svelte';
 	import type { ApiResponse, UploadResult } from '$lib/types/vocabulary';
 	import { settingsStore } from '$lib/stores/settings-store';
-	import { filterVocabularyFiles } from '$lib/utils/file-filter';
-	import { vocabularyStore } from '$lib/stores/vocabularyStore';
+	import { filterTermFiles } from '$lib/utils/file-filter';
 
 	interface Props {
 		isOpen?: boolean;
+		selectedFilename?: string;
 	}
 
-	let { isOpen = false }: Props = $props();
+	let { isOpen = false, selectedFilename = 'term.json' }: Props = $props();
 
 	const dispatch = createEventDispatcher<{
 		close: void;
 		change: void;
 	}>();
 
-	const SYSTEM_FILE = 'vocabulary.json';
+	const SYSTEM_FILE = 'term.json';
 
 	let files = $state<string[]>([]);
 	let allFiles = $state<string[]>([]);
@@ -32,24 +31,26 @@
 	let showSystemFiles = $state(true);
 	let activeTab = $state<'files' | 'upload'>('files');
 
-	// 도메인 파일 매핑 상태
-	let domainFiles = $state<string[]>([]);
-	let selectedDomainFile = $state('domain.json');
-	let isDomainLoading = $state(false);
-	let syncMessage = $state('');
-	let currentMappingFile = $state<string | null>(null);
-	let isMappingLoading = $state(false);
-
 	// 업로드 관련 상태
-	let selectedUploadFile = $state('vocabulary.json');
+	let selectedUploadFile = $state(selectedFilename);
 	let uploadMode = $state<'replace' | 'merge'>('merge');
 	type UploadSuccessDetail = { result: UploadResult };
 	type UploadErrorDetail = { error: string };
 
+	// 매핑 관련 상태
+	let vocabularyFiles = $state<string[]>([]);
+	let domainFiles = $state<string[]>([]);
+	let selectedVocabularyFile = $state('vocabulary.json');
+	let selectedDomainFile = $state('domain.json');
+	let isMappingLoading = $state(false);
+	let currentMappingFile = $state<string | null>(null);
+	let syncMessage = $state('');
+
 	// Settings store 구독
 	$effect(() => {
 		const unsubscribe = settingsStore.subscribe((settings) => {
-			showSystemFiles = settings.showVocabularySystemFiles;
+			// 용어 파일 필터링은 도메인 설정을 사용 (또는 별도 설정 추가 가능)
+			showSystemFiles = settings.showDomainSystemFiles;
 			if (allFiles.length > 0) {
 				filterFiles();
 			}
@@ -61,18 +62,18 @@
 	async function saveSettings(value: boolean) {
 		settingsStore.update((settings) => ({
 			...settings,
-			showVocabularySystemFiles: value
+			showDomainSystemFiles: value
 		}));
 	}
 
 	// Check if file is system file
 	function isSystemFile(file: string): boolean {
-		return file === SYSTEM_FILE;
+		return file === SYSTEM_FILE || file === 'history.json';
 	}
 
 	// Filter files based on settings
 	function filterFiles() {
-		files = filterVocabularyFiles(allFiles, showSystemFiles);
+		files = filterTermFiles(allFiles, showSystemFiles);
 	}
 
 	// Load files
@@ -80,7 +81,7 @@
 		isLoading = true;
 		try {
 			// 캐시를 무시하여 최신 파일 목록을 가져옴
-			const response = await fetch('/api/vocabulary/files', {
+			const response = await fetch('/api/term/files', {
 				cache: 'no-store',
 				headers: {
 					'Cache-Control': 'no-cache'
@@ -98,32 +99,107 @@
 		}
 	}
 
+	// Toggle system files visibility
+	async function toggleSystemFiles() {
+		showSystemFiles = !showSystemFiles;
+		await saveSettings(showSystemFiles);
+		filterFiles();
+	}
+
+	// Load vocabulary files for mapping
+	async function loadVocabularyFiles() {
+		try {
+			const response = await fetch('/api/vocabulary/files');
+			const result: ApiResponse = await response.json();
+			if (result.success && Array.isArray(result.data)) {
+				vocabularyFiles = result.data as string[];
+			}
+		} catch (err) {
+			console.error('단어집 파일 목록 로드 실패:', err);
+		}
+	}
+
 	// Load domain files for mapping
 	async function loadDomainFiles() {
-		isDomainLoading = true;
 		try {
 			const response = await fetch('/api/domain/files');
 			const result: ApiResponse = await response.json();
 			if (result.success && Array.isArray(result.data)) {
 				domainFiles = result.data as string[];
-				if (!domainFiles.includes(selectedDomainFile) && domainFiles.length > 0) {
-					handleDomainFileSelect(domainFiles[0]);
-				}
 			}
 		} catch (err) {
 			console.error('도메인 파일 목록 로드 실패:', err);
-		} finally {
-			isDomainLoading = false;
 		}
 	}
 
-	// Sync domainGroup mapping into vocabulary file
-	async function handleDomainSync() {
-		const { selectedFilename } = get(vocabularyStore);
-		const vocabFile = selectedFilename || selectedUploadFile || currentMappingFile || 'vocabulary.json';
+	// Load mapping info for selected term file
+	async function loadMappingInfo(filename: string) {
+		isMappingLoading = true;
+		try {
+			const response = await fetch(`/api/term/files/mapping?filename=${encodeURIComponent(filename)}`);
+			const result: ApiResponse = await response.json();
+			if (result.success && result.data && result.data.mapping) {
+				selectedVocabularyFile = result.data.mapping.vocabulary || 'vocabulary.json';
+				selectedDomainFile = result.data.mapping.domain || 'domain.json';
+				currentMappingFile = filename;
+			} else {
+				// 기본값 설정
+				selectedVocabularyFile = 'vocabulary.json';
+				selectedDomainFile = 'domain.json';
+				currentMappingFile = filename;
+			}
+		} catch (err) {
+			console.error('매핑 정보 로드 실패:', err);
+			selectedVocabularyFile = 'vocabulary.json';
+			selectedDomainFile = 'domain.json';
+			currentMappingFile = filename;
+		} finally {
+			isMappingLoading = false;
+		}
+	}
 
-		if (!vocabFile) {
-			error = '단어집 파일을 선택하세요.';
+	// Save mapping info
+	async function handleMappingSave() {
+		if (!currentMappingFile) {
+			error = '매핑할 용어 파일을 선택하세요.';
+			return;
+		}
+
+		isSubmitting = true;
+		error = '';
+		successMessage = '';
+		syncMessage = '';
+
+		try {
+			const response = await fetch('/api/term/files/mapping', {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					filename: currentMappingFile,
+					mapping: {
+						vocabulary: selectedVocabularyFile,
+						domain: selectedDomainFile
+					}
+				})
+			});
+			const result: ApiResponse = await response.json();
+
+			if (result.success) {
+				successMessage = '매핑 정보가 저장되었습니다.';
+			} else {
+				error = result.error || '매핑 정보 저장 실패';
+			}
+		} catch (_err) {
+			error = '서버 오류가 발생했습니다.';
+		} finally {
+			isSubmitting = false;
+		}
+	}
+
+	// Sync term mapping
+	async function handleTermSync() {
+		if (!currentMappingFile) {
+			syncMessage = '동기화할 용어 파일을 선택하세요.';
 			return;
 		}
 
@@ -133,20 +209,25 @@
 		successMessage = '';
 
 		try {
-			const response = await fetch('/api/vocabulary/sync-domain', {
+			const response = await fetch('/api/term/sync', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					vocabularyFilename: vocabFile
+					filename: currentMappingFile
 				})
 			});
 			const result: ApiResponse = await response.json();
-			if (response.ok && result.success) {
-				successMessage =
-					(result.message as string) ||
-					`동기화 완료 (matched: ${(result.data as Record<string, unknown>)?.matched})`;
+
+			if (result.success && result.data) {
+				const data = result.data as {
+					updated?: number;
+					matchedTerm?: number;
+					matchedColumn?: number;
+					matchedDomain?: number;
+					total?: number;
+				};
+				successMessage = `동기화 완료 (업데이트: ${data.updated || 0}, 매칭: 용어명 ${data.matchedTerm || 0}, 칼럼명 ${data.matchedColumn || 0}, 도메인 ${data.matchedDomain || 0})`;
 				syncMessage = '';
-				await loadFiles();
 				dispatch('change');
 			} else {
 				error = result.error || '동기화에 실패했습니다.';
@@ -157,13 +238,6 @@
 		} finally {
 			isSubmitting = false;
 		}
-	}
-
-	// Toggle system files visibility
-	async function toggleSystemFiles() {
-		showSystemFiles = !showSystemFiles;
-		await saveSettings(showSystemFiles);
-		filterFiles();
 	}
 
 	// Create file
@@ -180,7 +254,7 @@
 		successMessage = '';
 
 		try {
-			const response = await fetch('/api/vocabulary/files', {
+			const response = await fetch('/api/term/files', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ filename })
@@ -221,7 +295,7 @@
 		successMessage = '';
 
 		try {
-			const response = await fetch('/api/vocabulary/files', {
+			const response = await fetch('/api/term/files', {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ oldFilename: editingFile, newFilename: filename })
@@ -254,7 +328,7 @@
 		successMessage = '';
 
 		try {
-			const response = await fetch('/api/vocabulary/files', {
+			const response = await fetch('/api/term/files', {
 				method: 'DELETE',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ filename: file })
@@ -288,86 +362,12 @@
 		renameValue = '';
 	}
 
-	function handleDomainFileSelect(file: string) {
-		selectedDomainFile = file;
-		vocabularyStore.update((state) => ({ ...state, selectedDomainFilename: file }));
-	}
-
-	// Load mapping info for selected vocabulary file
-	async function loadMappingInfo(filename: string) {
-		isMappingLoading = true;
-		try {
-			const response = await fetch(
-				`/api/vocabulary/files/mapping?filename=${encodeURIComponent(filename)}`
-			);
-			const result: ApiResponse = await response.json();
-			if (result.success && result.data && result.data.mapping) {
-				selectedDomainFile = result.data.mapping.domain || 'domain.json';
-				currentMappingFile = filename;
-			} else {
-				// 기본값 설정
-				selectedDomainFile = 'domain.json';
-				currentMappingFile = filename;
-			}
-		} catch (err) {
-			console.error('매핑 정보 로드 실패:', err);
-			selectedDomainFile = 'domain.json';
-			currentMappingFile = filename;
-		} finally {
-			isMappingLoading = false;
-		}
-	}
-
-	// Save mapping info
-	async function handleMappingSave() {
-		const { selectedFilename } = get(vocabularyStore);
-		const vocabFile = selectedFilename || selectedUploadFile || 'vocabulary.json';
-
-		if (!vocabFile) {
-			error = '매핑할 단어집 파일을 선택하세요.';
-			return;
-		}
-
-		isSubmitting = true;
-		error = '';
-		successMessage = '';
-		syncMessage = '';
-
-		try {
-			const response = await fetch('/api/vocabulary/files/mapping', {
-				method: 'PUT',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					filename: vocabFile,
-					mapping: {
-						domain: selectedDomainFile
-					}
-				})
-			});
-			const result: ApiResponse = await response.json();
-
-			if (result.success) {
-				successMessage = '매핑 정보가 저장되었습니다.';
-				vocabularyStore.update((state) => ({
-					...state,
-					selectedDomainFilename: selectedDomainFile
-				}));
-			} else {
-				error = result.error || '매핑 정보 저장 실패';
-			}
-		} catch (_err) {
-			error = '서버 오류가 발생했습니다.';
-		} finally {
-			isSubmitting = false;
-		}
-	}
-
 	function handleClose() {
 		error = '';
 		successMessage = '';
 		newFilename = '';
 		editingFile = null;
-		selectedUploadFile = files.length > 0 ? files[0] : 'vocabulary.json';
+		selectedUploadFile = files.length > 0 ? files[0] : 'term.json';
 		dispatch('close');
 	}
 
@@ -400,43 +400,41 @@
 		if (files.length > 0 && !files.includes(selectedUploadFile)) {
 			selectedUploadFile = files[0];
 		} else if (files.length === 0) {
-			selectedUploadFile = 'vocabulary.json';
+			selectedUploadFile = 'term.json';
 		}
 	});
 
 	$effect(() => {
 		if (isOpen) {
-			// 초기 설정 로드
+			// 초기 설정 로드 및 파일 목록 로드
+			let settingsLoaded = false;
 			const unsubscribe = settingsStore.subscribe((settings) => {
-				showSystemFiles = settings.showVocabularySystemFiles;
-			});
-			loadFiles();
-			// 도메인 파일 로드 및 스토어 동기화
-			const unsubscribeDomain = vocabularyStore.subscribe((state) => {
-				if (state.selectedDomainFilename) {
-					selectedDomainFile = state.selectedDomainFilename;
+				showSystemFiles = settings.showDomainSystemFiles;
+				// 설정이 로드된 후 파일 목록 로드 (한 번만 실행)
+				if (!settingsLoaded) {
+					settingsLoaded = true;
+					loadFiles();
+					loadVocabularyFiles();
+					loadDomainFiles();
+					// 선택된 파일의 매핑 정보 로드
+					if (selectedFilename) {
+						loadMappingInfo(selectedFilename);
+					}
+				} else if (allFiles.length > 0) {
+					// 설정 변경 시 필터링만 재실행
+					filterFiles();
 				}
-				// 선택된 단어집 파일의 매핑 정보 로드
-				const vocabFile = state.selectedFilename || selectedUploadFile || 'vocabulary.json';
-				if (vocabFile && vocabFile !== currentMappingFile) {
-					loadMappingInfo(vocabFile);
-				}
 			});
-			loadDomainFiles();
-			// 초기 매핑 정보 로드
-			const { selectedFilename } = get(vocabularyStore);
-			if (selectedFilename) {
-				loadMappingInfo(selectedFilename);
-			} else if (selectedUploadFile) {
-				loadMappingInfo(selectedUploadFile);
-			}
-			return () => {
-				unsubscribe();
-				unsubscribeDomain();
-			};
+			return unsubscribe;
 		}
 	});
 
+	// selectedFilename 변경 시 매핑 정보 로드
+	$effect(() => {
+		if (isOpen && selectedFilename) {
+			loadMappingInfo(selectedFilename);
+		}
+	});
 
 	$effect(() => {
 		if (allFiles.length > 0) {
@@ -453,6 +451,7 @@
 			return () => clearTimeout(timer);
 		}
 	});
+
 	function focus(el: HTMLElement) {
 		el.focus();
 	}
@@ -474,7 +473,7 @@
 		<div class="mx-4 flex max-h-[90vh] w-full max-w-3xl flex-col rounded-lg bg-white shadow-xl">
 			<!-- 헤더 -->
 			<div class="flex items-center justify-between border-b px-6 py-4">
-				<h2 class="text-xl font-bold text-gray-900">단어집 파일 관리</h2>
+				<h2 class="text-xl font-bold text-gray-900">용어 파일 관리</h2>
 				<button onclick={handleClose} class="text-gray-400 hover:text-gray-600" aria-label="Close">
 					<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path
@@ -522,55 +521,75 @@
 				{#if activeTab === 'files'}
 					<!-- 파일 목록 탭 -->
 					<div class="space-y-6">
-						<!-- 도메인 파일 매핑 -->
+						<!-- 매핑 설정 -->
 						<div class="rounded-lg border border-gray-200 bg-white/70 p-4">
 							<div class="mb-3 flex items-center justify-between">
 								<div>
-									<h3 class="text-sm font-semibold text-gray-800">도메인 파일 매핑</h3>
+									<h3 class="text-sm font-semibold text-gray-800">매핑 설정</h3>
 									<p class="text-xs text-gray-500">
 										{#if currentMappingFile}
 											현재 파일: {currentMappingFile}
 										{:else}
-											도메인분류명 ↔ 도메인그룹 동기화
+											용어 파일을 선택하세요
 										{/if}
 									</p>
 								</div>
 								<div class="flex gap-2">
 									<button
-										onclick={handleDomainSync}
+										onclick={handleTermSync}
 										class="rounded-md bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
-										disabled={isSubmitting || isDomainLoading}
+										disabled={isSubmitting || isMappingLoading || !currentMappingFile}
 									>
 										{isSubmitting ? '동기화 중...' : '동기화'}
 									</button>
 									<button
 										onclick={handleMappingSave}
 										class="rounded-md bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-										disabled={isSubmitting || isMappingLoading}
+										disabled={isSubmitting || isMappingLoading || !currentMappingFile}
 									>
 										{isSubmitting ? '저장 중...' : '매핑 저장'}
 									</button>
 								</div>
 							</div>
-							<div class="space-y-2">
-								<label class="block text-xs font-medium text-gray-700" for="domainFileSelect">
-									매핑할 도메인 파일
-								</label>
-								<select
-									id="domainFileSelect"
-									class="w-full rounded-md border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
-									disabled={isDomainLoading}
-									bind:value={selectedDomainFile}
-									onchange={(e) => handleDomainFileSelect((e.target as HTMLSelectElement).value)}
-								>
-									{#if domainFiles.length === 0}
-										<option value="domain.json">domain.json</option>
-									{:else}
-										{#each domainFiles as file (file)}
-											<option value={file}>{file}</option>
-										{/each}
-									{/if}
-								</select>
+							<div class="space-y-3">
+								<div>
+									<label class="block text-xs font-medium text-gray-700" for="vocabularyFileSelect">
+										단어집 파일
+									</label>
+									<select
+										id="vocabularyFileSelect"
+										class="mt-1 w-full rounded-md border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+										disabled={isMappingLoading || !currentMappingFile}
+										bind:value={selectedVocabularyFile}
+									>
+										{#if vocabularyFiles.length === 0}
+											<option value="vocabulary.json">vocabulary.json</option>
+										{:else}
+											{#each vocabularyFiles as file (file)}
+												<option value={file}>{file}</option>
+											{/each}
+										{/if}
+									</select>
+								</div>
+								<div>
+									<label class="block text-xs font-medium text-gray-700" for="domainFileSelect">
+										도메인 파일
+									</label>
+									<select
+										id="domainFileSelect"
+										class="mt-1 w-full rounded-md border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
+										disabled={isMappingLoading || !currentMappingFile}
+										bind:value={selectedDomainFile}
+									>
+										{#if domainFiles.length === 0}
+											<option value="domain.json">domain.json</option>
+										{:else}
+											{#each domainFiles as file (file)}
+												<option value={file}>{file}</option>
+											{/each}
+										{/if}
+									</select>
+								</div>
 								{#if syncMessage}
 									<p class="text-xs text-gray-600">{syncMessage}</p>
 								{/if}
@@ -589,7 +608,7 @@
 										}
 									}}
 									bind:value={newFilename}
-									placeholder="파일명 (예: new_vocab)"
+									placeholder="파일명 (예: new_term)"
 									class="flex-1 rounded-md border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
 									disabled={isSubmitting}
 								/>
@@ -761,7 +780,7 @@
 									<option value={file}>{file}</option>
 								{/each}
 								{#if files.length === 0}
-									<option value="vocabulary.json">vocabulary.json</option>
+									<option value="term.json">term.json</option>
 								{/if}
 							</select>
 						</div>
@@ -770,6 +789,8 @@
 						<div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
 							<FileUpload
 								disabled={isSubmitting || files.length === 0}
+								apiEndpoint="/api/term/upload"
+								contentType="용어"
 								filename={selectedUploadFile}
 								replaceExisting={uploadMode === 'replace'}
 								onuploadstart={handleUploadStart}
@@ -794,3 +815,4 @@
 		</div>
 	</div>
 {/if}
+

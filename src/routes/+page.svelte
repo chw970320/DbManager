@@ -20,7 +20,7 @@
 			</div>
 
 			<!-- 기능 그리드 -->
-			<div class="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-2">
+			<div class="mt-16 grid gap-8 md:grid-cols-2 lg:grid-cols-3">
 				<!-- 기능 1: 단어집 -->
 				<a
 					href="/browse"
@@ -70,6 +70,32 @@
 						</div>
 						<h3 class="mt-4 text-lg font-semibold text-gray-900">도메인</h3>
 						<p class="mt-2 text-sm text-gray-600">등록된 도메인 정보를 검색하고 조회하세요.</p>
+					</div>
+				</a>
+
+				<!-- 기능 3: 용어 -->
+				<a
+					href="/term/browse"
+					class="animate-fade-in-up delay-700 group relative overflow-hidden rounded-2xl border border-gray-200/50 bg-white p-8 opacity-0 shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-xl"
+				>
+					<div
+						class="absolute inset-0 bg-gradient-to-br from-purple-50 to-pink-50 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+					></div>
+					<div class="relative">
+						<div
+							class="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100 text-purple-600 transition-all duration-300 group-hover:bg-purple-600 group-hover:text-white"
+						>
+							<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+								/>
+							</svg>
+						</div>
+						<h3 class="mt-4 text-lg font-semibold text-gray-900">용어</h3>
+						<p class="mt-2 text-sm text-gray-600">용어를 관리하고 단어집 및 도메인과 매핑하세요.</p>
 					</div>
 				</a>
 			</div>

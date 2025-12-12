@@ -8,6 +8,12 @@ import { validateXlsxFile } from '$lib/utils/validation.js';
 import { parseTermXlsxToJson } from '$lib/utils/xlsx-parser.js';
 import { addHistoryLog } from '$lib/utils/history-handler.js';
 import { v4 as uuidv4 } from 'uuid';
+import {
+	getRequiredFile,
+	getOptionalString,
+	getOptionalBoolean,
+	FormDataValidationError
+} from '$lib/utils/type-guards.js';
 
 /**
  * 용어 업로드 정보 조회 API
@@ -56,7 +62,10 @@ function checkTermMapping(
 	domainMap: Map<string, string>
 ): { isMappedTerm: boolean; isMappedColumn: boolean; isMappedDomain: boolean } {
 	// 용어명 매핑: 언더스코어로 분리해서 각 단어가 단어집의 standardName에 있는지 확인
-	const termParts = termName.split('_').map((p) => p.trim().toLowerCase()).filter((p) => p.length > 0);
+	const termParts = termName
+		.split('_')
+		.map((p) => p.trim().toLowerCase())
+		.filter((p) => p.length > 0);
 	const isMappedTerm =
 		termParts.length > 0 &&
 		termParts.every((part) => {
@@ -111,23 +120,11 @@ export async function POST({ request }: RequestEvent) {
 			);
 		}
 
-		// FormData 파싱
+		// FormData 파싱 및 안전한 추출
 		const formData = await request.formData();
-		const file = formData.get('file') as File;
-		const vocabularyFilename = (formData.get('vocabularyFilename') as string) || 'vocabulary.json';
-		const domainFilename = (formData.get('domainFilename') as string) || 'domain.json';
-
-		// 파일 존재 확인
-		if (!file) {
-			return json(
-				{
-					success: false,
-					error: '업로드할 파일이 없습니다.',
-					message: 'No file uploaded'
-				} as ApiResponse,
-				{ status: 400 }
-			);
-		}
+		const file = getRequiredFile(formData, 'file');
+		const vocabularyFilename = getOptionalString(formData, 'vocabularyFilename', 'vocabulary.json');
+		const domainFilename = getOptionalString(formData, 'domainFilename', 'domain.json');
 
 		// 파일 유효성 검증
 		try {
@@ -148,8 +145,8 @@ export async function POST({ request }: RequestEvent) {
 		const buffer = Buffer.from(arrayBuffer);
 
 		// 기존 데이터와 병합 (replace 옵션 확인)
-		const replaceExisting = formData.get('replace') === 'true';
-		const filename = (formData.get('filename') as string) || 'term.json';
+		const replaceExisting = getOptionalBoolean(formData, 'replace');
+		const filename = getOptionalString(formData, 'filename', 'term.json');
 
 		// 용어 파일의 매핑 정보 로드
 		const termData = await loadTermData(filename);
@@ -159,7 +156,10 @@ export async function POST({ request }: RequestEvent) {
 		};
 
 		// xlsx 파일 파싱
-		let parsedEntries: Omit<TermEntry, 'id' | 'isMappedTerm' | 'isMappedColumn' | 'isMappedDomain' | 'createdAt' | 'updatedAt'>[];
+		let parsedEntries: Omit<
+			TermEntry,
+			'id' | 'isMappedTerm' | 'isMappedColumn' | 'isMappedDomain' | 'createdAt' | 'updatedAt'
+		>[];
 		try {
 			parsedEntries = parseTermXlsxToJson(buffer, !replaceExisting);
 		} catch (parseError) {
@@ -294,6 +294,18 @@ export async function POST({ request }: RequestEvent) {
 	} catch (error) {
 		console.error('용어 파일 업로드 중 오류:', error);
 
+		// FormData 검증 에러 처리
+		if (error instanceof FormDataValidationError) {
+			return json(
+				{
+					success: false,
+					error: error.message,
+					message: 'FormData validation failed'
+				} as ApiResponse,
+				{ status: 400 }
+			);
+		}
+
 		return json(
 			{
 				success: false,
@@ -304,4 +316,3 @@ export async function POST({ request }: RequestEvent) {
 		);
 	}
 }
-

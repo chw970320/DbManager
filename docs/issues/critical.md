@@ -152,14 +152,25 @@ const newEntry: Partial<VocabularyEntry> = await request.json();
 
 ---
 
-## 이슈 #C3: FormData 파싱 시 null 체크 없이 타입 단언 사용
+## ~~이슈 #C3: FormData 파싱 시 null 체크 없이 타입 단언 사용~~ ✅ 해결됨
+
+> **해결일**: 2024-12-12
+> **해결 방법**: FormData 안전 추출 유틸리티 구현
+>
+> - `getRequiredFile()`: 필수 파일 안전 추출 + 검증
+> - `getOptionalString()`: 선택적 문자열 추출 + 기본값
+> - `getOptionalBoolean()`: boolean 값 안전 추출
+> - `FormDataValidationError`: 전용 에러 클래스
+> - 모든 upload API에 적용
 
 **심각도**: Critical
 
 **위치**:
 
-- `src/routes/api/upload/+server.ts:29`
-- `src/routes/api/domain/upload/+server.ts:70`
+- `src/lib/utils/type-guards.ts` - FormData 유틸리티 함수들
+- `src/routes/api/upload/+server.ts`
+- `src/routes/api/domain/upload/+server.ts`
+- `src/routes/api/term/upload/+server.ts`
 
 **문제 설명**:
 

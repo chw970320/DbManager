@@ -4,6 +4,12 @@ import { validateXlsxFile } from '$lib/utils/validation.js';
 import { parseXlsxToJson } from '$lib/utils/xlsx-parser.js';
 import { mergeVocabularyData } from '$lib/utils/file-handler.js';
 import { addHistoryLog } from '$lib/utils/history-handler.js';
+import {
+	getRequiredFile,
+	getOptionalString,
+	getOptionalBoolean,
+	FormDataValidationError
+} from '$lib/utils/type-guards.js';
 
 /**
  * 파일 업로드 및 처리 API
@@ -24,22 +30,10 @@ export async function POST({ request }: RequestEvent) {
 			);
 		}
 
-		// FormData 파싱
+		// FormData 파싱 및 안전한 추출
 		const formData = await request.formData();
-		const file = formData.get('file') as File;
-		const filename = (formData.get('filename') as string) || 'vocabulary.json';
-
-		// 파일 존재 확인
-		if (!file) {
-			return json(
-				{
-					success: false,
-					error: '업로드할 파일이 없습니다.',
-					message: 'No file uploaded'
-				} as ApiResponse,
-				{ status: 400 }
-			);
-		}
+		const file = getRequiredFile(formData, 'file');
+		const filename = getOptionalString(formData, 'filename', 'vocabulary.json');
 
 		// 파일 유효성 검증
 		try {
@@ -60,7 +54,7 @@ export async function POST({ request }: RequestEvent) {
 		const buffer = Buffer.from(arrayBuffer);
 
 		// 기존 데이터와 병합 (replace 옵션 확인)
-		const replaceExisting = formData.get('replace') === 'true';
+		const replaceExisting = getOptionalBoolean(formData, 'replace');
 
 		// xlsx 파일 파싱 (교체 모드일 때는 파일 내 중복 체크 건너뛰기)
 		let parsedEntries;
@@ -136,6 +130,18 @@ export async function POST({ request }: RequestEvent) {
 		);
 	} catch (error) {
 		console.error('파일 업로드 처리 중 오류:', error);
+
+		// FormData 검증 에러 처리
+		if (error instanceof FormDataValidationError) {
+			return json(
+				{
+					success: false,
+					error: error.message,
+					message: 'FormData validation failed'
+				} as ApiResponse,
+				{ status: 400 }
+			);
+		}
 
 		return json(
 			{

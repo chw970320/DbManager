@@ -49,14 +49,14 @@
   - 예상: 16시간 (기본 구조)
   - 담당:
 
-- [ ] **#C3: FormData null 체크 부족**
+- [x] **#C3: FormData null 체크 부족** ✅
   - 설명: `formData.get('file')` null 체크 없이 타입 단언 사용
   - 파일:
-    - `src/routes/api/upload/+server.ts:29`
-    - `src/routes/api/domain/upload/+server.ts:70`
+    - `src/lib/utils/type-guards.ts` (FormData 유틸리티 추가)
+    - `src/routes/api/upload/+server.ts`
+    - `src/routes/api/domain/upload/+server.ts`
     - `src/routes/api/term/upload/+server.ts`
-  - 예상: 4시간
-  - 담당:
+  - 완료: 2024-12-12
 
 - [ ] **#C4: 부분 업데이트 undefined 처리**
   - 설명: 스프레드 연산자로 병합 시 `undefined` 값이 기존 데이터 덮어쓰기

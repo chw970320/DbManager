@@ -510,3 +510,112 @@ export async function safeRequestJson<T>(
 
 	return parsed;
 }
+
+// ============================================================================
+// FormData 안전한 추출 유틸리티
+// ============================================================================
+
+/**
+ * FormData 검증 에러
+ */
+export class FormDataValidationError extends Error {
+	constructor(
+		message: string,
+		public readonly fieldName: string
+	) {
+		super(message);
+		this.name = 'FormDataValidationError';
+	}
+}
+
+/**
+ * FormData에서 필수 File 안전하게 추출
+ * @param formData - FormData 객체
+ * @param fieldName - 필드명
+ * @returns File 객체
+ * @throws FormDataValidationError - 파일이 없거나 유효하지 않은 경우
+ */
+export function getRequiredFile(formData: FormData, fieldName: string): File {
+	const value = formData.get(fieldName);
+
+	if (value === null) {
+		throw new FormDataValidationError(`필수 파일 '${fieldName}'이(가) 누락되었습니다.`, fieldName);
+	}
+
+	if (!(value instanceof File)) {
+		throw new FormDataValidationError(`'${fieldName}'이(가) 파일 형식이 아닙니다.`, fieldName);
+	}
+
+	if (value.size === 0) {
+		throw new FormDataValidationError(`'${fieldName}' 파일이 비어있습니다.`, fieldName);
+	}
+
+	return value;
+}
+
+/**
+ * FormData에서 필수 문자열 안전하게 추출
+ * @param formData - FormData 객체
+ * @param fieldName - 필드명
+ * @returns 문자열 값
+ * @throws FormDataValidationError - 값이 없거나 빈 문자열인 경우
+ */
+export function getRequiredString(formData: FormData, fieldName: string): string {
+	const value = formData.get(fieldName);
+
+	if (value === null) {
+		throw new FormDataValidationError(`필수 필드 '${fieldName}'이(가) 누락되었습니다.`, fieldName);
+	}
+
+	if (typeof value !== 'string') {
+		throw new FormDataValidationError(`'${fieldName}'이(가) 문자열 형식이 아닙니다.`, fieldName);
+	}
+
+	if (value.trim() === '') {
+		throw new FormDataValidationError(`'${fieldName}' 값이 비어있습니다.`, fieldName);
+	}
+
+	return value;
+}
+
+/**
+ * FormData에서 선택적 문자열 안전하게 추출
+ * @param formData - FormData 객체
+ * @param fieldName - 필드명
+ * @param defaultValue - 기본값
+ * @returns 문자열 값 또는 기본값
+ */
+export function getOptionalString(
+	formData: FormData,
+	fieldName: string,
+	defaultValue: string
+): string {
+	const value = formData.get(fieldName);
+
+	if (value === null || typeof value !== 'string' || value.trim() === '') {
+		return defaultValue;
+	}
+
+	return value;
+}
+
+/**
+ * FormData에서 boolean 값 안전하게 추출
+ * @param formData - FormData 객체
+ * @param fieldName - 필드명
+ * @param defaultValue - 기본값
+ * @returns boolean 값
+ */
+export function getOptionalBoolean(
+	formData: FormData,
+	fieldName: string,
+	defaultValue: boolean = false
+): boolean {
+	const value = formData.get(fieldName);
+
+	if (value === null || typeof value !== 'string') {
+		return defaultValue;
+	}
+
+	return value === 'true';
+}

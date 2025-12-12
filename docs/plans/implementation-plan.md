@@ -10,11 +10,10 @@
 
 ### Week 1
 
-- [ ] **#C10: Path Traversal 취약점**
+- [x] **#C10: Path Traversal 취약점** ✅
   - 설명: 파일명 파라미터에 경로 조작 문자(`../`) 포함 시 시스템 파일 접근 가능
-  - 파일: `src/lib/utils/file-handler.ts:107` (`getDataPath` 함수)
-  - 예상: 4시간
-  - 담당:
+  - 파일: `src/lib/utils/file-handler.ts:23-69` (`validateFilename`, `getDataPath` 함수)
+  - 완료: 2024-12-12
 
 - [ ] **#C2: JSON 파싱 타입 검증 없음**
   - 설명: JSON 파싱 결과에 타입 단언만 사용, 런타임 검증 없음

@@ -553,13 +553,22 @@ try {
 
 ---
 
-## 이슈 #C10: 파일 경로 조작 공격 가능성 (Path Traversal)
+## ~~이슈 #C10: 파일 경로 조작 공격 가능성 (Path Traversal)~~ ✅ 해결됨
+
+> **해결일**: 2024-12-12
+> **해결 방법**: `validateFilename()` 함수 추가 및 `getDataPath()` 함수에 경로 검증 로직 강화
+>
+> - 상위 디렉토리 접근(`..`) 차단
+> - Null byte injection 차단
+> - 절대 경로 차단
+> - `basename()` 및 `resolve()`를 사용한 경로 정규화
+> - 최종 경로가 base 디렉토리 내에 있는지 검증
 
 **심각도**: Critical
 
 **위치**:
 
-- `src/lib/utils/file-handler.ts:107` - `getDataPath()`
+- `src/lib/utils/file-handler.ts:23-69` - `validateFilename()`, `getDataPath()`
 - 모든 파일명을 받는 API 엔드포인트
 
 **문제 설명**:

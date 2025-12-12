@@ -1,6 +1,6 @@
 import { writeFile, readFile, mkdir, readdir, rename, unlink, stat } from 'fs/promises';
 import { existsSync } from 'fs';
-import { join } from 'path';
+import { join, resolve, basename } from 'path';
 import type { ForbiddenWordsData } from '$lib/types/vocabulary';
 
 // 데이터 저장 경로 설정
@@ -16,25 +16,69 @@ const FORBIDDEN_WORDS_FILE = 'forbidden-words.json';
 const HISTORY_FILE = 'history.json';
 
 /**
- * 데이터 파일 경로 가져오기
+ * 파일명 유효성 검증
+ * @param filename - 검증할 파일명
+ * @throws 유효하지 않은 파일명인 경우 에러
+ */
+function validateFilename(filename: string): void {
+	// 빈 파일명 체크
+	if (!filename || filename.trim() === '') {
+		throw new Error('파일명이 비어있습니다.');
+	}
+
+	// Path Traversal 공격 방지: 상위 디렉토리 접근 시도 차단
+	if (filename.includes('..')) {
+		throw new Error('유효하지 않은 파일명입니다: 상위 디렉토리 접근이 허용되지 않습니다.');
+	}
+
+	// Null byte injection 방지
+	if (filename.includes('\0')) {
+		throw new Error('유효하지 않은 파일명입니다: 허용되지 않는 문자가 포함되어 있습니다.');
+	}
+
+	// 절대 경로 차단 (Windows와 Unix 모두)
+	if (filename.startsWith('/') || filename.startsWith('\\') || /^[a-zA-Z]:/.test(filename)) {
+		throw new Error('유효하지 않은 파일명입니다: 절대 경로는 허용되지 않습니다.');
+	}
+}
+
+/**
+ * 데이터 파일 경로 가져오기 (Path Traversal 방지 포함)
  * @param filename - 파일명
  * @param type - 데이터 타입 ('vocabulary' | 'domain' | 'term' | 'forbidden' | 'history')
+ * @throws 유효하지 않은 파일명이거나 허용된 디렉토리 외부 접근 시 에러
  */
 function getDataPath(
 	filename: string,
 	type: 'vocabulary' | 'domain' | 'term' | 'forbidden' | 'history' = 'vocabulary'
 ): string {
-	// 파일명에 경로 구분자가 포함되어 있으면 제거 (보안)
-	const safeFilename = filename.replace(/^.*[\\/]/, '');
+	// 1. 파일명 유효성 검증
+	validateFilename(filename);
 
+	// 2. 파일명에서 경로 구분자 제거하여 기본 파일명만 추출
+	const safeFilename = basename(filename);
+
+	// 3. 타입별 base 디렉토리 결정
+	let baseDir: string;
 	if (type === 'domain') {
-		return join(DOMAIN_DIR, safeFilename);
+		baseDir = DOMAIN_DIR;
 	} else if (type === 'term') {
-		return join(TERM_DIR, safeFilename);
+		baseDir = TERM_DIR;
 	} else {
 		// vocabulary, forbidden, history는 vocabulary 폴더에 저장
-		return join(VOCABULARY_DIR, safeFilename);
+		baseDir = VOCABULARY_DIR;
 	}
+
+	// 4. 전체 경로 생성 및 정규화
+	const fullPath = resolve(baseDir, safeFilename);
+	const resolvedBaseDir = resolve(baseDir);
+
+	// 5. Path Traversal 최종 검증: 결과 경로가 base 디렉토리 내에 있는지 확인
+	if (!fullPath.startsWith(resolvedBaseDir)) {
+		throw new Error('유효하지 않은 파일 경로입니다: 허용된 디렉토리 외부 접근이 감지되었습니다.');
+	}
+
+	return fullPath;
 }
 
 /**

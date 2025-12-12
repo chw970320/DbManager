@@ -1,7 +1,7 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse } from '$lib/types/vocabulary.js';
 import type { DomainData, DomainEntry } from '$lib/types/domain.js';
-import { saveDomainData, loadDomainData } from '$lib/utils/file-handler.js';
+import { saveDomainData, loadDomainData, checkDomainReferences } from '$lib/utils/file-handler.js';
 import { safeMerge } from '$lib/utils/type-guards.js';
 
 /**
@@ -341,6 +341,8 @@ export async function DELETE({ url }: RequestEvent) {
 	try {
 		const id = url.searchParams.get('id');
 		const filename = url.searchParams.get('filename') || 'domain.json';
+		const force = url.searchParams.get('force') === 'true'; // 강제 삭제 옵션
+
 		if (!id) {
 			return json(
 				{ success: false, error: '삭제할 도메인 ID가 필요합니다.', message: 'ID required' },
@@ -349,17 +351,33 @@ export async function DELETE({ url }: RequestEvent) {
 		}
 
 		const domainData = await loadDomainData(filename);
-		const entryIndex = domainData.entries.findIndex((e) => e.id === id);
+		const entryToDelete = domainData.entries.find((e) => e.id === id);
 
-		if (entryIndex === -1) {
+		if (!entryToDelete) {
 			return json(
 				{ success: false, error: '삭제할 도메인을 찾을 수 없습니다.', message: 'Not found' },
 				{ status: 404 }
 			);
 		}
 
+		// 참조 무결성 검증 (강제 삭제가 아닌 경우)
+		if (!force) {
+			const refCheck = await checkDomainReferences(entryToDelete);
+			if (!refCheck.canDelete) {
+				return json(
+					{
+						success: false,
+						error: refCheck.message || '다른 항목에서 참조 중이므로 삭제할 수 없습니다.',
+						message: 'Referential integrity violation',
+						data: { references: refCheck.references }
+					},
+					{ status: 409 }
+				);
+			}
+		}
+
 		// 데이터 삭제
-		domainData.entries.splice(entryIndex, 1);
+		domainData.entries = domainData.entries.filter((e) => e.id !== id);
 		await saveDomainData(domainData, filename);
 
 		return json({ success: true, message: '도메인 삭제 완료' }, { status: 200 });

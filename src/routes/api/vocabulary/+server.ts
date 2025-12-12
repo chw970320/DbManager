@@ -3,7 +3,8 @@ import type { ApiResponse, VocabularyData, VocabularyEntry } from '$lib/types/vo
 import {
 	loadVocabularyData,
 	saveVocabularyData,
-	loadForbiddenWordsData
+	loadForbiddenWordsData,
+	checkVocabularyReferences
 } from '$lib/utils/file-handler.js';
 import { getDuplicateDetails } from '$lib/utils/duplicate-handler.js';
 import { safeMerge } from '$lib/utils/type-guards.js';
@@ -388,7 +389,9 @@ export async function DELETE({ url }: RequestEvent) {
 	try {
 		const id = url.searchParams.get('id');
 		const filename = url.searchParams.get('filename') || undefined;
-		console.log(`[DELETE] Request received for id: ${id}, filename: ${filename}`);
+		const force = url.searchParams.get('force') === 'true'; // 강제 삭제 옵션
+		console.log(`[DELETE] Request received for id: ${id}, filename: ${filename}, force: ${force}`);
+
 		if (!id) {
 			return json(
 				{
@@ -401,10 +404,9 @@ export async function DELETE({ url }: RequestEvent) {
 		}
 
 		const vocabularyData = await loadVocabularyData(filename);
-		const initialLength = vocabularyData.entries.length;
-		vocabularyData.entries = vocabularyData.entries.filter((e) => e.id !== id);
+		const entryToDelete = vocabularyData.entries.find((e) => e.id === id);
 
-		if (vocabularyData.entries.length === initialLength) {
+		if (!entryToDelete) {
 			return json(
 				{
 					success: false,
@@ -415,6 +417,25 @@ export async function DELETE({ url }: RequestEvent) {
 			);
 		}
 
+		// 참조 무결성 검증 (강제 삭제가 아닌 경우)
+		if (!force) {
+			const refCheck = await checkVocabularyReferences(entryToDelete);
+			if (!refCheck.canDelete) {
+				return json(
+					{
+						success: false,
+						error: refCheck.message || '다른 항목에서 참조 중이므로 삭제할 수 없습니다.',
+						message: 'Referential integrity violation',
+						data: {
+							references: refCheck.references
+						}
+					} as ApiResponse,
+					{ status: 409 }
+				);
+			}
+		}
+
+		vocabularyData.entries = vocabularyData.entries.filter((e) => e.id !== id);
 		await saveVocabularyData(vocabularyData, filename);
 
 		return json({ success: true, message: '단어가 성공적으로 삭제되었습니다.' } as ApiResponse, {

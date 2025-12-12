@@ -1219,3 +1219,152 @@ export async function deleteTermFile(filename: string): Promise<void> {
 		throw error;
 	}
 }
+
+// ============================================================================
+// 참조 무결성 검증 (Referential Integrity)
+// ============================================================================
+
+/**
+ * 참조 무결성 검증 결과
+ */
+export interface ReferenceCheckResult {
+	canDelete: boolean;
+	references: {
+		type: 'term' | 'vocabulary';
+		count: number;
+		entries: Array<{ id: string; name: string }>;
+	}[];
+	message?: string;
+}
+
+/**
+ * Vocabulary 삭제 전 참조 검증
+ * Term에서 해당 단어를 참조하는지 확인
+ *
+ * @param vocabularyEntry - 삭제하려는 단어 엔트리
+ * @param termFilename - 용어 파일명
+ * @returns 참조 검증 결과
+ */
+export async function checkVocabularyReferences(
+	vocabularyEntry: VocabularyEntry,
+	termFilename: string = DEFAULT_TERM_FILE
+): Promise<ReferenceCheckResult> {
+	try {
+		const termData = await loadTermData(termFilename);
+		const standardNameLower = vocabularyEntry.standardName.toLowerCase();
+		const abbreviationLower = vocabularyEntry.abbreviation.toLowerCase();
+
+		// Term에서 이 단어를 참조하는 엔트리 찾기
+		const referencingTerms = termData.entries.filter((term) => {
+			// 용어명에서 단어 참조 확인 (언더스코어로 분리된 단어들)
+			const termParts = term.termName.toLowerCase().split('_');
+			const hasTermNameRef = termParts.some(
+				(part) => part === standardNameLower || part === abbreviationLower
+			);
+
+			// 컬럼명에서 단어 참조 확인
+			const columnParts = term.columnName.toLowerCase().split('_');
+			const hasColumnRef = columnParts.some(
+				(part) => part === standardNameLower || part === abbreviationLower
+			);
+
+			return hasTermNameRef || hasColumnRef;
+		});
+
+		if (referencingTerms.length > 0) {
+			return {
+				canDelete: false,
+				references: [
+					{
+						type: 'term',
+						count: referencingTerms.length,
+						entries: referencingTerms.slice(0, 5).map((t) => ({
+							id: t.id,
+							name: t.termName
+						}))
+					}
+				],
+				message: `${referencingTerms.length}개의 용어에서 이 단어를 참조하고 있습니다.`
+			};
+		}
+
+		return { canDelete: true, references: [] };
+	} catch (error) {
+		// 용어 파일이 없는 경우 등은 삭제 허용
+		console.warn('참조 검증 중 오류 (삭제 허용):', error);
+		return { canDelete: true, references: [] };
+	}
+}
+
+/**
+ * Domain 삭제 전 참조 검증
+ * Vocabulary나 Term에서 해당 도메인을 참조하는지 확인
+ *
+ * @param domainEntry - 삭제하려는 도메인 엔트리
+ * @param vocabularyFilename - 단어집 파일명
+ * @param termFilename - 용어 파일명
+ * @returns 참조 검증 결과
+ */
+export async function checkDomainReferences(
+	domainEntry: DomainEntry,
+	vocabularyFilename: string = DEFAULT_VOCABULARY_FILE,
+	termFilename: string = DEFAULT_TERM_FILE
+): Promise<ReferenceCheckResult> {
+	const references: ReferenceCheckResult['references'] = [];
+	const domainNameLower = domainEntry.standardDomainName.toLowerCase();
+
+	try {
+		// Vocabulary에서 참조 확인 (isDomainCategoryMapped가 true이고 도메인 카테고리가 일치)
+		const vocabularyData = await loadVocabularyData(vocabularyFilename);
+		const referencingVocab = vocabularyData.entries.filter(
+			(vocab) =>
+				vocab.isDomainCategoryMapped &&
+				vocab.domainCategory?.toLowerCase() === domainEntry.domainCategory.toLowerCase()
+		);
+
+		if (referencingVocab.length > 0) {
+			references.push({
+				type: 'vocabulary',
+				count: referencingVocab.length,
+				entries: referencingVocab.slice(0, 5).map((v) => ({
+					id: v.id,
+					name: v.standardName
+				}))
+			});
+		}
+	} catch (error) {
+		console.warn('Vocabulary 참조 검증 중 오류:', error);
+	}
+
+	try {
+		// Term에서 참조 확인 (domainName이 일치)
+		const termData = await loadTermData(termFilename);
+		const referencingTerms = termData.entries.filter(
+			(term) => term.domainName.toLowerCase() === domainNameLower
+		);
+
+		if (referencingTerms.length > 0) {
+			references.push({
+				type: 'term',
+				count: referencingTerms.length,
+				entries: referencingTerms.slice(0, 5).map((t) => ({
+					id: t.id,
+					name: t.termName
+				}))
+			});
+		}
+	} catch (error) {
+		console.warn('Term 참조 검증 중 오류:', error);
+	}
+
+	if (references.length > 0) {
+		const totalCount = references.reduce((sum, ref) => sum + ref.count, 0);
+		return {
+			canDelete: false,
+			references,
+			message: `${totalCount}개의 항목에서 이 도메인을 참조하고 있습니다.`
+		};
+	}
+
+	return { canDelete: true, references: [] };
+}

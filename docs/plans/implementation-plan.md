@@ -83,14 +83,13 @@
     - `src/lib/utils/history-handler.ts` (`loadHistoryData()`)
   - 완료: 2024-12-12
 
-- [ ] **#C6: 참조 무결성 검증 없음**
+- [x] **#C6: 참조 무결성 검증 없음** ✅
   - 설명: 다른 엔트리에서 참조하는 경우에도 삭제 가능
   - 파일:
-    - `src/routes/api/vocabulary/+server.ts:382-429` (DELETE)
-    - `src/routes/api/domain/+server.ts:340-373` (DELETE)
-    - `src/routes/api/term/+server.ts` (DELETE)
-  - 예상: 16시간
-  - 담당:
+    - `src/lib/utils/file-handler.ts` (참조 검증 함수 추가)
+    - `src/routes/api/vocabulary/+server.ts` (DELETE)
+    - `src/routes/api/domain/+server.ts` (DELETE)
+  - 완료: 2024-12-12
 
 ---
 

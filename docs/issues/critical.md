@@ -363,15 +363,23 @@ await writeFile(getDataPath(filename, 'vocabulary'), jsonString, 'utf-8');
 
 ---
 
-## 이슈 #C6: 참조 무결성 검증 없이 엔트리 삭제 가능
+## ~~이슈 #C6: 참조 무결성 검증 없이 엔트리 삭제 가능~~ ✅ 해결됨
+
+> **해결일**: 2024-12-12
+> **해결 방법**: 참조 무결성 검증 유틸리티 구현
+>
+> - `checkVocabularyReferences()`: Vocabulary 삭제 전 Term 참조 확인
+> - `checkDomainReferences()`: Domain 삭제 전 Vocabulary/Term 참조 확인
+> - 참조 존재 시 409 Conflict 응답 반환
+> - `force=true` 옵션으로 강제 삭제 가능
 
 **심각도**: Critical
 
 **위치**:
 
-- `src/routes/api/vocabulary/+server.ts:382-429` (DELETE)
-- `src/routes/api/domain/+server.ts:340-373` (DELETE)
-- `src/routes/api/term/+server.ts` (DELETE)
+- `src/lib/utils/file-handler.ts` - 참조 검증 함수
+- `src/routes/api/vocabulary/+server.ts` (DELETE)
+- `src/routes/api/domain/+server.ts` (DELETE)
 
 **문제 설명**:
 

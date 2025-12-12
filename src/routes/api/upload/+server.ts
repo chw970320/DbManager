@@ -3,7 +3,7 @@ import type { ApiResponse, UploadResult, VocabularyData } from '$lib/types/vocab
 import { validateXlsxFile } from '$lib/utils/validation.js';
 import { parseXlsxToJson } from '$lib/utils/xlsx-parser.js';
 import { mergeVocabularyData } from '$lib/utils/file-handler.js';
-import { clearHistoryData, addHistoryLog } from '$lib/utils/history-handler.js';
+import { addHistoryLog } from '$lib/utils/history-handler.js';
 
 /**
  * 파일 업로드 및 처리 API
@@ -61,7 +61,7 @@ export async function POST({ request }: RequestEvent) {
 
 		// 기존 데이터와 병합 (replace 옵션 확인)
 		const replaceExisting = formData.get('replace') === 'true';
-		
+
 		// xlsx 파일 파싱 (교체 모드일 때는 파일 내 중복 체크 건너뛰기)
 		let parsedEntries;
 		try {

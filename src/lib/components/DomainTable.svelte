@@ -27,7 +27,7 @@
 		sortColumn = '',
 		sortDirection = 'asc' as 'asc' | 'desc',
 		searchField = 'all',
-		selectedFilename = 'domain.json',
+		_selectedFilename = 'domain.json',
 		onsort,
 		onpagechange,
 		onentryclick
@@ -42,7 +42,7 @@
 		sortColumn?: string;
 		sortDirection?: 'asc' | 'desc';
 		searchField?: string;
-		selectedFilename?: string;
+		_selectedFilename?: string;
 		onsort: (detail: SortEvent) => void;
 		onpagechange: (detail: PageChangeEvent) => void;
 		onentryclick?: (detail: EntryClickEvent) => void;

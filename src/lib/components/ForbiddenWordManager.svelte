@@ -87,7 +87,7 @@
 						const allFiles = result.data as string[];
 						const previousScope = selectedScope;
 						vocabularyFiles = filterVocabularyFiles(allFiles, settings.showVocabularySystemFiles);
-						
+
 						// selectedScope가 파일명이고 시스템 파일이며 필터링 후 목록에 없으면 변경
 						if (
 							previousScope !== 'global' &&
@@ -360,7 +360,7 @@
 						disabled={isLoading || isSubmitting}
 					>
 						<option value="global">전체 (Global)</option>
-						{#each vocabularyFiles as file}
+						{#each vocabularyFiles as file (file)}
 							<option value={file}>{file}</option>
 						{/each}
 					</select>

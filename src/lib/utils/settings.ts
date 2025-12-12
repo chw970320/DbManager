@@ -141,4 +141,3 @@ export async function getAllSettings(): Promise<Settings> {
 export async function setAllSettings(settings: Settings): Promise<void> {
 	await saveSettings(settings);
 }
-

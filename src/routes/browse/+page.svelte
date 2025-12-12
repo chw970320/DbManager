@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import SearchBar from '$lib/components/SearchBar.svelte';
 	import VocabularyTable from '$lib/components/VocabularyTable.svelte';
@@ -8,12 +8,7 @@
 	import ForbiddenWordManager from '$lib/components/ForbiddenWordManager.svelte';
 	import VocabularyFileManager from '$lib/components/VocabularyFileManager.svelte';
 	import HistoryLog from '$lib/components/HistoryLog.svelte';
-	import type {
-		VocabularyEntry,
-		ApiResponse,
-		SearchQuery,
-		SearchResult
-	} from '$lib/types/vocabulary.js';
+	import type { VocabularyEntry, ApiResponse } from '$lib/types/vocabulary.js';
 	import { get } from 'svelte/store';
 	import { vocabularyStore } from '$lib/stores/vocabularyStore';
 	import { settingsStore } from '$lib/stores/settings-store';
@@ -689,7 +684,7 @@
 						</button>
 					</div>
 					<div class="space-y-2">
-						{#each vocabularyFiles as file}
+						{#each vocabularyFiles as file (file)}
 							<button
 								type="button"
 								onclick={() => handleFileSelect(file)}
@@ -758,7 +753,7 @@
 							</div>
 						</div>
 						<div class="space-y-2">
-							{#each vocabularyFiles as file}
+							{#each vocabularyFiles as file (file)}
 								<button
 									type="button"
 									onclick={() => {
@@ -1162,7 +1157,7 @@
 								{sortColumn}
 								{sortDirection}
 								{searchField}
-								{selectedFilename}
+								_selectedFilename={selectedFilename}
 								onsort={handleSort}
 								onpagechange={handlePageChange}
 								onentryclick={handleEntryClick}

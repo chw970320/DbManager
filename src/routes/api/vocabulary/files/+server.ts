@@ -11,7 +11,7 @@ import {
  * 사용 가능한 단어집 파일 목록 조회 API
  * GET /api/vocabulary/files
  */
-export async function GET({}: RequestEvent) {
+export async function GET(_event: RequestEvent) {
 	try {
 		const files = await listVocabularyFiles();
 

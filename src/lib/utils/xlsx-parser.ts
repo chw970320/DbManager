@@ -10,7 +10,10 @@ import type { VocabularyEntry, VocabularyData } from '../types/vocabulary.js';
  * @param skipDuplicates - 파일 내 중복 데이터 건너뛰기 여부 (기본값: true)
  * @returns VocabularyEntry 배열
  */
-export function parseXlsxToJson(fileBuffer: Buffer, skipDuplicates: boolean = true): VocabularyEntry[] {
+export function parseXlsxToJson(
+	fileBuffer: Buffer,
+	skipDuplicates: boolean = true
+): VocabularyEntry[] {
 	try {
 		// xlsx 파일을 워크북으로 읽기
 		const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
@@ -45,7 +48,10 @@ export function parseXlsxToJson(fileBuffer: Buffer, skipDuplicates: boolean = tr
 			if (!value) return [];
 			const str = String(value).trim();
 			if (str === '-' || str === '') return [];
-			return str.split(',').map((item) => item.trim()).filter((item) => item.length > 0);
+			return str
+				.split(',')
+				.map((item) => item.trim())
+				.filter((item) => item.length > 0);
 		};
 
 		for (let i = 0; i < dataRows.length; i++) {
@@ -96,9 +102,7 @@ export function parseXlsxToJson(fileBuffer: Buffer, skipDuplicates: boolean = tr
 			}
 
 			// 형식단어여부 변환 (Y/N → boolean)
-			const isFormalWord = row[5]
-				? String(row[5]).trim().toUpperCase() === 'Y'
-				: false;
+			const isFormalWord = row[5] ? String(row[5]).trim().toUpperCase() === 'Y' : false;
 
 			// 도메인분류명 처리 ("-"는 빈값)
 			const domainCategory =
@@ -319,7 +323,10 @@ export function exportJsonToXlsxBuffer(data: VocabularyEntry[]): Buffer {
  * @param skipDuplicates - 파일 내 중복 데이터 건너뛰기 여부 (기본값: true)
  * @returns DomainEntry 배열
  */
-export function parseDomainXlsxToJson(fileBuffer: Buffer, skipDuplicates: boolean = true): DomainEntry[] {
+export function parseDomainXlsxToJson(
+	fileBuffer: Buffer,
+	skipDuplicates: boolean = true
+): DomainEntry[] {
 	try {
 		// xlsx 파일을 워크북으로 읽기
 		const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
@@ -355,9 +362,7 @@ export function parseDomainXlsxToJson(fileBuffer: Buffer, skipDuplicates: boolea
 		/**
 		 * 선택적 텍스트 필드 파싱 헬퍼 함수 ("-"는 undefined로 변환)
 		 */
-		const parseOptionalText = (
-			value: string | number | undefined
-		): string | undefined => {
+		const parseOptionalText = (value: string | number | undefined): string | undefined => {
 			if (!value) return undefined;
 			const str = String(value).trim();
 			return str === '-' || str === '' ? undefined : str;

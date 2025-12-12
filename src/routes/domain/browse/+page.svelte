@@ -23,7 +23,7 @@
 	let pageSize = $state(20);
 	let sortColumn = $state('standardDomainName');
 	let sortDirection = $state<'asc' | 'desc'>('asc');
-	let lastUpdated = $state('');
+	let _lastUpdated = $state('');
 	let errorMessage = $state('');
 
 	// 파일 관리 상태
@@ -149,7 +149,7 @@
 				entries = data.entries || [];
 				totalCount = data.pagination?.totalCount || 0;
 				totalPages = data.pagination?.totalPages || 1;
-				lastUpdated = data.lastUpdated || '';
+				_lastUpdated = data.lastUpdated || '';
 			} else {
 				errorMessage = result.error || '데이터 로드 실패';
 			}
@@ -215,7 +215,7 @@
 				entries = data.entries || [];
 				totalCount = data.pagination?.totalCount || 0;
 				totalPages = data.pagination?.totalPages || 1;
-				lastUpdated = data.lastUpdated || '';
+				_lastUpdated = data.lastUpdated || '';
 			} else {
 				errorMessage = result.error || '검색 실패';
 			}
@@ -556,7 +556,7 @@
 						</button>
 					</div>
 					<div class="space-y-2">
-						{#each fileList as file}
+						{#each fileList as file (file)}
 							<button
 								type="button"
 								onclick={() => handleFileSelect(file)}
@@ -625,7 +625,7 @@
 							</div>
 						</div>
 						<div class="space-y-2">
-							{#each fileList as file}
+							{#each fileList as file (file)}
 								<button
 									type="button"
 									onclick={() => {
@@ -862,7 +862,7 @@
 								{sortColumn}
 								{sortDirection}
 								{searchField}
-								{selectedFilename}
+								_selectedFilename={selectedFilename}
 								onsort={handleSort}
 								onpagechange={handlePageChange}
 								onentryclick={handleEntryClick}

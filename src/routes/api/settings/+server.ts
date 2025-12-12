@@ -1,8 +1,6 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import {
-	getShowVocabularySystemFiles,
 	setShowVocabularySystemFiles,
-	getShowDomainSystemFiles,
 	setShowDomainSystemFiles,
 	getAllSettings,
 	setAllSettings
@@ -72,4 +70,3 @@ export async function POST({ request }: RequestEvent) {
 		);
 	}
 }
-

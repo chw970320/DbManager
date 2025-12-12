@@ -23,7 +23,7 @@ function getDataPath(
 	type: 'vocabulary' | 'domain' | 'forbidden' | 'history' = 'vocabulary'
 ): string {
 	// 파일명에 경로 구분자가 포함되어 있으면 제거 (보안)
-	const safeFilename = filename.replace(/^.*[\\\/]/, '');
+	const safeFilename = filename.replace(/^.*[\\/]/, '');
 
 	if (type === 'domain') {
 		return join(DOMAIN_DIR, safeFilename);

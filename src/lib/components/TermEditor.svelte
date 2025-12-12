@@ -47,7 +47,7 @@
 	// Domain autocomplete state
 	let domainOptions = $state<{ category: string; group: string }[]>([]);
 	let domainWarning = $state('');
-	let isLoadingDomains = $state(false);
+	let _isLoadingDomains = $state(false);
 	let selectedDomainFilename = $state('domain.json');
 
 	// Update formData when entry prop changes
@@ -95,14 +95,14 @@
 	}
 
 	async function loadDomainOptions() {
-		isLoadingDomains = true;
+		_isLoadingDomains = true;
 		try {
 			const storeValue = get(vocabularyStore);
 			const currentDomainFilename = storeValue.selectedDomainFilename || 'domain.json';
 
 			// 도메인 파일이 변경되었거나 옵션이 비어있을 때만 로드
 			if (domainOptions.length > 0 && selectedDomainFilename === currentDomainFilename) {
-				isLoadingDomains = false;
+				_isLoadingDomains = false;
 				return;
 			}
 
@@ -159,7 +159,7 @@
 		} catch (err) {
 			console.warn('도메인 목록 로드 실패:', err);
 		} finally {
-			isLoadingDomains = false;
+			_isLoadingDomains = false;
 		}
 	}
 
@@ -195,11 +195,21 @@
 		errors.englishName = validateEnglishName(formData.englishName);
 	});
 
+	// 도메인 파일명이 변경될 때만 도메인 옵션 로드
 	$effect(() => {
-		void loadDomainOptions();
+		// vocabularyStore의 selectedDomainFilename을 구독하여 추적
+		const unsubscribe = vocabularyStore.subscribe((_storeValue) => {
+			// selectedDomainFilename이 변경될 때만 로드 (loadDomainOptions 내부에서도 중복 체크)
+			void loadDomainOptions();
+		});
+		return unsubscribe;
 	});
 
+	// domainCategory 또는 domainOptions가 변경될 때만 도메인 매핑 적용
 	$effect(() => {
+		// formData.domainCategory와 domainOptions를 읽어서 의존성으로 추적
+		const _category = formData.domainCategory;
+		const _options = domainOptions;
 		applyDomainMapping();
 	});
 

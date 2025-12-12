@@ -68,12 +68,7 @@ export interface DomainUploadResult {
 // 검색 쿼리 인터페이스
 export interface DomainSearchQuery {
 	query: string;
-	field?:
-		| 'all'
-		| 'domainGroup'
-		| 'domainCategory'
-		| 'standardDomainName'
-		| 'physicalDataType';
+	field?: 'all' | 'domainGroup' | 'domainCategory' | 'standardDomainName' | 'physicalDataType';
 }
 
 // 검색 결과 인터페이스

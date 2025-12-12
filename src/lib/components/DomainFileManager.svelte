@@ -81,7 +81,7 @@
 				allFiles = result.data as string[];
 				filterFiles();
 			}
-		} catch (err) {
+		} catch (_err) {
 			error = '파일 목록을 불러오는데 실패했습니다.';
 		} finally {
 			isLoading = false;
@@ -124,7 +124,7 @@
 			} else {
 				error = result.error || '파일 생성 실패';
 			}
-		} catch (err) {
+		} catch (_err) {
 			error = '서버 오류가 발생했습니다.';
 		} finally {
 			isSubmitting = false;
@@ -165,7 +165,7 @@
 			} else {
 				error = result.error || '파일 이름 변경 실패';
 			}
-		} catch (err) {
+		} catch (_err) {
 			error = '서버 오류가 발생했습니다.';
 		} finally {
 			isSubmitting = false;
@@ -200,7 +200,7 @@
 			} else {
 				error = result.error || '파일 삭제 실패';
 			}
-		} catch (err) {
+		} catch (_err) {
 			error = '서버 오류가 발생했습니다.';
 		} finally {
 			isSubmitting = false;
@@ -410,7 +410,7 @@
 									<div class="py-8 text-center text-sm text-gray-500">파일이 없습니다.</div>
 								{:else}
 									<ul class="divide-y divide-gray-100">
-										{#each files as file}
+										{#each files as file (file)}
 											<li class="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
 												{#if editingFile === file}
 													<div class="flex flex-1 items-center gap-2">
@@ -543,7 +543,7 @@
 								class="block w-full rounded-md border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
 								disabled={isSubmitting || files.length === 0}
 							>
-								{#each files as file}
+								{#each files as file (file)}
 									<option value={file}>{file}</option>
 								{/each}
 								{#if files.length === 0}

@@ -1,5 +1,5 @@
 const VOCABULARY_SYSTEM_FILE = 'vocabulary.json';
-const DOMAIN_SYSTEM_FILE = 'domain.json';
+const _DOMAIN_SYSTEM_FILE = 'domain.json';
 const FORBIDDEN_WORDS_FILE = 'forbidden-words.json';
 const HISTORY_FILE = 'history.json';
 
@@ -9,11 +9,7 @@ const HISTORY_FILE = 'history.json';
  * @returns 시스템 파일 여부
  */
 export function isSystemVocabularyFile(file: string): boolean {
-	return (
-		file === VOCABULARY_SYSTEM_FILE ||
-		file === FORBIDDEN_WORDS_FILE ||
-		file === HISTORY_FILE
-	);
+	return file === VOCABULARY_SYSTEM_FILE || file === FORBIDDEN_WORDS_FILE || file === HISTORY_FILE;
 }
 
 /**
@@ -32,10 +28,7 @@ export function isSystemDomainFile(file: string): boolean {
  * @param showSystemFiles - 시스템 파일 표시 여부
  * @returns 필터링된 파일 목록
  */
-export function filterVocabularyFiles(
-	files: string[],
-	showSystemFiles: boolean
-): string[] {
+export function filterVocabularyFiles(files: string[], showSystemFiles: boolean): string[] {
 	const userFiles = files.filter((file) => !isSystemVocabularyFile(file));
 	const hasUserFiles = userFiles.length > 0;
 
@@ -62,4 +55,3 @@ export function filterDomainFiles(files: string[], showSystemFiles: boolean): st
 	}
 	return files;
 }
-

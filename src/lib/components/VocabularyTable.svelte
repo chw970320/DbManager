@@ -27,7 +27,7 @@
 		sortColumn?: string;
 		sortDirection?: 'asc' | 'desc';
 		searchField?: string;
-		selectedFilename?: string;
+		_selectedFilename?: string;
 		onsort: (detail: SortEvent) => void;
 		onpagechange: (detail: PageChangeEvent) => void;
 		onentryclick?: (detail: EntryClickEvent) => void;
@@ -49,7 +49,7 @@
 	let sortColumn = $derived(props.sortColumn ?? '');
 	let sortDirection = $derived(props.sortDirection ?? 'asc');
 	let searchField = $derived(props.searchField ?? 'all');
-	let selectedFilename = $derived(props.selectedFilename ?? 'vocabulary.json');
+	let _selectedFilename = $derived(props._selectedFilename ?? 'vocabulary.json');
 	let onsort = $derived(props.onsort);
 	let onpagechange = $derived(props.onpagechange);
 

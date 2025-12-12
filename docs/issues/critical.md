@@ -269,14 +269,23 @@ vocabularyData.entries[entryIndex] = {
 
 ---
 
-## 이슈 #C5: 파일 쓰기 실패 시 롤백 메커니즘 없음
+## ~~이슈 #C5: 파일 쓰기 실패 시 롤백 메커니즘 없음~~ ✅ 해결됨
+
+> **해결일**: 2024-12-12
+> **해결 방법**: 원자적 쓰기 패턴 구현
+>
+> - `atomicWriteFile` 함수 추가: 임시 파일 → 검증 → rename
+> - `safeWriteFile` 함수: 파일 락 + 원자적 쓰기 통합
+> - 쓰기 실패 시 자동 백업 복원
+> - 모든 save 함수에 적용
 
 **심각도**: Critical
 
 **위치**:
 
-- `src/lib/utils/file-handler.ts:159-202` - `saveVocabularyData()`
-- `src/lib/utils/file-handler.ts` - 모든 `save*Data()` 함수
+- `src/lib/utils/file-lock.ts` - `atomicWriteFile`, `safeWriteFile` 함수
+- `src/lib/utils/file-handler.ts` - 모든 save 함수
+- `src/lib/utils/history-handler.ts` - saveHistoryData 함수
 
 **문제 설명**:
 

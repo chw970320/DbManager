@@ -1,10 +1,11 @@
 /**
- * 파일 락 메커니즘
+ * 파일 락 메커니즘 및 원자적 쓰기
  * 동시 파일 접근으로 인한 데이터 손실을 방지합니다.
  */
 
-import { writeFile, readFile, unlink, stat } from 'fs/promises';
+import { writeFile, readFile, unlink, stat, rename, copyFile } from 'fs/promises';
 import { existsSync } from 'fs';
+import { dirname, join } from 'path';
 
 // 락 설정
 const LOCK_TIMEOUT_MS = 30000; // 30초 타임아웃
@@ -198,4 +199,105 @@ export async function forceReleaseAllLocks(): Promise<void> {
  */
 export function getLockStatus(): Map<string, { acquiredAt: number; owner: string }> {
 	return new Map(inMemoryLocks);
+}
+
+// ============================================================================
+// 원자적 쓰기 (Atomic Write)
+// ============================================================================
+
+/**
+ * 임시 파일 경로 생성
+ */
+function getTempPath(filePath: string): string {
+	const dir = dirname(filePath);
+	const timestamp = Date.now();
+	const random = Math.random().toString(36).substr(2, 9);
+	return join(dir, `.tmp_${timestamp}_${random}.json`);
+}
+
+/**
+ * 백업 파일 경로 생성
+ */
+function getBackupPath(filePath: string): string {
+	return `${filePath}.backup`;
+}
+
+/**
+ * 원자적 파일 쓰기
+ * 1. 임시 파일에 쓰기
+ * 2. 기존 파일 백업 (존재하는 경우)
+ * 3. 임시 파일을 원본 위치로 rename
+ * 4. 백업 파일 삭제
+ *
+ * @param filePath - 저장할 파일 경로
+ * @param content - 저장할 내용
+ * @throws 쓰기 실패 시 에러 (원본 파일은 보존됨)
+ */
+export async function atomicWriteFile(filePath: string, content: string): Promise<void> {
+	const tempPath = getTempPath(filePath);
+	const backupPath = getBackupPath(filePath);
+	const originalExists = existsSync(filePath);
+
+	try {
+		// 1. 임시 파일에 쓰기
+		await writeFile(tempPath, content, 'utf-8');
+
+		// 2. 임시 파일 검증 (읽기 가능한지 확인)
+		const written = await readFile(tempPath, 'utf-8');
+		if (written !== content) {
+			throw new Error('임시 파일 검증 실패: 내용이 일치하지 않습니다.');
+		}
+
+		// 3. 기존 파일이 있으면 백업
+		if (originalExists) {
+			await copyFile(filePath, backupPath);
+		}
+
+		// 4. 임시 파일을 원본 위치로 rename (원자적 연산)
+		await rename(tempPath, filePath);
+
+		// 5. 백업 파일 삭제 (성공 시)
+		if (originalExists && existsSync(backupPath)) {
+			try {
+				await unlink(backupPath);
+			} catch {
+				// 백업 삭제 실패는 무시 (다음에 덮어쓰게 됨)
+			}
+		}
+	} catch (error) {
+		// 실패 시 정리
+		// 임시 파일 삭제
+		if (existsSync(tempPath)) {
+			try {
+				await unlink(tempPath);
+			} catch {
+				// 무시
+			}
+		}
+
+		// 백업에서 복원 시도 (원본이 손상된 경우)
+		if (originalExists && existsSync(backupPath) && !existsSync(filePath)) {
+			try {
+				await rename(backupPath, filePath);
+				console.warn('백업에서 원본 파일을 복원했습니다:', filePath);
+			} catch (restoreError) {
+				console.error('백업 복원 실패:', restoreError);
+			}
+		}
+
+		throw new Error(
+			`파일 쓰기 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`
+		);
+	}
+}
+
+/**
+ * 파일 락 + 원자적 쓰기를 함께 사용
+ * @param filePath - 저장할 파일 경로
+ * @param content - 저장할 내용
+ */
+export async function safeWriteFile(filePath: string, content: string): Promise<void> {
+	await withFileLock(filePath, async () => {
+		await atomicWriteFile(filePath, content);
+	});
 }

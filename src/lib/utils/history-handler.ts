@@ -10,7 +10,7 @@ import {
 	isTermHistoryData,
 	TypeValidationError
 } from './type-guards';
-import { withFileLock } from './file-lock';
+import { safeWriteFile } from './file-lock';
 
 // 히스토리 타입 정의
 export type HistoryType = 'vocabulary' | 'domain' | 'term';
@@ -84,12 +84,10 @@ export async function saveHistoryData(
 		};
 
 		const historyPath = getHistoryPath(type);
+		const jsonString = JSON.stringify(finalData, null, 2);
 
-		// 파일 락을 사용한 안전한 저장
-		await withFileLock(historyPath, async () => {
-			const jsonString = JSON.stringify(finalData, null, 2);
-			await writeFile(historyPath, jsonString, 'utf-8');
-		});
+		// 파일 락 + 원자적 쓰기를 사용한 안전한 저장
+		await safeWriteFile(historyPath, jsonString);
 	} catch (error) {
 		console.error('히스토리 데이터 저장 실패:', error);
 		throw new Error(

@@ -33,11 +33,13 @@
 
 ### Week 2
 
-- [ ] **#C5: 파일 쓰기 실패 시 롤백 없음**
+- [x] **#C5: 파일 쓰기 실패 시 롤백 없음** ✅
   - 설명: 파일 쓰기 중 오류 시 원본 데이터 손실 가능
-  - 파일: `src/lib/utils/file-handler.ts:159-202` (모든 `save*Data()` 함수)
-  - 예상: 16시간
-  - 담당:
+  - 파일:
+    - `src/lib/utils/file-lock.ts` (`atomicWriteFile`, `safeWriteFile` 추가)
+    - `src/lib/utils/file-handler.ts` (모든 save 함수에 적용)
+    - `src/lib/utils/history-handler.ts` (saveHistoryData에 적용)
+  - 완료: 2024-12-12
 
 - [ ] **#C9: 인증/권한 체크 부재 (기본 구조)**
   - 설명: 모든 API 엔드포인트에 인증/권한 체크 없음

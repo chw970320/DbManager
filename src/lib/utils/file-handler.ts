@@ -12,7 +12,7 @@ import {
 	safeJsonParse,
 	TypeValidationError
 } from './type-guards';
-import { withFileLock } from './file-lock';
+import { safeWriteFile } from './file-lock';
 
 // 데이터 저장 경로 설정
 const DATA_DIR = process.env.DATA_PATH || 'static/data';
@@ -247,12 +247,10 @@ export async function saveVocabularyData(
 		};
 
 		const dataPath = getDataPath(filename, 'vocabulary');
+		const jsonString = JSON.stringify(finalData, null, 2);
 
-		// 파일 락을 사용한 안전한 저장
-		await withFileLock(dataPath, async () => {
-			const jsonString = JSON.stringify(finalData, null, 2);
-			await writeFile(dataPath, jsonString, 'utf-8');
-		});
+		// 파일 락 + 원자적 쓰기를 사용한 안전한 저장
+		await safeWriteFile(dataPath, jsonString);
 	} catch (error) {
 		console.error('단어집 데이터 저장 실패:', error);
 		throw new Error(
@@ -611,12 +609,10 @@ export async function saveForbiddenWordsData(data: ForbiddenWordsData): Promise<
 		};
 
 		const dataPath = getDataPath(FORBIDDEN_WORDS_FILE, 'forbidden');
+		const jsonData = JSON.stringify(finalData, null, 2);
 
-		// 파일 락을 사용한 안전한 저장
-		await withFileLock(dataPath, async () => {
-			const jsonData = JSON.stringify(finalData, null, 2);
-			await writeFile(dataPath, jsonData, 'utf-8');
-		});
+		// 파일 락 + 원자적 쓰기를 사용한 안전한 저장
+		await safeWriteFile(dataPath, jsonData);
 	} catch (error) {
 		console.error('금지어 데이터 저장 실패:', error);
 		throw new Error(
@@ -711,12 +707,10 @@ export async function saveDomainData(
 		};
 
 		const dataPath = getDataPath(filename, 'domain');
+		const jsonData = JSON.stringify(finalData, null, 2);
 
-		// 파일 락을 사용한 안전한 저장
-		await withFileLock(dataPath, async () => {
-			const jsonData = JSON.stringify(finalData, null, 2);
-			await writeFile(dataPath, jsonData, 'utf-8');
-		});
+		// 파일 락 + 원자적 쓰기를 사용한 안전한 저장
+		await safeWriteFile(dataPath, jsonData);
 	} catch (error) {
 		console.error('도메인 데이터 저장 실패:', error);
 		throw new Error(
@@ -1017,12 +1011,10 @@ export async function saveTermData(
 		};
 
 		const dataPath = getDataPath(filename, 'term');
+		const jsonData = JSON.stringify(finalData, null, 2);
 
-		// 파일 락을 사용한 안전한 저장
-		await withFileLock(dataPath, async () => {
-			const jsonData = JSON.stringify(finalData, null, 2);
-			await writeFile(dataPath, jsonData, 'utf-8');
-		});
+		// 파일 락 + 원자적 쓰기를 사용한 안전한 저장
+		await safeWriteFile(dataPath, jsonData);
 	} catch (error) {
 		console.error('용어 데이터 저장 실패:', error);
 		throw new Error(

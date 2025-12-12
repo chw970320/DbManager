@@ -3,6 +3,7 @@ import type { ApiResponse } from '$lib/types/vocabulary.js';
 import type { DomainData, DomainEntry } from '$lib/types/domain.js';
 import { saveDomainData, loadDomainData, checkDomainReferences } from '$lib/utils/file-handler.js';
 import { safeMerge } from '$lib/utils/type-guards.js';
+import { invalidateCache } from '$lib/utils/cache.js';
 
 /**
  * 저장된 도메인 데이터 조회 API
@@ -323,6 +324,7 @@ export async function PUT({ request }: RequestEvent) {
 		};
 
 		await saveDomainData(domainData, filename);
+		invalidateCache('domain', filename); // 캐시 무효화
 
 		return json(
 			{ success: true, data: domainData.entries[entryIndex], message: '도메인 수정 완료' },
@@ -379,6 +381,7 @@ export async function DELETE({ url }: RequestEvent) {
 		// 데이터 삭제
 		domainData.entries = domainData.entries.filter((e) => e.id !== id);
 		await saveDomainData(domainData, filename);
+		invalidateCache('domain', filename); // 캐시 무효화
 
 		return json({ success: true, message: '도메인 삭제 완료' }, { status: 200 });
 	} catch (error) {

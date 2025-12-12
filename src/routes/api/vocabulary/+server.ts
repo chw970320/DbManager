@@ -8,6 +8,7 @@ import {
 } from '$lib/utils/file-handler.js';
 import { getDuplicateDetails } from '$lib/utils/duplicate-handler.js';
 import { safeMerge } from '$lib/utils/type-guards.js';
+import { invalidateCache } from '$lib/utils/cache.js';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -292,6 +293,7 @@ export async function POST({ request, url }: RequestEvent) {
 
 		vocabularyData.entries.push(entryToSave);
 		await saveVocabularyData(vocabularyData, filename);
+		invalidateCache('vocabulary', filename); // 캐시 무효화
 
 		return json(
 			{
@@ -359,6 +361,7 @@ export async function PUT({ request, url }: RequestEvent) {
 		};
 
 		await saveVocabularyData(vocabularyData, filename);
+		invalidateCache('vocabulary', filename); // 캐시 무효화
 
 		return json(
 			{
@@ -437,6 +440,7 @@ export async function DELETE({ url }: RequestEvent) {
 
 		vocabularyData.entries = vocabularyData.entries.filter((e) => e.id !== id);
 		await saveVocabularyData(vocabularyData, filename);
+		invalidateCache('vocabulary', filename); // 캐시 무효화
 
 		return json({ success: true, message: '단어가 성공적으로 삭제되었습니다.' } as ApiResponse, {
 			status: 200

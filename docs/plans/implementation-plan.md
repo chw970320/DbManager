@@ -97,14 +97,15 @@
 
 ### Week 3
 
-- [ ] **#H3: Term API N+1 문제**
+- [x] **#H3: Term API N+1 문제** ✅
   - 설명: Term API에서 매번 Vocabulary/Domain 데이터를 전체 로드
   - 파일:
-    - `src/routes/api/term/+server.ts:238-239, 345-346` (POST, PUT)
-    - `src/routes/api/term/upload/+server.ts:189`
-    - `src/routes/api/term/sync/+server.ts`
-  - 예상: 16시간
-  - 담당:
+    - `src/lib/utils/cache.ts` (신규 - 메모리 캐시)
+    - `src/routes/api/term/+server.ts` (캐시 적용)
+    - `src/routes/api/term/upload/+server.ts` (캐시 적용)
+    - `src/routes/api/vocabulary/+server.ts` (캐시 무효화)
+    - `src/routes/api/domain/+server.ts` (캐시 무효화)
+  - 완료: 2024-12-12
 
 - [ ] **#H4: 데이터 검증 로직 부족**
   - 설명: 타입, 형식, 참조 무결성 검증 부족

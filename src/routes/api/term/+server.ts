@@ -1,13 +1,9 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse } from '$lib/types/vocabulary.js';
 import type { TermData, TermEntry } from '$lib/types/term.js';
-import {
-	saveTermData,
-	loadTermData,
-	loadVocabularyData,
-	loadDomainData
-} from '$lib/utils/file-handler.js';
+import { saveTermData, loadTermData } from '$lib/utils/file-handler.js';
 import { safeMerge } from '$lib/utils/type-guards.js';
+import { getCachedVocabularyData, getCachedDomainData, invalidateCache } from '$lib/utils/cache.js';
 
 /**
  * 용어 매핑 로직 (업로드 API와 동일)
@@ -236,8 +232,9 @@ export async function POST({ request }: RequestEvent) {
 		};
 
 		// 단어집 및 도메인 데이터 로드 (매핑 확인용)
-		const vocabularyData = await loadVocabularyData(mapping.vocabulary);
-		const domainData = await loadDomainData(mapping.domain);
+		// 캐시를 사용한 데이터 로드 (N+1 문제 방지)
+		const vocabularyData = await getCachedVocabularyData(mapping.vocabulary);
+		const domainData = await getCachedDomainData(mapping.domain);
 
 		// 단어집 맵 생성
 		const vocabularyMap = new Map<string, { standardName: string; abbreviation: string }>();
@@ -287,6 +284,7 @@ export async function POST({ request }: RequestEvent) {
 		termData.lastUpdated = new Date().toISOString();
 
 		await saveTermData(termData, filename);
+		invalidateCache('term', filename); // 캐시 무효화
 
 		return json({
 			success: true,
@@ -343,8 +341,9 @@ export async function PUT({ request }: RequestEvent) {
 		};
 
 		// 단어집 및 도메인 데이터 로드 (매핑 확인용)
-		const vocabularyData = await loadVocabularyData(mapping.vocabulary);
-		const domainData = await loadDomainData(mapping.domain);
+		// 캐시를 사용한 데이터 로드 (N+1 문제 방지)
+		const vocabularyData = await getCachedVocabularyData(mapping.vocabulary);
+		const domainData = await getCachedDomainData(mapping.domain);
 
 		// 단어집 맵 생성
 		const vocabularyMap = new Map<string, { standardName: string; abbreviation: string }>();
@@ -397,6 +396,7 @@ export async function PUT({ request }: RequestEvent) {
 		termData.lastUpdated = new Date().toISOString();
 
 		await saveTermData(termData, filename);
+		invalidateCache('term', filename); // 캐시 무효화
 
 		return json({
 			success: true,
@@ -451,6 +451,7 @@ export async function DELETE({ request }: RequestEvent) {
 		termData.lastUpdated = new Date().toISOString();
 
 		await saveTermData(termData, filename);
+		invalidateCache('term', filename); // 캐시 무효화
 
 		return json({
 			success: true,

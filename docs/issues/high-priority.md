@@ -161,15 +161,24 @@ const logData: Partial<HistoryLogEntry | DomainHistoryLogEntry | TermHistoryLogE
 
 ---
 
-## 이슈 #H3: Term API에서 매번 Vocabulary/Domain 데이터를 로드하는 N+1 문제
+## ~~이슈 #H3: Term API에서 매번 Vocabulary/Domain 데이터를 로드하는 N+1 문제~~ ✅ 해결됨
+
+> **해결일**: 2024-12-12
+> **해결 방법**: 메모리 캐시 시스템 구현
+>
+> - `src/lib/utils/cache.ts` 신규 생성
+> - `MemoryCache` 클래스: TTL 기반 캐시
+> - `getCachedVocabularyData()`, `getCachedDomainData()` 함수
+> - 데이터 수정 시 `invalidateCache()` 호출
+> - TTL: 30초, 최대 캐시: 5개
 
 **심각도**: High Priority
 
 **위치**:
 
-- `src/routes/api/term/+server.ts:238-239, 345-346` - POST, PUT
-- `src/routes/api/term/upload/+server.ts:189`
-- `src/routes/api/term/sync/+server.ts` - 전체 파일 로드
+- `src/lib/utils/cache.ts` - 캐시 유틸리티
+- `src/routes/api/term/+server.ts` - 캐시 적용
+- `src/routes/api/term/upload/+server.ts` - 캐시 적용
 
 **문제 설명**:
 

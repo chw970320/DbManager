@@ -2,8 +2,6 @@ import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse } from '$lib/types/vocabulary.js';
 import type { TermData, TermEntry } from '$lib/types/term.js';
 import { loadTermData, mergeTermData } from '$lib/utils/file-handler.js';
-import { loadVocabularyData } from '$lib/utils/file-handler.js';
-import { loadDomainData } from '$lib/utils/file-handler.js';
 import { validateXlsxFile } from '$lib/utils/validation.js';
 import { parseTermXlsxToJson } from '$lib/utils/xlsx-parser.js';
 import { addHistoryLog } from '$lib/utils/history-handler.js';
@@ -14,6 +12,7 @@ import {
 	getOptionalBoolean,
 	FormDataValidationError
 } from '$lib/utils/type-guards.js';
+import { getCachedVocabularyData, getCachedDomainData, invalidateCache } from '$lib/utils/cache.js';
 
 /**
  * 용어 업로드 정보 조회 API
@@ -184,9 +183,9 @@ export async function POST({ request }: RequestEvent) {
 			);
 		}
 
-		// 단어집 및 도메인 데이터 로드 (매핑 정보 기반)
-		const vocabularyData = await loadVocabularyData(mapping.vocabulary);
-		const domainData = await loadDomainData(mapping.domain);
+		// 캐시를 사용한 데이터 로드 (N+1 문제 방지)
+		const vocabularyData = await getCachedVocabularyData(mapping.vocabulary);
+		const domainData = await getCachedDomainData(mapping.domain);
 
 		// 단어집 맵 생성 (standardName과 abbreviation 모두 포함)
 		const vocabularyMap = new Map<string, { standardName: string; abbreviation: string }>();

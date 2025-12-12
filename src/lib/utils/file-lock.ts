@@ -301,3 +301,84 @@ export async function safeWriteFile(filePath: string, content: string): Promise<
 		await atomicWriteFile(filePath, content);
 	});
 }
+
+// ============================================================================
+// 안전한 파일 읽기 (Safe Read with Backup Recovery)
+// ============================================================================
+
+/**
+ * 파일 읽기 에러 클래스
+ */
+export class FileReadError extends Error {
+	constructor(
+		message: string,
+		public readonly filePath: string,
+		public readonly errorCode?: string,
+		public readonly recoveredFromBackup: boolean = false
+	) {
+		super(message);
+		this.name = 'FileReadError';
+	}
+}
+
+/**
+ * 안전한 파일 읽기
+ * - 파일이 없으면 null 반환
+ * - 파일 읽기 실패 시 백업에서 복구 시도
+ * - 권한 에러, 손상 에러 등 구체적인 에러 메시지 제공
+ *
+ * @param filePath - 읽을 파일 경로
+ * @returns 파일 내용 또는 null (파일 없음)
+ * @throws FileReadError - 읽기 실패 시
+ */
+export async function safeReadFile(filePath: string): Promise<string | null> {
+	// 파일이 없으면 null 반환
+	if (!existsSync(filePath)) {
+		return null;
+	}
+
+	try {
+		return await readFile(filePath, 'utf-8');
+	} catch (error) {
+		const errorCode = (error as NodeJS.ErrnoException).code;
+
+		// 권한 에러
+		if (errorCode === 'EACCES' || errorCode === 'EPERM') {
+			throw new FileReadError(`파일 접근 권한이 없습니다: ${filePath}`, filePath, errorCode);
+		}
+
+		// 백업 파일에서 복구 시도
+		const backupPath = getBackupPath(filePath);
+		if (existsSync(backupPath)) {
+			try {
+				console.warn(`원본 파일 읽기 실패, 백업에서 복구 시도: ${filePath}`);
+				const backupContent = await readFile(backupPath, 'utf-8');
+
+				// 백업 내용으로 원본 복원 시도
+				try {
+					await writeFile(filePath, backupContent, 'utf-8');
+					console.warn(`백업에서 원본 파일 복원 완료: ${filePath}`);
+				} catch {
+					// 복원 실패해도 백업 내용은 반환
+				}
+
+				const readError = new FileReadError(
+					`원본 파일 읽기 실패, 백업에서 복구됨: ${filePath}`,
+					filePath,
+					errorCode,
+					true
+				);
+				console.warn(readError.message);
+				return backupContent;
+			} catch (backupError) {
+				throw new FileReadError(`파일 및 백업 모두 읽기 실패: ${filePath}`, filePath, errorCode);
+			}
+		}
+
+		throw new FileReadError(
+			`파일 읽기 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
+			filePath,
+			errorCode
+		);
+	}
+}

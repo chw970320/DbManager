@@ -75,11 +75,13 @@
     - `src/routes/api/generator/+server.ts` (nullish coalescing으로 해결)
   - 완료: 2024-12-12
 
-- [ ] **#C8: 파일 읽기 실패 처리**
+- [x] **#C8: 파일 읽기 실패 처리** ✅
   - 설명: 파일 읽기 실패 시 예외 처리 및 에러 메시지 개선
-  - 파일: `src/lib/utils/file-handler.ts:208-283` (모든 `load*Data()` 함수)
-  - 예상: 8시간
-  - 담당:
+  - 파일:
+    - `src/lib/utils/file-lock.ts` (`safeReadFile`, `FileReadError` 추가)
+    - `src/lib/utils/file-handler.ts` (모든 `load*Data()` 함수)
+    - `src/lib/utils/history-handler.ts` (`loadHistoryData()`)
+  - 완료: 2024-12-12
 
 - [ ] **#C6: 참조 무결성 검증 없음**
   - 설명: 다른 엔트리에서 참조하는 경우에도 삭제 가능

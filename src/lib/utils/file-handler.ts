@@ -12,7 +12,7 @@ import {
 	safeJsonParse,
 	TypeValidationError
 } from './type-guards';
-import { safeWriteFile } from './file-lock';
+import { safeWriteFile, safeReadFile, FileReadError } from './file-lock';
 
 // 데이터 저장 경로 설정
 const DATA_DIR = process.env.DATA_PATH || 'static/data';
@@ -271,19 +271,11 @@ export async function loadVocabularyData(
 		await ensureDataDirectory(); // 마이그레이션 확인을 위해 호출
 		const dataPath = getDataPath(filename, 'vocabulary');
 
-		// 파일이 없으면 빈 데이터 반환
-		if (!existsSync(dataPath)) {
-			return {
-				entries: [],
-				lastUpdated: new Date().toISOString(),
-				totalCount: 0
-			};
-		}
+		// 안전한 파일 읽기 (백업 복구 지원)
+		const jsonString = await safeReadFile(dataPath);
 
-		const jsonString = await readFile(dataPath, 'utf-8');
-
-		// 빈 파일이면 빈 데이터 반환
-		if (!jsonString.trim()) {
+		// 파일이 없거나 빈 파일이면 빈 데이터 반환
+		if (!jsonString || !jsonString.trim()) {
 			return {
 				entries: [],
 				lastUpdated: new Date().toISOString(),
@@ -317,6 +309,14 @@ export async function loadVocabularyData(
 		};
 	} catch (error) {
 		console.error('단어집 데이터 로드 실패:', error);
+		if (error instanceof FileReadError) {
+			if (error.recoveredFromBackup) {
+				// 백업에서 복구된 경우 경고만 출력하고 계속 진행
+				console.warn(error.message);
+			} else {
+				throw new Error(`단어집 파일 읽기 실패: ${error.message}`);
+			}
+		}
 		if (error instanceof TypeValidationError) {
 			throw new Error(`단어집 데이터 형식 오류: ${error.message}`);
 		}
@@ -552,7 +552,11 @@ export async function loadForbiddenWordsData(): Promise<ForbiddenWordsData> {
 		await ensureDataDirectory();
 		const dataPath = getDataPath(FORBIDDEN_WORDS_FILE, 'forbidden');
 
-		if (!existsSync(dataPath)) {
+		// 안전한 파일 읽기 (백업 복구 지원)
+		const fileContent = await safeReadFile(dataPath);
+
+		// 파일이 없거나 빈 파일이면 기본 데이터 생성
+		if (!fileContent || !fileContent.trim()) {
 			const defaultData: ForbiddenWordsData = {
 				entries: [],
 				lastUpdated: new Date().toISOString(),
@@ -561,8 +565,6 @@ export async function loadForbiddenWordsData(): Promise<ForbiddenWordsData> {
 			await saveForbiddenWordsData(defaultData);
 			return defaultData;
 		}
-
-		const fileContent = await readFile(dataPath, 'utf-8');
 
 		// 타입 가드를 사용한 안전한 JSON 파싱
 		const data = safeJsonParse(fileContent, isForbiddenWordsData, 'ForbiddenWordsData');
@@ -573,6 +575,9 @@ export async function loadForbiddenWordsData(): Promise<ForbiddenWordsData> {
 		};
 	} catch (error) {
 		console.error('금지어 데이터 로드 실패:', error);
+		if (error instanceof FileReadError) {
+			throw new Error(`금지어 파일 읽기 실패: ${error.message}`);
+		}
 		if (error instanceof TypeValidationError) {
 			throw new Error(`금지어 데이터 형식 오류: ${error.message}`);
 		}
@@ -630,7 +635,11 @@ export async function loadDomainData(filename: string = DEFAULT_DOMAIN_FILE): Pr
 		await ensureDataDirectory();
 		const dataPath = getDataPath(filename, 'domain');
 
-		if (!existsSync(dataPath)) {
+		// 안전한 파일 읽기 (백업 복구 지원)
+		const fileContent = await safeReadFile(dataPath);
+
+		// 파일이 없거나 빈 파일이면 기본 데이터 반환
+		if (!fileContent || !fileContent.trim()) {
 			const defaultData: DomainData = {
 				entries: [],
 				lastUpdated: new Date().toISOString(),
@@ -639,17 +648,6 @@ export async function loadDomainData(filename: string = DEFAULT_DOMAIN_FILE): Pr
 			if (filename === DEFAULT_DOMAIN_FILE) {
 				await saveDomainData(defaultData, filename);
 			}
-			return defaultData;
-		}
-
-		const fileContent = await readFile(dataPath, 'utf-8');
-
-		if (!fileContent.trim()) {
-			const defaultData: DomainData = {
-				entries: [],
-				lastUpdated: new Date().toISOString(),
-				totalCount: 0
-			};
 			return defaultData;
 		}
 
@@ -662,6 +660,9 @@ export async function loadDomainData(filename: string = DEFAULT_DOMAIN_FILE): Pr
 		};
 	} catch (error) {
 		console.error('도메인 데이터 로드 실패:', error);
+		if (error instanceof FileReadError) {
+			throw new Error(`도메인 파일 읽기 실패: ${error.message}`);
+		}
 		if (error instanceof TypeValidationError) {
 			throw new Error(`도메인 데이터 형식 오류: ${error.message}`);
 		}
@@ -930,7 +931,11 @@ export async function loadTermData(filename: string = DEFAULT_TERM_FILE): Promis
 			domain: 'domain.json'
 		};
 
-		if (!existsSync(dataPath)) {
+		// 안전한 파일 읽기 (백업 복구 지원)
+		const fileContent = await safeReadFile(dataPath);
+
+		// 파일이 없거나 빈 파일이면 기본 데이터 반환
+		if (!fileContent || !fileContent.trim()) {
 			const defaultData: TermData = {
 				entries: [],
 				lastUpdated: new Date().toISOString(),
@@ -940,18 +945,6 @@ export async function loadTermData(filename: string = DEFAULT_TERM_FILE): Promis
 			if (filename === DEFAULT_TERM_FILE) {
 				await saveTermData(defaultData, filename);
 			}
-			return defaultData;
-		}
-
-		const fileContent = await readFile(dataPath, 'utf-8');
-
-		if (!fileContent.trim()) {
-			const defaultData: TermData = {
-				entries: [],
-				lastUpdated: new Date().toISOString(),
-				totalCount: 0,
-				mapping: defaultMapping
-			};
 			return defaultData;
 		}
 
@@ -966,6 +959,9 @@ export async function loadTermData(filename: string = DEFAULT_TERM_FILE): Promis
 		};
 	} catch (error) {
 		console.error('용어 데이터 로드 실패:', error);
+		if (error instanceof FileReadError) {
+			throw new Error(`용어 파일 읽기 실패: ${error.message}`);
+		}
 		if (error instanceof TypeValidationError) {
 			throw new Error(`용어 데이터 형식 오류: ${error.message}`);
 		}

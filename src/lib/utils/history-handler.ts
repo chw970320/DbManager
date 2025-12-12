@@ -10,7 +10,7 @@ import {
 	isTermHistoryData,
 	TypeValidationError
 } from './type-guards';
-import { safeWriteFile } from './file-lock';
+import { safeWriteFile, safeReadFile, FileReadError } from './file-lock';
 
 // 히스토리 타입 정의
 export type HistoryType = 'vocabulary' | 'domain' | 'term';
@@ -110,20 +110,11 @@ export async function loadHistoryData(
 	try {
 		const historyPath = getHistoryPath(type);
 
-		// 파일 존재 확인
-		if (!existsSync(historyPath)) {
-			return {
-				logs: [],
-				lastUpdated: new Date().toISOString(),
-				totalCount: 0
-			};
-		}
+		// 안전한 파일 읽기 (백업 복구 지원)
+		const jsonString = await safeReadFile(historyPath);
 
-		// 파일 읽기
-		const jsonString = await readFile(historyPath, 'utf-8');
-
-		if (!jsonString.trim()) {
-			console.warn('히스토리 데이터 파일이 비어있습니다.');
+		// 파일이 없거나 빈 파일이면 빈 데이터 반환
+		if (!jsonString || !jsonString.trim()) {
 			return {
 				logs: [],
 				lastUpdated: new Date().toISOString(),
@@ -193,6 +184,10 @@ export async function loadHistoryData(
 		};
 	} catch (error) {
 		console.error('히스토리 데이터 로드 실패:', error);
+
+		if (error instanceof FileReadError) {
+			throw new Error(`히스토리 파일 읽기 실패: ${error.message}`);
+		}
 
 		if (error instanceof TypeValidationError) {
 			throw new Error(`히스토리 데이터 형식 오류: ${error.message}`);

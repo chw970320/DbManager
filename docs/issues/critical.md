@@ -493,14 +493,23 @@ entry.keyword.toLowerCase() === newEntry.standardName?.toLowerCase();
 
 ---
 
-## 이슈 #C8: 파일 읽기 실패 시 에러 처리로 인한 API 완전 작동 불가
+## ~~이슈 #C8: 파일 읽기 실패 시 에러 처리로 인한 API 완전 작동 불가~~ ✅ 해결됨
+
+> **해결일**: 2024-12-12
+> **해결 방법**: 안전한 파일 읽기 유틸리티 구현
+>
+> - `safeReadFile()`: 백업 복구 지원 파일 읽기
+> - `FileReadError`: 구체적 에러 클래스 (권한, 손상 구분)
+> - 백업 파일에서 자동 복구 시도
+> - 모든 load 함수에 적용
 
 **심각도**: Critical
 
 **위치**:
 
-- `src/lib/utils/file-handler.ts:208-283` - `loadVocabularyData()`
+- `src/lib/utils/file-lock.ts` - `safeReadFile`, `FileReadError`
 - `src/lib/utils/file-handler.ts` - 모든 `load*Data()` 함수
+- `src/lib/utils/history-handler.ts` - `loadHistoryData()`
 
 **문제 설명**:
 

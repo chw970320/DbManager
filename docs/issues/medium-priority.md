@@ -4,18 +4,23 @@
 
 ---
 
-## 이슈 #M1: file-handler.ts의 중복된 load/save 함수 패턴
+## ~~이슈 #M1: file-handler.ts의 중복된 load/save 함수 패턴~~ ⚠️ 부분 해결
+
+> **해결일**: 2024-12-12
+> **해결 방법**: 파일 관리 함수 제네릭화 (#M2)로 부분 해결
+>
+> - `file-operations.ts`에 공통 파일 경로/검증 로직 추출
+> - load/save 함수는 타입별 검증 로직이 달라 래퍼 유지
+> - create/rename/delete 함수들은 완전히 제네릭화됨
+>
+> **남은 작업**: 타입 가드 통합 시 추가 리팩토링 가능
 
 **심각도**: Medium Priority
 
 **위치**:
 
-- `src/lib/utils/file-handler.ts:208-283` - `loadVocabularyData()`
-- `src/lib/utils/file-handler.ts:574-619` - `loadDomainData()`
-- `src/lib/utils/file-handler.ts:867-928` - `loadTermData()`
-- `src/lib/utils/file-handler.ts:159-202` - `saveVocabularyData()`
-- `src/lib/utils/file-handler.ts:624-664` - `saveDomainData()`
-- `src/lib/utils/file-handler.ts:933-972` - `saveTermData()`
+- `src/lib/utils/file-operations.ts` - 공통 파일 관리 로직
+- `src/lib/utils/file-handler.ts` - 엔티티별 load/save (래퍼)
 
 **문제 설명**:
 
@@ -803,13 +808,23 @@ if (isVocabularyMode) {
 
 ---
 
-## 이슈 #M9: file-handler.ts 파일이 너무 큼 (1176줄)
+## ~~이슈 #M9: file-handler.ts 파일이 너무 큼 (1176줄)~~ ⚠️ 부분 해결
+
+> **해결일**: 2024-12-12
+> **해결 방법**: 파일 분리로 크기 감소
+>
+> - `file-operations.ts` 분리 (약 160줄)
+> - 제네릭 함수로 통합하여 중복 코드 약 200줄 제거
+> - 현재 약 900줄로 감소
+>
+> **남은 작업**: 엔티티별 파일 분리 시 추가 개선 가능
 
 **심각도**: Medium Priority
 
 **위치**:
 
-- `src/lib/utils/file-handler.ts` (1176줄)
+- `src/lib/utils/file-handler.ts` (약 900줄로 감소)
+- `src/lib/utils/file-operations.ts` (신규 분리)
 
 **문제 설명**:
 

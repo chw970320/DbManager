@@ -148,3 +148,10 @@ export function dataFileExists(type: DataType, filename: string): boolean {
 		return false;
 	}
 }
+
+/**
+ * 디렉토리 경로 가져오기
+ */
+export function getDataDir(type: DataType): string {
+	return DATA_DIRS[type];
+}

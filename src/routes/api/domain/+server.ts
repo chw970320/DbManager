@@ -96,26 +96,26 @@ export async function GET({ url }: RequestEvent) {
 			filteredEntries = domainData.entries.filter((entry) => {
 				switch (searchField) {
 					case 'domainGroup':
-						return entry.domainGroup.toLowerCase().includes(query);
+						return entry.domainGroup?.toLowerCase().includes(query);
 					case 'domainCategory':
-						return entry.domainCategory.toLowerCase().includes(query);
+						return entry.domainCategory?.toLowerCase().includes(query);
 					case 'standardDomainName':
-						return entry.standardDomainName.toLowerCase().includes(query);
+						return entry.standardDomainName?.toLowerCase().includes(query);
 					case 'logicalDataType':
-						return entry.logicalDataType.toLowerCase().includes(query);
+						return entry.logicalDataType?.toLowerCase().includes(query);
 					case 'physicalDataType':
-						return entry.physicalDataType.toLowerCase().includes(query);
+						return entry.physicalDataType?.toLowerCase().includes(query);
 					case 'all':
 					default:
 						return (
-							entry.domainGroup.toLowerCase().includes(query) ||
-							entry.domainCategory.toLowerCase().includes(query) ||
-							entry.standardDomainName.toLowerCase().includes(query) ||
-							entry.logicalDataType.toLowerCase().includes(query) ||
-							entry.physicalDataType.toLowerCase().includes(query) ||
-							(entry.dataValue && entry.dataValue.toLowerCase().includes(query)) ||
-							(entry.measurementUnit && entry.measurementUnit.toLowerCase().includes(query)) ||
-							(entry.remarks && entry.remarks.toLowerCase().includes(query))
+							entry.domainGroup?.toLowerCase().includes(query) ||
+							entry.domainCategory?.toLowerCase().includes(query) ||
+							entry.standardDomainName?.toLowerCase().includes(query) ||
+							entry.logicalDataType?.toLowerCase().includes(query) ||
+							entry.physicalDataType?.toLowerCase().includes(query) ||
+							entry.dataValue?.toLowerCase().includes(query) ||
+							entry.measurementUnit?.toLowerCase().includes(query) ||
+							entry.remarks?.toLowerCase().includes(query)
 						);
 				}
 			});

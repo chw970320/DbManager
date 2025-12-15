@@ -3,7 +3,7 @@
 	import { browser } from '$app/environment';
 	import SearchBar from '$lib/components/SearchBar.svelte';
 	import VocabularyTable from '$lib/components/VocabularyTable.svelte';
-	import TermEditor from '$lib/components/TermEditor.svelte';
+	import VocabularyEditor from '$lib/components/VocabularyEditor.svelte';
 	import ForbiddenWordManager from '$lib/components/ForbiddenWordManager.svelte';
 	import VocabularyFileManager from '$lib/components/VocabularyFileManager.svelte';
 	import HistoryLog from '$lib/components/HistoryLog.svelte';
@@ -922,9 +922,9 @@
 					</div>
 				</div>
 
-				<!-- TermEditor 모달 -->
+				<!-- VocabularyEditor 모달 -->
 				{#if showEditor}
-					<TermEditor
+					<VocabularyEditor
 						entry={currentEditingEntry || {}}
 						isEditMode={!!currentEditingEntry}
 						serverError={editorServerError}

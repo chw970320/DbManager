@@ -20,10 +20,10 @@ export async function GET({ url }: RequestEvent) {
 		// XLSX 버퍼 생성
 		const buffer = exportTermToXlsxBuffer(termData.entries);
 
-		// 파일명 생성 (타임스탬프 포함)
-		const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+		// 파일명 생성 (YYYY-MM-DD 형식, 다른 API와 일관)
+		const currentDate = new Date().toISOString().split('T')[0];
 		const safeFilename = filename.replace(/\.json$/, '');
-		const downloadFilename = `term_${safeFilename}_${timestamp}.xlsx`;
+		const downloadFilename = `${safeFilename}_${currentDate}.xlsx`;
 
 		// 응답 헤더 설정
 		return new Response(buffer, {

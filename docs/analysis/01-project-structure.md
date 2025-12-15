@@ -77,7 +77,7 @@ DbManager/
   - `TermGenerator.svelte`: 용어 생성기
 
 - **`stores/`**: Svelte Stores를 사용한 상태 관리
-  - `vocabularyStore.ts`: 단어집 상태 관리
+  - `vocabulary-store.ts`: 단어집 상태 관리
   - `domain-store.ts`: 도메인 상태 관리
   - `term-store.ts`: 용어 상태 관리
   - `settings-store.ts`: 설정 상태 관리
@@ -86,12 +86,24 @@ DbManager/
   - `vocabulary.ts`: 단어집 관련 타입
   - `domain.ts`: 도메인 관련 타입
   - `term.ts`: 용어 관련 타입
+  - `table.ts`: 공통 테이블 타입 (신규)
+  - `editor.ts`: 공통 에디터 타입 (신규)
+
+- **`composables/`**: 재사용 가능한 훅 (신규)
+  - `use-data-table.ts`: 데이터 테이블 상태 관리 훅
 
 - **`utils/`**: 유틸리티 함수
   - `file-handler.ts`: 파일 읽기/쓰기 처리
+  - `file-lock.ts`: 파일 락 및 원자적 쓰기 (신규)
+  - `file-operations.ts`: 제네릭 파일 관리 (신규)
   - `xlsx-parser.ts`: Excel 파일 파싱 및 생성
   - `history-handler.ts`: 히스토리 로그 관리
-  - `validation.ts`: 데이터 검증
+  - `type-guards.ts`: 런타임 타입 검증 (신규)
+  - `validation.ts`: 데이터 형식 검증
+  - `cache.ts`: 메모리 캐시 (신규)
+  - `data-index.ts`: 데이터 인덱스 (신규)
+  - `api-client.ts`: 공통 API 클라이언트 (신규)
+  - `logger.ts`: 로깅 유틸리티 (신규)
   - `duplicate-handler.ts`: 중복 처리
   - `file-filter.ts`: 파일 필터링
   - `settings.ts`: 설정 관리

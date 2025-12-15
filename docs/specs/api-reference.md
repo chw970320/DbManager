@@ -711,6 +711,104 @@ const data = await response.json();
 
 ---
 
+### POST /api/domain
+
+새로운 도메인을 생성합니다.
+
+#### 설명
+
+새로운 도메인을 생성합니다. 필수 필드 검증 및 중복 검사를 수행합니다.
+
+#### 요청 바디
+
+```typescript
+{
+  domainGroup: string;          // 필수
+  domainCategory: string;       // 필수
+  standardDomainName: string;   // 필수
+  physicalDataType: string;     // 필수
+  logicalDataType?: string;
+  description?: string;
+  revision?: string;
+  filename?: string;            // 기본값: 'domain.json'
+}
+```
+
+#### 요청 예시
+
+**curl:**
+
+```bash
+curl -X POST "http://localhost:5173/api/domain" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "domainGroup": "사용자",
+    "domainCategory": "사용자관리",
+    "standardDomainName": "사용자명",
+    "physicalDataType": "VARCHAR(100)"
+  }'
+```
+
+**JavaScript (fetch):**
+
+```javascript
+const response = await fetch('http://localhost:5173/api/domain', {
+	method: 'POST',
+	headers: {
+		'Content-Type': 'application/json'
+	},
+	body: JSON.stringify({
+		domainGroup: '사용자',
+		domainCategory: '사용자관리',
+		standardDomainName: '사용자명',
+		physicalDataType: 'VARCHAR(100)'
+	})
+});
+const data = await response.json();
+```
+
+#### 응답 예시
+
+**성공 (201):**
+
+```json
+{
+	"success": true,
+	"data": {
+		"id": "550e8400-e29b-41d4-a716-446655440000",
+		"domainGroup": "사용자",
+		"domainCategory": "사용자관리",
+		"standardDomainName": "사용자명",
+		"physicalDataType": "VARCHAR(100)",
+		"createdAt": "2024-01-01T00:00:00.000Z",
+		"updatedAt": "2024-01-01T00:00:00.000Z"
+	},
+	"message": "도메인이 성공적으로 추가되었습니다."
+}
+```
+
+**에러 (400) - 필수 필드 누락:**
+
+```json
+{
+	"success": false,
+	"error": "필수 필드가 누락되었습니다: physicalDataType",
+	"message": "Missing required fields"
+}
+```
+
+**에러 (409) - 중복:**
+
+```json
+{
+	"success": false,
+	"error": "이미 동일한 도메인이 존재합니다.",
+	"message": "Duplicate domain"
+}
+```
+
+---
+
 ### PUT /api/domain
 
 도메인을 수정합니다.

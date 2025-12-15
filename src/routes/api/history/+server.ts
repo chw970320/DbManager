@@ -1,7 +1,7 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type { ApiResponse, HistoryData, HistoryLogEntry } from '$lib/types/vocabulary.js';
-import type { DomainHistoryData, DomainHistoryLogEntry } from '$lib/types/domain.js';
-import type { TermHistoryData, TermHistoryLogEntry } from '$lib/types/term.js';
+import type { ApiResponse, HistoryLogEntry } from '$lib/types/vocabulary.js';
+import type { DomainHistoryLogEntry } from '$lib/types/domain.js';
+import type { TermHistoryLogEntry } from '$lib/types/term.js';
 import { loadHistoryData, addHistoryLog, type HistoryType } from '$lib/utils/history-handler.js';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -42,8 +42,8 @@ export async function GET({ url }: RequestEvent) {
 			);
 		}
 
-		// 히스토리 데이터 로드
-		let historyData: HistoryData | DomainHistoryData | TermHistoryData;
+		// 히스토리 데이터 로드 (타입별 오버로드 함수 사용)
+		let historyData;
 		try {
 			historyData = await loadHistoryData(filename, type);
 		} catch (loadError) {
@@ -100,8 +100,10 @@ export async function GET({ url }: RequestEvent) {
  */
 export async function POST({ request, url }: RequestEvent) {
 	try {
-		const logData: Partial<HistoryLogEntry | DomainHistoryLogEntry | TermHistoryLogEntry> =
-			await request.json();
+		// 요청 데이터 파싱 (타입 가드로 검증)
+		const logData = (await request.json()) as Partial<
+			HistoryLogEntry | DomainHistoryLogEntry | TermHistoryLogEntry
+		>;
 		const typeParam = url.searchParams.get('type') || 'vocabulary';
 		const type: HistoryType =
 			typeParam === 'domain' ? 'domain' : typeParam === 'term' ? 'term' : 'vocabulary';
@@ -141,10 +143,10 @@ export async function POST({ request, url }: RequestEvent) {
 			details: logData.details || undefined
 		};
 
-		// 히스토리 로그 추가
-		let updatedHistoryData: HistoryData | DomainHistoryData | TermHistoryData;
+		// 히스토리 로그 추가 (타입별 오버로드 함수 사용)
+		let updatedHistoryData;
 		try {
-			updatedHistoryData = await addHistoryLog(newLogEntry, type);
+			updatedHistoryData = await addHistoryLog(newLogEntry as HistoryLogEntry, type);
 		} catch (addError) {
 			return json(
 				{

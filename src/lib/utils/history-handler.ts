@@ -15,6 +15,17 @@ import { safeWriteFile, safeReadFile, FileReadError } from './file-lock';
 // 히스토리 타입 정의
 export type HistoryType = 'vocabulary' | 'domain' | 'term';
 
+// 타입 매핑 (제네릭 타입 추론용)
+export interface HistoryTypeMap {
+	vocabulary: { data: HistoryData; log: HistoryLogEntry };
+	domain: { data: DomainHistoryData; log: DomainHistoryLogEntry };
+	term: { data: TermHistoryData; log: TermHistoryLogEntry };
+}
+
+// 타입별 데이터 타입 추출
+export type HistoryDataByType<T extends HistoryType> = HistoryTypeMap[T]['data'];
+export type HistoryLogByType<T extends HistoryType> = HistoryTypeMap[T]['log'];
+
 // 히스토리 데이터 저장 경로 설정
 const DATA_DIR = 'static/data';
 
@@ -97,12 +108,25 @@ export async function saveHistoryData(
 }
 
 /**
- * 저장된 히스토리 데이터를 JSON 파일에서 로드
+ * 저장된 히스토리 데이터를 JSON 파일에서 로드 (함수 오버로드)
  * @param filename - 필터링할 파일명 (선택사항)
  * @param type - 히스토리 타입 ('vocabulary' | 'domain' | 'term', 기본값: 'vocabulary')
- * @returns 로드된 HistoryData, DomainHistoryData 또는 TermHistoryData 객체
+ * @returns 로드된 타입별 HistoryData 객체
  * @throws TypeValidationError - 타입 검증 실패 시
  */
+export async function loadHistoryData(filename?: string, type?: 'vocabulary'): Promise<HistoryData>;
+export async function loadHistoryData(
+	filename: string | undefined,
+	type: 'domain'
+): Promise<DomainHistoryData>;
+export async function loadHistoryData(
+	filename: string | undefined,
+	type: 'term'
+): Promise<TermHistoryData>;
+export async function loadHistoryData<T extends HistoryType>(
+	filename?: string,
+	type?: T
+): Promise<HistoryDataByType<T>>;
 export async function loadHistoryData(
 	filename?: string,
 	type: HistoryType = 'vocabulary'
@@ -145,7 +169,7 @@ export async function loadHistoryData(
 					typeNames[type],
 					parsed
 				);
-		}
+			}
 			data = parsed;
 		} else if (type === 'domain') {
 			if (!isDomainHistoryData(parsed)) {
@@ -200,11 +224,27 @@ export async function loadHistoryData(
 }
 
 /**
- * 새로운 히스토리 로그 엔트리를 추가
+ * 새로운 히스토리 로그 엔트리를 추가 (함수 오버로드)
  * @param newLog - 추가할 새로운 히스토리 로그 엔트리
  * @param type - 히스토리 타입 ('vocabulary' | 'domain' | 'term', 기본값: 'vocabulary')
- * @returns 업데이트된 HistoryData, DomainHistoryData 또는 TermHistoryData 객체
+ * @returns 업데이트된 타입별 HistoryData 객체
  */
+export async function addHistoryLog(
+	newLog: HistoryLogEntry,
+	type?: 'vocabulary'
+): Promise<HistoryData>;
+export async function addHistoryLog(
+	newLog: DomainHistoryLogEntry,
+	type: 'domain'
+): Promise<DomainHistoryData>;
+export async function addHistoryLog(
+	newLog: TermHistoryLogEntry,
+	type: 'term'
+): Promise<TermHistoryData>;
+export async function addHistoryLog<T extends HistoryType>(
+	newLog: HistoryLogByType<T>,
+	type?: T
+): Promise<HistoryDataByType<T>>;
 export async function addHistoryLog(
 	newLog: HistoryLogEntry | DomainHistoryLogEntry | TermHistoryLogEntry,
 	type: HistoryType = 'vocabulary'
@@ -265,11 +305,27 @@ export async function createHistoryBackup(type: HistoryType = 'vocabulary'): Pro
 }
 
 /**
- * 히스토리 데이터를 초기화 (모든 로그 삭제)
+ * 히스토리 데이터를 초기화 (모든 로그 삭제) - 함수 오버로드
  * @param createBackup - 초기화 전 백업 생성 여부 (기본값: true)
  * @param type - 히스토리 타입 ('vocabulary' | 'domain' | 'term', 기본값: 'vocabulary')
- * @returns 초기화된 빈 HistoryData, DomainHistoryData 또는 TermHistoryData 객체
+ * @returns 초기화된 빈 타입별 HistoryData 객체
  */
+export async function clearHistoryData(
+	createBackup?: boolean,
+	type?: 'vocabulary'
+): Promise<HistoryData>;
+export async function clearHistoryData(
+	createBackup: boolean,
+	type: 'domain'
+): Promise<DomainHistoryData>;
+export async function clearHistoryData(
+	createBackup: boolean,
+	type: 'term'
+): Promise<TermHistoryData>;
+export async function clearHistoryData<T extends HistoryType>(
+	createBackup?: boolean,
+	type?: T
+): Promise<HistoryDataByType<T>>;
 export async function clearHistoryData(
 	createBackup: boolean = true,
 	type: HistoryType = 'vocabulary'

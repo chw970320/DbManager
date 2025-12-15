@@ -90,14 +90,23 @@ export interface VocabularyData {
 
 ---
 
-## 이슈 #H2: History API의 유니온 타입 응답으로 인한 타입 안정성 저하
+## ~~이슈 #H2: History API의 유니온 타입 응답으로 인한 타입 안정성 저하~~ ✅ 해결됨
+
+> **해결일**: 2024-12-12
+> **해결 방법**: 함수 오버로드 + 제네릭 타입 매핑으로 타입 안정성 확보
+>
+> - `HistoryTypeMap` 인터페이스 추가 (타입별 매핑)
+> - `HistoryDataByType<T>`, `HistoryLogByType<T>` 제네릭 타입 정의
+> - `loadHistoryData()` 함수 오버로드 추가
+> - `addHistoryLog()` 함수 오버로드 추가
+> - `clearHistoryData()` 함수 오버로드 추가
 
 **심각도**: High Priority
 
 **위치**:
 
-- `src/routes/api/history/+server.ts:46, 103, 145`
-- `src/lib/utils/history-handler.ts:100`
+- `src/lib/utils/history-handler.ts` - 오버로드 + 제네릭 적용
+- `src/routes/api/history/+server.ts` - 유니온 타입 제거
 
 **문제 설명**:
 

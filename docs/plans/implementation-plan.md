@@ -148,13 +148,12 @@
   - 예상: 16시간
   - 담당:
 
-- [ ] **#H2: History API 유니온 타입**
+- [x] **#H2: History API 유니온 타입** ✅
   - 설명: History API가 유니온 타입 반환으로 타입 안정성 저하
   - 파일:
-    - `src/routes/api/history/+server.ts:46, 103, 145`
-    - `src/lib/utils/history-handler.ts:100`
-  - 예상: 16시간
-  - 담당:
+    - `src/lib/utils/history-handler.ts` (함수 오버로드 + 제네릭)
+    - `src/routes/api/history/+server.ts` (유니온 타입 제거)
+  - 완료: 2024-12-12
 
 - [ ] **#H5: Domain API POST 없음**
   - 설명: Domain API에 POST (생성) 엔드포인트 없음

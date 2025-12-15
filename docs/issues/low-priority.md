@@ -4,12 +4,23 @@
 
 ---
 
-## 이슈 #L1: 프로덕션 코드에 console.log/warn/error 남아있음
+## ~~이슈 #L1: 프로덕션 코드에 console.log/warn/error 남아있음~~ ⚠️ 부분 해결
+
+> **해결일**: 2024-12-12
+> **해결 방법**: 로깅 유틸리티 생성
+>
+> - `src/lib/utils/logger.ts` 신규 생성
+> - `LogLevel` enum으로 로그 레벨 관리
+> - `createLogger()` 팩토리 함수
+> - 환경별 조건부 로깅 지원
+>
+> **남은 작업**: 기존 console 호출을 logger로 교체
 
 **심각도**: Low Priority
 
 **위치**:
 
+- `src/lib/utils/logger.ts` - 로깅 유틸리티
 - 전체 코드베이스에 266개 이상의 console 호출
 - `src/lib/utils/file-handler.ts` (35개)
 - `src/lib/utils/history-handler.ts` (9개)
@@ -87,12 +98,20 @@ console.error('Final conversion error:', err);
 
 ---
 
-## 이슈 #L2: window 객체에 any 타입 사용
+## ~~이슈 #L2: window 객체에 any 타입 사용~~ ✅ 해결됨
+
+> **해결일**: 2024-12-12
+> **해결 방법**: Window 인터페이스 확장
+>
+> - `src/app.d.ts`에 Window 인터페이스 확장
+> - `refreshHistoryLog`, `refreshDomainHistoryLog`, `refreshTermHistoryLog` 타입 선언
+> - `window as any` 제거 가능
 
 **심각도**: Low Priority
 
 **위치**:
 
+- `src/app.d.ts` - Window 타입 선언
 - `src/routes/browse/+page.svelte:486-489`
 - `src/routes/domain/browse/+page.svelte:416-419, 488-491`
 - `src/routes/term/browse/+page.svelte` (유사한 패턴)

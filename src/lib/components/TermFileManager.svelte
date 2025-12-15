@@ -164,44 +164,6 @@
 		}
 	}
 
-	// Save mapping info
-	async function handleMappingSave() {
-		if (!currentMappingFile) {
-			error = '매핑할 용어 파일을 선택하세요.';
-			return;
-		}
-
-		isSubmitting = true;
-		error = '';
-		successMessage = '';
-		syncMessage = '';
-
-		try {
-			const response = await fetch('/api/term/files/mapping', {
-				method: 'PUT',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					filename: currentMappingFile,
-					mapping: {
-						vocabulary: selectedVocabularyFile,
-						domain: selectedDomainFile
-					}
-				})
-			});
-			const result: ApiResponse = await response.json();
-
-			if (result.success) {
-				successMessage = '매핑 정보가 저장되었습니다.';
-			} else {
-				error = result.error || '매핑 정보 저장 실패';
-			}
-		} catch (_err) {
-			error = '서버 오류가 발생했습니다.';
-		} finally {
-			isSubmitting = false;
-		}
-	}
-
 	// Sync term mapping
 	async function handleTermSync() {
 		if (!currentMappingFile) {
@@ -215,6 +177,26 @@
 		successMessage = '';
 
 		try {
+			// 1) 매핑 저장
+			const saveResponse = await fetch('/api/term/files/mapping', {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					filename: currentMappingFile,
+					mapping: {
+						vocabulary: selectedVocabularyFile,
+						domain: selectedDomainFile
+					}
+				})
+			});
+			const saveResult: ApiResponse = await saveResponse.json();
+			if (!saveResponse.ok || !saveResult.success) {
+				error = saveResult.error || '매핑 정보 저장 실패';
+				isSubmitting = false;
+				return;
+			}
+
+			// 2) 동기화 실행
 			const response = await fetch('/api/term/sync', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -563,14 +545,7 @@
 										class="rounded-md bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
 										disabled={isSubmitting || isMappingLoading || !currentMappingFile}
 									>
-										{isSubmitting ? '동기화 중...' : '동기화'}
-									</button>
-									<button
-										onclick={handleMappingSave}
-										class="rounded-md bg-blue-600 px-3 py-2 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-										disabled={isSubmitting || isMappingLoading || !currentMappingFile}
-									>
-										{isSubmitting ? '저장 중...' : '매핑 저장'}
+										{isSubmitting ? '동기화 중...' : '매핑 저장 후 동기화'}
 									</button>
 								</div>
 							</div>

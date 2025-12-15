@@ -235,12 +235,23 @@ export async function createDomainFile(filename: string): Promise<void> {
 
 ---
 
-## 이슈 #M3: Table 컴포넌트들의 중복 코드
+## ~~이슈 #M3: Table 컴포넌트들의 중복 코드~~ ⚠️ 부분 해결
+
+> **해결일**: 2024-12-12
+> **해결 방법**: 공통 테이블 타입 정의 추출
+>
+> - `src/lib/types/table.ts` 신규 생성
+> - `ColumnDefinition<T>`, `SortEvent`, `PageChangeEvent` 공통 타입
+> - `TableProps<T>` 제네릭 Props 인터페이스
+> - `getVisiblePageNumbers()` 페이지네이션 유틸리티
+>
+> **남은 작업**: 제네릭 DataTable 컴포넌트로 통합
 
 **심각도**: Medium Priority
 
 **위치**:
 
+- `src/lib/types/table.ts` - 공통 테이블 타입
 - `src/lib/components/VocabularyTable.svelte` (약 545줄)
 - `src/lib/components/DomainTable.svelte` (약 524줄)
 - `src/lib/components/TermTable.svelte` (약 522줄)
@@ -608,12 +619,23 @@ src/lib/stores/
 
 ---
 
-## 이슈 #M7: browse 페이지들의 중복된 상태 관리 패턴
+## ~~이슈 #M7: browse 페이지들의 중복된 상태 관리 패턴~~ ⚠️ 부분 해결
+
+> **해결일**: 2024-12-12
+> **해결 방법**: 공통 상태 관리 훅 생성
+>
+> - `src/lib/composables/use-data-table.ts` 신규 생성
+> - `DataTableState<T>` 제네릭 상태 인터페이스
+> - `createInitialState()`, `buildSearchParams()` 유틸리티
+> - 이벤트 핸들러 팩토리 함수들
+>
+> **남은 작업**: 각 페이지에서 훅 활용하여 리팩토링
 
 **심각도**: Medium Priority
 
 **위치**:
 
+- `src/lib/composables/use-data-table.ts` - 공통 상태 관리
 - `src/routes/browse/+page.svelte` (약 1166줄)
 - `src/routes/domain/browse/+page.svelte` (약 890줄)
 - `src/routes/term/browse/+page.svelte` (약 944줄)
@@ -928,12 +950,22 @@ if (isVocabularyMode) {
 
 ---
 
-## 이슈 #M10: Table 컴포넌트의 Props Drilling
+## ~~이슈 #M10: Table 컴포넌트의 Props Drilling~~ ⚠️ 부분 해결
+
+> **해결일**: 2024-12-12
+> **해결 방법**: 공통 Props 타입 정의
+>
+> - `src/lib/types/table.ts`에 `TableProps<T>` 정의
+> - Props 타입 통합으로 일관성 확보
+> - Svelte Context API 활용은 추가 작업 필요
+>
+> **남은 작업**: Context API로 전환 시 추가 개선
 
 **심각도**: Medium Priority
 
 **위치**:
 
+- `src/lib/types/table.ts` - TableProps 정의
 - `src/lib/components/VocabularyTable.svelte:19-34`
 - `src/lib/components/DomainTable.svelte:19-49`
 - `src/lib/components/TermTable.svelte`
@@ -1320,12 +1352,22 @@ async function loadDomainData() {
 
 ---
 
-## 이슈 #M14: 상태 관리 패턴의 일관성 부족
+## ~~이슈 #M14: 상태 관리 패턴의 일관성 부족~~ ⚠️ 부분 해결
+
+> **해결일**: 2024-12-12
+> **해결 방법**: 공통 상태 관리 패턴 정의
+>
+> - `src/lib/composables/use-data-table.ts` 생성
+> - `DataTableState<T>` 통일된 상태 인터페이스
+> - 핸들러 팩토리 함수로 패턴 표준화
+>
+> **남은 작업**: 각 페이지 Store 정리 및 패턴 적용
 
 **심각도**: Medium Priority
 
 **위치**:
 
+- `src/lib/composables/use-data-table.ts` - 통합 상태 관리
 - `src/routes/browse/+page.svelte` - Store + 로컬 상태 혼용
 - `src/routes/domain/browse/+page.svelte` - Store + 로컬 상태 혼용
 - `src/routes/term/browse/+page.svelte` - Store + 로컬 상태 혼용

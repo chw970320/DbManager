@@ -13,6 +13,7 @@ import {
 	TypeValidationError
 } from './type-guards';
 import { safeWriteFile, safeReadFile, FileReadError } from './file-lock';
+import { isValidUUID, isValidISODate } from './validation';
 
 // 데이터 저장 경로 설정
 const DATA_DIR = process.env.DATA_PATH || 'static/data';
@@ -223,13 +224,27 @@ export async function saveVocabularyData(
 		}
 
 		const validEntries = data.entries.filter((entry) => {
-			const isValid =
+			// 필수 필드 존재 검증
+			const hasRequiredFields =
 				entry.id &&
 				entry.standardName &&
 				entry.abbreviation &&
 				entry.englishName &&
 				entry.createdAt;
-			return isValid;
+
+			if (!hasRequiredFields) return false;
+
+			// 형식 검증 (경고만 출력, 저장은 허용)
+			if (!isValidUUID(entry.id)) {
+				console.warn(`[검증 경고] 단어집 엔트리 ID가 UUID 형식이 아닙니다: ${entry.id}`);
+			}
+			if (!isValidISODate(entry.createdAt)) {
+				console.warn(
+					`[검증 경고] 단어집 엔트리 생성일이 ISO 8601 형식이 아닙니다: ${entry.createdAt}`
+				);
+			}
+
+			return true;
 		});
 
 		if (validEntries.length === 0 && data.entries.length > 0) {
@@ -599,8 +614,20 @@ export async function saveForbiddenWordsData(data: ForbiddenWordsData): Promise<
 		}
 
 		const validEntries = data.entries.filter((entry) => {
-			const isValid = entry.id && entry.keyword && entry.type && entry.createdAt;
-			return isValid;
+			const hasRequiredFields = entry.id && entry.keyword && entry.type && entry.createdAt;
+			if (!hasRequiredFields) return false;
+
+			// 형식 검증 (경고만 출력)
+			if (!isValidUUID(entry.id)) {
+				console.warn(`[검증 경고] 금지어 엔트리 ID가 UUID 형식이 아닙니다: ${entry.id}`);
+			}
+			if (!isValidISODate(entry.createdAt)) {
+				console.warn(
+					`[검증 경고] 금지어 엔트리 생성일이 ISO 8601 형식이 아닙니다: ${entry.createdAt}`
+				);
+			}
+
+			return true;
 		});
 
 		if (validEntries.length === 0 && data.entries.length > 0) {
@@ -687,14 +714,26 @@ export async function saveDomainData(
 		}
 
 		const validEntries = data.entries.filter((entry) => {
-			const isValid =
+			const hasRequiredFields =
 				entry.id &&
 				entry.domainGroup &&
 				entry.domainCategory &&
 				entry.standardDomainName &&
 				entry.physicalDataType &&
 				entry.createdAt;
-			return isValid;
+			if (!hasRequiredFields) return false;
+
+			// 형식 검증 (경고만 출력)
+			if (!isValidUUID(entry.id)) {
+				console.warn(`[검증 경고] 도메인 엔트리 ID가 UUID 형식이 아닙니다: ${entry.id}`);
+			}
+			if (!isValidISODate(entry.createdAt)) {
+				console.warn(
+					`[검증 경고] 도메인 엔트리 생성일이 ISO 8601 형식이 아닙니다: ${entry.createdAt}`
+				);
+			}
+
+			return true;
 		});
 
 		if (validEntries.length === 0 && data.entries.length > 0) {
@@ -986,9 +1025,21 @@ export async function saveTermData(
 		}
 
 		const validEntries = data.entries.filter((entry) => {
-			const isValid =
+			const hasRequiredFields =
 				entry.id && entry.termName && entry.columnName && entry.domainName && entry.createdAt;
-			return isValid;
+			if (!hasRequiredFields) return false;
+
+			// 형식 검증 (경고만 출력)
+			if (!isValidUUID(entry.id)) {
+				console.warn(`[검증 경고] 용어 엔트리 ID가 UUID 형식이 아닙니다: ${entry.id}`);
+			}
+			if (!isValidISODate(entry.createdAt)) {
+				console.warn(
+					`[검증 경고] 용어 엔트리 생성일이 ISO 8601 형식이 아닙니다: ${entry.createdAt}`
+				);
+			}
+
+			return true;
 		});
 
 		if (validEntries.length === 0 && data.entries.length > 0) {

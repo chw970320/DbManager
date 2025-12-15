@@ -255,14 +255,23 @@ vocabularyData.entries.forEach((vocabEntry) => {
 
 ---
 
-## 이슈 #H4: 데이터 검증 로직 부족 (타입, 형식, 참조 무결성)
+## ~~이슈 #H4: 데이터 검증 로직 부족 (타입, 형식, 참조 무결성)~~ ✅ 해결됨
+
+> **해결일**: 2024-12-12
+> **해결 방법**: 형식 검증 함수 추가 및 저장 로직 강화
+>
+> - `isValidUUID()`: UUID v4 형식 검증
+> - `isValidISODate()`: ISO 8601 날짜 형식 검증
+> - `DataValidationError`: 검증 에러 클래스
+> - 모든 save 함수에 형식 검증 추가
+> - (참조 무결성은 Phase 1 #C6에서 구현됨)
 
 **심각도**: High Priority
 
 **위치**:
 
-- `src/lib/utils/file-handler.ts:243-251, 670-676` - 검증 로직
-- 모든 API 엔드포인트의 요청 바디 검증
+- `src/lib/utils/validation.ts` - 형식 검증 함수들
+- `src/lib/utils/file-handler.ts` - save 함수 검증 강화
 
 **문제 설명**:
 

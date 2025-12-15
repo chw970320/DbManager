@@ -487,19 +487,16 @@ export async function DELETE({ url }: RequestEvent) {
 			);
 		}
 
-		// 참조 무결성 검증 (강제 삭제가 아닌 경우)
+		// 참조 검증: 차단하지 않고 경고 정보만 수집
+		let warnings: unknown[] = [];
 		if (!force) {
-			const refCheck = await checkDomainReferences(entryToDelete);
-			if (!refCheck.canDelete) {
-				return json(
-					{
-						success: false,
-						error: refCheck.message || '다른 항목에서 참조 중이므로 삭제할 수 없습니다.',
-						message: 'Referential integrity violation',
-						data: { references: refCheck.references }
-					},
-					{ status: 409 }
-				);
+			try {
+				const refCheck = await checkDomainReferences(entryToDelete);
+				if (!refCheck.canDelete && refCheck.references?.length) {
+					warnings = refCheck.references;
+				}
+			} catch (refError) {
+				console.warn('참조 검증 경고 수집 중 오류:', refError);
 			}
 		}
 
@@ -508,7 +505,7 @@ export async function DELETE({ url }: RequestEvent) {
 		await saveDomainData(domainData, filename);
 		invalidateCache('domain', filename); // 캐시 무효화
 
-		return json({ success: true, message: '도메인 삭제 완료' }, { status: 200 });
+		return json({ success: true, message: '도메인 삭제 완료', warnings }, { status: 200 });
 	} catch (error) {
 		console.error('도메인 삭제 중 오류:', error);
 		return json(

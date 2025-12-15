@@ -25,6 +25,7 @@
 	let isLoading = $state(false);
 	let error = $state('');
 	let successMessage = $state('');
+	let warningMessage = $state('');
 	let newFilename = $state('');
 	let editingFile = $state<string | null>(null);
 	let renameValue = $state('');
@@ -253,6 +254,7 @@
 		isSubmitting = true;
 		error = '';
 		successMessage = '';
+		warningMessage = '';
 
 		try {
 			const response = await fetch('/api/vocabulary/files', {
@@ -263,7 +265,10 @@
 			const result: ApiResponse = await response.json();
 
 			if (result.success) {
+				const warns = (result as ApiResponse & { warnings?: unknown[] }).warnings;
+				const warnCount = Array.isArray(warns) ? warns.length : 0;
 				successMessage = '파일이 삭제되었습니다.';
+				warningMessage = warnCount > 0 ? `경고 ${warnCount}건: 참조 정보를 확인하세요.` : '';
 				if (editingFile === file) {
 					editingFile = null;
 				}
@@ -302,8 +307,10 @@
 				`/api/vocabulary/files/mapping?filename=${encodeURIComponent(filename)}`
 			);
 			const result: ApiResponse = await response.json();
-			if (result.success && result.data && result.data.mapping) {
-				selectedDomainFile = result.data.mapping.domain || 'domain.json';
+			const data = (result as { data?: { mapping?: { domain?: string } } }).data;
+			const mapping = data?.mapping;
+			if (result.success && mapping) {
+				selectedDomainFile = mapping.domain || 'domain.json';
 				currentMappingFile = filename;
 			} else {
 				// 기본값 설정
@@ -453,6 +460,14 @@
 			return () => clearTimeout(timer);
 		}
 	});
+	$effect(() => {
+		if (warningMessage) {
+			const timer = setTimeout(() => {
+				warningMessage = '';
+			}, 5000);
+			return () => clearTimeout(timer);
+		}
+	});
 	function focus(el: HTMLElement) {
 		el.focus();
 	}
@@ -508,6 +523,26 @@
 			</div>
 
 			<!-- 메시지 영역 -->
+			{#if successMessage}
+				<div class="mx-6 mt-4 rounded-md bg-green-50 p-3 text-sm text-green-800">
+					{successMessage}
+				</div>
+			{/if}
+			{#if warningMessage}
+				<div
+					class="mx-6 mt-2 flex items-start justify-between rounded-md bg-yellow-50 p-3 text-sm text-yellow-800"
+				>
+					<span>{warningMessage}</span>
+					<button
+						type="button"
+						class="ml-3 rounded-md border border-yellow-300 px-2 py-1 text-xs font-semibold text-yellow-900 hover:bg-yellow-100"
+						onclick={handleDomainSync}
+						aria-label="동기화"
+					>
+						동기화
+					</button>
+				</div>
+			{/if}
 			{#if error}
 				<div class="mx-6 mt-4 rounded-md bg-red-50 p-3 text-sm text-red-800">{error}</div>
 			{/if}

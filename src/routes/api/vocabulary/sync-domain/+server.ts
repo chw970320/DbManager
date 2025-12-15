@@ -1,5 +1,6 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import { loadVocabularyData, saveVocabularyData, loadDomainData } from '$lib/utils/file-handler.js';
+import { invalidateCache } from '$lib/utils/cache.js';
 import type { ApiResponse, VocabularyEntry, VocabularyData } from '$lib/types/vocabulary.js';
 import type { DomainEntry } from '$lib/types/domain.js';
 
@@ -73,6 +74,7 @@ export async function POST({ request }: RequestEvent) {
 			lastUpdated: new Date().toISOString()
 		};
 		await saveVocabularyData(finalData, vocabFile);
+		invalidateCache('vocabulary', vocabFile);
 
 		return json(
 			{

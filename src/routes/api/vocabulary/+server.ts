@@ -420,21 +420,16 @@ export async function DELETE({ url }: RequestEvent) {
 			);
 		}
 
-		// 참조 무결성 검증 (강제 삭제가 아닌 경우)
+		// 참조 검증: 차단하지 않고 경고 정보만 수집
+		let warnings: unknown[] = [];
 		if (!force) {
-			const refCheck = await checkVocabularyReferences(entryToDelete);
-			if (!refCheck.canDelete) {
-				return json(
-					{
-						success: false,
-						error: refCheck.message || '다른 항목에서 참조 중이므로 삭제할 수 없습니다.',
-						message: 'Referential integrity violation',
-						data: {
-							references: refCheck.references
-						}
-					} as ApiResponse,
-					{ status: 409 }
-				);
+			try {
+				const refCheck = await checkVocabularyReferences(entryToDelete);
+				if (!refCheck.canDelete && refCheck.references?.length) {
+					warnings = refCheck.references;
+				}
+			} catch (refError) {
+				console.warn('참조 검증 경고 수집 중 오류:', refError);
 			}
 		}
 
@@ -442,9 +437,10 @@ export async function DELETE({ url }: RequestEvent) {
 		await saveVocabularyData(vocabularyData, filename);
 		invalidateCache('vocabulary', filename); // 캐시 무효화
 
-		return json({ success: true, message: '단어가 성공적으로 삭제되었습니다.' } as ApiResponse, {
-			status: 200
-		});
+		return json(
+			{ success: true, message: '단어가 성공적으로 삭제되었습니다.', warnings } as ApiResponse,
+			{ status: 200 }
+		);
 	} catch (error) {
 		console.error('단어 삭제 중 오류:', error);
 		return json(

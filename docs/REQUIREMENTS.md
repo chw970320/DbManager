@@ -74,7 +74,7 @@ Medium Priority 레벨의 이슈들을 해결하여 코드 중복 제거 및 유
 | #M3  | Table 컴포넌트 중복    | ⚠️ 부분 |
 | #M4  | FileManager 중복       | ⚠️ 부분 |
 | #M7  | 상태 관리 중복         | ⚠️ 부분 |
-| #M8  | TermEditor 이중 역할   | ⬜ 대기 |
+| #M8  | TermEditor 이중 역할   | ⚠️ 부분 |
 | #M10 | Table Props Drilling   | ⚠️ 부분 |
 | #M14 | 상태 관리 패턴 불일치  | ⚠️ 부분 |
 

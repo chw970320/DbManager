@@ -741,12 +741,23 @@ async function loadDomainData() {
 
 ---
 
-## 이슈 #M8: TermEditor의 이중 역할 (Vocabulary + Term)
+## ~~이슈 #M8: TermEditor의 이중 역할 (Vocabulary + Term)~~ ⚠️ 부분 해결
+
+> **해결일**: 2024-12-12
+> **해결 방법**: 공통 에디터 타입 정의 추출
+>
+> - `src/lib/types/editor.ts` 신규 생성
+> - `EditorProps<T>` 제네릭 Props 인터페이스
+> - `ValidationError`, `ValidationResult` 검증 타입
+> - 검증 유틸리티 함수 (`validateRequired`, `validateMaxLength`)
+>
+> **남은 작업**: VocabularyEditor 별도 컴포넌트 생성
 
 **심각도**: Medium Priority
 
 **위치**:
 
+- `src/lib/types/editor.ts` - 공통 에디터 타입
 - `src/lib/components/TermEditor.svelte` (약 668줄)
 
 **문제 설명**:

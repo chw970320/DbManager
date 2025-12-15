@@ -208,6 +208,138 @@ export function invalidateAllCaches(): void {
 	termCache.clear();
 }
 
+// ============================================================================
+// 페이지네이션 최적화 (메모리 효율성)
+// ============================================================================
+
+/**
+ * 페이지네이션된 결과를 반환 (전체 로드 후 슬라이싱)
+ * 캐시를 활용하여 반복 로드 방지
+ */
+export async function getPaginatedVocabulary(
+	filename: string = 'vocabulary.json',
+	page: number = 1,
+	limit: number = 20,
+	searchQuery?: string
+): Promise<{
+	entries: import('$lib/types/vocabulary').VocabularyEntry[];
+	totalCount: number;
+	page: number;
+	limit: number;
+	totalPages: number;
+}> {
+	const data = await getCachedVocabularyData(filename);
+	let entries = data.entries;
+
+	// 검색 필터링
+	if (searchQuery && searchQuery.trim()) {
+		const query = searchQuery.toLowerCase();
+		entries = entries.filter(
+			(e) =>
+				e.standardName.toLowerCase().includes(query) ||
+				e.abbreviation.toLowerCase().includes(query) ||
+				e.englishName.toLowerCase().includes(query)
+		);
+	}
+
+	const totalCount = entries.length;
+	const totalPages = Math.ceil(totalCount / limit);
+	const startIndex = (page - 1) * limit;
+	const paginatedEntries = entries.slice(startIndex, startIndex + limit);
+
+	return {
+		entries: paginatedEntries,
+		totalCount,
+		page,
+		limit,
+		totalPages
+	};
+}
+
+/**
+ * 페이지네이션된 Domain 결과
+ */
+export async function getPaginatedDomain(
+	filename: string = 'domain.json',
+	page: number = 1,
+	limit: number = 20,
+	searchQuery?: string
+): Promise<{
+	entries: import('$lib/types/domain').DomainEntry[];
+	totalCount: number;
+	page: number;
+	limit: number;
+	totalPages: number;
+}> {
+	const data = await getCachedDomainData(filename);
+	let entries = data.entries;
+
+	if (searchQuery && searchQuery.trim()) {
+		const query = searchQuery.toLowerCase();
+		entries = entries.filter(
+			(e) =>
+				e.domainGroup.toLowerCase().includes(query) ||
+				e.domainCategory.toLowerCase().includes(query) ||
+				e.standardDomainName.toLowerCase().includes(query)
+		);
+	}
+
+	const totalCount = entries.length;
+	const totalPages = Math.ceil(totalCount / limit);
+	const startIndex = (page - 1) * limit;
+	const paginatedEntries = entries.slice(startIndex, startIndex + limit);
+
+	return {
+		entries: paginatedEntries,
+		totalCount,
+		page,
+		limit,
+		totalPages
+	};
+}
+
+/**
+ * 페이지네이션된 Term 결과
+ */
+export async function getPaginatedTerm(
+	filename: string = 'term.json',
+	page: number = 1,
+	limit: number = 20,
+	searchQuery?: string
+): Promise<{
+	entries: import('$lib/types/term').TermEntry[];
+	totalCount: number;
+	page: number;
+	limit: number;
+	totalPages: number;
+}> {
+	const data = await getCachedTermData(filename);
+	let entries = data.entries;
+
+	if (searchQuery && searchQuery.trim()) {
+		const query = searchQuery.toLowerCase();
+		entries = entries.filter(
+			(e) =>
+				e.termName.toLowerCase().includes(query) ||
+				e.columnName.toLowerCase().includes(query) ||
+				e.domainName.toLowerCase().includes(query)
+		);
+	}
+
+	const totalCount = entries.length;
+	const totalPages = Math.ceil(totalCount / limit);
+	const startIndex = (page - 1) * limit;
+	const paginatedEntries = entries.slice(startIndex, startIndex + limit);
+
+	return {
+		entries: paginatedEntries,
+		totalCount,
+		page,
+		limit,
+		totalPages
+	};
+}
+
 /**
  * 특정 타입의 캐시 무효화
  */

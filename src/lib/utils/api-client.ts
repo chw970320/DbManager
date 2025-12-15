@@ -223,3 +223,65 @@ export async function fetchHistory(
 		...params
 	});
 }
+
+// ============================================================================
+// 파일 관리 API (FileManager 컴포넌트용)
+// ============================================================================
+
+export type EntityType = 'vocabulary' | 'domain' | 'term';
+
+const FILE_API_ENDPOINTS: Record<EntityType, string> = {
+	vocabulary: '/api/vocabulary/files',
+	domain: '/api/domain/files',
+	term: '/api/term/files'
+};
+
+/**
+ * 파일 목록 조회
+ */
+export async function fetchFileList(type: EntityType): Promise<ApiResponse & { data?: string[] }> {
+	const response = await fetch(FILE_API_ENDPOINTS[type], {
+		cache: 'no-store',
+		headers: { 'Cache-Control': 'no-cache' }
+	});
+	return response.json();
+}
+
+/**
+ * 파일 생성
+ */
+export async function createFile(type: EntityType, filename: string): Promise<ApiResponse> {
+	const response = await fetch(FILE_API_ENDPOINTS[type], {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ filename })
+	});
+	return response.json();
+}
+
+/**
+ * 파일 이름 변경
+ */
+export async function renameFile(
+	type: EntityType,
+	oldFilename: string,
+	newFilename: string
+): Promise<ApiResponse> {
+	const response = await fetch(FILE_API_ENDPOINTS[type], {
+		method: 'PUT',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ oldFilename, newFilename })
+	});
+	return response.json();
+}
+
+/**
+ * 파일 삭제
+ */
+export async function deleteFile(type: EntityType, filename: string): Promise<ApiResponse> {
+	const params = new URLSearchParams({ filename });
+	const response = await fetch(`${FILE_API_ENDPOINTS[type]}?${params}`, {
+		method: 'DELETE'
+	});
+	return response.json();
+}

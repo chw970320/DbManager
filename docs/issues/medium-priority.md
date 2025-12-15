@@ -340,12 +340,22 @@ const columns = [
 
 ---
 
-## 이슈 #M4: FileManager 컴포넌트들의 중복 코드
+## ~~이슈 #M4: FileManager 컴포넌트들의 중복 코드~~ ⚠️ 부분 해결
+
+> **해결일**: 2024-12-12
+> **해결 방법**: 공통 파일 관리 API 함수 추가
+>
+> - `api-client.ts`에 파일 관리 함수 추가
+> - `fetchFileList()`, `createFile()`, `renameFile()`, `deleteFile()`
+> - UI 컴포넌트 통합은 추가 작업 필요
+>
+> **남은 작업**: 제네릭 FileManager 컴포넌트로 통합
 
 **심각도**: Medium Priority
 
 **위치**:
 
+- `src/lib/utils/api-client.ts` - 파일 관리 API 함수
 - `src/lib/components/VocabularyFileManager.svelte`
 - `src/lib/components/DomainFileManager.svelte`
 - `src/lib/components/TermFileManager.svelte`

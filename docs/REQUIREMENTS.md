@@ -72,7 +72,7 @@ Medium Priority 레벨의 이슈들을 해결하여 코드 중복 제거 및 유
 | #M12 | 데이터 로드 패턴 중복  | ✅ 완료 |
 | #M13 | xlsx-parser 파일 크기  | ⚠️ 부분 |
 | #M3  | Table 컴포넌트 중복    | ⬜ 대기 |
-| #M4  | FileManager 중복       | ⬜ 대기 |
+| #M4  | FileManager 중복       | ⚠️ 부분 |
 | #M7  | 상태 관리 중복         | ⬜ 대기 |
 | #M8  | TermEditor 이중 역할   | ⬜ 대기 |
 | #M10 | Table Props Drilling   | ⬜ 대기 |

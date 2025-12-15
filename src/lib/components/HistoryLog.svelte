@@ -4,7 +4,7 @@
 	import type { HistoryLogEntry, ApiResponse } from '$lib/types/vocabulary';
 	import type { DomainHistoryLogEntry } from '$lib/types/domain';
 	import type { TermHistoryLogEntry } from '$lib/types/term';
-	import { vocabularyStore } from '$lib/stores/vocabularyStore';
+	import { vocabularyStore } from '$lib/stores/vocabulary-store';
 	import { domainStore } from '$lib/stores/domain-store';
 	import { termStore } from '$lib/stores/term-store';
 
@@ -133,9 +133,11 @@
 				'logs' in result.data &&
 				Array.isArray((result.data as { logs: unknown }).logs)
 			) {
-				historyLogs = (result.data as {
-					logs: (HistoryLogEntry | DomainHistoryLogEntry | TermHistoryLogEntry)[];
-				}).logs;
+				historyLogs = (
+					result.data as {
+						logs: (HistoryLogEntry | DomainHistoryLogEntry | TermHistoryLogEntry)[];
+					}
+				).logs;
 				const data = result.data as {
 					logs: (HistoryLogEntry | DomainHistoryLogEntry | TermHistoryLogEntry)[];
 					pagination?: { totalCount?: number };

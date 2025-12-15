@@ -5,6 +5,61 @@ import { validateVocabularyEntry } from './validation.js';
 import type { VocabularyEntry, VocabularyData } from '../types/vocabulary.js';
 import type { TermEntry } from '../types/term.js';
 
+// ============================================================================
+// 공통 유틸리티 함수
+// ============================================================================
+
+/**
+ * xlsx 파일 버퍼를 2D 배열로 파싱 (공통)
+ * @param fileBuffer - xlsx 파일의 Buffer 데이터
+ * @returns 2D 문자열 배열 (첫 번째 행은 헤더)
+ */
+export function parseWorkbookToArray(fileBuffer: Buffer): string[][] {
+	const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+
+	const firstSheetName = workbook.SheetNames[0];
+	if (!firstSheetName) {
+		throw new Error('Excel 파일에 시트가 없습니다.');
+	}
+
+	const worksheet = workbook.Sheets[firstSheetName];
+	const rawData: string[][] = XLSX.utils.sheet_to_json(worksheet, {
+		header: 1,
+		defval: ''
+	});
+
+	if (rawData.length < 2) {
+		throw new Error('Excel 파일에 데이터가 충분하지 않습니다. (헤더 + 최소 1행 필요)');
+	}
+
+	return rawData;
+}
+
+/**
+ * 배열 필드 파싱 헬퍼 함수 (이음동의어, 금칙어 등)
+ */
+export function parseArrayField(value: string | number | undefined): string[] {
+	if (!value) return [];
+	const str = String(value).trim();
+	if (str === '-' || str === '') return [];
+	return str
+		.split(',')
+		.map((item) => item.trim())
+		.filter((item) => item.length > 0);
+}
+
+/**
+ * 빈 행 여부 확인
+ */
+export function isEmptyRow(row: (string | number | undefined)[] | undefined): boolean {
+	if (!row || row.length === 0) return true;
+	return !row.some((cell) => cell && String(cell).trim());
+}
+
+// ============================================================================
+// Vocabulary 파싱
+// ============================================================================
+
 /**
  * xlsx 파일 버퍼를 파싱하여 단어집 엔트리 배열로 변환
  * @param fileBuffer - xlsx 파일의 Buffer 데이터
@@ -16,54 +71,17 @@ export function parseXlsxToJson(
 	skipDuplicates: boolean = true
 ): VocabularyEntry[] {
 	try {
-		// xlsx 파일을 워크북으로 읽기
-		const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
-
-		// 첫 번째 시트 가져오기
-		const firstSheetName = workbook.SheetNames[0];
-		if (!firstSheetName) {
-			throw new Error('Excel 파일에 시트가 없습니다.');
-		}
-
-		const worksheet = workbook.Sheets[firstSheetName];
-
-		// 시트를 JSON으로 변환 (헤더 포함)
-		const rawData: string[][] = XLSX.utils.sheet_to_json(worksheet, {
-			header: 1, // 배열 형태로 반환
-			defval: '' // 빈 셀은 빈 문자열로 처리
-		});
-
-		if (rawData.length < 2) {
-			throw new Error('Excel 파일에 데이터가 충분하지 않습니다. (헤더 + 최소 1행 필요)');
-		}
-
-		// 첫 번째 행(헤더) 제외하고 데이터 처리
+		// 공통 워크북 파싱
+		const rawData = parseWorkbookToArray(fileBuffer);
 		const dataRows = rawData.slice(1);
 		const entries: VocabularyEntry[] = [];
-		const seenCombinations = skipDuplicates ? new Set<string>() : null; // 중복 체크용 (skipDuplicates가 false면 null)
-
-		/**
-		 * 배열 필드 파싱 헬퍼 함수 (이음동의어, 금칙어)
-		 */
-		const parseArrayField = (value: string | number | undefined): string[] => {
-			if (!value) return [];
-			const str = String(value).trim();
-			if (str === '-' || str === '') return [];
-			return str
-				.split(',')
-				.map((item) => item.trim())
-				.filter((item) => item.length > 0);
-		};
+		const seenCombinations = skipDuplicates ? new Set<string>() : null;
 
 		for (let i = 0; i < dataRows.length; i++) {
 			const row = dataRows[i];
 
 			// 빈 행 건너뛰기
-			if (
-				!row ||
-				row.length === 0 ||
-				!row.some((cell: string | number | undefined) => cell && String(cell).trim())
-			) {
+			if (isEmptyRow(row)) {
 				continue;
 			}
 
@@ -329,26 +347,8 @@ export function parseDomainXlsxToJson(
 	skipDuplicates: boolean = true
 ): DomainEntry[] {
 	try {
-		// xlsx 파일을 워크북으로 읽기
-		const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
-
-		// 첫 번째 시트 가져오기
-		const firstSheetName = workbook.SheetNames[0];
-		if (!firstSheetName) {
-			throw new Error('Excel 파일에 시트가 없습니다.');
-		}
-
-		const worksheet = workbook.Sheets[firstSheetName];
-
-		// 시트를 JSON으로 변환 (헤더 포함)
-		const rawData: string[][] = XLSX.utils.sheet_to_json(worksheet, {
-			header: 1, // 배열 형태로 반환
-			defval: '' // 빈 셀은 빈 문자열로 처리
-		});
-
-		if (rawData.length < 2) {
-			throw new Error('Excel 파일에 데이터가 충분하지 않습니다. (헤더 + 최소 1행 필요)');
-		}
+		// 공통 워크북 파싱
+		const rawData = parseWorkbookToArray(fileBuffer);
 
 		// 헤더 검증
 		const headerRow = rawData[0];
@@ -616,32 +616,20 @@ export function exportDomainToXlsxBuffer(data: DomainEntry[]): Buffer {
 export function parseTermXlsxToJson(
 	fileBuffer: Buffer,
 	skipDuplicates: boolean = true
-): Omit<TermEntry, 'id' | 'isMappedTerm' | 'isMappedColumn' | 'isMappedDomain' | 'createdAt' | 'updatedAt'>[] {
+): Omit<
+	TermEntry,
+	'id' | 'isMappedTerm' | 'isMappedColumn' | 'isMappedDomain' | 'createdAt' | 'updatedAt'
+>[] {
 	try {
-		// xlsx 파일을 워크북으로 읽기
-		const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
-
-		// 첫 번째 시트 가져오기
-		const firstSheetName = workbook.SheetNames[0];
-		if (!firstSheetName) {
-			throw new Error('Excel 파일에 시트가 없습니다.');
-		}
-
-		const worksheet = workbook.Sheets[firstSheetName];
-
-		// 시트를 JSON으로 변환 (헤더 포함)
-		const rawData: string[][] = XLSX.utils.sheet_to_json(worksheet, {
-			header: 1, // 배열 형태로 반환
-			defval: '' // 빈 셀은 빈 문자열로 처리
-		});
-
-		if (rawData.length < 2) {
-			throw new Error('Excel 파일에 데이터가 충분하지 않습니다. (헤더 + 최소 1행 필요)');
-		}
+		// 공통 워크북 파싱
+		const rawData = parseWorkbookToArray(fileBuffer);
 
 		// 첫 번째 행(헤더) 제외하고 데이터 처리
 		const dataRows = rawData.slice(1);
-		const entries: Omit<TermEntry, 'id' | 'isMappedTerm' | 'isMappedColumn' | 'isMappedDomain' | 'createdAt' | 'updatedAt'>[] = [];
+		const entries: Omit<
+			TermEntry,
+			'id' | 'isMappedTerm' | 'isMappedColumn' | 'isMappedDomain' | 'createdAt' | 'updatedAt'
+		>[] = [];
 		const seenCombinations = skipDuplicates ? new Set<string>() : null; // 중복 체크용
 
 		for (let i = 0; i < dataRows.length; i++) {

@@ -9,7 +9,7 @@
 	import HistoryLog from '$lib/components/HistoryLog.svelte';
 	import type { VocabularyEntry, ApiResponse } from '$lib/types/vocabulary.js';
 	import { get } from 'svelte/store';
-	import { vocabularyStore } from '$lib/stores/vocabularyStore';
+	import { vocabularyStore } from '$lib/stores/vocabulary-store';
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { filterVocabularyFiles, isSystemVocabularyFile } from '$lib/utils/file-filter';
 

@@ -127,21 +127,21 @@ export async function loadDomainData(filename: string = DEFAULT_DOMAIN_FILE) {
 
 ---
 
-## 이슈 #M2: file-handler.ts의 중복된 파일 관리 함수 패턴
+## ~~이슈 #M2: file-handler.ts의 중복된 파일 관리 함수 패턴~~ ✅ 해결됨
+
+> **해결일**: 2024-12-12
+> **해결 방법**: 제네릭 파일 관리 유틸리티로 통합
+>
+> - `src/lib/utils/file-operations.ts` 신규 생성
+> - `createDataFile()`, `renameDataFile()`, `deleteDataFile()` 제네릭 함수
+> - 기존 함수들을 래퍼로 간소화 (약 200줄 감소)
 
 **심각도**: Medium Priority
 
 **위치**:
 
-- `src/lib/utils/file-handler.ts:388-420` - `createVocabularyFile()`
-- `src/lib/utils/file-handler.ts:768-796` - `createDomainFile()`
-- `src/lib/utils/file-handler.ts:1076-1108` - `createTermFile()`
-- `src/lib/utils/file-handler.ts:425-462` - `renameVocabularyFile()`
-- `src/lib/utils/file-handler.ts:801-831` - `renameDomainFile()`
-- `src/lib/utils/file-handler.ts:1113-1144` - `renameTermFile()`
-- `src/lib/utils/file-handler.ts:467-497` - `deleteVocabularyFile()`
-- `src/lib/utils/file-handler.ts:836-862` - `deleteDomainFile()`
-- `src/lib/utils/file-handler.ts:1149-1175` - `deleteTermFile()`
+- `src/lib/utils/file-operations.ts` - 제네릭 파일 관리
+- `src/lib/utils/file-handler.ts` - 래퍼 함수들
 
 **문제 설명**:
 
@@ -426,18 +426,21 @@ async function loadFiles() {
 
 ---
 
-## 이슈 #M5: xlsx-parser.ts의 중복된 파싱 함수 패턴
+## ~~이슈 #M5: xlsx-parser.ts의 중복된 파싱 함수 패턴~~ ✅ 해결됨
+
+> **해결일**: 2024-12-12
+> **해결 방법**: 공통 유틸리티 함수 추출
+>
+> - `parseWorkbookToArray()`: 워크북 → 2D 배열 공통 파싱
+> - `parseArrayField()`: 배열 필드 파싱 공통 함수
+> - `isEmptyRow()`: 빈 행 체크 공통 함수
+> - 중복 코드 약 60줄 제거
 
 **심각도**: Medium Priority
 
 **위치**:
 
-- `src/lib/utils/xlsx-parser.ts:14-151` - `parseXlsxToJson()`
-- `src/lib/utils/xlsx-parser.ts:327-452` - `parseDomainXlsxToJson()`
-- `src/lib/utils/xlsx-parser.ts:616-707` - `parseTermXlsxToJson()`
-- `src/lib/utils/xlsx-parser.ts:179-318` - `exportJsonToXlsxBuffer()`
-- `src/lib/utils/xlsx-parser.ts:459-614` - `exportDomainToXlsxBuffer()`
-- `src/lib/utils/xlsx-parser.ts:714-833` - `exportTermToXlsxBuffer()`
+- `src/lib/utils/xlsx-parser.ts` - 공통 유틸리티 함수 추가
 
 **문제 설명**:
 
@@ -521,13 +524,19 @@ export function parseDomainXlsxToJson(fileBuffer: Buffer, skipDuplicates: boolea
 
 ---
 
-## 이슈 #M6: 네이밍 컨벤션 불일치 (Store 파일명)
+## ~~이슈 #M6: 네이밍 컨벤션 불일치 (Store 파일명)~~ ✅ 해결됨
+
+> **해결일**: 2024-12-12
+> **해결 방법**: 케밥케이스로 통일
+>
+> - `vocabularyStore.ts` → `vocabulary-store.ts` 변경
+> - 4개 파일 import 경로 수정
 
 **심각도**: Medium Priority
 
 **위치**:
 
-- `src/lib/stores/vocabularyStore.ts` - 카멜케이스
+- `src/lib/stores/vocabulary-store.ts` - 케밥케이스 ✅
 - `src/lib/stores/domain-store.ts` - 케밥케이스
 - `src/lib/stores/term-store.ts` - 케밥케이스
 - `src/lib/stores/settings-store.ts` - 케밥케이스
@@ -1001,16 +1010,21 @@ interface Props {
 
 ---
 
-## 이슈 #M11: 불필요한 데이터 변환 및 매핑 로직 중복
+## ~~이슈 #M11: 불필요한 데이터 변환 및 매핑 로직 중복~~ ✅ 해결됨
+
+> **해결일**: 2024-12-12
+> **해결 방법**: #H1에서 `mapping.domain`으로 통합 완료
+>
+> - `mappedDomainFile` deprecated 처리
+> - `mapping.domain`만 사용하도록 통일
+> - 로드 시 자동 마이그레이션 구현
 
 **심각도**: Medium Priority
 
 **위치**:
 
-- `src/lib/utils/file-handler.ts:254-265` - `mappedDomainFile` ↔ `mapping.domain` 변환
-- `src/routes/api/vocabulary/sync-domain/+server.ts:20-24` - 매핑 정보 로드
-- `src/routes/api/vocabulary/files/mapping/+server.ts:20, 59, 75-78` - 매핑 정보 처리
-- `src/lib/components/TermFileManager.svelte:143` - 매핑 정보 사용
+- `src/lib/types/vocabulary.ts` - @deprecated 주석
+- `src/lib/utils/file-handler.ts` - 마이그레이션 로직
 
 **문제 설명**:
 

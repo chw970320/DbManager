@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import { get } from 'svelte/store';
-	import { vocabularyStore } from '$lib/stores/vocabularyStore';
+	import { vocabularyStore } from '$lib/stores/vocabulary-store';
 	import { domainStore } from '$lib/stores/domain-store';
 	import { termStore } from '$lib/stores/term-store';
 	import type { TermEntry } from '$lib/types/term';
@@ -395,10 +395,7 @@
 	// Close suggestions when clicking outside
 	function handleClickOutside(event: MouseEvent) {
 		const target = event.target as HTMLElement;
-		if (
-			!target.closest('.autocomplete-container') &&
-			!target.closest('.autocomplete-input')
-		) {
+		if (!target.closest('.autocomplete-container') && !target.closest('.autocomplete-input')) {
 			showTermNameSuggestions = false;
 			showColumnNameSuggestions = false;
 			showDomainNameSuggestions = false;

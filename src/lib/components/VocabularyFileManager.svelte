@@ -5,7 +5,7 @@
 	import type { ApiResponse, UploadResult } from '$lib/types/vocabulary';
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { filterVocabularyFiles } from '$lib/utils/file-filter';
-	import { vocabularyStore } from '$lib/stores/vocabularyStore';
+	import { vocabularyStore } from '$lib/stores/vocabulary-store';
 
 	interface Props {
 		isOpen?: boolean;
@@ -120,7 +120,8 @@
 	// Sync domainGroup mapping into vocabulary file
 	async function handleDomainSync() {
 		const { selectedFilename } = get(vocabularyStore);
-		const vocabFile = selectedFilename || selectedUploadFile || currentMappingFile || 'vocabulary.json';
+		const vocabFile =
+			selectedFilename || selectedUploadFile || currentMappingFile || 'vocabulary.json';
 
 		if (!vocabFile) {
 			error = '단어집 파일을 선택하세요.';
@@ -436,7 +437,6 @@
 			};
 		}
 	});
-
 
 	$effect(() => {
 		if (allFiles.length > 0) {

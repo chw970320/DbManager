@@ -14,6 +14,13 @@ import {
 } from './type-guards';
 import { safeWriteFile, safeReadFile, FileReadError } from './file-lock';
 import { isValidUUID, isValidISODate } from './validation';
+import {
+	createDataFile,
+	renameDataFile,
+	deleteDataFile,
+	listDataFiles,
+	type DataType
+} from './file-operations';
 
 // 데이터 저장 경로 설정
 const DATA_DIR = process.env.DATA_PATH || 'static/data';
@@ -448,36 +455,13 @@ export async function listVocabularyFiles(): Promise<string[]> {
  * 새로운 단어집 파일 생성
  */
 export async function createVocabularyFile(filename: string): Promise<void> {
-	try {
-		await ensureDataDirectory();
-
-		if (!filename.endsWith('.json')) {
-			throw new Error('파일명은 .json으로 끝나야 합니다.');
-		}
-		if (/[\\/:*?"<>|]/.test(filename)) {
-			throw new Error('파일명에 사용할 수 없는 문자가 포함되어 있습니다.');
-		}
-
-		const filePath = getDataPath(filename, 'vocabulary');
-
-		if (existsSync(filePath)) {
-			throw new Error('이미 존재하는 파일명입니다.');
-		}
-
-		const emptyData: import('../types/vocabulary.js').VocabularyData = {
-			entries: [],
-			lastUpdated: new Date().toISOString(),
-			totalCount: 0,
-			mapping: {
-				domain: 'domain.json'
-			}
-		};
-
-		await writeFile(filePath, JSON.stringify(emptyData, null, 2), 'utf-8');
-	} catch (error) {
-		console.error('단어집 파일 생성 실패:', error);
-		throw error;
-	}
+	await ensureDataDirectory();
+	await createDataFile('vocabulary', filename, () => ({
+		entries: [],
+		lastUpdated: new Date().toISOString(),
+		totalCount: 0,
+		mapping: { domain: 'domain.json' }
+	}));
 }
 
 /**
@@ -487,74 +471,32 @@ export async function renameVocabularyFile(
 	oldFilename: string,
 	newFilename: string
 ): Promise<void> {
-	try {
-		await ensureDataDirectory();
-
-		if (!newFilename.endsWith('.json')) {
-			throw new Error('새 파일명은 .json으로 끝나야 합니다.');
-		}
-		if (/[\\/:*?"<>|]/.test(newFilename)) {
-			throw new Error('파일명에 사용할 수 없는 문자가 포함되어 있습니다.');
-		}
-
-		const oldPath = getDataPath(oldFilename, 'vocabulary');
-		const newPath = getDataPath(newFilename, 'vocabulary');
-
-		if (!existsSync(oldPath)) {
-			throw new Error('변경할 파일이 존재하지 않습니다.');
-		}
-		if (existsSync(newPath)) {
-			throw new Error('이미 존재하는 파일명입니다.');
-		}
-
-		if (
-			oldFilename === FORBIDDEN_WORDS_FILE ||
-			oldFilename === DEFAULT_VOCABULARY_FILE ||
-			oldFilename === HISTORY_FILE
-		) {
-			throw new Error('시스템 파일은 이름을 변경할 수 없습니다.');
-		}
-
-		await rename(oldPath, newPath);
-	} catch (error) {
-		console.error('단어집 파일 이름 변경 실패:', error);
-		throw error;
+	// 시스템 파일 보호
+	if (
+		oldFilename === FORBIDDEN_WORDS_FILE ||
+		oldFilename === DEFAULT_VOCABULARY_FILE ||
+		oldFilename === HISTORY_FILE
+	) {
+		throw new Error('시스템 파일은 이름을 변경할 수 없습니다.');
 	}
+	await ensureDataDirectory();
+	await renameDataFile('vocabulary', oldFilename, newFilename);
 }
 
 /**
  * 단어집 파일 삭제
  */
 export async function deleteVocabularyFile(filename: string): Promise<void> {
-	try {
-		await ensureDataDirectory();
-
-		if (!filename.endsWith('.json')) {
-			throw new Error('삭제할 파일명은 .json으로 끝나야 합니다.');
-		}
-		if (/[\\/:*?"<>|]/.test(filename)) {
-			throw new Error('파일명에 사용할 수 없는 문자가 포함되어 있습니다.');
-		}
-
-		if (
-			filename === FORBIDDEN_WORDS_FILE ||
-			filename === DEFAULT_VOCABULARY_FILE ||
-			filename === HISTORY_FILE
-		) {
-			throw new Error('시스템 파일은 삭제할 수 없습니다.');
-		}
-
-		const filePath = getDataPath(filename, 'vocabulary');
-
-		if (!existsSync(filePath)) {
-			throw new Error('삭제할 파일이 존재하지 않습니다.');
-		}
-
-		await unlink(filePath);
-	} catch (error) {
-		console.error('단어집 파일 삭제 실패:', error);
-		throw error;
+	// 시스템 파일 보호
+	if (
+		filename === FORBIDDEN_WORDS_FILE ||
+		filename === DEFAULT_VOCABULARY_FILE ||
+		filename === HISTORY_FILE
+	) {
+		throw new Error('시스템 파일은 삭제할 수 없습니다.');
 	}
+	await ensureDataDirectory();
+	await deleteDataFile('vocabulary', filename);
 }
 
 /**
@@ -860,99 +802,34 @@ export async function listDomainFiles(): Promise<string[]> {
  * 새로운 도메인 파일 생성
  */
 export async function createDomainFile(filename: string): Promise<void> {
-	try {
-		await ensureDataDirectory();
-
-		if (!filename.endsWith('.json')) {
-			throw new Error('파일명은 .json으로 끝나야 합니다.');
-		}
-		if (/[\\/:*?"<>|]/.test(filename)) {
-			throw new Error('파일명에 사용할 수 없는 문자가 포함되어 있습니다.');
-		}
-
-		const filePath = getDataPath(filename, 'domain');
-
-		if (existsSync(filePath)) {
-			throw new Error('이미 존재하는 파일명입니다.');
-		}
-
-		const emptyData: import('../types/domain.js').DomainData = {
-			entries: [],
-			lastUpdated: new Date().toISOString(),
-			totalCount: 0
-		};
-
-		await writeFile(filePath, JSON.stringify(emptyData, null, 2), 'utf-8');
-	} catch (error) {
-		console.error('도메인 파일 생성 실패:', error);
-		throw error;
-	}
+	await ensureDataDirectory();
+	await createDataFile('domain', filename, () => ({
+		entries: [],
+		lastUpdated: new Date().toISOString(),
+		totalCount: 0
+	}));
 }
 
 /**
  * 도메인 파일 이름 변경
  */
 export async function renameDomainFile(oldFilename: string, newFilename: string): Promise<void> {
-	try {
-		await ensureDataDirectory();
-
-		if (!newFilename.endsWith('.json')) {
-			throw new Error('새 파일명은 .json으로 끝나야 합니다.');
-		}
-		if (/[\\/:*?"<>|]/.test(newFilename)) {
-			throw new Error('파일명에 사용할 수 없는 문자가 포함되어 있습니다.');
-		}
-
-		const oldPath = getDataPath(oldFilename, 'domain');
-		const newPath = getDataPath(newFilename, 'domain');
-
-		if (!existsSync(oldPath)) {
-			throw new Error('변경할 파일이 존재하지 않습니다.');
-		}
-		if (existsSync(newPath)) {
-			throw new Error('이미 존재하는 파일명입니다.');
-		}
-
-		if (oldFilename === DEFAULT_DOMAIN_FILE) {
-			throw new Error('시스템 파일은 이름을 변경할 수 없습니다.');
-		}
-
-		await rename(oldPath, newPath);
-	} catch (error) {
-		console.error('도메인 파일 이름 변경 실패:', error);
-		throw error;
+	if (oldFilename === DEFAULT_DOMAIN_FILE) {
+		throw new Error('시스템 파일은 이름을 변경할 수 없습니다.');
 	}
+	await ensureDataDirectory();
+	await renameDataFile('domain', oldFilename, newFilename);
 }
 
 /**
  * 도메인 파일 삭제
  */
 export async function deleteDomainFile(filename: string): Promise<void> {
-	try {
-		await ensureDataDirectory();
-
-		if (!filename.endsWith('.json')) {
-			throw new Error('삭제할 파일명은 .json으로 끝나야 합니다.');
-		}
-		if (/[\\/:*?"<>|]/.test(filename)) {
-			throw new Error('파일명에 사용할 수 없는 문자가 포함되어 있습니다.');
-		}
-
-		if (filename === DEFAULT_DOMAIN_FILE) {
-			throw new Error('시스템 파일은 삭제할 수 없습니다.');
-		}
-
-		const filePath = getDataPath(filename, 'domain');
-
-		if (!existsSync(filePath)) {
-			throw new Error('삭제할 파일이 존재하지 않습니다.');
-		}
-
-		await unlink(filePath);
-	} catch (error) {
-		console.error('도메인 파일 삭제 실패:', error);
-		throw error;
+	if (filename === DEFAULT_DOMAIN_FILE) {
+		throw new Error('시스템 파일은 삭제할 수 없습니다.');
 	}
+	await ensureDataDirectory();
+	await deleteDataFile('domain', filename);
 }
 
 /**
@@ -1170,104 +1047,38 @@ export async function listTermFiles(): Promise<string[]> {
  * 새로운 용어 파일 생성
  */
 export async function createTermFile(filename: string): Promise<void> {
-	try {
-		await ensureDataDirectory();
-
-		if (!filename.endsWith('.json')) {
-			throw new Error('파일명은 .json으로 끝나야 합니다.');
+	await ensureDataDirectory();
+	await createDataFile('term', filename, () => ({
+		entries: [],
+		lastUpdated: new Date().toISOString(),
+		totalCount: 0,
+		mapping: {
+			vocabulary: 'vocabulary.json',
+			domain: 'domain.json'
 		}
-		if (/[\\/:*?"<>|]/.test(filename)) {
-			throw new Error('파일명에 사용할 수 없는 문자가 포함되어 있습니다.');
-		}
-
-		const filePath = getDataPath(filename, 'term');
-
-		if (existsSync(filePath)) {
-			throw new Error('이미 존재하는 파일명입니다.');
-		}
-
-		const emptyData: import('../types/term.js').TermData = {
-			entries: [],
-			lastUpdated: new Date().toISOString(),
-			totalCount: 0,
-			mapping: {
-				vocabulary: 'vocabulary.json',
-				domain: 'domain.json'
-			}
-		};
-
-		await writeFile(filePath, JSON.stringify(emptyData, null, 2), 'utf-8');
-	} catch (error) {
-		console.error('용어 파일 생성 실패:', error);
-		throw error;
-	}
+	}));
 }
 
 /**
  * 용어 파일 이름 변경
  */
 export async function renameTermFile(oldFilename: string, newFilename: string): Promise<void> {
-	try {
-		await ensureDataDirectory();
-
-		if (!newFilename.endsWith('.json')) {
-			throw new Error('새 파일명은 .json으로 끝나야 합니다.');
-		}
-		if (/[\\/:*?"<>|]/.test(newFilename)) {
-			throw new Error('파일명에 사용할 수 없는 문자가 포함되어 있습니다.');
-		}
-
-		const oldPath = getDataPath(oldFilename, 'term');
-		const newPath = getDataPath(newFilename, 'term');
-
-		if (!existsSync(oldPath)) {
-			throw new Error('이름을 변경할 파일이 존재하지 않습니다.');
-		}
-
-		if (existsSync(newPath)) {
-			throw new Error('이미 존재하는 파일명입니다.');
-		}
-
-		if (oldFilename === DEFAULT_TERM_FILE) {
-			throw new Error('시스템 파일은 이름을 변경할 수 없습니다.');
-		}
-
-		await rename(oldPath, newPath);
-	} catch (error) {
-		console.error('용어 파일 이름 변경 실패:', error);
-		throw error;
+	if (oldFilename === DEFAULT_TERM_FILE) {
+		throw new Error('시스템 파일은 이름을 변경할 수 없습니다.');
 	}
+	await ensureDataDirectory();
+	await renameDataFile('term', oldFilename, newFilename);
 }
 
 /**
  * 용어 파일 삭제
  */
 export async function deleteTermFile(filename: string): Promise<void> {
-	try {
-		await ensureDataDirectory();
-
-		if (!filename.endsWith('.json')) {
-			throw new Error('삭제할 파일명은 .json으로 끝나야 합니다.');
-		}
-		if (/[\\/:*?"<>|]/.test(filename)) {
-			throw new Error('파일명에 사용할 수 없는 문자가 포함되어 있습니다.');
-		}
-
-		if (filename === DEFAULT_TERM_FILE) {
-			throw new Error('시스템 파일은 삭제할 수 없습니다.');
-		}
-
-		const filePath = getDataPath(filename, 'term');
-
-		if (!existsSync(filePath)) {
-			throw new Error('삭제할 파일이 존재하지 않습니다.');
-		}
-
-		await unlink(filePath);
-	} catch (error) {
-		console.error('용어 파일 삭제 실패:', error);
-		throw error;
+	if (filename === DEFAULT_TERM_FILE) {
+		throw new Error('시스템 파일은 삭제할 수 없습니다.');
 	}
+	await ensureDataDirectory();
+	await deleteDataFile('term', filename);
 }
 
 // ============================================================================

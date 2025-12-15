@@ -28,8 +28,7 @@ export async function GET({ url }: RequestEvent) {
 		// 응답 헤더 설정
 		return new Response(buffer, {
 			headers: {
-				'Content-Type':
-					'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+				'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 				'Content-Disposition': `attachment; filename="${downloadFilename}"`,
 				'Content-Length': buffer.length.toString()
 			}
@@ -39,4 +38,3 @@ export async function GET({ url }: RequestEvent) {
 		return error(500, '용어 데이터 다운로드 중 오류가 발생했습니다.');
 	}
 }
-

@@ -34,6 +34,19 @@
 
 	let isSubmitting = $state(false);
 
+	// 실시간 검증: 도메인/용어 에디터와 동일 패턴
+	$effect(() => {
+		errors.standardName = formData.standardName.trim() ? '' : '표준단어명은 필수 입력 항목입니다.';
+	});
+
+	$effect(() => {
+		errors.abbreviation = formData.abbreviation.trim() ? '' : '영문약어는 필수 입력 항목입니다.';
+	});
+
+	$effect(() => {
+		errors.englishName = formData.englishName.trim() ? '' : '영문명은 필수 입력 항목입니다.';
+	});
+
 	$effect(() => {
 		formData.standardName = entry.standardName || '';
 		formData.abbreviation = entry.abbreviation || '';
@@ -44,16 +57,20 @@
 		formData.synonyms = entry.synonyms?.join(', ') || '';
 	});
 
-	function validate() {
-		errors.standardName = formData.standardName.trim() ? '' : '표준단어명은 필수입니다.';
-		errors.abbreviation = formData.abbreviation.trim() ? '' : '영문약어는 필수입니다.';
-		errors.englishName = formData.englishName.trim() ? '' : '영문명은 필수입니다.';
-		return !errors.standardName && !errors.abbreviation && !errors.englishName;
+	function isFormValid(): boolean {
+		return (
+			!errors.standardName &&
+			!errors.abbreviation &&
+			!errors.englishName &&
+			!!formData.standardName.trim() &&
+			!!formData.abbreviation.trim() &&
+			!!formData.englishName.trim()
+		);
 	}
 
 	function handleSubmit() {
 		if (isSubmitting) return;
-		if (!validate()) return;
+		if (!isFormValid()) return;
 
 		isSubmitting = true;
 
@@ -86,147 +103,261 @@
 
 	function handleDelete() {
 		if (!entry.id) return;
-		dispatch('delete', entry as VocabularyEntry);
+
+		if (confirm('정말로 이 항목을 삭제하시겠습니까?')) {
+			const entryToDelete: VocabularyEntry = {
+				id: entry.id,
+				standardName: formData.standardName.trim() || entry.standardName || '',
+				abbreviation: formData.abbreviation.trim() || entry.abbreviation || '',
+				englishName: formData.englishName.trim() || entry.englishName || '',
+				description: formData.description?.trim() || entry.description || '',
+				domainCategory: formData.domainCategory?.trim() || entry.domainCategory || '',
+				isFormalWord: entry.isFormalWord ?? false,
+				synonyms: entry.synonyms || [],
+				createdAt: entry.createdAt || '',
+				updatedAt: entry.updatedAt || ''
+			};
+			dispatch('delete', entryToDelete);
+		}
+	}
+
+	function handleBackgroundClick(event: MouseEvent) {
+		if (event.target === event.currentTarget) {
+			handleCancel();
+		}
 	}
 </script>
 
-<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-	<div class="w-full max-w-3xl rounded-2xl bg-white shadow-xl">
-		<div class="flex items-center justify-between border-b px-6 py-4">
-			<h2 class="text-xl font-bold text-gray-900">
-				{isEditMode ? '단어 수정' : '새 단어 추가'}
-			</h2>
+<div
+	class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+	role="button"
+	tabindex="-1"
+	aria-label="배경 닫기"
+	onclick={handleBackgroundClick}
+	onkeydown={(e) => e.key === 'Escape' && handleCancel()}
+>
+	<div
+		class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl"
+		role="dialog"
+		aria-modal="true"
+		tabindex="-1"
+		onclick={(e) => e.stopPropagation()}
+		onkeydown={(e) => e.stopPropagation()}
+	>
+		<div class="flex flex-shrink-0 items-center justify-between border-b p-6">
+			<h2 class="text-xl font-bold text-gray-900">{isEditMode ? '단어 수정' : '새 단어 추가'}</h2>
 			<button
-				type="button"
-				class="text-gray-500 hover:text-gray-700"
 				onclick={handleCancel}
-				aria-label="close"
-			>
-				&times;
-			</button>
-		</div>
-
-		<div class="space-y-4 px-6 py-4">
-			<div class="grid gap-4 md:grid-cols-2">
-				<div>
-					<label for="standardName" class="mb-1 block text-sm font-medium text-gray-700">
-						표준단어명 *
-					</label>
-					<input
-						id="standardName"
-						class="w-full rounded-lg border px-3 py-2"
-						bind:value={formData.standardName}
-						placeholder="예: 사용자"
-					/>
-					{#if errors.standardName}
-						<p class="mt-1 text-sm text-red-600">{errors.standardName}</p>
-					{/if}
-				</div>
-				<div>
-					<label for="abbreviation" class="mb-1 block text-sm font-medium text-gray-700">
-						영문약어 *
-					</label>
-					<input
-						id="abbreviation"
-						class="w-full rounded-lg border px-3 py-2"
-						bind:value={formData.abbreviation}
-						placeholder="예: user"
-					/>
-					{#if errors.abbreviation}
-						<p class="mt-1 text-sm text-red-600">{errors.abbreviation}</p>
-					{/if}
-				</div>
-			</div>
-
-			<div class="grid gap-4 md:grid-cols-2">
-				<div>
-					<label for="englishName" class="mb-1 block text-sm font-medium text-gray-700">
-						영문명 *
-					</label>
-					<input
-						id="englishName"
-						class="w-full rounded-lg border px-3 py-2"
-						bind:value={formData.englishName}
-						placeholder="예: User"
-					/>
-					{#if errors.englishName}
-						<p class="mt-1 text-sm text-red-600">{errors.englishName}</p>
-					{/if}
-				</div>
-				<div>
-					<label for="domainCategory" class="mb-1 block text-sm font-medium text-gray-700">
-						도메인분류명
-					</label>
-					<input
-						id="domainCategory"
-						class="w-full rounded-lg border px-3 py-2"
-						bind:value={formData.domainCategory}
-						placeholder="예: 사용자관리"
-					/>
-				</div>
-			</div>
-
-			<div>
-				<label for="description" class="mb-1 block text-sm font-medium text-gray-700">설명</label>
-				<textarea
-					id="description"
-					class="w-full rounded-lg border px-3 py-2"
-					rows="3"
-					bind:value={formData.description}
-					placeholder="단어 설명을 입력하세요"
-				></textarea>
-			</div>
-
-			<div class="grid gap-4 md:grid-cols-2">
-				<div class="flex items-center space-x-2">
-					<input id="isFormalWord" type="checkbox" bind:checked={formData.isFormalWord} />
-					<label for="isFormalWord" class="text-sm text-gray-700">형식단어 여부</label>
-				</div>
-				<div>
-					<label for="synonyms" class="mb-1 block text-sm font-medium text-gray-700">
-						이음동의어 (쉼표 구분)
-					</label>
-					<input
-						id="synonyms"
-						class="w-full rounded-lg border px-3 py-2"
-						bind:value={formData.synonyms}
-						placeholder="예: 고객, 사용자"
-					/>
-				</div>
-			</div>
-
-			{#if serverError}
-				<div class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-					{serverError}
-				</div>
-			{/if}
-		</div>
-
-		<div class="flex items-center justify-end space-x-3 border-t px-6 py-4">
-			{#if isEditMode}
-				<button
-					type="button"
-					class="rounded-lg border border-red-200 px-4 py-2 text-red-600 hover:bg-red-50"
-					onclick={handleDelete}
-				>
-					삭제
-				</button>
-			{/if}
-			<button
-				type="button"
-				class="rounded-lg border px-4 py-2 text-gray-700 hover:bg-gray-50"
-				onclick={handleCancel}
-			>
-				취소
-			</button>
-			<button
-				type="button"
-				class="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-60"
+				class="text-gray-400 hover:text-gray-600"
 				disabled={isSubmitting}
-				onclick={handleSubmit}
+				aria-label="닫기"
 			>
-				{isEditMode ? '수정' : '추가'}
+				<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M6 18L18 6M6 6l12 12"
+					></path>
+				</svg>
 			</button>
+		</div>
+
+		<div class="flex-1 overflow-y-auto p-6">
+			{#if serverError}
+				<div class="bg-error mb-4 rounded-md p-3">
+					<div class="flex items-center">
+						<svg
+							class="mr-2 h-5 w-5 text-red-700"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+							/>
+						</svg>
+						<p class="text-error text-sm font-medium">{serverError}</p>
+					</div>
+				</div>
+			{/if}
+
+			<form
+				onsubmit={(e) => {
+					e.preventDefault();
+					handleSubmit();
+				}}
+				class="space-y-4"
+			>
+				<div class="space-y-4 border-b border-gray-200 pb-4">
+					<h3 class="text-sm font-semibold text-gray-700">필수 정보</h3>
+					<div class="space-y-4">
+						<div>
+							<label for="standardName" class="mb-1 block text-sm font-medium text-gray-900">
+								표준단어명 <span class="text-red-700">*</span>
+							</label>
+							<input
+								id="standardName"
+								type="text"
+								class="input"
+								class:input-error={errors.standardName}
+								bind:value={formData.standardName}
+								placeholder="예: 사용자"
+								disabled={isSubmitting}
+								required
+							/>
+							{#if errors.standardName}
+								<p class="text-error mt-1 text-sm">{errors.standardName}</p>
+							{/if}
+						</div>
+
+						<div>
+							<label for="abbreviation" class="mb-1 block text-sm font-medium text-gray-900">
+								영문약어 <span class="text-red-700">*</span>
+							</label>
+							<input
+								id="abbreviation"
+								type="text"
+								class="input"
+								class:input-error={errors.abbreviation}
+								bind:value={formData.abbreviation}
+								placeholder="예: user"
+								disabled={isSubmitting}
+								required
+							/>
+							{#if errors.abbreviation}
+								<p class="text-error mt-1 text-sm">{errors.abbreviation}</p>
+							{/if}
+						</div>
+
+						<div>
+							<label for="englishName" class="mb-1 block text-sm font-medium text-gray-900">
+								영문명 <span class="text-red-700">*</span>
+							</label>
+							<input
+								id="englishName"
+								type="text"
+								class="input"
+								class:input-error={errors.englishName}
+								bind:value={formData.englishName}
+								placeholder="예: User"
+								disabled={isSubmitting}
+								required
+							/>
+							{#if errors.englishName}
+								<p class="text-error mt-1 text-sm">{errors.englishName}</p>
+							{/if}
+						</div>
+						<div>
+							<label for="domainCategory" class="mb-1 block text-sm font-medium text-gray-900">
+								도메인분류명
+							</label>
+							<input
+								id="domainCategory"
+								type="text"
+								class="input"
+								bind:value={formData.domainCategory}
+								placeholder="예: 사용자관리"
+								disabled={isSubmitting}
+							/>
+						</div>
+					</div>
+				</div>
+
+				<div class="space-y-4 border-b border-gray-200 pb-4">
+					<h3 class="text-sm font-semibold text-gray-700">추가 정보</h3>
+					<div class="space-y-4">
+						<div>
+							<label for="description" class="mb-1 block text-sm font-medium text-gray-900">
+								설명
+							</label>
+							<textarea
+								id="description"
+								class="input resize-none"
+								rows="3"
+								bind:value={formData.description}
+								placeholder="단어에 대한 상세 설명을 입력하세요"
+								disabled={isSubmitting}
+							></textarea>
+						</div>
+
+						<div class="flex items-center space-x-2">
+							<input
+								id="isFormalWord"
+								type="checkbox"
+								bind:checked={formData.isFormalWord}
+								disabled={isSubmitting}
+							/>
+							<label for="isFormalWord" class="text-sm text-gray-700">형식단어 여부</label>
+						</div>
+						<div>
+							<label for="synonyms" class="mb-1 block text-sm font-medium text-gray-900">
+								이음동의어 (쉼표 구분)
+							</label>
+							<input
+								id="synonyms"
+								type="text"
+								class="input"
+								bind:value={formData.synonyms}
+								placeholder="예: 고객, 사용자"
+								disabled={isSubmitting}
+							/>
+						</div>
+					</div>
+				</div>
+
+				<div class="flex items-center justify-between pt-2">
+					{#if isEditMode}
+						<button
+							type="button"
+							onclick={handleDelete}
+							class="group inline-flex items-center space-x-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 shadow-sm transition-all duration-200 hover:border-red-400 hover:bg-red-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-red-300 disabled:hover:bg-red-50 disabled:hover:shadow-sm"
+							disabled={isSubmitting}
+						>
+							<svg
+								class="h-4 w-4 transition-transform duration-200 group-hover:scale-110"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+								/>
+							</svg>
+							<span>삭제</span>
+						</button>
+					{:else}
+						<div></div>
+					{/if}
+					<div class="flex space-x-3">
+						<button
+							type="button"
+							onclick={handleCancel}
+							class="btn btn-secondary"
+							disabled={isSubmitting}
+						>
+							취소
+						</button>
+						<button
+							type="submit"
+							class="btn btn-primary disabled:cursor-not-allowed disabled:opacity-50"
+							disabled={!isFormValid() || isSubmitting}
+						>
+							{#if isSubmitting}
+								저장 중...
+							{:else}
+								{isEditMode ? '수정' : '저장'}
+							{/if}
+						</button>
+					</div>
+				</div>
+			</form>
 		</div>
 	</div>
 </div>

@@ -1114,15 +1114,21 @@ domain: vocabularyData.mappedDomainFile || 'domain.json';
 
 ---
 
-## 이슈 #M12: 각 페이지의 동일한 데이터 로드 패턴 중복
+## ~~이슈 #M12: 각 페이지의 동일한 데이터 로드 패턴 중복~~ ✅ 해결됨
+
+> **해결일**: 2024-12-12
+> **해결 방법**: 공통 API 클라이언트 유틸리티 생성
+>
+> - `src/lib/utils/api-client.ts` 신규 생성
+> - `fetchData<T>()` 제네릭 조회 함수
+> - `createItem()`, `updateItem()`, `deleteItem()` CRUD 함수
+> - `fetchVocabulary()`, `fetchDomain()`, `fetchTerm()` 편의 함수
 
 **심각도**: Medium Priority
 
 **위치**:
 
-- `src/routes/browse/+page.svelte:185-238` - `loadVocabularyData()`
-- `src/routes/domain/browse/+page.svelte:127-162` - `loadDomainData()`
-- `src/routes/term/browse/+page.svelte:129-164` - `loadTermData()`
+- `src/lib/utils/api-client.ts` - 공통 API 클라이언트
 
 **문제 설명**:
 
@@ -1232,13 +1238,22 @@ async function loadDomainData() {
 
 ---
 
-## 이슈 #M13: xlsx-parser.ts 파일이 너무 큼
+## ~~이슈 #M13: xlsx-parser.ts 파일이 너무 큼~~ ⚠️ 부분 해결
+
+> **해결일**: 2024-12-12
+> **해결 방법**: #M5에서 공통 유틸리티 함수 추출
+>
+> - `parseWorkbookToArray()` 공통 워크북 파싱
+> - `parseArrayField()`, `isEmptyRow()` 유틸리티
+> - 현재 약 820줄로 감소
+>
+> **남은 작업**: 엔티티별 파일 분리 시 추가 개선 가능
 
 **심각도**: Medium Priority
 
 **위치**:
 
-- `src/lib/utils/xlsx-parser.ts` (약 833줄)
+- `src/lib/utils/xlsx-parser.ts` (약 820줄로 감소)
 
 **문제 설명**:
 

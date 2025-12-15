@@ -155,11 +155,10 @@
     - `src/routes/api/history/+server.ts` (유니온 타입 제거)
   - 완료: 2024-12-12
 
-- [ ] **#H5: Domain API POST 없음**
+- [x] **#H5: Domain API POST 없음** ✅
   - 설명: Domain API에 POST (생성) 엔드포인트 없음
-  - 파일: `src/routes/api/domain/+server.ts` (POST 메소드 추가)
-  - 예상: 8시간
-  - 담당:
+  - 파일: `src/routes/api/domain/+server.ts` (POST 핸들러 추가)
+  - 완료: 2024-12-12
 
 ### Week 6
 

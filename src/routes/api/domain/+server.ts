@@ -4,6 +4,7 @@ import type { DomainData, DomainEntry } from '$lib/types/domain.js';
 import { saveDomainData, loadDomainData, checkDomainReferences } from '$lib/utils/file-handler.js';
 import { safeMerge } from '$lib/utils/type-guards.js';
 import { invalidateCache } from '$lib/utils/cache.js';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * 저장된 도메인 데이터 조회 API
@@ -288,6 +289,130 @@ export async function OPTIONS({ url }: RequestEvent) {
 			{
 				success: false,
 				error: '서버에서 통계 조회 중 오류가 발생했습니다.',
+				message: 'Internal server error'
+			} as ApiResponse,
+			{ status: 500 }
+		);
+	}
+}
+
+/**
+ * 새로운 도메인 추가 API
+ * POST /api/domain
+ */
+export async function POST({ request }: RequestEvent) {
+	try {
+		const body = await request.json();
+		const { filename = 'domain.json', ...entryData } = body;
+
+		// 필수 필드 검증
+		const requiredFields = [
+			'domainGroup',
+			'domainCategory',
+			'standardDomainName',
+			'physicalDataType'
+		];
+		const missingFields = requiredFields.filter((field) => !entryData[field]);
+
+		if (missingFields.length > 0) {
+			return json(
+				{
+					success: false,
+					error: `필수 필드가 누락되었습니다: ${missingFields.join(', ')}`,
+					message: 'Missing required fields'
+				} as ApiResponse,
+				{ status: 400 }
+			);
+		}
+
+		// 기존 데이터 로드
+		let domainData: DomainData;
+		try {
+			domainData = await loadDomainData(filename);
+		} catch (loadError) {
+			// 파일이 없으면 새로 생성
+			domainData = {
+				entries: [],
+				lastUpdated: new Date().toISOString(),
+				totalCount: 0
+			};
+		}
+
+		// 중복 검사 (도메인 그룹 + 분류 + 표준도메인명)
+		const isDuplicate = domainData.entries.some(
+			(entry) =>
+				entry.domainGroup === entryData.domainGroup &&
+				entry.domainCategory === entryData.domainCategory &&
+				entry.standardDomainName === entryData.standardDomainName
+		);
+
+		if (isDuplicate) {
+			return json(
+				{
+					success: false,
+					error: '이미 동일한 도메인이 존재합니다.',
+					message: 'Duplicate domain entry'
+				} as ApiResponse,
+				{ status: 409 }
+			);
+		}
+
+		// 새 도메인 엔트리 생성
+		const now = new Date().toISOString();
+		const newEntry: DomainEntry = {
+			id: uuidv4(),
+			domainGroup: entryData.domainGroup,
+			domainCategory: entryData.domainCategory,
+			standardDomainName: entryData.standardDomainName,
+			physicalDataType: entryData.physicalDataType,
+			dataLength: entryData.dataLength || undefined,
+			decimalPlaces: entryData.decimalPlaces || undefined,
+			measurementUnit: entryData.measurementUnit || undefined,
+			revision: entryData.revision || undefined,
+			description: entryData.description || undefined,
+			storageFormat: entryData.storageFormat || undefined,
+			displayFormat: entryData.displayFormat || undefined,
+			allowedValues: entryData.allowedValues || undefined,
+			createdAt: now,
+			updatedAt: now
+		};
+
+		// 데이터에 추가
+		domainData.entries.push(newEntry);
+		domainData.lastUpdated = now;
+		domainData.totalCount = domainData.entries.length;
+
+		// 저장
+		await saveDomainData(domainData, filename);
+		invalidateCache('domain', filename);
+
+		return json(
+			{
+				success: true,
+				data: newEntry,
+				message: '도메인이 성공적으로 추가되었습니다.'
+			} as ApiResponse,
+			{ status: 201 }
+		);
+	} catch (error) {
+		console.error('도메인 추가 중 오류:', error);
+
+		// JSON 파싱 오류
+		if (error instanceof SyntaxError) {
+			return json(
+				{
+					success: false,
+					error: '요청 데이터 형식이 올바르지 않습니다.',
+					message: 'Invalid JSON format'
+				} as ApiResponse,
+				{ status: 400 }
+			);
+		}
+
+		return json(
+			{
+				success: false,
+				error: '서버에서 도메인 추가 중 오류가 발생했습니다.',
 				message: 'Internal server error'
 			} as ApiResponse,
 			{ status: 500 }

@@ -390,14 +390,21 @@ const isValid =
 
 ---
 
-## 이슈 #H5: Domain API에 POST (생성) 엔드포인트 없음
+## ~~이슈 #H5: Domain API에 POST (생성) 엔드포인트 없음~~ ✅ 해결됨
+
+> **해결일**: 2024-12-12
+> **해결 방법**: POST 핸들러 추가로 CRUD 완성
+>
+> - `POST /api/domain` 핸들러 추가
+> - 필수 필드 검증 (domainGroup, domainCategory, standardDomainName, physicalDataType)
+> - 중복 검사 (동일 도메인 그룹+분류+표준도메인명)
+> - 캐시 무효화 통합
 
 **심각도**: High Priority
 
 **위치**:
 
-- `src/routes/api/domain/+server.ts` - POST 메소드 없음
-- `docs/analysis/03-api-layer.md:46-59` - Domain API 목록
+- `src/routes/api/domain/+server.ts` - POST 핸들러 추가
 
 **문제 설명**:
 

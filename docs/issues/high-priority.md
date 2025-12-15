@@ -4,17 +4,24 @@
 
 ---
 
-## 이슈 #H1: 하위 호환성 필드 중복으로 인한 스키마 불일치
+## ~~이슈 #H1: 하위 호환성 필드 중복으로 인한 스키마 불일치~~ ✅ 해결됨
+
+> **해결일**: 2024-12-12
+> **해결 방법**: `mappedDomainFile`을 deprecated하고 `mapping.domain`으로 통합
+>
+> - `mappedDomainFile`에 `@deprecated` JSDoc 주석 추가
+> - 로드 시 자동 마이그레이션 (mappedDomainFile → mapping.domain)
+> - 저장 시 `mappedDomainFile` 필드 제거
+> - 모든 API에서 `mapping.domain`만 사용하도록 통일
 
 **심각도**: High Priority
 
 **위치**:
 
-- `src/lib/types/vocabulary.ts:33` - `VocabularyData.mappedDomainFile`
-- `src/lib/types/vocabulary.ts:114` - `VocabularyData.mapping.domain`
-- `src/lib/utils/file-handler.ts:189-191, 254-265` - 필드 처리 로직
-- `src/routes/api/vocabulary/sync-domain/+server.ts:20-24, 75`
-- `src/routes/api/vocabulary/files/mapping/+server.ts:20, 59, 75-78`
+- `src/lib/types/vocabulary.ts` - `@deprecated` 주석 추가
+- `src/lib/utils/file-handler.ts` - 저장 시 mappedDomainFile 제거
+- `src/routes/api/vocabulary/sync-domain/+server.ts` - mapping.domain만 사용
+- `src/routes/api/vocabulary/files/mapping/+server.ts` - mappedDomainFile 제거
 
 **문제 설명**:
 

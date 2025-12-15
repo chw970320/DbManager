@@ -30,7 +30,13 @@ export interface VocabularyData {
 	entries: VocabularyEntry[];
 	lastUpdated: string; // ISO 8601 날짜 문자열
 	totalCount: number;
-	mappedDomainFile?: string; // 매핑에 사용된 도메인 파일명 (하위 호환성 유지)
+	/**
+	 * @deprecated mappedDomainFile은 하위 호환성을 위해 유지됨.
+	 * 새 코드에서는 mapping.domain을 사용하세요.
+	 * 로드 시 자동으로 mapping.domain으로 마이그레이션됩니다.
+	 */
+	mappedDomainFile?: string;
+	/** 매핑 정보 (표준 필드) */
 	mapping?: {
 		domain: string; // 매핑된 도메인 파일명
 	};

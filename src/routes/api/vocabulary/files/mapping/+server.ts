@@ -16,9 +16,8 @@ export async function GET({ url }: RequestEvent) {
 			{
 				success: true,
 				data: {
-					mapping: vocabularyData.mapping || {
-						domain: vocabularyData.mappedDomainFile || 'domain.json'
-					}
+					// mapping.domain 사용 (mappedDomainFile은 deprecated)
+					mapping: vocabularyData.mapping || { domain: 'domain.json' }
 				},
 				message: 'Vocabulary mapping retrieved successfully'
 			} as ApiResponse,
@@ -70,12 +69,12 @@ export async function PUT({ request }: RequestEvent) {
 		// 기존 데이터 로드
 		const vocabularyData = await loadVocabularyData(filename);
 
-		// 매핑 정보 업데이트
+		// 매핑 정보 업데이트 (mapping.domain만 사용)
 		vocabularyData.mapping = {
 			domain: mapping.domain
 		};
-		// 하위 호환성을 위해 mappedDomainFile도 업데이트
-		vocabularyData.mappedDomainFile = mapping.domain;
+		// mappedDomainFile 제거 (deprecated)
+		delete vocabularyData.mappedDomainFile;
 
 		// 저장
 		await saveVocabularyData(vocabularyData, filename);
@@ -101,4 +100,3 @@ export async function PUT({ request }: RequestEvent) {
 		);
 	}
 }
-

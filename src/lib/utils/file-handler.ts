@@ -255,10 +255,10 @@ export async function saveVocabularyData(
 			entries: validEntries,
 			lastUpdated: new Date().toISOString(),
 			totalCount: validEntries.length,
+			// mapping.domain으로 통합 (mappedDomainFile은 저장하지 않음)
 			mapping: data.mapping || {
 				domain: data.mappedDomainFile || 'domain.json'
-			},
-			mappedDomainFile: data.mapping?.domain || data.mappedDomainFile || 'domain.json' // 하위 호환성 유지
+			}
 		};
 
 		const dataPath = getDataPath(filename, 'vocabulary');
@@ -301,10 +301,10 @@ export async function loadVocabularyData(
 		// 타입 가드를 사용한 안전한 JSON 파싱
 		const data = safeJsonParse(jsonString, isVocabularyData, 'VocabularyData');
 
-		// 매핑 정보 처리 (하위 호환성 유지)
+		// 매핑 정보 처리 (mappedDomainFile → mapping.domain 마이그레이션)
 		let mapping = data.mapping;
 		if (!mapping && data.mappedDomainFile) {
-			// 기존 mappedDomainFile이 있으면 mapping으로 변환
+			// 기존 mappedDomainFile을 mapping.domain으로 마이그레이션
 			mapping = {
 				domain: data.mappedDomainFile
 			};
@@ -319,8 +319,8 @@ export async function loadVocabularyData(
 			entries: data.entries,
 			lastUpdated: data.lastUpdated || new Date().toISOString(),
 			totalCount: data.entries.length,
-			mapping,
-			mappedDomainFile: mapping.domain // 하위 호환성 유지
+			// mapping.domain만 저장 (mappedDomainFile은 deprecated)
+			mapping
 		};
 	} catch (error) {
 		console.error('단어집 데이터 로드 실패:', error);
@@ -470,8 +470,7 @@ export async function createVocabularyFile(filename: string): Promise<void> {
 			totalCount: 0,
 			mapping: {
 				domain: 'domain.json'
-			},
-			mappedDomainFile: 'domain.json' // 하위 호환성 유지
+			}
 		};
 
 		await writeFile(filePath, JSON.stringify(emptyData, null, 2), 'utf-8');

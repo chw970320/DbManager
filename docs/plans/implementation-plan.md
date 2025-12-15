@@ -137,13 +137,14 @@
 
 ### Week 5
 
-- [ ] **#H1: 하위 호환성 필드 중복**
+- [x] **#H1: 하위 호환성 필드 중복** ✅
   - 설명: `mappedDomainFile`과 `mapping.domain` 두 필드 공존
   - 파일:
-    - `src/lib/types/vocabulary.ts:33, 114`
-    - `src/lib/utils/file-handler.ts:189-191, 254-265`
-    - `src/routes/api/vocabulary/sync-domain/+server.ts:20-24, 75`
-    - `src/routes/api/vocabulary/files/mapping/+server.ts:20, 59, 75-78`
+    - `src/lib/types/vocabulary.ts` (@deprecated 추가)
+    - `src/lib/utils/file-handler.ts` (저장 시 mappedDomainFile 제거)
+    - `src/routes/api/vocabulary/sync-domain/+server.ts` (mapping.domain만 사용)
+    - `src/routes/api/vocabulary/files/mapping/+server.ts` (mappedDomainFile 제거)
+  - 완료: 2024-12-12
   - 예상: 16시간
   - 담당:
 

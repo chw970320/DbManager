@@ -145,7 +145,7 @@ export async function loadHistoryData(
 					typeNames[type],
 					parsed
 				);
-			}
+		}
 			data = parsed;
 		} else if (type === 'domain') {
 			if (!isDomainHistoryData(parsed)) {

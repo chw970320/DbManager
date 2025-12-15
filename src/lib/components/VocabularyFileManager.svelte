@@ -37,7 +37,6 @@
 	let domainFiles = $state<string[]>([]);
 	let selectedDomainFile = $state('domain.json');
 	let isDomainLoading = $state(false);
-	let syncMessage = $state('');
 	let currentMappingFile = $state<string | null>(null);
 	let isMappingLoading = $state(false);
 
@@ -130,7 +129,6 @@
 		}
 
 		isSubmitting = true;
-		syncMessage = '';
 		error = '';
 		successMessage = '';
 
@@ -171,7 +169,6 @@
 				successMessage =
 					(result.message as string) ||
 					`동기화 완료 (matched: ${(result.data as Record<string, unknown>)?.matched})`;
-				syncMessage = '';
 				await loadFiles();
 				dispatch('change');
 			} else {
@@ -526,12 +523,6 @@
 			{#if error}
 				<div class="mx-6 mt-4 rounded-md bg-red-50 p-3 text-sm text-red-800">{error}</div>
 			{/if}
-			{#if successMessage}
-				<div class="mx-6 mt-4 rounded-md bg-green-50 p-3 text-sm text-green-800">
-					{successMessage}
-				</div>
-			{/if}
-
 			<!-- 탭 컨텐츠 -->
 			<div class="flex-1 overflow-y-auto px-6 py-4">
 				{#if activeTab === 'files'}
@@ -579,9 +570,6 @@
 										{/each}
 									{/if}
 								</select>
-								{#if syncMessage}
-									<p class="text-xs text-gray-600">{syncMessage}</p>
-								{/if}
 							</div>
 						</div>
 

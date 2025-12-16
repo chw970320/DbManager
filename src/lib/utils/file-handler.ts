@@ -296,13 +296,17 @@ export async function loadVocabularyData(
 		// 안전한 파일 읽기 (백업 복구 지원)
 		const jsonString = await safeReadFile(dataPath);
 
-		// 파일이 없거나 빈 파일이면 빈 데이터 반환
+		// 파일이 없거나 빈 파일이면 기본 데이터 생성 및 파일 저장
 		if (!jsonString || !jsonString.trim()) {
-			return {
+			const defaultData: VocabularyData = {
 				entries: [],
 				lastUpdated: new Date().toISOString(),
 				totalCount: 0
 			};
+			if (filename === DEFAULT_VOCABULARY_FILE) {
+				await saveVocabularyData(defaultData, filename);
+			}
+			return defaultData;
 		}
 
 		// 타입 가드를 사용한 안전한 JSON 파싱

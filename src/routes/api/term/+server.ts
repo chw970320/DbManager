@@ -14,45 +14,77 @@ function checkTermMapping(
 	domainName: string,
 	vocabularyMap: Map<string, { standardName: string; abbreviation: string }>,
 	domainMap: Map<string, string>
-): { isMappedTerm: boolean; isMappedColumn: boolean; isMappedDomain: boolean } {
+): {
+	isMappedTerm: boolean;
+	isMappedColumn: boolean;
+	isMappedDomain: boolean;
+	unmappedTermParts: string[];
+	unmappedColumnParts: string[];
+} {
 	// 용어명 매핑: 언더스코어로 분리해서 각 단어가 단어집의 standardName에 있는지 확인
 	const termParts = termName
 		.split('_')
-		.map((p) => p.trim().toLowerCase())
+		.map((p) => p.trim())
 		.filter((p) => p.length > 0);
-	const isMappedTerm =
-		termParts.length > 0 &&
-		termParts.every((part) => {
-			// 정확히 일치하거나 부분 일치하는지 확인
-			for (const [key, value] of vocabularyMap.entries()) {
-				if (key === part || value.standardName.toLowerCase() === part) {
-					return true;
-				}
+	const unmappedTermParts: string[] = [];
+	let isMappedTerm = termParts.length > 0;
+
+	// 모든 부분을 확인하여 unmapped 목록을 완성
+	for (const part of termParts) {
+		const partLower = part.toLowerCase();
+		let partMapped = false;
+
+		// 단어집에서 해당 부분 찾기
+		for (const [key, value] of vocabularyMap.entries()) {
+			if (key === partLower || value.standardName.toLowerCase() === partLower) {
+				partMapped = true;
+				break;
 			}
-			return false;
-		});
+		}
+
+		if (!partMapped) {
+			unmappedTermParts.push(part);
+			isMappedTerm = false; // 하나라도 매핑되지 않으면 전체 false
+		}
+	}
 
 	// 칼럼명 매핑: 언더스코어로 분리해서 각 단어가 단어집의 abbreviation에 있는지 확인
 	const columnParts = columnName
 		.split('_')
-		.map((p) => p.trim().toLowerCase())
+		.map((p) => p.trim())
 		.filter((p) => p.length > 0);
-	const isMappedColumn =
-		columnParts.length > 0 &&
-		columnParts.every((part) => {
-			// 정확히 일치하거나 부분 일치하는지 확인
-			for (const [key, value] of vocabularyMap.entries()) {
-				if (key === part || value.abbreviation.toLowerCase() === part) {
-					return true;
-				}
+	const unmappedColumnParts: string[] = [];
+	let isMappedColumn = columnParts.length > 0;
+
+	// 모든 부분을 확인하여 unmapped 목록을 완성
+	for (const part of columnParts) {
+		const partLower = part.toLowerCase();
+		let partMapped = false;
+
+		// 단어집에서 해당 부분 찾기
+		for (const [key, value] of vocabularyMap.entries()) {
+			if (key === partLower || value.abbreviation.toLowerCase() === partLower) {
+				partMapped = true;
+				break;
 			}
-			return false;
-		});
+		}
+
+		if (!partMapped) {
+			unmappedColumnParts.push(part);
+			isMappedColumn = false; // 하나라도 매핑되지 않으면 전체 false
+		}
+	}
 
 	// 도메인명 매핑: 도메인의 standardDomainName과 정확히 일치하는지 확인
 	const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 
-	return { isMappedTerm, isMappedColumn, isMappedDomain };
+	return {
+		isMappedTerm,
+		isMappedColumn,
+		isMappedDomain,
+		unmappedTermParts,
+		unmappedColumnParts
+	};
 }
 
 /**
@@ -125,10 +157,65 @@ export async function GET({ url }: RequestEvent) {
 
 		let filteredEntries = termData.entries;
 
+		// 매핑 정보 실시간 재계산 (단어집 변경 반영)
+		const mapping = termData.mapping || {
+			vocabulary: 'vocabulary.json',
+			domain: 'domain.json'
+		};
+
+		// 단어집 및 도메인 데이터 로드
+		const vocabularyData = await getCachedVocabularyData(mapping.vocabulary);
+		const domainData = await getCachedDomainData(mapping.domain);
+
+		// 단어집 맵 생성
+		const vocabularyMap = new Map<string, { standardName: string; abbreviation: string }>();
+		vocabularyData.entries.forEach((vocabEntry) => {
+			const standardNameKey = vocabEntry.standardName.trim().toLowerCase();
+			const abbreviationKey = vocabEntry.abbreviation.trim().toLowerCase();
+			vocabularyMap.set(standardNameKey, {
+				standardName: vocabEntry.standardName,
+				abbreviation: vocabEntry.abbreviation
+			});
+			vocabularyMap.set(abbreviationKey, {
+				standardName: vocabEntry.standardName,
+				abbreviation: vocabEntry.abbreviation
+			});
+		});
+
+		// 도메인 맵 생성
+		const domainMap = new Map<string, string>();
+		domainData.entries.forEach((domainEntry) => {
+			const key = domainEntry.standardDomainName.trim().toLowerCase();
+			domainMap.set(key, domainEntry.standardDomainName);
+		});
+
+		// 각 항목의 매핑 정보 실시간 업데이트
+		filteredEntries = filteredEntries.map((entry) => {
+			const mappingResult = checkTermMapping(
+				entry.termName,
+				entry.columnName,
+				entry.domainName,
+				vocabularyMap,
+				domainMap
+			);
+			return {
+				...entry,
+				isMappedTerm: mappingResult.isMappedTerm,
+				isMappedColumn: mappingResult.isMappedColumn,
+				isMappedDomain: mappingResult.isMappedDomain,
+				unmappedTermParts:
+					mappingResult.unmappedTermParts.length > 0 ? mappingResult.unmappedTermParts : undefined,
+				unmappedColumnParts:
+					mappingResult.unmappedColumnParts.length > 0
+						? mappingResult.unmappedColumnParts
+						: undefined
+			};
+		});
+
 		// 검색 필터링
 		if (searchQuery.trim()) {
 			const query = searchQuery.toLowerCase();
-			filteredEntries = termData.entries.filter((entry) => {
+			filteredEntries = filteredEntries.filter((entry) => {
 				switch (searchField) {
 					case 'termName':
 						return entry.termName.toLowerCase().includes(query);
@@ -275,6 +362,12 @@ export async function POST({ request }: RequestEvent) {
 			isMappedTerm: mappingResult.isMappedTerm,
 			isMappedColumn: mappingResult.isMappedColumn,
 			isMappedDomain: mappingResult.isMappedDomain,
+			unmappedTermParts:
+				mappingResult.unmappedTermParts.length > 0 ? mappingResult.unmappedTermParts : undefined,
+			unmappedColumnParts:
+				mappingResult.unmappedColumnParts.length > 0
+					? mappingResult.unmappedColumnParts
+					: undefined,
 			createdAt: entry.createdAt || new Date().toISOString(),
 			updatedAt: new Date().toISOString()
 		};
@@ -389,6 +482,12 @@ export async function PUT({ request }: RequestEvent) {
 			isMappedTerm: mappingResult.isMappedTerm,
 			isMappedColumn: mappingResult.isMappedColumn,
 			isMappedDomain: mappingResult.isMappedDomain,
+			unmappedTermParts:
+				mappingResult.unmappedTermParts.length > 0 ? mappingResult.unmappedTermParts : undefined,
+			unmappedColumnParts:
+				mappingResult.unmappedColumnParts.length > 0
+					? mappingResult.unmappedColumnParts
+					: undefined,
 			id: entry.id,
 			updatedAt: new Date().toISOString()
 		};

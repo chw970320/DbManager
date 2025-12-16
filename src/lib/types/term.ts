@@ -10,6 +10,8 @@ export interface TermEntry {
 	isMappedTerm: boolean; // 용어명 매핑 성공 여부
 	isMappedColumn: boolean; // 칼럼명 매핑 성공 여부
 	isMappedDomain: boolean; // 도메인 매핑 성공 여부
+	unmappedTermParts?: string[]; // 용어명에서 매핑되지 않은 부분들
+	unmappedColumnParts?: string[]; // 칼럼명에서 매핑되지 않은 부분들
 	createdAt: string; // ISO 8601
 	updatedAt: string; // ISO 8601
 }

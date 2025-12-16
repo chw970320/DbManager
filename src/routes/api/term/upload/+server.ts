@@ -59,45 +59,57 @@ function checkTermMapping(
 	domainName: string,
 	vocabularyMap: Map<string, { standardName: string; abbreviation: string }>,
 	domainMap: Map<string, string>
-): { isMappedTerm: boolean; isMappedColumn: boolean; isMappedDomain: boolean } {
+): {
+	isMappedTerm: boolean;
+	isMappedColumn: boolean;
+	isMappedDomain: boolean;
+	unmappedTermParts: string[];
+	unmappedColumnParts: string[];
+} {
 	// 용어명 매핑: 언더스코어로 분리해서 각 단어가 단어집의 standardName에 있는지 확인
-	const termParts = termName
-		.split('_')
-		.map((p) => p.trim().toLowerCase())
-		.filter((p) => p.length > 0);
+	const termParts = termName.split('_').map((p) => p.trim()).filter((p) => p.length > 0);
+	const unmappedTermParts: string[] = [];
 	const isMappedTerm =
 		termParts.length > 0 &&
 		termParts.every((part) => {
+			const partLower = part.toLowerCase();
 			// 정확히 일치하거나 부분 일치하는지 확인
 			for (const [key, value] of vocabularyMap.entries()) {
-				if (key === part || value.standardName.toLowerCase() === part) {
+				if (key === partLower || value.standardName.toLowerCase() === partLower) {
 					return true;
 				}
 			}
+			unmappedTermParts.push(part);
 			return false;
 		});
 
 	// 칼럼명 매핑: 언더스코어로 분리해서 각 단어가 단어집의 abbreviation에 있는지 확인
-	const columnParts = columnName
-		.split('_')
-		.map((p) => p.trim().toLowerCase())
-		.filter((p) => p.length > 0);
+	const columnParts = columnName.split('_').map((p) => p.trim()).filter((p) => p.length > 0);
+	const unmappedColumnParts: string[] = [];
 	const isMappedColumn =
 		columnParts.length > 0 &&
 		columnParts.every((part) => {
+			const partLower = part.toLowerCase();
 			// 정확히 일치하거나 부분 일치하는지 확인
 			for (const [key, value] of vocabularyMap.entries()) {
-				if (key === part || value.abbreviation.toLowerCase() === part) {
+				if (key === partLower || value.abbreviation.toLowerCase() === partLower) {
 					return true;
 				}
 			}
+			unmappedColumnParts.push(part);
 			return false;
 		});
 
 	// 도메인명 매핑: 도메인의 standardDomainName과 정확히 일치하는지 확인
 	const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 
-	return { isMappedTerm, isMappedColumn, isMappedDomain };
+	return {
+		isMappedTerm,
+		isMappedColumn,
+		isMappedDomain,
+		unmappedTermParts,
+		unmappedColumnParts
+	};
 }
 
 /**
@@ -228,6 +240,10 @@ export async function POST({ request }: RequestEvent) {
 				isMappedTerm: mapping.isMappedTerm,
 				isMappedColumn: mapping.isMappedColumn,
 				isMappedDomain: mapping.isMappedDomain,
+				unmappedTermParts:
+					mapping.unmappedTermParts.length > 0 ? mapping.unmappedTermParts : undefined,
+				unmappedColumnParts:
+					mapping.unmappedColumnParts.length > 0 ? mapping.unmappedColumnParts : undefined,
 				createdAt: now,
 				updatedAt: now
 			};

@@ -950,7 +950,10 @@
 				<VocabularyFileManager
 					isOpen={isFileManagerOpen}
 					on:close={() => (isFileManagerOpen = false)}
-					on:change={loadVocabularyFiles}
+					on:change={async () => {
+						await loadVocabularyFiles();
+						await loadVocabularyData();
+					}}
 				/>
 
 				<!-- 히스토리 로그 -->

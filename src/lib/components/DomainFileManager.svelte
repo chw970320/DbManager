@@ -90,8 +90,9 @@
 	}
 
 	// Toggle system files visibility
-	async function toggleSystemFiles() {
-		showSystemFiles = !showSystemFiles;
+	async function toggleSystemFiles(event: Event) {
+		const target = event.target as HTMLInputElement;
+		showSystemFiles = target.checked;
 		await saveSettings(showSystemFiles);
 		filterFiles();
 	}

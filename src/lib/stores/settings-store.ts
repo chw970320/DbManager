@@ -4,11 +4,13 @@ import { browser } from '$app/environment';
 export interface Settings {
 	showVocabularySystemFiles: boolean;
 	showDomainSystemFiles: boolean;
+	showTermSystemFiles: boolean;
 }
 
 export const settingsStore = writable<Settings>({
 	showVocabularySystemFiles: true,
-	showDomainSystemFiles: true
+	showDomainSystemFiles: true,
+	showTermSystemFiles: true
 });
 
 // 초기값 로드 (클라이언트 사이드에서만)
@@ -20,7 +22,8 @@ if (browser) {
 			if (result.success && result.data) {
 				settingsStore.set({
 					showVocabularySystemFiles: result.data.showVocabularySystemFiles ?? true,
-					showDomainSystemFiles: result.data.showDomainSystemFiles ?? true
+					showDomainSystemFiles: result.data.showDomainSystemFiles ?? true,
+					showTermSystemFiles: result.data.showTermSystemFiles ?? true
 				});
 			}
 		})
@@ -43,7 +46,8 @@ if (browser) {
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					showVocabularySystemFiles: settings.showVocabularySystemFiles,
-					showDomainSystemFiles: settings.showDomainSystemFiles
+					showDomainSystemFiles: settings.showDomainSystemFiles,
+					showTermSystemFiles: settings.showTermSystemFiles
 				})
 			});
 			isUpdatingFromApi = false;

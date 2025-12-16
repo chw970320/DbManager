@@ -1,4 +1,5 @@
 {
   "showVocabularySystemFiles": true,
-  "showDomainSystemFiles": true
+  "showDomainSystemFiles": true,
+  "showTermSystemFiles": true
 }

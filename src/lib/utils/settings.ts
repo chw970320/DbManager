@@ -9,11 +9,13 @@ const SETTINGS_PATH = join(SETTINGS_DIR, SETTINGS_FILE);
 interface Settings {
 	showVocabularySystemFiles: boolean;
 	showDomainSystemFiles: boolean;
+	showTermSystemFiles: boolean;
 }
 
 const DEFAULT_SETTINGS: Settings = {
 	showVocabularySystemFiles: true,
-	showDomainSystemFiles: true
+	showDomainSystemFiles: true,
+	showTermSystemFiles: true
 };
 
 /**
@@ -107,6 +109,23 @@ export async function getShowDomainSystemFiles(): Promise<boolean> {
 export async function setShowDomainSystemFiles(value: boolean): Promise<void> {
 	const settings = await loadSettings();
 	settings.showDomainSystemFiles = value;
+	await saveSettings(settings);
+}
+
+/**
+ * 용어 시스템 파일 표시 설정 가져오기
+ */
+export async function getShowTermSystemFiles(): Promise<boolean> {
+	const settings = await loadSettings();
+	return settings.showTermSystemFiles ?? true;
+}
+
+/**
+ * 용어 시스템 파일 표시 설정 저장
+ */
+export async function setShowTermSystemFiles(value: boolean): Promise<void> {
+	const settings = await loadSettings();
+	settings.showTermSystemFiles = value;
 	await saveSettings(settings);
 }
 

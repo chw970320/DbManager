@@ -50,8 +50,7 @@
 	// Settings store 구독
 	$effect(() => {
 		const unsubscribe = settingsStore.subscribe((settings) => {
-			// 용어 파일 필터링은 도메인 설정을 사용 (또는 별도 설정 추가 가능)
-			showSystemFiles = settings.showDomainSystemFiles;
+			showSystemFiles = settings.showTermSystemFiles;
 			if (allFiles.length > 0) {
 				filterFiles();
 			}
@@ -63,7 +62,7 @@
 	async function saveSettings(value: boolean) {
 		settingsStore.update((settings) => ({
 			...settings,
-			showDomainSystemFiles: value
+			showTermSystemFiles: value
 		}));
 	}
 
@@ -101,8 +100,9 @@
 	}
 
 	// Toggle system files visibility
-	async function toggleSystemFiles() {
-		showSystemFiles = !showSystemFiles;
+	async function toggleSystemFiles(event: Event) {
+		const target = event.target as HTMLInputElement;
+		showSystemFiles = target.checked;
 		await saveSettings(showSystemFiles);
 		filterFiles();
 	}
@@ -401,7 +401,7 @@
 			// 초기 설정 로드 및 파일 목록 로드
 			let settingsLoaded = false;
 			const unsubscribe = settingsStore.subscribe((settings) => {
-				showSystemFiles = settings.showDomainSystemFiles;
+				showSystemFiles = settings.showTermSystemFiles;
 				// 설정이 로드된 후 파일 목록 로드 (한 번만 실행)
 				if (!settingsLoaded) {
 					settingsLoaded = true;

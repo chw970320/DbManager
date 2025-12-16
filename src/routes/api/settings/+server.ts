@@ -2,6 +2,7 @@ import { json, type RequestEvent } from '@sveltejs/kit';
 import {
 	setShowVocabularySystemFiles,
 	setShowDomainSystemFiles,
+	setShowTermSystemFiles,
 	getAllSettings,
 	setAllSettings
 } from '$lib/utils/settings.js';
@@ -47,10 +48,16 @@ export async function POST({ request }: RequestEvent) {
 			await setShowDomainSystemFiles(body.showDomainSystemFiles);
 		}
 
+		// 용어 설정 업데이트
+		if (typeof body.showTermSystemFiles === 'boolean') {
+			await setShowTermSystemFiles(body.showTermSystemFiles);
+		}
+
 		// 전체 설정 객체인 경우
 		if (
 			body.showVocabularySystemFiles === undefined &&
 			body.showDomainSystemFiles === undefined &&
+			body.showTermSystemFiles === undefined &&
 			Object.keys(body).length > 0
 		) {
 			await setAllSettings(body);

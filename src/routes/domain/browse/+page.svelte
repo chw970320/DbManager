@@ -26,6 +26,7 @@
 	let _lastUpdated = $state('');
 	let errorMessage = $state('');
 	let columnFilters = $state<Record<string, string | null>>({}); // 컬럼 필터 상태
+	let filterOptions = $state<Record<string, string[]>>({}); // 필터 옵션 (전체 데이터 기준)
 
 	// 파일 관리 상태
 	let isFileManagerOpen = $state(false);
@@ -56,6 +57,7 @@
 				selectedFilename = fileList[0];
 			}
 			domainStore.set({ selectedFilename });
+			await loadFilterOptions();
 			await loadDomainData();
 		}
 	});
@@ -122,6 +124,26 @@
 		});
 		return unsubscribe;
 	});
+
+	/**
+	 * 필터 옵션 로드 (전체 데이터 기준)
+	 */
+	async function loadFilterOptions() {
+		try {
+			const params = new URLSearchParams({
+				filename: selectedFilename
+			});
+
+			const response = await fetch(`/api/domain/filter-options?${params}`);
+			const result: DomainApiResponse<Record<string, string[]>> = await response.json();
+
+			if (result.success && result.data && typeof result.data === 'object') {
+				filterOptions = result.data;
+			}
+		} catch (error) {
+			console.error('필터 옵션 로드 오류:', error);
+		}
+	}
 
 	/**
 	 * 도메인 데이터 로드
@@ -281,6 +303,7 @@
 		if (fileList.length > 0 && !fileList.includes(selectedFilename)) {
 			selectedFilename = fileList[0];
 		}
+		await loadFilterOptions();
 		if (searchQuery) {
 			await executeSearch();
 		} else {
@@ -378,6 +401,7 @@
 		domainStore.set({ selectedFilename: filename });
 		currentPage = 1;
 		searchQuery = '';
+		await loadFilterOptions();
 		await loadDomainData();
 	}
 
@@ -916,6 +940,7 @@
 								{searchField}
 								_selectedFilename={selectedFilename}
 								activeFilters={columnFilters}
+								{filterOptions}
 								onsort={handleSort}
 								onpagechange={handlePageChange}
 								onfilter={handleFilter}

@@ -35,6 +35,7 @@
 		searchField = 'all',
 		_selectedFilename = 'domain.json',
 		activeFilters = {} as Record<string, string | null>,
+		filterOptions = {} as Record<string, string[]>,
 		onsort,
 		onpagechange,
 		onfilter,
@@ -53,6 +54,7 @@
 		searchField?: string;
 		_selectedFilename?: string;
 		activeFilters?: Record<string, string | null>;
+		filterOptions?: Record<string, string[]>;
 		onsort: (detail: SortEvent) => void;
 		onpagechange: (detail: PageChangeEvent) => void;
 		onfilter?: (detail: FilterEvent) => void;
@@ -370,7 +372,7 @@
 	</div>
 
 	<!-- 테이블 컨테이너 (가로 스크롤 지원) -->
-	<div>
+	<div class="overflow-x-auto px-1 pb-6">
 		<table class="min-w-full divide-y divide-gray-200">
 			<!-- 테이블 헤더 -->
 			<thead class="overflow-visible bg-gray-100">
@@ -439,7 +441,9 @@
 										columnLabel={column.label}
 										filterType="select"
 										currentValue={activeFilters[column.key] || null}
-										options={column.filterOptions || getUniqueValues(column.key)}
+										options={filterOptions[column.key] ||
+											column.filterOptions ||
+											getUniqueValues(column.key)}
 										isOpen={openFilterColumn === column.key}
 										onOpen={(key) => {
 											openFilterColumn = key;

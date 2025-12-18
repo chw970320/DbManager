@@ -1,0 +1,72 @@
+import { json, type RequestEvent } from '@sveltejs/kit';
+import type { ApiResponse } from '$lib/types/vocabulary.js';
+import type { DomainEntry } from '$lib/types/domain.js';
+import { loadDomainData } from '$lib/utils/file-handler.js';
+
+/**
+ * 필터 옵션 조회 API
+ * GET /api/domain/filter-options
+ * 각 필터 가능한 컬럼의 고유값만 반환
+ */
+export async function GET({ url }: RequestEvent) {
+	try {
+		const filename = url.searchParams.get('filename') || 'domain.json';
+
+		// 데이터 로드
+		let domainData;
+		try {
+			domainData = await loadDomainData(filename);
+		} catch (loadError) {
+			return json(
+				{
+					success: false,
+					error: loadError instanceof Error ? loadError.message : '데이터 로드 실패',
+					message: 'Data loading failed'
+				} as ApiResponse,
+				{ status: 500 }
+			);
+		}
+
+		const options: Record<string, string[]> = {};
+
+		// 각 필터 가능한 컬럼에 대해 고유값 추출
+		const filterableColumns = [
+			'domainGroup',
+			'domainCategory',
+			'standardDomainName',
+			'physicalDataType',
+			'revision'
+		];
+
+		filterableColumns.forEach((columnKey) => {
+			const values = new Set<string>();
+			domainData.entries.forEach((entry) => {
+				const value = entry[columnKey as keyof DomainEntry];
+				if (value !== null && value !== undefined && value !== '') {
+					values.add(String(value));
+				}
+			});
+			options[columnKey] = Array.from(values).sort();
+		});
+
+		return json(
+			{
+				success: true,
+				data: options,
+				message: 'Filter options retrieved successfully'
+			} as ApiResponse,
+			{ status: 200 }
+		);
+	} catch (error) {
+		console.error('필터 옵션 조회 중 오류:', error);
+
+		return json(
+			{
+				success: false,
+				error: '서버에서 필터 옵션 조회 중 오류가 발생했습니다.',
+				message: 'Internal server error'
+			} as ApiResponse,
+			{ status: 500 }
+		);
+	}
+}

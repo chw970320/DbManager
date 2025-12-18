@@ -35,6 +35,7 @@
 		searchField?: string;
 		_selectedFilename?: string;
 		activeFilters?: Record<string, string | null>;
+		filterOptions?: Record<string, string[]>;
 		onsort: (detail: SortEvent) => void;
 		onpagechange: (detail: PageChangeEvent) => void;
 		onfilter?: (detail: FilterEvent) => void;
@@ -61,6 +62,7 @@
 	let searchField = $derived(props.searchField ?? 'all');
 	let _selectedFilename = $derived(props._selectedFilename ?? 'vocabulary.json');
 	let activeFilters = $derived(props.activeFilters ?? {});
+	let filterOptions = $derived(props.filterOptions ?? {});
 	let onsort = $derived(props.onsort);
 	let onpagechange = $derived(props.onpagechange);
 	let onfilter = $derived(props.onfilter);
@@ -399,7 +401,7 @@
 	</div>
 
 	<!-- 테이블 컨테이너 -->
-	<div class="overflow-x-auto">
+	<div class="overflow-x-auto px-1 pb-6">
 		<table class="min-w-full table-auto divide-y divide-gray-200">
 			<!-- 테이블 헤더 -->
 			<thead class="overflow-visible bg-gray-100">
@@ -468,7 +470,9 @@
 										columnLabel={column.label}
 										filterType="select"
 										currentValue={activeFilters[column.key] || null}
-										options={column.filterOptions || getUniqueValues(column.key)}
+										options={filterOptions[column.key] ||
+											column.filterOptions ||
+											getUniqueValues(column.key)}
 										isOpen={openFilterColumn === column.key}
 										onOpen={(key) => {
 											openFilterColumn = key;

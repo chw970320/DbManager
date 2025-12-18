@@ -38,6 +38,7 @@
 	}); // 세부 중복 필터 상태
 	let unmappedDomainOnly = $state(false);
 	let columnFilters = $state<Record<string, string | null>>({}); // 컬럼 필터 상태
+	let filterOptions = $state<Record<string, string[]>>({}); // 필터 옵션 (전체 데이터 기준)
 
 	// 파일 관리 상태
 	let vocabularyFiles = $state<string[]>([]);
@@ -94,6 +95,7 @@
 		(async () => {
 			await loadVocabularyFiles();
 			if (browser) {
+				await loadFilterOptions();
 				await loadVocabularyData();
 			}
 		})();
@@ -105,6 +107,7 @@
 					// 파일 변경 시 검색 조건 초기화 및 데이터 로드
 					currentPage = 1;
 					searchQuery = '';
+					loadFilterOptions();
 					loadVocabularyData();
 				}
 			}
@@ -176,9 +179,34 @@
 	/**
 	 * 단어집 파일 선택 처리
 	 */
-	function handleFileSelect(filename: string) {
+	async function handleFileSelect(filename: string) {
 		if (selectedFilename === filename) return;
+		selectedFilename = filename;
 		vocabularyStore.update((store) => ({ ...store, selectedFilename: filename }));
+		currentPage = 1;
+		searchQuery = '';
+		await loadFilterOptions();
+		await loadVocabularyData();
+	}
+
+	/**
+	 * 필터 옵션 로드 (전체 데이터 기준)
+	 */
+	async function loadFilterOptions() {
+		try {
+			const params = new URLSearchParams({
+				filename: selectedFilename
+			});
+
+			const response = await fetch(`/api/vocabulary/filter-options?${params}`);
+			const result: ApiResponse = await response.json();
+
+			if (result.success && result.data && typeof result.data === 'object') {
+				filterOptions = result.data as Record<string, string[]>;
+			}
+		} catch (error) {
+			console.error('필터 옵션 로드 오류:', error);
+		}
 	}
 
 	/**
@@ -445,6 +473,7 @@
 	 */
 	async function refreshData() {
 		await loadVocabularyFiles();
+		await loadFilterOptions();
 		await loadVocabularyData();
 	}
 
@@ -1208,6 +1237,7 @@
 								{searchField}
 								_selectedFilename={selectedFilename}
 								activeFilters={columnFilters}
+								{filterOptions}
 								onsort={handleSort}
 								onpagechange={handlePageChange}
 								onfilter={handleFilter}

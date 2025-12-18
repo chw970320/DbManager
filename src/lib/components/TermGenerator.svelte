@@ -1,6 +1,7 @@
 <script lang="ts">
 	import CopyToClipboard from 'svelte-copy-to-clipboard';
 	import { debounce } from '$lib/utils/debounce';
+	import { createEventDispatcher } from 'svelte';
 
 	// --- Component State ---
 	let sourceTerm = $state('');
@@ -16,6 +17,11 @@
 
 	// 검색 입력 필드 참조
 	let searchInput: HTMLInputElement | undefined;
+
+	// Event dispatcher
+	const dispatch = createEventDispatcher<{
+		addTerm: { termName: string; columnName: string };
+	}>();
 
 	// --- Effects ---
 	$effect(() => {
@@ -109,6 +115,18 @@
 			copiedResults.delete(text);
 			copiedResults = new Set(copiedResults); // 2초 후 제거
 		}, 2000);
+	}
+
+	/**
+	 * 새 용어 추가 버튼 클릭 처리
+	 */
+	function handleAddTerm(result: string) {
+		if (selectedSegment) {
+			dispatch('addTerm', {
+				termName: selectedSegment,
+				columnName: result
+			});
+		}
 	}
 
 	function clearSearch() {
@@ -310,49 +328,73 @@
 									class="flex items-center justify-between rounded-md border border-gray-200 p-2 hover:bg-gray-50"
 								>
 									<span class="font-mono text-lg">{result}</span>
-									<CopyToClipboard text={result} let:copy>
+									<div class="flex items-center space-x-1">
+										<CopyToClipboard text={result} let:copy>
+											<button
+												type="button"
+												onclick={() => {
+													copy();
+													handleCopy(result);
+												}}
+												class="rounded p-1 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+												aria-label="결과 복사"
+											>
+												{#if copiedResults.has(result)}
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														width="20"
+														height="20"
+														viewBox="0 0 24 24"
+														fill="none"
+														stroke="currentColor"
+														stroke-width="2"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														class="text-green-600"
+													>
+														<polyline points="20,6 9,17 4,12"></polyline>
+													</svg>
+												{:else}
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														width="20"
+														height="20"
+														viewBox="0 0 24 24"
+														fill="none"
+														stroke="currentColor"
+														stroke-width="2"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+													>
+														<rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+														<path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+													</svg>
+												{/if}
+											</button>
+										</CopyToClipboard>
 										<button
 											type="button"
-											onclick={() => {
-												copy();
-												handleCopy(result);
-											}}
-											class="rounded p-1 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-											aria-label="결과 복사"
+											onclick={() => handleAddTerm(result)}
+											class="rounded p-1 text-blue-600 transition-colors hover:bg-blue-100 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+											aria-label="새 용어 추가"
+											title="새 용어 추가"
 										>
-											{#if copiedResults.has(result)}
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													width="20"
-													height="20"
-													viewBox="0 0 24 24"
-													fill="none"
-													stroke="currentColor"
-													stroke-width="2"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													class="text-green-600"
-												>
-													<polyline points="20,6 9,17 4,12"></polyline>
-												</svg>
-											{:else}
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													width="20"
-													height="20"
-													viewBox="0 0 24 24"
-													fill="none"
-													stroke="currentColor"
-													stroke-width="2"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-												>
-													<rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
-													<path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
-												</svg>
-											{/if}
+											<svg
+												xmlns="http://www.w3.org/2000/svg"
+												width="20"
+												height="20"
+												viewBox="0 0 24 24"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="2"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+											>
+												<line x1="12" y1="5" x2="12" y2="19"></line>
+												<line x1="5" y1="12" x2="19" y2="12"></line>
+											</svg>
 										</button>
-									</CopyToClipboard>
+									</div>
 								</div>
 							{/each}
 						</div>

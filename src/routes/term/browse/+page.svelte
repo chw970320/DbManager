@@ -618,6 +618,26 @@
 		editorServerError = '';
 		currentEditingEntry = null;
 	}
+
+	/**
+	 * 용어 변환기에서 새 용어 추가 요청 처리
+	 */
+	function handleAddTermFromGenerator(event: CustomEvent<{ termName: string; columnName: string }>) {
+		const { termName, columnName } = event.detail;
+		currentEditingEntry = {
+			id: '',
+			termName,
+			columnName,
+			domainName: '',
+			isMappedTerm: false,
+			isMappedColumn: false,
+			isMappedDomain: false,
+			createdAt: '',
+			updatedAt: ''
+		};
+		showEditor = true;
+		editorServerError = '';
+	}
 </script>
 
 <svelte:head>
@@ -895,7 +915,7 @@
 
 				<!-- 용어 변환기 -->
 				<div class="mb-8">
-					<TermGenerator />
+					<TermGenerator on:addTerm={handleAddTermFromGenerator} />
 				</div>
 
 				<!-- 에러 메시지 -->

@@ -48,6 +48,10 @@
 	let showColumnNameSuggestions = $state(false);
 	let showDomainNameSuggestions = $state(false);
 
+	// Domain options for select (based on termName's last segment)
+	let domainOptions = $state<string[]>([]);
+	let isLoadingDomainOptions = $state(false);
+
 	// Mapping info state
 	let termMapping = $state<{ vocabulary: string; domain: string } | null>(null);
 	let isMappingLoading = $state(false);
@@ -55,7 +59,7 @@
 	// Input refs
 	let termNameInput: HTMLInputElement | undefined;
 	let columnNameInput: HTMLInputElement | undefined;
-	let domainNameInput: HTMLInputElement | undefined;
+	let domainNameInput: HTMLInputElement | HTMLSelectElement | undefined;
 
 	// Update formData when entry prop changes
 	$effect(() => {
@@ -63,6 +67,8 @@
 			formData.termName = entry.termName || '';
 			formData.columnName = entry.columnName || '';
 			formData.domainName = entry.domainName || '';
+			// 엔트리가 변경되면 도메인 옵션 업데이트
+			debouncedUpdateDomainOptions();
 		}
 	});
 
@@ -77,6 +83,12 @@
 			loadTermMapping();
 		});
 		return unsubscribe;
+	});
+
+	// 용어명 변경 시 도메인 옵션 자동 업데이트
+	$effect(() => {
+		void formData.termName;
+		debouncedUpdateDomainOptions();
 	});
 
 	// Load term mapping info
@@ -246,12 +258,86 @@
 	const debouncedTermNameSearch = debounce(loadTermNameSuggestions, 300);
 	const debouncedColumnNameSearch = debounce(loadColumnNameSuggestions, 300);
 	const debouncedDomainNameSearch = debounce(loadDomainNameSuggestions, 300);
+	const debouncedUpdateDomainOptions = debounce(updateDomainOptions, 300);
 
 	// Handle term name input
 	function handleTermNameInput() {
 		const query = formData.termName;
 		debouncedTermNameSearch(query);
 		showTermNameSuggestions = true;
+		// 용어명 변경 시 도메인 옵션 업데이트 (debounced)
+		debouncedUpdateDomainOptions();
+	}
+
+	/**
+	 * 용어명의 마지막 부분(underscore split)을 추출
+	 */
+	function getLastSegment(termName: string): string {
+		if (!termName || !termName.trim()) {
+			return '';
+		}
+		const parts = termName
+			.split('_')
+			.map((p) => p.trim())
+			.filter((p) => p.length > 0);
+		return parts.length > 0 ? parts[parts.length - 1] : '';
+	}
+
+	/**
+	 * 용어명의 마지막 부분에 해당하는 도메인 찾기
+	 */
+	async function updateDomainOptions() {
+		const lastSegment = getLastSegment(formData.termName);
+		if (!lastSegment) {
+			domainOptions = [];
+			// 관련 도메인이 없으면 선택값도 초기화
+			formData.domainName = '';
+			return;
+		}
+
+		isLoadingDomainOptions = true;
+		try {
+			const filename = getDomainFilename();
+			// domainCategory로 검색
+			const params = new URLSearchParams({
+				filename,
+				query: lastSegment,
+				field: 'domainCategory',
+				page: '1',
+				limit: '100' // 충분히 많은 옵션을 가져오기 위해
+			});
+			const response = await fetch(`/api/domain?${params}`);
+
+			if (response.ok) {
+				const result = await response.json();
+				if (result.success && result.data && Array.isArray(result.data.entries)) {
+					// standardDomainName만 추출하고 중복 제거
+					const domainNames = result.data.entries.map(
+						(entry: { standardDomainName: string }) => entry.standardDomainName
+					);
+					domainOptions = [...new Set(domainNames)];
+				} else {
+					domainOptions = [];
+				}
+			} else {
+				domainOptions = [];
+			}
+		} catch (err) {
+			console.warn('도메인 옵션 로드 실패:', err);
+			domainOptions = [];
+		} finally {
+			// 옵션 리스트와 선택 값 동기화
+			if (domainOptions.length > 0) {
+				// 현재 선택된 값이 없거나, 새 옵션 목록에 포함되지 않으면 첫 번째 값으로 선택
+				if (!formData.domainName || !domainOptions.includes(formData.domainName)) {
+					formData.domainName = domainOptions[0];
+				}
+			} else {
+				formData.domainName = '';
+			}
+
+			isLoadingDomainOptions = false;
+		}
 	}
 
 	// Handle column name input
@@ -566,41 +652,38 @@
 					<label for="domainName" class="mb-1 block text-sm font-medium text-gray-900">
 						도메인명 <span class="text-red-700">*</span>
 					</label>
-					<input
+					<select
 						id="domainName"
 						bind:this={domainNameInput}
-						type="text"
 						bind:value={formData.domainName}
-						oninput={handleDomainNameInput}
-						onfocus={() => {
-							if (formData.domainName.trim()) {
-								handleDomainNameInput();
-							}
-						}}
-						placeholder="예: VARCHAR(255)"
 						class="autocomplete-input input"
 						class:input-error={errors.domainName}
-						disabled={isSubmitting}
-					/>
+						disabled={isSubmitting || isLoadingDomainOptions || domainOptions.length === 0}
+					>
+						{#if domainOptions.length > 0}
+							{#each domainOptions as option}
+								<option value={option}>{option}</option>
+							{/each}
+						{:else}
+							<option value="">관련된 도메인이 없습니다.</option>
+						{/if}
+					</select>
 					{#if errors.domainName}
 						<p class="text-error mt-1 text-sm">{errors.domainName}</p>
 					{/if}
-					{#if showDomainNameSuggestions && domainNameSuggestions.length > 0}
-						<div
-							class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-300 bg-white shadow-lg"
-						>
-							{#each domainNameSuggestions as suggestion}
-								<button
-									type="button"
-									class="w-full px-4 py-2 text-left text-sm hover:bg-gray-100"
-									onclick={() => selectDomainNameSuggestion(suggestion)}
-								>
-									{suggestion}
-								</button>
-							{/each}
-						</div>
+					{#if isLoadingDomainOptions}
+						<p class="mt-1 text-xs text-gray-500">도메인 옵션을 불러오는 중...</p>
+					{:else if domainOptions.length === 0 && formData.termName.trim()}
+						<p class="mt-1 text-xs text-gray-500">
+							({getLastSegment(formData.termName) || '없음'})에 해당하는 도메인이 없습니다.
+						</p>
+					{:else if domainOptions.length > 0}
+						<p class="mt-1 text-xs text-gray-500">
+							({getLastSegment(formData.termName)})에 해당하는 도메인 {domainOptions.length}개
+						</p>
+					{:else}
+						<p class="mt-1 text-xs text-gray-500">용어명을 입력하면 도메인 옵션이 표시됩니다</p>
 					{/if}
-					<p class="mt-1 text-xs text-gray-500">도메인의 표준도메인명을 입력하세요</p>
 				</div>
 
 				<!-- 버튼 그룹 -->

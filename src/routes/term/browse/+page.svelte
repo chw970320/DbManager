@@ -622,7 +622,9 @@
 	/**
 	 * 용어 변환기에서 새 용어 추가 요청 처리
 	 */
-	function handleAddTermFromGenerator(event: CustomEvent<{ termName: string; columnName: string }>) {
+	function handleAddTermFromGenerator(
+		event: CustomEvent<{ termName: string; columnName: string }>
+	) {
 		const { termName, columnName } = event.detail;
 		currentEditingEntry = {
 			id: '',

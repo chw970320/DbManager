@@ -316,18 +316,23 @@
 	<div
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
 		onclick={handleBackgroundClick}
+		role="dialog"
+		aria-modal="true"
+		aria-label="금지어 관리"
 	>
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="mx-4 w-full max-w-4xl rounded-lg bg-white p-6 shadow-xl"
 			onclick={(e) => e.stopPropagation()}
 		>
 			<!-- Header -->
-			<div class="mb-4 flex items-center justify-between border-b pb-4">
+				<div class="mb-4 flex items-center justify-between border-b pb-4">
 				<h2 class="text-xl font-bold text-gray-900">금지어 관리</h2>
 				<button
 					onclick={handleClose}
 					class="text-gray-400 hover:text-gray-600"
-					disabled={isSubmitting}
+						disabled={isSubmitting}
+						aria-label="금지어 관리 닫기"
 				>
 					<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path
@@ -341,12 +346,12 @@
 			</div>
 
 			<!-- Scope Selection -->
-			<div class="mb-8 rounded-xl border border-gray-100 bg-gray-50 p-5">
-				<div class="mb-3 flex items-center justify-between">
-					<label for="scope-select" class="block text-sm font-semibold text-gray-700"
-						>관리 범위 선택</label
-					>
-				</div>
+						<div class="mb-8 rounded-xl border border-gray-100 bg-gray-50 p-5">
+							<div class="mb-3 flex items-center justify-between">
+								<label for="scope-select" class="block text-sm font-semibold text-gray-700">
+									관리 범위 선택 <span class="text-red-700">*</span>
+								</label>
+							</div>
 				<div class="relative">
 					<select
 						id="scope-select"
@@ -446,10 +451,11 @@
 						</div>
 
 						<!-- 타입 -->
-						<div>
-							<label class="mb-2 block text-sm font-medium text-gray-900">
-								적용 타입 <span class="text-red-700">*</span>
-							</label>
+							<div>
+								<!-- 시각적으로는 그룹 레이블이지만, 개별 라디오에 aria-labelledby로 연결 -->
+								<span id="type-label" class="mb-2 block text-sm font-medium text-gray-900">
+									적용 타입 <span class="text-red-700">*</span>
+								</span>
 							<div class="space-y-2">
 								<label class="flex items-center">
 									<input
@@ -457,7 +463,8 @@
 										bind:group={formData.type}
 										value="standardName"
 										disabled={isSubmitting}
-										class="mr-2"
+											class="mr-2"
+											aria-labelledby="type-label"
 									/>
 									<span class="text-sm text-gray-700">표준단어명</span>
 								</label>
@@ -467,7 +474,8 @@
 										bind:group={formData.type}
 										value="abbreviation"
 										disabled={isSubmitting}
-										class="mr-2"
+											class="mr-2"
+											aria-labelledby="type-label"
 									/>
 									<span class="text-sm text-gray-700">영문약어</span>
 								</label>

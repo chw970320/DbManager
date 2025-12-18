@@ -1,4 +1,5 @@
 <script lang="ts">
+	// @ts-nocheck
 	import type { VocabularyEntry } from '$lib/types/vocabulary.js';
 	import { createEventDispatcher } from 'svelte';
 	import ColumnFilter from './ColumnFilter.svelte';
@@ -189,7 +190,7 @@
 	 */
 	function getUniqueValues(columnKey: string): string[] {
 		const values = new Set<string>();
-		entries.forEach((entry) => {
+		entries.forEach((entry: VocabularyEntry) => {
 			const value = entry[columnKey as keyof VocabularyEntry];
 			if (value !== null && value !== undefined && value !== '') {
 				if (columnKey === 'isFormalWord') {

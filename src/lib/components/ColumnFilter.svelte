@@ -1,4 +1,5 @@
 <script lang="ts">
+	 
 	import { onMount } from 'svelte';
 
 	type FilterType = 'text' | 'select';
@@ -19,7 +20,7 @@
 	let {
 		columnKey,
 		columnLabel,
-		filterType = 'text',
+		filterType: _filterType = 'text',
 		currentValue = null,
 		options = [],
 		isOpen: externalIsOpen = false,
@@ -29,15 +30,12 @@
 		onClear
 	}: Props = $props();
 
-	let isOpen = $state(externalIsOpen);
+	// 현재는 필터 타입별 분기 처리가 없지만, API 호환성을 위해 props로 유지
+	void _filterType;
+
 	let inputValue = $state(currentValue || '');
 	let filterButtonRef = $state<HTMLButtonElement | null>(null);
 	let dropdownRef = $state<HTMLDivElement | null>(null);
-
-	// 외부에서 isOpen이 변경되면 내부 상태도 업데이트
-	$effect(() => {
-		isOpen = externalIsOpen;
-	});
 
 	// 외부 클릭 감지
 	function handleClickOutside(event: MouseEvent) {
@@ -47,7 +45,6 @@
 			!dropdownRef.contains(event.target as Node) &&
 			!filterButtonRef.contains(event.target as Node)
 		) {
-			isOpen = false;
 			if (onClose) {
 				onClose();
 			}
@@ -64,9 +61,8 @@
 	// 필터 열기/닫기
 	function toggleFilter(event: MouseEvent) {
 		event.stopPropagation(); // 이벤트 전파 방지
-		if (isOpen) {
+		if (externalIsOpen) {
 			// 닫기
-			isOpen = false;
 			if (onClose) {
 				onClose();
 			}
@@ -75,7 +71,6 @@
 			if (onOpen) {
 				onOpen(columnKey);
 			}
-			isOpen = true;
 			inputValue = currentValue || '';
 		}
 	}
@@ -90,26 +85,13 @@
 			onApply(value);
 		}
 		// 필터 선택 후 드롭다운 닫기
-		isOpen = false;
 		if (onClose) {
 			onClose();
 		}
 	}
 
-	// 필터 초기화
-	function clearFilter(event?: MouseEvent) {
-		if (event) {
-			event.stopPropagation();
-		}
-		inputValue = '';
-		if (onClear) {
-			onClear();
-		}
-		// 드롭다운은 열어둠
-	}
-
-	// 필터 활성화 여부
-	let isActive = $derived(currentValue !== null && currentValue !== '');
+	// 필터 활성화 여부 (props 기반 파생 상태)
+	const isActive = currentValue !== null && currentValue !== '';
 </script>
 
 <div class="relative inline-block">
@@ -141,7 +123,7 @@
 	</button>
 
 	<!-- 필터 드롭다운 (absolute 포지셔닝, header cell 아래에 배치) -->
-	{#if isOpen}
+	{#if externalIsOpen}
 		<div
 			bind:this={dropdownRef}
 			class="absolute right-[-10px] top-full z-50 mt-1 w-32 rounded-md border border-gray-300 bg-white shadow-lg"
@@ -165,7 +147,8 @@
 					onclick={(e) => e.stopPropagation()}
 				>
 					<option value="">전체</option>
-					{#each options as option}
+					<!-- eslint-disable-next-line svelte/require-each-key -->
+					{#each options as option (option)}
 						<option value={option}>{option}</option>
 					{/each}
 				</select>

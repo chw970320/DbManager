@@ -90,7 +90,20 @@ export async function fetchById<T>(
 	id: string,
 	params: FetchParams = {}
 ): Promise<ApiResponse & { data?: T }> {
-	return fetchData<T>(`${endpoint}/${id}`, params);
+	// 단건 조회는 페이지네이션 메타 정보가 없는 일반 응답을 기대하므로
+	// 제네릭 fetchData 대신 직접 구현합니다.
+	const searchParams = buildSearchParams(params);
+	const url = searchParams.toString()
+		? `${endpoint}/${id}?${searchParams.toString()}`
+		: `${endpoint}/${id}`;
+
+	const response = await fetch(url);
+
+	if (!response.ok) {
+		throw new Error(`API 요청 실패: ${response.status} ${response.statusText}`);
+	}
+
+	return (await response.json()) as ApiResponse & { data?: T };
 }
 
 /**

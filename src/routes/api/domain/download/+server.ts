@@ -1,5 +1,5 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type { DomainEntry } from '$lib/types/domain.js';
+import type { DomainEntry } from '$lib/types/domain';
 import { loadDomainData } from '$lib/utils/file-handler.js';
 import { exportDomainToXlsxBuffer } from '$lib/utils/xlsx-parser.js';
 

@@ -3,8 +3,10 @@
  * @param func - 지연시킬 함수
  * @param wait - 지연 시간 (milliseconds)
  * @returns debounced 함수
+ *
+ * async 함수 등 다양한 시그니처를 허용하기 위해 매개변수/반환 타입에는 any를 사용합니다.
  */
-export function debounce<T extends (...args: unknown[]) => unknown>(
+export function debounce<T extends (...args: any[]) => any>(
 	func: T,
 	wait: number
 ): ((...args: Parameters<T>) => void) & { cancel: () => void } {
@@ -34,7 +36,7 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
  * @param immediate - 첫 호출 즉시 실행 여부
  * @returns debounced 함수
  */
-export function debounceImmediate<T extends (...args: unknown[]) => unknown>(
+export function debounceImmediate<T extends (...args: any[]) => any>(
 	func: T,
 	wait: number,
 	immediate = false

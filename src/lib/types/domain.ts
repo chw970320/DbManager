@@ -8,15 +8,19 @@ export interface DomainEntry {
 	domainGroup: string; // C: 공통표준도메인그룹명
 	domainCategory: string; // D: 공통표준도메인분류명
 	standardDomainName: string; // E: 공통표준도메인명 (계산된 값)
+	// 논리/물리 데이터 타입 및 부가 정보
+	logicalDataType?: string; // 논리 데이터타입
 	physicalDataType: string; // G: 데이터타입 (물리 데이터타입)
 	dataLength?: string; // H: 데이터길이 (text 타입)
 	decimalPlaces?: string; // I: 데이터소수점길이 (text 타입)
 	measurementUnit?: string; // L: 단위
+	dataValue?: string; // 데이터값
 	revision?: string; // B: 재정차수
 	description?: string; // F: 공통표준도메인설명
 	storageFormat?: string; // J: 저장 형식
 	displayFormat?: string; // K: 표현 형식
 	allowedValues?: string; // M: 허용값
+	remarks?: string; // 비고
 	createdAt: string; // ISO 8601 날짜 문자열
 	updatedAt: string; // ISO 8601 날짜 문자열
 }

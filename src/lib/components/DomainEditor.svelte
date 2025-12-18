@@ -198,7 +198,11 @@
 <div
 	class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
 	onclick={handleBackgroundClick}
+	role="dialog"
+	aria-modal="true"
+	aria-label="도메인 수정"
 >
+	<!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
 	<div
 		class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl"
 		onclick={(e) => e.stopPropagation()}
@@ -209,6 +213,7 @@
 				onclick={handleCancel}
 				class="text-gray-400 hover:text-gray-600"
 				disabled={isSubmitting}
+				aria-label="도메인 수정 닫기"
 			>
 				<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path

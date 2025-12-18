@@ -76,7 +76,7 @@
 				<!-- 기능 3: 용어 -->
 				<a
 					href="/term/browse"
-					class="animate-fade-in-up delay-700 group relative overflow-hidden rounded-2xl border border-gray-200/50 bg-white p-8 opacity-0 shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-xl"
+					class="animate-fade-in-up group relative overflow-hidden rounded-2xl border border-gray-200/50 bg-white p-8 opacity-0 shadow-sm transition-all delay-700 duration-300 hover:scale-105 hover:shadow-xl"
 				>
 					<div
 						class="absolute inset-0 bg-gradient-to-br from-purple-50 to-pink-50 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
@@ -204,10 +204,6 @@
 
 	.delay-400 {
 		animation-delay: 0.4s;
-	}
-
-	.delay-500 {
-		animation-delay: 0.5s;
 	}
 
 	.delay-600 {

@@ -250,6 +250,8 @@
 	onmouseleave={() => (isHovered = false)}
 	class:translate-x-72={!shouldShowContainer}
 	class:translate-x-0={shouldShowContainer}
+	role="complementary"
+	aria-label="작업 히스토리"
 >
 	<!-- 플로팅 박스들 컨테이너 -->
 	<div class="w-80 space-y-4">
@@ -260,6 +262,15 @@
 				class="flex cursor-pointer items-center justify-between rounded-t-xl border border-gray-200 bg-white p-3 shadow-lg"
 				class:rounded-b-xl={!isExpanded}
 				onclick={() => (isExpanded = !isExpanded)}
+				role="button"
+				tabindex="0"
+				aria-expanded={isExpanded}
+				onkeydown={(event) => {
+					if (event.key === 'Enter' || event.key === ' ') {
+						event.preventDefault();
+						isExpanded = !isExpanded;
+					}
+				}}
 			>
 				<div class="flex items-center space-x-2">
 					<div class="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100">
@@ -298,6 +309,7 @@
 						disabled={isLoading}
 						class="rounded-md p-1 text-gray-400 hover:text-gray-600 disabled:opacity-50"
 						title="새로고침"
+						aria-label="히스토리 새로고침"
 					>
 						<svg
 							class="h-4 w-4"

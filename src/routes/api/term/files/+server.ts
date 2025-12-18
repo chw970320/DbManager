@@ -1,6 +1,11 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse } from '$lib/types/vocabulary';
-import { listTermFiles, createTermFile, renameTermFile, deleteTermFile } from '$lib/utils/file-handler';
+import {
+	listTermFiles,
+	createTermFile,
+	renameTermFile,
+	deleteTermFile
+} from '$lib/utils/file-handler';
 
 /**
  * 용어 파일 목록 조회 API
@@ -21,7 +26,8 @@ export async function GET() {
 		return json(
 			{
 				success: false,
-				error: error instanceof Error ? error.message : '용어 파일 목록 조회 중 오류가 발생했습니다.',
+				error:
+					error instanceof Error ? error.message : '용어 파일 목록 조회 중 오류가 발생했습니다.',
 				message: 'Failed to retrieve term files'
 			} as ApiResponse,
 			{ status: 500 }
@@ -101,7 +107,8 @@ export async function PUT({ request }: RequestEvent) {
 		return json(
 			{
 				success: false,
-				error: error instanceof Error ? error.message : '용어 파일 이름 변경 중 오류가 발생했습니다.',
+				error:
+					error instanceof Error ? error.message : '용어 파일 이름 변경 중 오류가 발생했습니다.',
 				message: 'Failed to rename term file'
 			} as ApiResponse,
 			{ status: 500 }
@@ -148,4 +155,3 @@ export async function DELETE({ request }: RequestEvent) {
 		);
 	}
 }
-

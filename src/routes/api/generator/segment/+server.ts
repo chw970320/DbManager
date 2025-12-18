@@ -80,8 +80,8 @@ export async function POST({ request }: RequestEvent) {
 
 		const wordSet = direction === 'ko-to-en' ? dictionary.ko : dictionary.en;
 
-		// 공백으로 단어를 분리
-		const termParts = term.split(' ').filter((p) => p.length > 0);
+		// 공백 및 언더바로 단어를 분리
+		const termParts = term.split(/[\s_]+/).filter((p) => p.length > 0);
 
 		// 각 단어를 분해 (매칭되지 않는 단어는 ##으로 표시)
 		const segmentedParts = termParts.map((part) => segmentPart(part, wordSet));

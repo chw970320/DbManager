@@ -49,9 +49,9 @@
 	let showColumnNameSuggestions = $state(false);
 	let showDomainNameSuggestions = $state(false);
 
-	// Domain options for select (based on termName's last segment)
-	let domainOptions = $state<string[]>([]);
-	let isLoadingDomainOptions = $state(false);
+	// Domain recommendations (based on termName's last segment & vocabulary/domain mapping)
+	let domainRecommendations = $state<string[]>([]);
+	let isLoadingDomainRecommendations = $state(false);
 
 	// Mapping info state
 	let termMapping = $state<{ vocabulary: string; domain: string } | null>(null);
@@ -60,7 +60,7 @@
 	// Input refs
 	let termNameInput: HTMLInputElement | undefined;
 	let columnNameInput: HTMLInputElement | undefined;
-	let domainNameInput: HTMLInputElement | HTMLSelectElement | undefined;
+	let domainNameInput: HTMLInputElement | undefined;
 
 	// Update formData when entry prop changes
 	$effect(() => {
@@ -68,8 +68,8 @@
 			formData.termName = entry.termName || '';
 			formData.columnName = entry.columnName || '';
 			formData.domainName = entry.domainName || '';
-			// 엔트리가 변경되면 도메인 옵션 업데이트
-			debouncedUpdateDomainOptions();
+			// 엔트리가 변경되면 도메인 추천 업데이트
+			debouncedUpdateDomainRecommendations();
 		}
 	});
 
@@ -86,10 +86,10 @@
 		return unsubscribe;
 	});
 
-	// 용어명 변경 시 도메인 옵션 자동 업데이트
+	// 용어명 변경 시 도메인 추천 자동 업데이트
 	$effect(() => {
 		void formData.termName;
-		debouncedUpdateDomainOptions();
+		debouncedUpdateDomainRecommendations();
 	});
 
 	// Load term mapping info
@@ -268,8 +268,8 @@
 		void loadDomainNameSuggestions(query);
 	}, 300);
 
-	const debouncedUpdateDomainOptions = debounce(() => {
-		void updateDomainOptions();
+	const debouncedUpdateDomainRecommendations = debounce(() => {
+		void updateDomainRecommendations();
 	}, 300);
 
 	// Handle term name input
@@ -277,8 +277,8 @@
 		const query = formData.termName;
 		debouncedTermNameSearch(query);
 		showTermNameSuggestions = true;
-		// 용어명 변경 시 도메인 옵션 업데이트 (debounced)
-		debouncedUpdateDomainOptions();
+		// 용어명 변경 시 도메인 추천 업데이트 (debounced)
+		debouncedUpdateDomainRecommendations();
 	}
 
 	/**
@@ -296,59 +296,45 @@
 	}
 
 	/**
-	 * 용어명의 마지막 부분에 해당하는 도메인 찾기
+	 * 용어명의 마지막 부분에 해당하는 도메인 추천 조회
 	 */
-	async function updateDomainOptions() {
-		const lastSegment = getLastSegment(formData.termName);
-		if (!lastSegment) {
-			domainOptions = [];
-			// 관련 도메인이 없으면 선택값도 초기화
-			formData.domainName = '';
+	async function updateDomainRecommendations() {
+		const termName = formData.termName;
+		if (!termName || !termName.trim()) {
+			domainRecommendations = [];
 			return;
 		}
 
-		isLoadingDomainOptions = true;
+		isLoadingDomainRecommendations = true;
 		try {
-			const filename = getDomainFilename();
-			// domainCategory로 검색
-			const params = new URLSearchParams({
-				filename,
-				query: lastSegment,
-				field: 'domainCategory',
-				page: '1',
-				limit: '100' // 충분히 많은 옵션을 가져오기 위해
+			// 현재 선택된 용어 파일명은 termStore에서 가져옴
+			const storeValue = get(termStore);
+			const termFilename = storeValue.selectedFilename || 'term.json';
+
+			const response = await fetch('/api/term/recommend', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					filename: termFilename,
+					termName
+				})
 			});
-			const response = await fetch(`/api/domain?${params}`);
 
 			if (response.ok) {
 				const result = await response.json();
-				if (result.success && result.data && Array.isArray(result.data.entries)) {
-					// standardDomainName만 추출하고 중복 제거
-					const domainNames: string[] = result.data.entries.map(
-						(entry: { standardDomainName: string }) => entry.standardDomainName
-					);
-					domainOptions = [...new Set<string>(domainNames)];
+				if (result.success && result.data && Array.isArray(result.data.recommendations)) {
+					domainRecommendations = result.data.recommendations as string[];
 				} else {
-					domainOptions = [];
+					domainRecommendations = [];
 				}
 			} else {
-				domainOptions = [];
+				domainRecommendations = [];
 			}
 		} catch (err) {
-			console.warn('도메인 옵션 로드 실패:', err);
-			domainOptions = [];
+			console.warn('도메인 추천 로드 실패:', err);
+			domainRecommendations = [];
 		} finally {
-			// 옵션 리스트와 선택 값 동기화
-			if (domainOptions.length > 0) {
-				// 현재 선택된 값이 없거나, 새 옵션 목록에 포함되지 않으면 첫 번째 값으로 선택
-				if (!formData.domainName || !domainOptions.includes(formData.domainName)) {
-					formData.domainName = domainOptions[0];
-				}
-			} else {
-				formData.domainName = '';
-			}
-
-			isLoadingDomainOptions = false;
+			isLoadingDomainRecommendations = false;
 		}
 	}
 
@@ -677,38 +663,51 @@
 					<label for="domainName" class="mb-1 block text-sm font-medium text-gray-900">
 						도메인명 <span class="text-red-700">*</span>
 					</label>
-					<select
+					<input
 						id="domainName"
 						bind:this={domainNameInput}
+						type="text"
 						bind:value={formData.domainName}
+						oninput={handleDomainNameInput}
+						onfocus={() => {
+							if (formData.domainName.trim()) {
+								handleDomainNameInput();
+							}
+						}}
 						class="autocomplete-input input"
 						class:input-error={errors.domainName}
-						disabled={isSubmitting || isLoadingDomainOptions || domainOptions.length === 0}
-					>
-						{#if domainOptions.length > 0}
-							<!-- eslint-disable-next-line svelte/require-each-key -->
-							{#each domainOptions as option (option)}
-								<option value={option}>{option}</option>
-							{/each}
-						{:else}
-							<option value="">관련된 도메인이 없습니다.</option>
-						{/if}
-					</select>
+						disabled={isSubmitting}
+						placeholder="예: 고객_기본정보_도메인"
+					/>
 					{#if errors.domainName}
 						<p class="text-error mt-1 text-sm">{errors.domainName}</p>
 					{/if}
-					{#if isLoadingDomainOptions}
-						<p class="mt-1 text-xs text-gray-500">도메인 옵션을 불러오는 중...</p>
-					{:else if domainOptions.length === 0 && formData.termName.trim()}
+					{#if isLoadingDomainRecommendations}
+						<p class="mt-1 text-xs text-gray-500">도메인 추천을 불러오는 중...</p>
+					{:else if domainRecommendations.length > 0}
 						<p class="mt-1 text-xs text-gray-500">
-							({getLastSegment(formData.termName) || '없음'})에 해당하는 도메인이 없습니다.
+							({getLastSegment(formData.termName)})에 매핑된 도메인 {domainRecommendations.length}개
 						</p>
-					{:else if domainOptions.length > 0}
+						<div class="mt-2 flex flex-wrap gap-2">
+							<!-- eslint-disable-next-line svelte/require-each-key -->
+							{#each domainRecommendations as rec (rec)}
+								<button
+									type="button"
+									class="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs text-blue-700 hover:bg-blue-100"
+									onclick={() => (formData.domainName = rec)}
+								>
+									{rec}
+								</button>
+							{/each}
+						</div>
+					{:else if formData.termName.trim()}
 						<p class="mt-1 text-xs text-gray-500">
-							({getLastSegment(formData.termName)})에 해당하는 도메인 {domainOptions.length}개
+							({getLastSegment(formData.termName) || '없음'})에 매핑된 도메인이 없습니다.
 						</p>
 					{:else}
-						<p class="mt-1 text-xs text-gray-500">용어명을 입력하면 도메인 옵션이 표시됩니다</p>
+						<p class="mt-1 text-xs text-gray-500">
+							용어명을 입력하면 단어집 표준단어명과 매핑된 도메인을 자동으로 추천합니다.
+						</p>
 					{/if}
 				</div>
 

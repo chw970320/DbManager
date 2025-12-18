@@ -17,6 +17,7 @@
 	type SearchDetail = { query: string; field: string; exact: boolean };
 	type SortDetail = { column: string; direction: 'asc' | 'desc' };
 	type PageChangeDetail = { page: number };
+	type FilterDetail = { column: string; value: string | null };
 
 	// 상태 변수
 	let entries = $state<VocabularyEntry[]>([]);
@@ -36,6 +37,7 @@
 		englishName: false
 	}); // 세부 중복 필터 상태
 	let unmappedDomainOnly = $state(false);
+	let columnFilters = $state<Record<string, string | null>>({}); // 컬럼 필터 상태
 
 	// 파일 관리 상태
 	let vocabularyFiles = $state<string[]>([]);
@@ -203,6 +205,13 @@
 				params.set('unmappedDomain', 'true');
 			}
 
+			// 컬럼 필터 파라미터 추가
+			Object.entries(columnFilters).forEach(([key, value]) => {
+				if (value !== null && value !== '') {
+					params.append(`filters[${key}]`, value);
+				}
+			});
+
 			const response = await fetch(`/api/vocabulary?${params}`);
 			const result: ApiResponse = await response.json();
 
@@ -274,6 +283,13 @@
 			if (unmappedDomainOnly) {
 				params.set('unmappedDomain', 'true');
 			}
+
+			// 컬럼 필터 파라미터 추가
+			Object.entries(columnFilters).forEach(([key, value]) => {
+				if (value !== null && value !== '') {
+					params.append(`filters[${key}]`, value);
+				}
+			});
 
 			const response = await fetch(`/api/search?${params}`);
 			const result: ApiResponse = await response.json();
@@ -381,6 +397,29 @@
 	 */
 	async function handleUnmappedToggle() {
 		currentPage = 1;
+		if (searchQuery) {
+			await executeSearch();
+		} else {
+			await loadVocabularyData();
+		}
+	}
+
+	/**
+	 * 컬럼 필터 변경 처리
+	 */
+	async function handleFilter(detail: FilterDetail) {
+		const { column, value } = detail;
+		currentPage = 1; // 필터 변경 시 첫 페이지로 이동
+
+		// 필터 상태 업데이트
+		if (value === null || value === '') {
+			const { [column]: _, ...rest } = columnFilters;
+			columnFilters = rest;
+		} else {
+			columnFilters = { ...columnFilters, [column]: value };
+		}
+
+		// 데이터 재로드
 		if (searchQuery) {
 			await executeSearch();
 		} else {
@@ -1155,8 +1194,10 @@
 								{sortDirection}
 								{searchField}
 								_selectedFilename={selectedFilename}
+								activeFilters={columnFilters}
 								onsort={handleSort}
 								onpagechange={handlePageChange}
+								onfilter={handleFilter}
 								onentryclick={handleEntryClick}
 							/>
 						</div>

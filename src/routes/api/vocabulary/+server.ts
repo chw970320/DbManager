@@ -26,6 +26,15 @@ export async function GET({ url }: RequestEvent) {
 		const unmappedDomain = url.searchParams.get('unmappedDomain') === 'true';
 		const filename = url.searchParams.get('filename') || undefined; // 파일명 파라미터 추가
 
+		// 컬럼 필터 파라미터 추출 (filters[columnKey]=value 형식)
+		const columnFilters: Record<string, string> = {};
+		url.searchParams.forEach((value, key) => {
+			const match = key.match(/^filters\[(.+)\]$/);
+			if (match && value) {
+				columnFilters[match[1]] = value;
+			}
+		});
+
 		// 페이지네이션 유효성 검증
 		if (page < 1 || limit < 1 || limit > 1000) {
 			return json(
@@ -114,6 +123,29 @@ export async function GET({ url }: RequestEvent) {
 			filteredEntries = filteredEntries.filter(
 				(entry) => !entry.domainGroup || entry.isDomainCategoryMapped === false
 			);
+		}
+
+		// 컬럼 필터 적용
+		if (Object.keys(columnFilters).length > 0) {
+			filteredEntries = filteredEntries.filter((entry) => {
+				return Object.entries(columnFilters).every(([columnKey, filterValue]) => {
+					const entryValue = entry[columnKey as keyof VocabularyEntry];
+					if (entryValue === null || entryValue === undefined) {
+						return false;
+					}
+
+					// 형식단어여부 필드의 경우 boolean을 Y/N으로 변환하여 비교
+					if (columnKey === 'isFormalWord') {
+						const entryStr = entryValue ? 'Y' : 'N';
+						return entryStr === filterValue;
+					}
+
+					// 문자열 필드의 경우 부분 일치 검색
+					const entryStr = String(entryValue).toLowerCase();
+					const filterStr = filterValue.toLowerCase();
+					return entryStr.includes(filterStr);
+				});
+			});
 		}
 
 		// 정렬 적용

@@ -21,6 +21,15 @@ export async function GET({ url }: RequestEvent) {
 		const searchField = url.searchParams.get('field') || 'all';
 		const filename = url.searchParams.get('filename') || 'domain.json';
 
+		// 컬럼 필터 파라미터 추출 (filters[columnKey]=value 형식)
+		const columnFilters: Record<string, string> = {};
+		url.searchParams.forEach((value, key) => {
+			const match = key.match(/^filters\[(.+)\]$/);
+			if (match && value) {
+				columnFilters[match[1]] = value;
+			}
+		});
+
 		// 페이지네이션 유효성 검증
 		if (page < 1 || limit < 1 || limit > 100) {
 			return json(
@@ -118,6 +127,23 @@ export async function GET({ url }: RequestEvent) {
 							entry.remarks?.toLowerCase().includes(query)
 						);
 				}
+			});
+		}
+
+		// 컬럼 필터 적용
+		if (Object.keys(columnFilters).length > 0) {
+			filteredEntries = filteredEntries.filter((entry) => {
+				return Object.entries(columnFilters).every(([columnKey, filterValue]) => {
+					const entryValue = entry[columnKey as keyof DomainEntry];
+					if (entryValue === null || entryValue === undefined) {
+						return false;
+					}
+
+					// 문자열 필드의 경우 부분 일치 검색
+					const entryStr = String(entryValue).toLowerCase();
+					const filterStr = filterValue.toLowerCase();
+					return entryStr.includes(filterStr);
+				});
 			});
 		}
 

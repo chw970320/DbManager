@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { VocabularyEntry } from '$lib/types/vocabulary.js';
 	import { createEventDispatcher } from 'svelte';
+	import ColumnFilter from './ColumnFilter.svelte';
 
 	type SortEvent = {
 		column: string;
@@ -13,6 +14,11 @@
 
 	type EntryClickEvent = {
 		entry: VocabularyEntry;
+	};
+
+	type FilterEvent = {
+		column: string;
+		value: string | null;
 	};
 
 	// 컴포넌트 속성
@@ -28,14 +34,17 @@
 		sortDirection?: 'asc' | 'desc';
 		searchField?: string;
 		_selectedFilename?: string;
+		activeFilters?: Record<string, string | null>;
 		onsort: (detail: SortEvent) => void;
 		onpagechange: (detail: PageChangeEvent) => void;
+		onfilter?: (detail: FilterEvent) => void;
 		onentryclick?: (detail: EntryClickEvent) => void;
 	}>();
 
 	// Event dispatcher
 	const dispatch = createEventDispatcher<{
 		entryclick: EntryClickEvent;
+		filter: FilterEvent;
 	}>();
 
 	// Default values using derived state
@@ -50,8 +59,10 @@
 	let sortDirection = $derived(props.sortDirection ?? 'asc');
 	let searchField = $derived(props.searchField ?? 'all');
 	let _selectedFilename = $derived(props._selectedFilename ?? 'vocabulary.json');
+	let activeFilters = $derived(props.activeFilters ?? {});
 	let onsort = $derived(props.onsort);
 	let onpagechange = $derived(props.onpagechange);
+	let onfilter = $derived(props.onfilter);
 
 	// 행 클릭 핸들러
 	function handleRowClick(entry: VocabularyEntry, event: MouseEvent) {
@@ -73,6 +84,9 @@
 		key: string;
 		label: string;
 		sortable: boolean;
+		filterable: boolean;
+		filterType?: 'text' | 'select';
+		filterOptions?: string[];
 		width: string;
 		align: ColumnAlignment;
 	}> = [
@@ -80,6 +94,8 @@
 			key: 'standardName',
 			label: '표준단어명',
 			sortable: true,
+			filterable: true,
+			filterType: 'text',
 			width: 'min-w-[150px] max-w-[200px]',
 			align: 'left'
 		},
@@ -87,6 +103,8 @@
 			key: 'abbreviation',
 			label: '영문약어',
 			sortable: true,
+			filterable: true,
+			filterType: 'text',
 			width: 'min-w-[150px] max-w-[200px]',
 			align: 'left'
 		},
@@ -94,6 +112,8 @@
 			key: 'englishName',
 			label: '영문명',
 			sortable: true,
+			filterable: true,
+			filterType: 'text',
 			width: 'min-w-[150px] max-w-[250px]',
 			align: 'left'
 		},
@@ -101,6 +121,7 @@
 			key: 'description',
 			label: '단어설명',
 			sortable: false,
+			filterable: false,
 			width: 'min-w-[300px]',
 			align: 'left'
 		},
@@ -108,6 +129,9 @@
 			key: 'isFormalWord',
 			label: '형식단어여부',
 			sortable: false,
+			filterable: true,
+			filterType: 'select',
+			filterOptions: ['Y', 'N'],
 			width: 'min-w-[100px]',
 			align: 'center'
 		},
@@ -115,6 +139,8 @@
 			key: 'domainCategory',
 			label: '도메인분류명',
 			sortable: false,
+			filterable: true,
+			filterType: 'text',
 			width: 'min-w-[100px]',
 			align: 'left'
 		},
@@ -122,6 +148,7 @@
 			key: 'synonyms',
 			label: '이음동의어',
 			sortable: false,
+			filterable: false,
 			width: 'min-w-[200px]',
 			align: 'left'
 		},
@@ -129,6 +156,7 @@
 			key: 'forbiddenWords',
 			label: '금칙어',
 			sortable: false,
+			filterable: false,
 			width: 'min-w-[200px]',
 			align: 'left'
 		},
@@ -136,6 +164,8 @@
 			key: 'source',
 			label: '출처',
 			sortable: false,
+			filterable: true,
+			filterType: 'select',
 			width: 'min-w-[200px]',
 			align: 'left'
 		}
@@ -143,6 +173,27 @@
 
 	// 파생 상태 (페이지네이션)
 	let displayedPages = $derived(getPageNumbers());
+
+	// 열린 필터 추적 (하나만 열리도록)
+	let openFilterColumn = $state<string | null>(null);
+
+	/**
+	 * 컬럼별 고유값 목록 추출
+	 */
+	function getUniqueValues(columnKey: string): string[] {
+		const values = new Set<string>();
+		entries.forEach((entry) => {
+			const value = entry[columnKey as keyof VocabularyEntry];
+			if (value !== null && value !== undefined && value !== '') {
+				if (columnKey === 'isFormalWord') {
+					values.add(value ? 'Y' : 'N');
+				} else {
+					values.add(String(value));
+				}
+			}
+		});
+		return Array.from(values).sort();
+	}
 
 	/**
 	 * 특정 필드의 중복 상태에 따른 배경색 클래스를 결정
@@ -176,6 +227,16 @@
 			const newDirection = sortColumn === column && sortDirection === 'asc' ? 'desc' : 'asc';
 			onsort({ column, direction: newDirection });
 		}
+	}
+
+	/**
+	 * 필터 적용 처리
+	 */
+	function handleFilter(column: string, value: string | null) {
+		if (onfilter) {
+			onfilter({ column, value });
+		}
+		dispatch('filter', { column, value });
 	}
 
 	/**
@@ -310,17 +371,19 @@
 	<div class="overflow-x-auto">
 		<table class="min-w-full table-auto divide-y divide-gray-200">
 			<!-- 테이블 헤더 -->
-			<thead class="bg-gray-100">
+			<thead class="overflow-visible bg-gray-100">
 				<tr>
 					{#each columns as column (column.key)}
 						<th
 							scope="col"
-							class="text-nowrap px-6 py-3 text-xs font-medium uppercase tracking-wider text-gray-700 {column.width} whitespace-normal {column.align ===
+							class="relative text-nowrap px-6 py-3 text-xs font-medium uppercase tracking-wider text-gray-700 {column.width} whitespace-normal {column.align ===
 							'center'
 								? 'text-center'
 								: column.align === 'right'
 									? 'text-right'
-									: 'text-left'} {column.sortable ? 'cursor-pointer hover:bg-gray-200' : ''}"
+									: 'text-left'} {column.sortable
+								? 'cursor-pointer hover:bg-gray-200'
+								: ''} {column.filterable ? 'overflow-visible' : ''}"
 							class:bg-gray-200={sortColumn === column.key}
 							onclick={() => column.sortable && handleSort(column.key)}
 							onkeydown={(e) => {
@@ -367,6 +430,24 @@
 											/>
 										{/if}
 									</svg>
+								{/if}
+								{#if column.filterable}
+									<ColumnFilter
+										columnKey={column.key}
+										columnLabel={column.label}
+										filterType="select"
+										currentValue={activeFilters[column.key] || null}
+										options={column.filterOptions || getUniqueValues(column.key)}
+										isOpen={openFilterColumn === column.key}
+										onOpen={(key) => {
+											openFilterColumn = key;
+										}}
+										onClose={() => {
+											openFilterColumn = null;
+										}}
+										onApply={(value) => handleFilter(column.key, value)}
+										onClear={() => handleFilter(column.key, null)}
+									/>
 								{/if}
 							</div>
 						</th>

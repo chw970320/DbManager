@@ -25,6 +25,7 @@
 	let sortDirection = $state<'asc' | 'desc'>('asc');
 	let _lastUpdated = $state('');
 	let errorMessage = $state('');
+	let columnFilters = $state<Record<string, string | null>>({}); // 컬럼 필터 상태
 
 	// 파일 관리 상태
 	let isFileManagerOpen = $state(false);
@@ -41,6 +42,7 @@
 	type SearchDetail = { query: string; field: string; exact: boolean };
 	type SortDetail = { column: string; direction: 'asc' | 'desc' };
 	type PageChangeDetail = { page: number };
+	type FilterDetail = { column: string; value: string | null };
 
 	/**
 	 * 컴포넌트 마운트 시 초기 데이터 로드
@@ -137,6 +139,13 @@
 				filename: selectedFilename
 			});
 
+			// 컬럼 필터 파라미터 추가
+			Object.entries(columnFilters).forEach(([key, value]) => {
+				if (value !== null && value !== '') {
+					params.append(`filters[${key}]`, value);
+				}
+			});
+
 			const response = await fetch(`/api/domain?${params}`);
 			const result: DomainApiResponse = await response.json();
 
@@ -203,6 +212,13 @@
 				filename: selectedFilename
 			});
 
+			// 컬럼 필터 파라미터 추가
+			Object.entries(columnFilters).forEach(([key, value]) => {
+				if (value !== null && value !== '') {
+					params.append(`filters[${key}]`, value);
+				}
+			});
+
 			const response = await fetch(`/api/domain?${params}`);
 			const result: DomainApiResponse = await response.json();
 
@@ -265,6 +281,29 @@
 		if (fileList.length > 0 && !fileList.includes(selectedFilename)) {
 			selectedFilename = fileList[0];
 		}
+		if (searchQuery) {
+			await executeSearch();
+		} else {
+			await loadDomainData();
+		}
+	}
+
+	/**
+	 * 컬럼 필터 변경 처리
+	 */
+	async function handleFilter(detail: FilterDetail) {
+		const { column, value } = detail;
+		currentPage = 1; // 필터 변경 시 첫 페이지로 이동
+
+		// 필터 상태 업데이트
+		if (value === null || value === '') {
+			const { [column]: _, ...rest } = columnFilters;
+			columnFilters = rest;
+		} else {
+			columnFilters = { ...columnFilters, [column]: value };
+		}
+
+		// 데이터 재로드
 		if (searchQuery) {
 			await executeSearch();
 		} else {
@@ -863,8 +902,10 @@
 								{sortDirection}
 								{searchField}
 								_selectedFilename={selectedFilename}
+								activeFilters={columnFilters}
 								onsort={handleSort}
 								onpagechange={handlePageChange}
+								onfilter={handleFilter}
 								onentryclick={handleEntryClick}
 							/>
 						</div>

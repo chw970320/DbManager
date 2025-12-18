@@ -13,9 +13,9 @@ interface Settings {
 }
 
 const DEFAULT_SETTINGS: Settings = {
-	showVocabularySystemFiles: true,
-	showDomainSystemFiles: true,
-	showTermSystemFiles: true
+	showVocabularySystemFiles: false,
+	showDomainSystemFiles: false,
+	showTermSystemFiles: false
 };
 
 /**

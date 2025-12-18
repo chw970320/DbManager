@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, onDestroy } from 'svelte';
 	import SearchBar from '$lib/components/SearchBar.svelte';
 	import TermTable from '$lib/components/TermTable.svelte';
 	import TermFileManager from '$lib/components/TermFileManager.svelte';
@@ -27,6 +27,7 @@
 	let sortDirection = $state<'asc' | 'desc'>('asc');
 	let _lastUpdated = $state('');
 	let errorMessage = $state('');
+	let columnFilters = $state<Record<string, string | null>>({}); // 컬럼 필터 상태
 
 	// 파일 관리 상태
 	let isFileManagerOpen = $state(false);
@@ -43,22 +44,7 @@
 	type SearchDetail = { query: string; field: string; exact: boolean };
 	type SortDetail = { column: string; direction: 'asc' | 'desc' };
 	type PageChangeDetail = { page: number };
-
-	/**
-	 * 컴포넌트 마운트 시 초기 데이터 로드
-	 */
-	onMount(async () => {
-		await loadFileList();
-		// 파일 목록 로드 후 데이터 로드
-		if (fileList.length > 0) {
-			// selectedFilename이 파일 목록에 없으면 첫 번째 파일 선택
-			if (!fileList.includes(selectedFilename)) {
-				selectedFilename = fileList[0];
-			}
-			termStore.set({ selectedFilename });
-			await loadTermData();
-		}
-	});
+	type FilterDetail = { column: string; value: string | null };
 
 	async function loadFileList() {
 		try {
@@ -68,7 +54,7 @@
 				const allFiles = result.data as string[];
 				// 설정에 따라 필터링 - 초기값만 가져오기 위해 get() 사용
 				const settings = get(settingsStore);
-				fileList = filterTermFiles(allFiles, settings.showDomainSystemFiles);
+				fileList = filterTermFiles(allFiles, settings.showTermSystemFiles);
 
 				// 파일 목록이 비어있으면 기본 파일 생성 시도
 				if (fileList.length === 0 && allFiles.length === 0) {
@@ -104,7 +90,7 @@
 					if (result.success && result.data) {
 						const allFiles = result.data as string[];
 						const previousSelected = selectedFilename;
-						fileList = filterTermFiles(allFiles, settings.showDomainSystemFiles);
+						fileList = filterTermFiles(allFiles, settings.showTermSystemFiles);
 
 						// 현재 선택된 파일이 필터링 후 목록에 없고 시스템 파일이면 첫 번째 파일로 자동 선택
 						if (
@@ -124,6 +110,22 @@
 	});
 
 	/**
+	 * 컴포넌트 마운트 시 초기 데이터 로드
+	 */
+	onMount(async () => {
+		await loadFileList();
+		// 파일 목록 로드 후 데이터 로드
+		if (fileList.length > 0) {
+			// selectedFilename이 파일 목록에 없으면 첫 번째 파일 선택
+			if (!fileList.includes(selectedFilename)) {
+				selectedFilename = fileList[0];
+			}
+			termStore.set({ selectedFilename });
+			await loadTermData();
+		}
+	});
+
+	/**
 	 * 용어 데이터 로드
 	 */
 	async function loadTermData() {
@@ -137,6 +139,13 @@
 				sortBy: sortColumn,
 				sortOrder: sortDirection,
 				filename: selectedFilename
+			});
+
+			// 컬럼 필터 파라미터 추가
+			Object.entries(columnFilters).forEach(([key, value]) => {
+				if (value !== null && value !== '') {
+					params.append(`filters[${key}]`, value);
+				}
 			});
 
 			const response = await fetch(`/api/term?${params}`);
@@ -205,6 +214,13 @@
 				filename: selectedFilename
 			});
 
+			// 컬럼 필터 파라미터 추가
+			Object.entries(columnFilters).forEach(([key, value]) => {
+				if (value !== null && value !== '') {
+					params.append(`filters[${key}]`, value);
+				}
+			});
+
 			const response = await fetch(`/api/term?${params}`);
 			const result: ApiResponse = await response.json();
 
@@ -267,6 +283,29 @@
 		if (fileList.length > 0 && !fileList.includes(selectedFilename)) {
 			selectedFilename = fileList[0];
 		}
+		if (searchQuery) {
+			await executeSearch();
+		} else {
+			await loadTermData();
+		}
+	}
+
+	/**
+	 * 컬럼 필터 변경 처리
+	 */
+	async function handleFilter(detail: FilterDetail) {
+		const { column, value } = detail;
+		currentPage = 1; // 필터 변경 시 첫 페이지로 이동
+
+		// 필터 상태 업데이트
+		if (value === null || value === '') {
+			const { [column]: _, ...rest } = columnFilters;
+			columnFilters = rest;
+		} else {
+			columnFilters = { ...columnFilters, [column]: value };
+		}
+
+		// 데이터 재로드
 		if (searchQuery) {
 			await executeSearch();
 		} else {
@@ -414,13 +453,14 @@
 							targetId: editedEntry.id,
 							targetName: editedEntry.termName,
 							details: {
-								before: originalEntry && !isNewEntry
-									? {
-											termName: originalEntry.termName,
-											columnName: originalEntry.columnName,
-											domainName: originalEntry.domainName
-										}
-									: undefined,
+								before:
+									originalEntry && !isNewEntry
+										? {
+												termName: originalEntry.termName,
+												columnName: originalEntry.columnName,
+												domainName: originalEntry.domainName
+											}
+										: undefined,
 								after: {
 									termName: editedEntry.termName,
 									columnName: editedEntry.columnName,
@@ -808,7 +848,7 @@
 				<!-- TermFileManager 모달 -->
 				<TermFileManager
 					isOpen={isFileManagerOpen}
-					selectedFilename={selectedFilename}
+					{selectedFilename}
 					on:close={() => (isFileManagerOpen = false)}
 					on:change={handleFileChange}
 				/>
@@ -916,8 +956,10 @@
 								{sortDirection}
 								{searchField}
 								_selectedFilename={selectedFilename}
+								activeFilters={columnFilters}
 								onsort={handleSort}
 								onpagechange={handlePageChange}
+								onfilter={handleFilter}
 								onentryclick={handleEntryClick}
 							/>
 						</div>
@@ -940,4 +982,3 @@
 		}
 	}
 </style>
-

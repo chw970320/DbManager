@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { DomainEntry } from '$lib/types/domain.js';
 	import { createEventDispatcher } from 'svelte';
+	import ColumnFilter from './ColumnFilter.svelte';
 
 	type SortEvent = {
 		column: string;
@@ -13,6 +14,11 @@
 
 	type EntryClickEvent = {
 		entry: DomainEntry;
+	};
+
+	type FilterEvent = {
+		column: string;
+		value: string | null;
 	};
 
 	// 컴포넌트 속성
@@ -28,8 +34,10 @@
 		sortDirection = 'asc' as 'asc' | 'desc',
 		searchField = 'all',
 		_selectedFilename = 'domain.json',
+		activeFilters = {} as Record<string, string | null>,
 		onsort,
 		onpagechange,
+		onfilter,
 		onentryclick
 	}: {
 		entries?: DomainEntry[];
@@ -43,14 +51,17 @@
 		sortDirection?: 'asc' | 'desc';
 		searchField?: string;
 		_selectedFilename?: string;
+		activeFilters?: Record<string, string | null>;
 		onsort: (detail: SortEvent) => void;
 		onpagechange: (detail: PageChangeEvent) => void;
+		onfilter?: (detail: FilterEvent) => void;
 		onentryclick?: (detail: EntryClickEvent) => void;
 	} = $props();
 
 	// Event dispatcher
 	const dispatch = createEventDispatcher<{
 		entryclick: EntryClickEvent;
+		filter: FilterEvent;
 	}>();
 
 	// 행 클릭 핸들러
@@ -73,6 +84,9 @@
 		key: string;
 		label: string;
 		sortable: boolean;
+		filterable: boolean;
+		filterType?: 'text' | 'select';
+		filterOptions?: string[];
 		width: string;
 		align: ColumnAlignment;
 	}> = [
@@ -80,6 +94,8 @@
 			key: 'revision',
 			label: '제정차수',
 			sortable: false,
+			filterable: true,
+			filterType: 'select',
 			width: 'min-w-[100px]',
 			align: 'center'
 		},
@@ -87,6 +103,8 @@
 			key: 'domainGroup',
 			label: '도메인그룹명',
 			sortable: true,
+			filterable: true,
+			filterType: 'text',
 			width: 'min-w-[150px]',
 			align: 'left' as const
 		},
@@ -94,6 +112,8 @@
 			key: 'domainCategory',
 			label: '도메인분류명',
 			sortable: true,
+			filterable: true,
+			filterType: 'text',
 			width: 'min-w-[150px]',
 			align: 'left' as const
 		},
@@ -101,6 +121,8 @@
 			key: 'standardDomainName',
 			label: '도메인명',
 			sortable: true,
+			filterable: true,
+			filterType: 'text',
 			width: 'min-w-[150px]',
 			align: 'left'
 		},
@@ -108,6 +130,7 @@
 			key: 'description',
 			label: '도메인설명',
 			sortable: false,
+			filterable: false,
 			width: 'min-w-[300px]',
 			align: 'left'
 		},
@@ -115,6 +138,8 @@
 			key: 'physicalDataType',
 			label: '데이터타입',
 			sortable: true,
+			filterable: true,
+			filterType: 'select',
 			width: 'min-w-[150px]',
 			align: 'left'
 		},
@@ -122,6 +147,7 @@
 			key: 'dataLength',
 			label: '데이터길이',
 			sortable: false,
+			filterable: false,
 			width: 'min-w-[100px]',
 			align: 'center'
 		},
@@ -129,6 +155,7 @@
 			key: 'decimalPlaces',
 			label: '데이터소수점길이',
 			sortable: false,
+			filterable: false,
 			width: 'min-w-[100px]',
 			align: 'center'
 		},
@@ -136,6 +163,7 @@
 			key: 'storageFormat',
 			label: '저장 형식',
 			sortable: false,
+			filterable: false,
 			width: 'min-w-[150px]',
 			align: 'left'
 		},
@@ -143,6 +171,7 @@
 			key: 'displayFormat',
 			label: '표현 형식',
 			sortable: false,
+			filterable: false,
 			width: 'min-w-[150px]',
 			align: 'left'
 		},
@@ -150,6 +179,7 @@
 			key: 'measurementUnit',
 			label: '단위',
 			sortable: false,
+			filterable: false,
 			width: 'min-w-[150px]',
 			align: 'center'
 		},
@@ -157,6 +187,7 @@
 			key: 'allowedValues',
 			label: '허용값',
 			sortable: false,
+			filterable: false,
 			width: 'min-w-[150px]',
 			align: 'left'
 		}
@@ -164,6 +195,23 @@
 
 	// 파생 상태 (페이지네이션)
 	let displayedPages = $derived(getPageNumbers());
+
+	// 열린 필터 추적 (하나만 열리도록)
+	let openFilterColumn = $state<string | null>(null);
+
+	/**
+	 * 컬럼별 고유값 목록 추출
+	 */
+	function getUniqueValues(columnKey: string): string[] {
+		const values = new Set<string>();
+		entries.forEach((entry) => {
+			const value = entry[columnKey as keyof DomainEntry];
+			if (value !== null && value !== undefined && value !== '') {
+				values.add(String(value));
+			}
+		});
+		return Array.from(values).sort();
+	}
 
 	/**
 	 * 컬럼 정렬 처리
@@ -173,6 +221,16 @@
 			const newDirection = sortColumn === column && sortDirection === 'asc' ? 'desc' : 'asc';
 			onsort({ column, direction: newDirection });
 		}
+	}
+
+	/**
+	 * 필터 적용 처리
+	 */
+	function handleFilter(column: string, value: string | null) {
+		if (onfilter) {
+			onfilter({ column, value });
+		}
+		dispatch('filter', { column, value });
 	}
 
 	/**
@@ -284,17 +342,19 @@
 	<div>
 		<table class="min-w-full divide-y divide-gray-200">
 			<!-- 테이블 헤더 -->
-			<thead class="bg-gray-100">
+			<thead class="overflow-visible bg-gray-100">
 				<tr>
 					{#each columns as column (column.key)}
 						<th
 							scope="col"
-							class=" whitespace-nowrap px-6 py-3 text-xs font-medium uppercase tracking-wider text-gray-700 {column.width} {column.align ===
+							class="relative whitespace-nowrap px-6 py-3 text-xs font-medium uppercase tracking-wider text-gray-700 {column.width} {column.align ===
 							'center'
 								? 'text-center'
 								: column.align === 'right'
 									? 'text-right'
-									: 'text-left'} {column.sortable ? 'cursor-pointer hover:bg-gray-200' : ''}"
+									: 'text-left'} {column.sortable
+								? 'cursor-pointer hover:bg-gray-200'
+								: ''} {column.filterable ? 'overflow-visible' : ''}"
 							class:bg-gray-200={sortColumn === column.key}
 							onclick={() => column.sortable && handleSort(column.key)}
 							onkeydown={(e) => {
@@ -341,6 +401,24 @@
 											/>
 										{/if}
 									</svg>
+								{/if}
+								{#if column.filterable}
+									<ColumnFilter
+										columnKey={column.key}
+										columnLabel={column.label}
+										filterType="select"
+										currentValue={activeFilters[column.key] || null}
+										options={column.filterOptions || getUniqueValues(column.key)}
+										isOpen={openFilterColumn === column.key}
+										onOpen={(key) => {
+											openFilterColumn = key;
+										}}
+										onClose={() => {
+											openFilterColumn = null;
+										}}
+										onApply={(value) => handleFilter(column.key, value)}
+										onClear={() => handleFilter(column.key, null)}
+									/>
 								{/if}
 							</div>
 						</th>

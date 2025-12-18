@@ -137,10 +137,17 @@
 	}
 
 	/**
-	 * 방향 전환 후 포커스 이동
+	 * 방향 전환 후 포커스 및 입력 값 처리
 	 */
 	function handleDirectionChange() {
 		direction = direction === 'ko-to-en' ? 'en-to-ko' : 'ko-to-en';
+
+		// 현재 변환 결과가 있다면 첫 번째 값을 입력 필드에 채워 넣어
+		// 반대 방향 변환의 시작점으로 사용
+		if (finalResults.length > 0) {
+			sourceTerm = finalResults[0];
+		}
+
 		// 검색 입력 필드에 포커스 이동
 		if (searchInput) {
 			searchInput.focus();

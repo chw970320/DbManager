@@ -5,13 +5,13 @@
 export interface TermEntry {
 	id: string;
 	termName: string; // 용어명 (단어집 standardName 기반)
-	columnName: string; // 칼럼명 (단어집 abbreviation 기반)
+	columnName: string; // 컬럼명 (단어집 abbreviation 기반)
 	domainName: string; // 도메인 명 (standardDomainName 기반)
 	isMappedTerm: boolean; // 용어명 매핑 성공 여부
-	isMappedColumn: boolean; // 칼럼명 매핑 성공 여부
+	isMappedColumn: boolean; // 컬럼명 매핑 성공 여부
 	isMappedDomain: boolean; // 도메인 매핑 성공 여부
 	unmappedTermParts?: string[]; // 용어명에서 매핑되지 않은 부분들
-	unmappedColumnParts?: string[]; // 칼럼명에서 매핑되지 않은 부분들
+	unmappedColumnParts?: string[]; // 컬럼명에서 매핑되지 않은 부분들
 	createdAt: string; // ISO 8601
 	updatedAt: string; // ISO 8601
 }
@@ -48,4 +48,3 @@ export interface TermHistoryData {
 	lastUpdated: string;
 	totalCount: number;
 }
-

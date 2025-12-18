@@ -927,16 +927,16 @@
 				>
 					<div class="mb-6">
 						<h2 class="text-2xl font-bold text-gray-900">통합검색</h2>
-						<p class="mt-2 text-gray-600">용어명, 칼럼명, 도메인으로 검색하세요</p>
+						<p class="mt-2 text-gray-600">용어명, 컬럼명, 도메인으로 검색하세요</p>
 					</div>
 
 					<div class="mb-6">
 						<SearchBar
-							placeholder="용어명, 칼럼명, 도메인으로 검색하세요..."
+							placeholder="용어명, 컬럼명, 도메인으로 검색하세요..."
 							searchFields={[
 								{ value: 'all', label: '전체' },
 								{ value: 'termName', label: '용어명' },
-								{ value: 'columnName', label: '칼럼명' },
+								{ value: 'columnName', label: '컬럼명' },
 								{ value: 'domainName', label: '도메인' }
 							]}
 							bind:query={searchQuery}

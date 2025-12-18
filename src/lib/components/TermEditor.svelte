@@ -197,7 +197,7 @@
 				}
 			}
 		} catch (err) {
-			console.warn('칼럼명 자동완성 로드 실패:', err);
+			console.warn('컬럼명 자동완성 로드 실패:', err);
 			columnNameSuggestions = [];
 			showColumnNameSuggestions = false;
 		}
@@ -297,7 +297,7 @@
 
 	function validateColumnName(value: string): string {
 		if (!value.trim()) {
-			return '칼럼명은 필수 입력 항목입니다.';
+			return '컬럼명은 필수 입력 항목입니다.';
 		}
 		return '';
 	}
@@ -517,10 +517,10 @@
 					</p>
 				</div>
 
-				<!-- 칼럼명 -->
+				<!-- 컬럼명 -->
 				<div class="autocomplete-container relative">
 					<label for="columnName" class="mb-1 block text-sm font-medium text-gray-900">
-						칼럼명 <span class="text-red-700">*</span>
+						컬럼명 <span class="text-red-700">*</span>
 					</label>
 					<input
 						id="columnName"

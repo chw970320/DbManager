@@ -214,7 +214,7 @@
 					matchedDomain?: number;
 					total?: number;
 				};
-				successMessage = `동기화 완료 (업데이트: ${data.updated || 0}, 매칭: 용어명 ${data.matchedTerm || 0}, 칼럼명 ${data.matchedColumn || 0}, 도메인 ${data.matchedDomain || 0})`;
+				successMessage = `동기화 완료 (업데이트: ${data.updated || 0}, 매칭: 용어명 ${data.matchedTerm || 0}, 컬럼명 ${data.matchedColumn || 0}, 도메인 ${data.matchedDomain || 0})`;
 				syncMessage = '';
 				dispatch('change');
 			} else {

@@ -27,7 +27,7 @@ export async function GET({ url }: RequestEvent) {
 			data: {
 				supportedFormats: ['.xlsx', '.xls'],
 				maxFileSize: '10MB',
-				requiredColumns: ['용어명', '칼럼명', '도메인'],
+				requiredColumns: ['용어명', '컬럼명', '도메인'],
 				optionalColumns: [],
 				endpoint: '/api/term/upload',
 				method: 'POST',
@@ -50,7 +50,7 @@ export async function GET({ url }: RequestEvent) {
 
 /**
  * 용어 매핑 로직
- * 용어명과 칼럼명은 언더스코어로 연결된 형태를 분리해서 각각 단어집에서 찾음
+ * 용어명과 컬럼명은 언더스코어로 연결된 형태를 분리해서 각각 단어집에서 찾음
  * 도메인명은 도메인 데이터에서 찾음
  */
 function checkTermMapping(
@@ -67,7 +67,10 @@ function checkTermMapping(
 	unmappedColumnParts: string[];
 } {
 	// 용어명 매핑: 언더스코어로 분리해서 각 단어가 단어집의 standardName에 있는지 확인
-	const termParts = termName.split('_').map((p) => p.trim()).filter((p) => p.length > 0);
+	const termParts = termName
+		.split('_')
+		.map((p) => p.trim())
+		.filter((p) => p.length > 0);
 	const unmappedTermParts: string[] = [];
 	const isMappedTerm =
 		termParts.length > 0 &&
@@ -83,8 +86,11 @@ function checkTermMapping(
 			return false;
 		});
 
-	// 칼럼명 매핑: 언더스코어로 분리해서 각 단어가 단어집의 abbreviation에 있는지 확인
-	const columnParts = columnName.split('_').map((p) => p.trim()).filter((p) => p.length > 0);
+	// 컬럼명 매핑: 언더스코어로 분리해서 각 단어가 단어집의 abbreviation에 있는지 확인
+	const columnParts = columnName
+		.split('_')
+		.map((p) => p.trim())
+		.filter((p) => p.length > 0);
 	const unmappedColumnParts: string[] = [];
 	const isMappedColumn =
 		columnParts.length > 0 &&

@@ -105,7 +105,7 @@
 		},
 		{
 			key: 'columnName',
-			label: '칼럼명',
+			label: '컬럼명',
 			sortable: true,
 			filterable: true,
 			filterType: 'text',
@@ -198,7 +198,7 @@
 			return highlightedParts.join('_');
 		}
 
-		// 칼럼명: 언더스코어로 분리하여 매핑되지 않은 부분만 하이라이팅
+		// 컬럼명: 언더스코어로 분리하여 매핑되지 않은 부분만 하이라이팅
 		if (
 			columnKey === 'columnName' &&
 			entry.unmappedColumnParts &&

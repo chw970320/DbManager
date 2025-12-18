@@ -1,7 +1,12 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse } from '$lib/types/vocabulary.js';
 import type { TermData, TermEntry } from '$lib/types/term.js';
-import { loadTermData, saveTermData, loadVocabularyData, loadDomainData } from '$lib/utils/file-handler.js';
+import {
+	loadTermData,
+	saveTermData,
+	loadVocabularyData,
+	loadDomainData
+} from '$lib/utils/file-handler.js';
 
 /**
  * 용어 매핑 검증 로직 (업로드 API와 동일)
@@ -20,7 +25,10 @@ function checkTermMapping(
 	unmappedColumnParts: string[];
 } {
 	// 용어명 매핑: 언더스코어로 분리해서 각 단어가 단어집의 standardName에 있는지 확인
-	const termParts = termName.split('_').map((p) => p.trim()).filter((p) => p.length > 0);
+	const termParts = termName
+		.split('_')
+		.map((p) => p.trim())
+		.filter((p) => p.length > 0);
 	const unmappedTermParts: string[] = [];
 	const isMappedTerm =
 		termParts.length > 0 &&
@@ -36,8 +44,11 @@ function checkTermMapping(
 			return false;
 		});
 
-	// 칼럼명 매핑: 언더스코어로 분리해서 각 단어가 단어집의 abbreviation에 있는지 확인
-	const columnParts = columnName.split('_').map((p) => p.trim()).filter((p) => p.length > 0);
+	// 컬럼명 매핑: 언더스코어로 분리해서 각 단어가 단어집의 abbreviation에 있는지 확인
+	const columnParts = columnName
+		.split('_')
+		.map((p) => p.trim())
+		.filter((p) => p.length > 0);
 	const unmappedColumnParts: string[] = [];
 	const isMappedColumn =
 		columnParts.length > 0 &&
@@ -193,4 +204,3 @@ export async function POST({ request }: RequestEvent) {
 		);
 	}
 }
-

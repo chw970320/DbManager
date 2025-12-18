@@ -644,7 +644,7 @@ export function parseTermXlsxToJson(
 				continue;
 			}
 
-			// 컬럼 매핑: A=번호(무시), B=용어명, C=칼럼명, D=도메인
+			// 컬럼 매핑: A=번호(무시), B=용어명, C=컬럼명, D=도메인
 			const termName = row[1] ? String(row[1]).trim() : '';
 			const columnName = row[2] ? String(row[2]).trim() : '';
 			const domainName = row[3] ? String(row[3]).trim() : '';
@@ -659,7 +659,7 @@ export function parseTermXlsxToJson(
 				continue;
 			}
 
-			// 중복 체크 (용어명 + 칼럼명 + 도메인 조합) - skipDuplicates가 true일 때만 실행
+			// 중복 체크 (용어명 + 컬럼명 + 도메인 조합) - skipDuplicates가 true일 때만 실행
 			if (skipDuplicates && seenCombinations) {
 				const combination = `${termName}|${columnName}|${domainName}`;
 				if (seenCombinations.has(combination)) {
@@ -704,8 +704,8 @@ export function exportTermToXlsxBuffer(data: TermEntry[]): Buffer {
 		// 새 워크시트 생성
 		const worksheet = XLSX.utils.aoa_to_sheet([]);
 
-		// 헤더 정의 (A: 번호, B: 용어명, C: 칼럼명, D: 도메인)
-		const headers = ['번호', '용어명', '칼럼명', '도메인'];
+		// 헤더 정의 (A: 번호, B: 용어명, C: 컬럼명, D: 도메인)
+		const headers = ['번호', '용어명', '컬럼명', '도메인'];
 
 		// 셀 주소 생성 헬퍼 함수
 		const getCellAddress = (row: number, col: number): string => {
@@ -748,7 +748,7 @@ export function exportTermToXlsxBuffer(data: TermEntry[]): Buffer {
 			const values = [
 				rowIndex + 1, // A: 번호
 				entry.termName, // B: 용어명
-				entry.columnName, // C: 칼럼명
+				entry.columnName, // C: 컬럼명
 				entry.domainName // D: 도메인
 			];
 
@@ -782,7 +782,7 @@ export function exportTermToXlsxBuffer(data: TermEntry[]): Buffer {
 		worksheet['!cols'] = [
 			{ wch: 8 }, // A: 번호
 			{ wch: 30 }, // B: 용어명
-			{ wch: 30 }, // C: 칼럼명
+			{ wch: 30 }, // C: 컬럼명
 			{ wch: 30 } // D: 도메인
 		];
 

@@ -48,7 +48,7 @@ function checkTermMapping(
 		}
 	}
 
-	// 칼럼명 매핑: 언더스코어로 분리해서 각 단어가 단어집의 abbreviation에 있는지 확인
+	// 컬럼명 매핑: 언더스코어로 분리해서 각 단어가 단어집의 abbreviation에 있는지 확인
 	const columnParts = columnName
 		.split('_')
 		.map((p) => p.trim())
@@ -329,7 +329,7 @@ export async function POST({ request }: RequestEvent) {
 			return json(
 				{
 					success: false,
-					error: '용어명, 칼럼명, 도메인명은 필수입니다.',
+					error: '용어명, 컬럼명, 도메인명은 필수입니다.',
 					message: 'Required fields missing'
 				} as ApiResponse,
 				{ status: 400 }

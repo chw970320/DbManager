@@ -505,9 +505,20 @@
 	tabindex="0"
 	aria-label="배경을 클릭하거나 Esc 키로 닫기"
 	onkeydown={(event) => {
-		if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
-			event.preventDefault();
-			handleCancel();
+		// 입력 필드에서의 스페이스/엔터는 모달을 닫지 않도록 방지
+		const target = event.target as HTMLElement;
+		const isFormElement =
+			target.tagName === 'INPUT' ||
+			target.tagName === 'TEXTAREA' ||
+			target.tagName === 'SELECT' ||
+			target.isContentEditable;
+
+		// 오버레이 자체에 포커스가 있을 때만 키보드로 닫기 처리
+		if (!isFormElement && event.currentTarget === event.target) {
+			if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
+				event.preventDefault();
+				handleCancel();
+			}
 		}
 	}}
 >

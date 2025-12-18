@@ -41,8 +41,9 @@
 
 	// 디바운스된 검색 함수
 	const debouncedSearch = debounce((q: string, f: string, e: boolean) => {
-		if (q.trim().length > 0) {
-			onsearch({ query: q.trim(), field: f, exact: e });
+		// 공백도 유효한 입력으로 취급하기 위해 trim()으로 길이를 판단하지 않음
+		if (q.length > 0) {
+			onsearch({ query: q, field: f, exact: e });
 		} else {
 			onclear();
 		}
@@ -59,7 +60,7 @@
 	 * 검색 필드 변경 처리
 	 */
 	function handleFieldChange() {
-		if (query.trim().length > 0) {
+		if (query.length > 0) {
 			debouncedSearch(query, field, exact);
 		}
 	}
@@ -68,7 +69,7 @@
 	 * 정확 일치 옵션 변경 처리
 	 */
 	function handleExactChange() {
-		if (query.trim().length > 0) {
+		if (query.length > 0) {
 			debouncedSearch(query, field, exact);
 		}
 	}

@@ -428,6 +428,19 @@
 	}
 
 	/**
+	 * 모든 필터 초기화
+	 */
+	async function handleClearAllFilters() {
+		columnFilters = {};
+		currentPage = 1;
+		if (searchQuery) {
+			await executeSearch();
+		} else {
+			await loadVocabularyData();
+		}
+	}
+
+	/**
 	 * 데이터 새로고침
 	 */
 	async function refreshData() {
@@ -1199,6 +1212,7 @@
 								onpagechange={handlePageChange}
 								onfilter={handleFilter}
 								onentryclick={handleEntryClick}
+								onClearAllFilters={handleClearAllFilters}
 							/>
 						</div>
 					</div>

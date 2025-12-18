@@ -39,6 +39,7 @@
 		onpagechange: (detail: PageChangeEvent) => void;
 		onfilter?: (detail: FilterEvent) => void;
 		onentryclick?: (detail: EntryClickEvent) => void;
+		onClearAllFilters?: () => void;
 	}>();
 
 	// Event dispatcher
@@ -63,6 +64,10 @@
 	let onsort = $derived(props.onsort);
 	let onpagechange = $derived(props.onpagechange);
 	let onfilter = $derived(props.onfilter);
+	let onClearAllFilters = $derived(props.onClearAllFilters);
+
+	// 활성 필터가 있는지 확인
+	let hasActiveFilters = $derived(Object.keys(activeFilters).length > 0);
 
 	// 행 클릭 핸들러
 	function handleRowClick(entry: VocabularyEntry, event: MouseEvent) {
@@ -359,11 +364,37 @@
 				{/if}
 			</h3>
 
-			{#if searchQuery}
-				<div class="text-sm text-gray-500">
-					<span class="font-medium">"{searchQuery}"</span> 검색 결과
-				</div>
-			{/if}
+			<div class="flex items-center gap-4">
+				{#if searchQuery}
+					<div class="text-sm text-gray-500">
+						<span class="font-medium">"{searchQuery}"</span> 검색 결과
+					</div>
+				{/if}
+				{#if hasActiveFilters && onClearAllFilters}
+					<button
+						type="button"
+						onclick={() => onClearAllFilters?.()}
+						class="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+						title="모든 필터 초기화"
+					>
+						<svg
+							class="h-4 w-4"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+							xmlns="http://www.w3.org/2000/svg"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M6 18L18 6M6 6l12 12"
+							/>
+						</svg>
+						필터 초기화
+					</button>
+				{/if}
+			</div>
 		</div>
 	</div>
 

@@ -314,6 +314,19 @@
 	}
 
 	/**
+	 * 모든 필터 초기화
+	 */
+	async function handleClearAllFilters() {
+		columnFilters = {};
+		currentPage = 1;
+		if (searchQuery) {
+			await executeSearch();
+		} else {
+			await loadTermData();
+		}
+	}
+
+	/**
 	 * 용어 XLSX 다운로드 처리
 	 */
 	async function handleTermDownload() {
@@ -961,6 +974,7 @@
 								onpagechange={handlePageChange}
 								onfilter={handleFilter}
 								onentryclick={handleEntryClick}
+								onClearAllFilters={handleClearAllFilters}
 							/>
 						</div>
 					</div>

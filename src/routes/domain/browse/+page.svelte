@@ -312,6 +312,19 @@
 	}
 
 	/**
+	 * 모든 필터 초기화
+	 */
+	async function handleClearAllFilters() {
+		columnFilters = {};
+		currentPage = 1;
+		if (searchQuery) {
+			await executeSearch();
+		} else {
+			await loadDomainData();
+		}
+	}
+
+	/**
 	 * 도메인 XLSX 다운로드 처리 (단어집 관리와 동일하게)
 	 */
 	async function handleDomainDownload() {
@@ -907,6 +920,7 @@
 								onpagechange={handlePageChange}
 								onfilter={handleFilter}
 								onentryclick={handleEntryClick}
+								onClearAllFilters={handleClearAllFilters}
 							/>
 						</div>
 					</div>

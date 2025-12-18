@@ -8,9 +8,9 @@ export interface Settings {
 }
 
 export const settingsStore = writable<Settings>({
-	showVocabularySystemFiles: true,
-	showDomainSystemFiles: true,
-	showTermSystemFiles: true
+	showVocabularySystemFiles: false,
+	showDomainSystemFiles: false,
+	showTermSystemFiles: false
 });
 
 // 초기값 로드 (클라이언트 사이드에서만)
@@ -21,9 +21,9 @@ if (browser) {
 		.then((result) => {
 			if (result.success && result.data) {
 				settingsStore.set({
-					showVocabularySystemFiles: result.data.showVocabularySystemFiles ?? true,
-					showDomainSystemFiles: result.data.showDomainSystemFiles ?? true,
-					showTermSystemFiles: result.data.showTermSystemFiles ?? true
+					showVocabularySystemFiles: result.data.showVocabularySystemFiles ?? false,
+					showDomainSystemFiles: result.data.showDomainSystemFiles ?? false,
+					showTermSystemFiles: result.data.showTermSystemFiles ?? false
 				});
 			}
 		})

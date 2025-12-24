@@ -14,6 +14,11 @@
 	let isLoadingResult = $state(false);
 	let copiedResults = $state<Set<string>>(new Set()); // 복사된 결과들을 개별 관리
 	let isExpanded = $state(true); // 토글 상태
+	let forbiddenWordInfo = $state<{
+		isForbidden: boolean;
+		isSynonym: boolean;
+		recommendations: string[];
+	} | null>(null);
 
 	// 검색 입력 필드 참조
 	let searchInput: HTMLInputElement | undefined;
@@ -35,6 +40,7 @@
 		selectedSegment = '';
 		finalResults = [];
 		error = null;
+		forbiddenWordInfo = null;
 
 		if (!sourceTerm.trim()) {
 			return;
@@ -53,6 +59,7 @@
 			}
 			const data = await response.json();
 			segmentsList = data.segments || [];
+			forbiddenWordInfo = data.forbiddenWordInfo || null;
 
 			// 첫 번째 항목 자동 선택
 			if (segmentsList.length > 0) {
@@ -268,6 +275,51 @@
 				</button>
 			</div>
 		</div>
+
+		<!-- 금칙어 및 이음동의어 경고 -->
+		{#if forbiddenWordInfo && (forbiddenWordInfo.isForbidden || forbiddenWordInfo.isSynonym)}
+			<div class="rounded-md border border-yellow-300 bg-yellow-50 p-3">
+				<div class="flex items-start">
+					<svg
+						class="mr-2 h-5 w-5 flex-shrink-0 text-yellow-600"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+						/>
+					</svg>
+					<div class="flex-1">
+						<p class="text-sm font-medium text-yellow-800">
+							{forbiddenWordInfo.isForbidden ? '금칙어가 입력되었습니다.' : '이음동의어가 입력되었습니다.'}
+						</p>
+						{#if forbiddenWordInfo.recommendations.length > 0}
+							<p class="mt-1 text-xs text-yellow-700">
+								다음 표준단어명을 사용하는 것을 권장합니다:
+							</p>
+							<div class="mt-2 flex flex-wrap gap-2">
+								{#each forbiddenWordInfo.recommendations as rec (rec)}
+									<button
+										type="button"
+										class="rounded border border-yellow-300 bg-yellow-100 px-2 py-1 text-xs text-yellow-800 hover:bg-yellow-200"
+										onclick={() => {
+											sourceTerm = rec;
+											forbiddenWordInfo = null;
+										}}
+									>
+										{rec}
+									</button>
+								{/each}
+							</div>
+						{/if}
+					</div>
+				</div>
+			</div>
+		{/if}
 
 		<!-- 가로 배치: 단어 조합 + 변환 결과 -->
 		<div class="grid grid-cols-1 gap-4 md:grid-cols-2">

@@ -390,6 +390,10 @@
 		if (!value.trim()) {
 			return '도메인명은 필수 입력 항목입니다.';
 		}
+		// 추천 목록에서만 선택 가능
+		if (domainRecommendations.length > 0 && !domainRecommendations.includes(value.trim())) {
+			return '도메인명은 추천 목록에서 선택해야 합니다.';
+		}
 		return '';
 	}
 
@@ -408,13 +412,17 @@
 
 	// Form validation
 	function isFormValid(): boolean {
+		const hasValidDomainName = 
+			formData.domainName.trim() && 
+			(domainRecommendations.length === 0 || domainRecommendations.includes(formData.domainName.trim()));
+		
 		return (
 			!errors.termName &&
 			!errors.columnName &&
 			!errors.domainName &&
 			!!formData.termName.trim() &&
 			!!formData.columnName.trim() &&
-			!!formData.domainName.trim()
+			hasValidDomainName
 		);
 	}
 
@@ -583,6 +591,9 @@
 				<div class="autocomplete-container relative">
 					<label for="termName" class="mb-1 block text-sm font-medium text-gray-900">
 						용어명 <span class="text-red-700">*</span>
+						{#if isEditMode}
+							<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
+						{/if}
 					</label>
 					<input
 						id="termName"
@@ -598,12 +609,14 @@
 						placeholder="예: 데이터베이스_관리자"
 						class="autocomplete-input input"
 						class:input-error={errors.termName}
-						disabled={isSubmitting}
+						class:bg-gray-50={isEditMode}
+						disabled={isSubmitting || isEditMode}
+						readonly={isEditMode}
 					/>
 					{#if errors.termName}
 						<p class="text-error mt-1 text-sm">{errors.termName}</p>
 					{/if}
-					{#if showTermNameSuggestions && termNameSuggestions.length > 0}
+					{#if !isEditMode && showTermNameSuggestions && termNameSuggestions.length > 0}
 						<div
 							class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-300 bg-white shadow-lg"
 						>
@@ -620,7 +633,11 @@
 						</div>
 					{/if}
 					<p class="mt-1 text-xs text-gray-500">
-						단어집의 표준단어명을 언더스코어(_)로 연결하여 입력하세요
+						{#if isEditMode}
+							용어명은 validation 처리되는 값으로 수정할 수 없습니다.
+						{:else}
+							단어집의 표준단어명을 언더스코어(_)로 연결하여 입력하세요
+						{/if}
 					</p>
 				</div>
 
@@ -628,6 +645,9 @@
 				<div class="autocomplete-container relative">
 					<label for="columnName" class="mb-1 block text-sm font-medium text-gray-900">
 						컬럼명 <span class="text-red-700">*</span>
+						{#if isEditMode}
+							<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
+						{/if}
 					</label>
 					<input
 						id="columnName"
@@ -643,12 +663,14 @@
 						placeholder="예: DB_ADMIN"
 						class="autocomplete-input input uppercase"
 						class:input-error={errors.columnName}
-						disabled={isSubmitting}
+						class:bg-gray-50={isEditMode}
+						disabled={isSubmitting || isEditMode}
+						readonly={isEditMode}
 					/>
 					{#if errors.columnName}
 						<p class="text-error mt-1 text-sm">{errors.columnName}</p>
 					{/if}
-					{#if showColumnNameSuggestions && columnNameSuggestions.length > 0}
+					{#if !isEditMode && showColumnNameSuggestions && columnNameSuggestions.length > 0}
 						<div
 							class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-300 bg-white shadow-lg"
 						>
@@ -665,7 +687,11 @@
 						</div>
 					{/if}
 					<p class="mt-1 text-xs text-gray-500">
-						단어집의 영문약어를 언더스코어(_)로 연결하여 입력하세요
+						{#if isEditMode}
+							컬럼명은 validation 처리되는 값으로 수정할 수 없습니다.
+						{:else}
+							단어집의 영문약어를 언더스코어(_)로 연결하여 입력하세요
+						{/if}
 					</p>
 				</div>
 
@@ -673,52 +699,47 @@
 				<div class="autocomplete-container relative">
 					<label for="domainName" class="mb-1 block text-sm font-medium text-gray-900">
 						도메인명 <span class="text-red-700">*</span>
+						<span class="ml-2 text-xs font-normal text-gray-500">(추천 목록에서만 선택 가능)</span>
 					</label>
-					<input
-						id="domainName"
-						bind:this={domainNameInput}
-						type="text"
-						bind:value={formData.domainName}
-						oninput={handleDomainNameInput}
-						onfocus={() => {
-							if (formData.domainName.trim()) {
-								handleDomainNameInput();
-							}
-						}}
-						class="autocomplete-input input"
-						class:input-error={errors.domainName}
-						disabled={isSubmitting}
-						placeholder="예: 고객_기본정보_도메인"
-					/>
-					{#if errors.domainName}
-						<p class="text-error mt-1 text-sm">{errors.domainName}</p>
-					{/if}
-					{#if isLoadingDomainRecommendations}
-						<p class="mt-1 text-xs text-gray-500">도메인 추천을 불러오는 중...</p>
-					{:else if domainRecommendations.length > 0}
-						<p class="mt-1 text-xs text-gray-500">
-							({getLastSegment(formData.termName)})에 매핑된 도메인 {domainRecommendations.length}개
-						</p>
+					{#if domainRecommendations.length > 0}
 						<div class="mt-2 flex flex-wrap gap-2">
 							<!-- eslint-disable-next-line svelte/require-each-key -->
 							{#each domainRecommendations as rec (rec)}
 								<button
 									type="button"
-									class="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs text-blue-700 hover:bg-blue-100"
+									class="rounded-full border px-3 py-1 text-xs transition-colors {formData.domainName === rec
+										? 'border-blue-500 bg-blue-100 text-blue-800'
+										: 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100'}"
 									onclick={() => (formData.domainName = rec)}
+									disabled={isSubmitting}
 								>
 									{rec}
 								</button>
 							{/each}
 						</div>
+						{#if formData.domainName && !domainRecommendations.includes(formData.domainName)}
+							<p class="mt-1 text-xs text-red-600">
+								선택한 도메인명이 추천 목록에 없습니다. 추천 목록에서 선택해주세요.
+							</p>
+						{/if}
+					{:else if isLoadingDomainRecommendations}
+						<p class="mt-1 text-xs text-gray-500">도메인 추천을 불러오는 중...</p>
 					{:else if formData.termName.trim()}
 						<p class="mt-1 text-xs text-gray-500">
-							({getLastSegment(formData.termName) || '없음'})에 매핑된 도메인이 없습니다.
+							({getLastSegment(formData.termName) || '없음'})에 매핑된 도메인이 없습니다. 용어명을 확인해주세요.
 						</p>
 					{:else}
 						<p class="mt-1 text-xs text-gray-500">
 							용어명을 입력하면 단어집 표준단어명과 매핑된 도메인을 자동으로 추천합니다.
 						</p>
+					{/if}
+					<input
+						id="domainName"
+						type="hidden"
+						bind:value={formData.domainName}
+					/>
+					{#if errors.domainName}
+						<p class="text-error mt-1 text-sm">{errors.domainName}</p>
 					{/if}
 				</div>
 

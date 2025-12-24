@@ -206,71 +206,111 @@
 						<div>
 							<label for="standardName" class="mb-1 block text-sm font-medium text-gray-900">
 								표준단어명 <span class="text-red-700">*</span>
+								{#if isEditMode}
+									<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
+								{/if}
 							</label>
 							<input
 								id="standardName"
 								type="text"
 								class="input"
 								class:input-error={errors.standardName}
+								class:bg-gray-50={isEditMode}
 								bind:value={formData.standardName}
 								placeholder="예: 사용자"
-								disabled={isSubmitting}
+								disabled={isSubmitting || isEditMode}
+								readonly={isEditMode}
 								required
 							/>
 							{#if errors.standardName}
 								<p class="text-error mt-1 text-sm">{errors.standardName}</p>
+							{/if}
+							{#if isEditMode}
+								<p class="mt-1 text-xs text-gray-500">
+									표준단어명은 validation 처리되는 값으로 수정할 수 없습니다.
+								</p>
 							{/if}
 						</div>
 
 						<div>
 							<label for="abbreviation" class="mb-1 block text-sm font-medium text-gray-900">
 								영문약어 <span class="text-red-700">*</span>
+								{#if isEditMode}
+									<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
+								{/if}
 							</label>
 							<input
 								id="abbreviation"
 								type="text"
 								class="input"
 								class:input-error={errors.abbreviation}
+								class:bg-gray-50={isEditMode}
 								bind:value={formData.abbreviation}
 								placeholder="예: user"
-								disabled={isSubmitting}
+								disabled={isSubmitting || isEditMode}
+								readonly={isEditMode}
 								required
 							/>
 							{#if errors.abbreviation}
 								<p class="text-error mt-1 text-sm">{errors.abbreviation}</p>
+							{/if}
+							{#if isEditMode}
+								<p class="mt-1 text-xs text-gray-500">
+									영문약어는 validation 처리되는 값으로 수정할 수 없습니다.
+								</p>
 							{/if}
 						</div>
 
 						<div>
 							<label for="englishName" class="mb-1 block text-sm font-medium text-gray-900">
 								영문명 <span class="text-red-700">*</span>
+								{#if isEditMode}
+									<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
+								{/if}
 							</label>
 							<input
 								id="englishName"
 								type="text"
 								class="input"
 								class:input-error={errors.englishName}
+								class:bg-gray-50={isEditMode}
 								bind:value={formData.englishName}
 								placeholder="예: User"
-								disabled={isSubmitting}
+								disabled={isSubmitting || isEditMode}
+								readonly={isEditMode}
 								required
 							/>
 							{#if errors.englishName}
 								<p class="text-error mt-1 text-sm">{errors.englishName}</p>
 							{/if}
+							{#if isEditMode}
+								<p class="mt-1 text-xs text-gray-500">
+									영문명은 validation 처리되는 값으로 수정할 수 없습니다.
+								</p>
+							{/if}
 						</div>
 						<div>
 							<label for="domainCategory" class="mb-1 block text-sm font-medium text-gray-900">
 								도메인분류명
+								{#if isEditMode}
+									<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
+								{/if}
 							</label>
 							<input
 								id="domainCategory"
 								type="text"
 								class="input"
+								class:bg-gray-50={isEditMode}
 								bind:value={formData.domainCategory}
 								placeholder="예: 사용자관리"
-								disabled={isSubmitting}
+								disabled={isSubmitting || isEditMode}
+								readonly={isEditMode}
 							/>
+							{#if isEditMode}
+								<p class="mt-1 text-xs text-gray-500">
+									도메인분류명은 validation 처리되는 값으로 수정할 수 없습니다.
+								</p>
+							{/if}
 						</div>
 					</div>
 				</div>
@@ -304,30 +344,49 @@
 						<div>
 							<label for="synonyms" class="mb-1 block text-sm font-medium text-gray-900">
 								이음동의어 (쉼표 구분)
+								{#if isEditMode}
+									<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
+								{/if}
 							</label>
 							<input
 								id="synonyms"
 								type="text"
 								class="input"
+								class:bg-gray-50={isEditMode}
 								bind:value={formData.synonyms}
 								placeholder="예: 고객, 사용자"
-								disabled={isSubmitting}
+								disabled={isSubmitting || isEditMode}
+								readonly={isEditMode}
 							/>
+							{#if isEditMode}
+								<p class="mt-1 text-xs text-gray-500">
+									이음동의어는 validation 처리되는 값으로 수정할 수 없습니다.
+								</p>
+							{/if}
 						</div>
 						<div>
 							<label for="forbiddenWords" class="mb-1 block text-sm font-medium text-gray-900">
 								금칙어 (쉼표 구분)
+								{#if isEditMode}
+									<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
+								{/if}
 							</label>
 							<input
 								id="forbiddenWords"
 								type="text"
 								class="input"
+								class:bg-gray-50={isEditMode}
 								bind:value={formData.forbiddenWords}
 								placeholder="예: 테스트, 샘플"
-								disabled={isSubmitting}
+								disabled={isSubmitting || isEditMode}
+								readonly={isEditMode}
 							/>
 							<p class="mt-1 text-xs text-gray-500">
-								이 단어집 파일에만 적용되는 금칙어 목록입니다.
+								{#if isEditMode}
+									금칙어는 validation 처리되는 값으로 수정할 수 없습니다.
+								{:else}
+									이 단어집 파일에만 적용되는 금칙어 목록입니다.
+								{/if}
 							</p>
 						</div>
 					</div>

@@ -17,7 +17,6 @@ static/data/
 ├── vocabulary/              # 단어집 데이터
 │   ├── vocabulary.json
 │   ├── vocabulary-*.json  # 사용자 생성 파일
-│   ├── forbidden-words.json
 │   └── history.json
 ├── domain/                 # 도메인 데이터
 │   ├── domain.json
@@ -26,6 +25,10 @@ static/data/
     ├── term.json
     └── history.json
 ```
+
+**주요 변경사항 (프로젝트 고도화):**
+- 전역 금지어 관리 기능 제거 (`forbidden-words.json` 삭제)
+- 단어집별 금칙어 관리로 전환 (각 VocabularyEntry에 `forbiddenWords` 필드 포함)
 
 **환경 변수:**
 

@@ -260,6 +260,9 @@
 					<div>
 						<label for="domainGroup" class="mb-1 block text-sm font-medium text-gray-900">
 							도메인그룹 <span class="text-red-700">*</span>
+							{#if isEditMode}
+								<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
+							{/if}
 						</label>
 						<input
 							id="domainGroup"
@@ -268,10 +271,17 @@
 							placeholder="예: 공통표준도메인그룹명"
 							class="input"
 							class:input-error={errors.domainGroup}
-							disabled={isSubmitting}
+							class:bg-gray-50={isEditMode}
+							disabled={isSubmitting || isEditMode}
+							readonly={isEditMode}
 						/>
 						{#if errors.domainGroup}
 							<p class="text-error mt-1 text-sm">{errors.domainGroup}</p>
+						{/if}
+						{#if isEditMode}
+							<p class="mt-1 text-xs text-gray-500">
+								도메인그룹은 validation 처리되는 값으로 수정할 수 없습니다.
+							</p>
 						{/if}
 					</div>
 
@@ -279,6 +289,9 @@
 					<div>
 						<label for="domainCategory" class="mb-1 block text-sm font-medium text-gray-900">
 							도메인 분류명 <span class="text-red-700">*</span>
+							{#if isEditMode}
+								<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
+							{/if}
 						</label>
 						<input
 							id="domainCategory"
@@ -287,10 +300,17 @@
 							placeholder="예: 공통표준도메인분류명"
 							class="input"
 							class:input-error={errors.domainCategory}
-							disabled={isSubmitting}
+							class:bg-gray-50={isEditMode}
+							disabled={isSubmitting || isEditMode}
+							readonly={isEditMode}
 						/>
 						{#if errors.domainCategory}
 							<p class="text-error mt-1 text-sm">{errors.domainCategory}</p>
+						{/if}
+						{#if isEditMode}
+							<p class="mt-1 text-xs text-gray-500">
+								도메인 분류명은 validation 처리되는 값으로 수정할 수 없습니다.
+							</p>
 						{/if}
 					</div>
 
@@ -298,13 +318,17 @@
 					<div>
 						<label for="standardDomainName" class="mb-1 block text-sm font-medium text-gray-900">
 							표준 도메인명 <span class="text-red-700">*</span>
-							<span class="ml-2 text-xs font-normal text-gray-500">(자동 생성)</span>
+							<span class="ml-2 text-xs font-normal text-gray-500">(자동 생성{#if isEditMode}, 수정 불가{/if})</span>
 						</label>
 						<div class="rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700">
 							{generatedDomainName || '(입력 필요)'}
 						</div>
 						<p class="mt-1 text-xs text-gray-500">
-							도메인분류명, 물리데이터타입, 데이터길이, 소수점자리수로 자동 생성됩니다.
+							{#if isEditMode}
+								표준 도메인명은 validation 처리되는 값으로 수정할 수 없습니다.
+							{:else}
+								도메인분류명, 물리데이터타입, 데이터길이, 소수점자리수로 자동 생성됩니다.
+							{/if}
 						</p>
 					</div>
 
@@ -312,6 +336,9 @@
 					<div>
 						<label for="physicalDataType" class="mb-1 block text-sm font-medium text-gray-900">
 							물리 데이터타입 <span class="text-red-700">*</span>
+							{#if isEditMode}
+								<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
+							{/if}
 						</label>
 						<input
 							id="physicalDataType"
@@ -320,10 +347,17 @@
 							placeholder="예: VARCHAR, NUMBER 등"
 							class="input"
 							class:input-error={errors.physicalDataType}
-							disabled={isSubmitting}
+							class:bg-gray-50={isEditMode}
+							disabled={isSubmitting || isEditMode}
+							readonly={isEditMode}
 						/>
 						{#if errors.physicalDataType}
 							<p class="text-error mt-1 text-sm">{errors.physicalDataType}</p>
+						{/if}
+						{#if isEditMode}
+							<p class="mt-1 text-xs text-gray-500">
+								물리 데이터타입은 validation 처리되는 값으로 수정할 수 없습니다.
+							</p>
 						{/if}
 					</div>
 				</div>
@@ -336,6 +370,9 @@
 					<div>
 						<label for="dataLength" class="mb-1 block text-sm font-medium text-gray-900">
 							데이터 길이
+							{#if isEditMode}
+								<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
+							{/if}
 						</label>
 						<input
 							id="dataLength"
@@ -343,14 +380,24 @@
 							bind:value={formData.dataLength}
 							placeholder="예: 255"
 							class="input"
-							disabled={isSubmitting}
+							class:bg-gray-50={isEditMode}
+							disabled={isSubmitting || isEditMode}
+							readonly={isEditMode}
 						/>
+						{#if isEditMode}
+							<p class="mt-1 text-xs text-gray-500">
+								데이터 길이는 validation 처리되는 값으로 수정할 수 없습니다.
+							</p>
+						{/if}
 					</div>
 
 					<!-- 소수점자리수 -->
 					<div>
 						<label for="decimalPlaces" class="mb-1 block text-sm font-medium text-gray-900">
 							소수점자리수
+							{#if isEditMode}
+								<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
+							{/if}
 						</label>
 						<input
 							id="decimalPlaces"
@@ -358,8 +405,15 @@
 							bind:value={formData.decimalPlaces}
 							placeholder="예: 2"
 							class="input"
-							disabled={isSubmitting}
+							class:bg-gray-50={isEditMode}
+							disabled={isSubmitting || isEditMode}
+							readonly={isEditMode}
 						/>
+						{#if isEditMode}
+							<p class="mt-1 text-xs text-gray-500">
+								소수점자리수는 validation 처리되는 값으로 수정할 수 없습니다.
+							</p>
+						{/if}
 					</div>
 
 					<!-- 측정단위 -->

@@ -1,8 +1,8 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse } from '$lib/types/vocabulary.js';
 import type { DomainData, DomainEntry } from '$lib/types/domain.js';
-import { loadDomainData, mergeDomainData } from '$lib/utils/file-handler.js';
-import { validateXlsxFile } from '$lib/utils/validation.js';
+import { loadDomainData, mergeDomainData, listDomainFiles } from '$lib/utils/file-handler.js';
+import { validateXlsxFile, generateStandardDomainName, validateDomainNameUniqueness } from '$lib/utils/validation.js';
 import { parseDomainXlsxToJson } from '$lib/utils/xlsx-parser.js';
 import { addHistoryLog } from '$lib/utils/history-handler.js';
 import {
@@ -121,6 +121,59 @@ export async function POST({ request }: RequestEvent) {
 				} as ApiResponse,
 				{ status: 422 }
 			);
+		}
+
+		// 도메인명 자동 생성 및 validation
+		try {
+			const allDomainFiles = await listDomainFiles();
+			const allDomainEntries: DomainEntry[] = [];
+			for (const file of allDomainFiles) {
+				try {
+					const fileData = await loadDomainData(file);
+					// 교체 모드가 아닌 경우 현재 파일의 기존 엔트리는 제외
+					if (!replaceExisting && file === filename) {
+						continue;
+					}
+					allDomainEntries.push(...fileData.entries);
+				} catch (error) {
+					console.warn(`도메인 파일 ${file} 로드 실패:`, error);
+				}
+			}
+
+			// 각 엔트리에 대해 도메인명 자동 생성 및 validation
+			const validationErrors: string[] = [];
+			for (const entry of parsedEntries) {
+				// 도메인명 자동 생성
+				const generatedDomainName = generateStandardDomainName(
+					entry.domainCategory,
+					entry.physicalDataType,
+					entry.dataLength,
+					entry.decimalPlaces
+				);
+				entry.standardDomainName = generatedDomainName;
+
+				// 도메인명 유일성 validation
+				const validationError = validateDomainNameUniqueness(
+					generatedDomainName,
+					allDomainEntries
+				);
+				if (validationError) {
+					validationErrors.push(`${entry.domainCategory}: ${validationError}`);
+				}
+			}
+
+			if (validationErrors.length > 0) {
+				return json(
+					{
+						success: false,
+						error: `다음 도메인들이 중복되거나 유효하지 않습니다:\n${validationErrors.join('\n')}`,
+						message: 'Domain validation failed in upload'
+					} as ApiResponse,
+					{ status: 400 }
+				);
+			}
+		} catch (validationError) {
+			console.warn('도메인명 validation 확인 중 오류 (계속 진행):', validationError);
 		}
 
 		let finalData: DomainData;

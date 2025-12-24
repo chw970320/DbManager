@@ -65,8 +65,9 @@ SvelteKit의 파일 기반 라우팅을 사용합니다:
 - 중복 필터링 (표준단어명, 영문약어, 영문명)
 - 도메인 미매핑 필터링
 - XLSX 파일 다운로드
-- 금지어 관리
+- 단어집별 금칙어 관리 (각 단어에 금칙어 목록 포함)
 - 히스토리 로그 조회
+- 데이터 수정 제한 (표준단어명, 영문약어, 영문명, 도메인분류명, 이음동의어, 금칙어 수정 불가)
 
 **인증/권한:**
 
@@ -76,8 +77,7 @@ SvelteKit의 파일 기반 라우팅을 사용합니다:
 
 - `SearchBar`: 검색 바
 - `VocabularyTable`: 단어집 테이블
-- `TermEditor`: 단어 편집 모달 (재사용)
-- `ForbiddenWordManager`: 금지어 관리 모달
+- `VocabularyEditor`: 단어 편집 모달
 - `VocabularyFileManager`: 파일 관리 모달
 - `HistoryLog`: 히스토리 로그
 

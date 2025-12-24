@@ -227,6 +227,60 @@ export async function POST({ request }: RequestEvent) {
 			domainMap.set(key, entry.standardDomainName);
 		});
 
+		// 용어명 접미사 및 유일성 validation
+		try {
+			// 모든 용어 파일 로드
+			const allTermFiles = await listTermFiles();
+			const allTermEntries: TermEntry[] = [];
+			for (const file of allTermFiles) {
+				try {
+					const fileData = await loadTermData(file);
+					// 교체 모드가 아닌 경우 현재 파일의 기존 엔트리는 제외
+					if (!replaceExisting && file === filename) {
+						continue;
+					}
+					allTermEntries.push(...fileData.entries);
+				} catch (error) {
+					console.warn(`용어 파일 ${file} 로드 실패:`, error);
+				}
+			}
+
+			// 각 엔트리에 대해 validation 수행
+			const validationErrors: string[] = [];
+			for (const entry of parsedEntries) {
+				// 용어명 접미사 validation
+				const suffixValidationError = validateTermNameSuffix(
+					entry.termName,
+					vocabularyData.entries
+				);
+				if (suffixValidationError) {
+					validationErrors.push(`${entry.termName}: ${suffixValidationError}`);
+				}
+
+				// 용어명 유일성 validation
+				const uniquenessError = validateTermNameUniqueness(
+					entry.termName,
+					allTermEntries
+				);
+				if (uniquenessError) {
+					validationErrors.push(`${entry.termName}: ${uniquenessError}`);
+				}
+			}
+
+			if (validationErrors.length > 0) {
+				return json(
+					{
+						success: false,
+						error: `다음 용어들이 유효하지 않거나 중복됩니다:\n${validationErrors.join('\n')}`,
+						message: 'Term validation failed in upload'
+					} as ApiResponse,
+					{ status: 400 }
+				);
+			}
+		} catch (validationError) {
+			console.warn('용어명 validation 확인 중 오류 (계속 진행):', validationError);
+		}
+
 		// 매핑 확인 및 TermEntry 생성
 		const now = new Date().toISOString();
 		const termEntries: TermEntry[] = parsedEntries.map((entry) => {

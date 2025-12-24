@@ -1029,26 +1029,6 @@
 					<!-- 고급 검색 옵션 -->
 					<div class="mb-4 flex flex-col space-y-4">
 						<div class="space-y-3">
-							<h3 class="text-sm font-medium text-gray-700">도메인 미매핑 필터</h3>
-
-							<!-- 도메인 미매핑 필터 -->
-							<div class="flex items-center space-x-2">
-								<input
-									type="checkbox"
-									id="unmappedDomainOnly"
-									bind:checked={unmappedDomainOnly}
-									onchange={handleUnmappedToggle}
-									class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-								/>
-								<label
-									for="unmappedDomainOnly"
-									class="cursor-pointer select-none text-sm font-medium text-gray-700"
-								>
-									도메인 미매핑
-								</label>
-							</div>
-						</div>
-						<div class="space-y-3">
 							<h3 class="text-sm font-medium text-gray-700">중복 필터</h3>
 
 							<div class="flex flex-wrap items-center gap-6">
@@ -1102,10 +1082,26 @@
 										영문명 중복
 									</label>
 								</div>
+
+								<div class="flex items-center space-x-2">
+									<input
+										type="checkbox"
+										id="unmappedDomainOnly"
+										bind:checked={unmappedDomainOnly}
+										onchange={handleUnmappedToggle}
+										class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+									/>
+									<label
+										for="unmappedDomainOnly"
+										class="cursor-pointer select-none text-sm font-medium text-gray-700"
+									>
+										도메인 미매핑
+									</label>
+								</div>
 							</div>
 
 							<!-- 필터 상태 표시 -->
-							{#if duplicateFilters.standardName || duplicateFilters.abbreviation || duplicateFilters.englishName}
+							{#if duplicateFilters.standardName || duplicateFilters.abbreviation || duplicateFilters.englishName || unmappedDomainOnly}
 								<div class="flex flex-wrap items-center gap-2">
 									{#if duplicateFilters.standardName}
 										<div
@@ -1150,6 +1146,21 @@
 												/>
 											</svg>
 											<span>영문명</span>
+										</div>
+									{/if}
+									{#if unmappedDomainOnly}
+										<div
+											class="flex items-center space-x-1 rounded-md bg-red-100 px-2 py-1 text-xs font-medium text-red-800"
+										>
+											<svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+												<path
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													stroke-width="2"
+													d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+												/>
+											</svg>
+											<span>도메인 미매핑</span>
 										</div>
 									{/if}
 								</div>

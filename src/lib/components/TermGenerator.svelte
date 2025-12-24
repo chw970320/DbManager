@@ -12,7 +12,7 @@
 
 	// --- Component State ---
 	let sourceTerm = $state('');
-	let direction = $state<'ko-to-en' | 'en-to-ko'>('ko-to-en');
+	const direction = 'ko-to-en' as const; // 한영 변환만 지원
 	let segmentsList = $state<string[]>([]);
 	let selectedSegment = $state('');
 	let finalResults = $state<string[]>([]); // 단일 결과에서 복수 결과로 변경
@@ -40,7 +40,6 @@
 	// --- Effects ---
 	$effect(() => {
 		void sourceTerm;
-		void direction;
 		debouncedFindCombinations();
 	});
 
@@ -117,7 +116,7 @@
 			finalResults = data.results || [];
 			
 			// 각 결과에 대해 접미사 validation 수행
-			if (direction === 'ko-to-en' && finalResults.length > 0) {
+			if (finalResults.length > 0) {
 				await validateSegmentResults(segment);
 			}
 		} catch (err) {
@@ -192,24 +191,6 @@
 	}
 
 	/**
-	 * 방향 전환 후 포커스 및 입력 값 처리
-	 */
-	function handleDirectionChange() {
-		direction = direction === 'ko-to-en' ? 'en-to-ko' : 'ko-to-en';
-
-		// 현재 변환 결과가 있다면 첫 번째 값을 입력 필드에 채워 넣어
-		// 반대 방향 변환의 시작점으로 사용
-		if (finalResults.length > 0) {
-			sourceTerm = finalResults[0];
-		}
-
-		// 검색 입력 필드에 포커스 이동
-		if (searchInput) {
-			searchInput.focus();
-		}
-	}
-
-	/**
 	 * 토글 상태 변경
 	 */
 	function toggleExpanded() {
@@ -274,7 +255,7 @@
 						bind:this={searchInput}
 						type="text"
 						bind:value={sourceTerm}
-						placeholder={direction === 'ko-to-en' ? '한글 약어 입력...' : '영문 전체 단어 입력...'}
+						placeholder="한글 약어 입력..."
 						class="input pl-10 pr-10"
 					/>
 
@@ -296,31 +277,6 @@
 						</button>
 					{/if}
 				</div>
-
-				<!-- Direction Toggle -->
-				<button onclick={handleDirectionChange} class="btn btn-outline w-36" title="방향 전환">
-					{#if direction === 'ko-to-en'}
-						<span class="font-bold">한</span>
-						<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-							<path
-								fill-rule="evenodd"
-								d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-						<span class="font-bold">영</span>
-					{:else}
-						<span class="font-bold">영</span>
-						<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-							<path
-								fill-rule="evenodd"
-								d="M12.293 5.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z"
-								clip-rule="evenodd"
-							/>
-						</svg>
-						<span class="font-bold">한</span>
-					{/if}
-				</button>
 			</div>
 		</div>
 

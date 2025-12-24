@@ -119,11 +119,15 @@ export async function GET({ url }: RequestEvent) {
 			);
 		}
 
-		// 도메인 미매핑 필터
+		// 도메인 미매핑 필터 (형식단어여부가 Y인 경우만 적용)
 		if (unmappedDomain) {
-			filteredEntries = filteredEntries.filter(
-				(entry) => !entry.domainGroup || entry.isDomainCategoryMapped === false
-			);
+			filteredEntries = filteredEntries.filter((entry) => {
+				// 형식단어여부가 N인 경우는 제외
+				if (entry.isFormalWord !== true) {
+					return false;
+				}
+				return !entry.domainGroup || entry.isDomainCategoryMapped === false;
+			});
 		}
 
 		// 컬럼 필터 적용

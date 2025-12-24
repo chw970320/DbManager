@@ -1,5 +1,4 @@
 <script lang="ts">
-	 
 	import { onMount } from 'svelte';
 
 	type FilterType = 'text' | 'select';
@@ -91,7 +90,7 @@
 	}
 
 	// 필터 활성화 여부 (props 기반 파생 상태)
-	const isActive = currentValue !== null && currentValue !== '';
+	const isActive = $derived(currentValue !== null && currentValue !== '');
 </script>
 
 <div class="relative inline-block">
@@ -108,7 +107,7 @@
 	>
 		<svg
 			class="h-4 w-4"
-			fill={isActive ? 'blue' : 'none'}
+			fill={isActive ? 'currentColor' : 'none'}
 			stroke="currentColor"
 			viewBox="0 0 24 24"
 			xmlns="http://www.w3.org/2000/svg"

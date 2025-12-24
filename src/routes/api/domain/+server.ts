@@ -1,7 +1,12 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse } from '$lib/types/vocabulary';
 import type { DomainData, DomainEntry, DomainApiResponse } from '$lib/types/domain';
-import { saveDomainData, loadDomainData, checkDomainReferences, listDomainFiles } from '$lib/utils/file-handler.js';
+import {
+	saveDomainData,
+	loadDomainData,
+	checkDomainReferences,
+	listDomainFiles
+} from '$lib/utils/file-handler.js';
 import { safeMerge } from '$lib/utils/type-guards.js';
 import { invalidateCache } from '$lib/utils/cache.js';
 import { generateStandardDomainName, validateDomainNameUniqueness } from '$lib/utils/validation.js';
@@ -277,10 +282,7 @@ export async function OPTIONS({ url }: RequestEvent) {
 
 			// 논리 데이터 타입별 카운트 (값이 있을 때만)
 			const logicalType = entry.logicalDataType ?? 'UNKNOWN';
-			logicalDataTypeStats.set(
-				logicalType,
-				(logicalDataTypeStats.get(logicalType) || 0) + 1
-			);
+			logicalDataTypeStats.set(logicalType, (logicalDataTypeStats.get(logicalType) || 0) + 1);
 
 			// 물리 데이터 타입별 카운트
 			physicalDataTypeStats.set(
@@ -384,10 +386,7 @@ export async function POST({ request, url }: RequestEvent) {
 			}
 
 			// 도메인명 유일성 validation
-			const validationError = validateDomainNameUniqueness(
-				generatedDomainName,
-				allDomainEntries
-			);
+			const validationError = validateDomainNameUniqueness(generatedDomainName, allDomainEntries);
 			if (validationError) {
 				return json(
 					{
@@ -491,13 +490,13 @@ export async function PUT({ request, url }: RequestEvent) {
 		}
 
 		const existingEntry = domainData.entries[entryIndex];
-		
+
 		// 도메인명 자동 생성 (도메인분류명, 물리데이터타입, 데이터길이, 소수점자리수가 변경되면 재생성)
 		const finalDomainCategory = updateFields.domainCategory ?? existingEntry.domainCategory;
 		const finalPhysicalDataType = updateFields.physicalDataType ?? existingEntry.physicalDataType;
 		const finalDataLength = updateFields.dataLength ?? existingEntry.dataLength;
 		const finalDecimalPlaces = updateFields.decimalPlaces ?? existingEntry.decimalPlaces;
-		
+
 		const generatedDomainName = generateStandardDomainName(
 			finalDomainCategory,
 			finalPhysicalDataType,

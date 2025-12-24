@@ -119,8 +119,12 @@ export async function GET({ url }: RequestEvent) {
 				if (!hasDuplicate) return false;
 			}
 
-			// 도메인 미매핑 필터
+			// 도메인 미매핑 필터 (형식단어여부가 Y인 경우만 적용)
 			if (unmappedDomain) {
+				// 형식단어여부가 N인 경우는 제외
+				if (entry.isFormalWord !== true) {
+					return false;
+				}
 				const isUnmapped = entry.isDomainCategoryMapped === false || !entry.domainGroup;
 				if (!isUnmapped) return false;
 			}
@@ -130,6 +134,24 @@ export async function GET({ url }: RequestEvent) {
 			// 검색 대상 필드 설정
 			if (field === 'all') {
 				searchTargets.push(entry.standardName, entry.abbreviation, entry.englishName);
+				
+				// 이음동의어 배열의 각 항목 추가
+				if (entry.synonyms && Array.isArray(entry.synonyms)) {
+					entry.synonyms.forEach((synonym) => {
+						if (typeof synonym === 'string' && synonym.trim()) {
+							searchTargets.push(synonym.trim());
+						}
+					});
+				}
+				
+				// 금칙어 배열의 각 항목 추가
+				if (entry.forbiddenWords && Array.isArray(entry.forbiddenWords)) {
+					entry.forbiddenWords.forEach((forbiddenWord) => {
+						if (typeof forbiddenWord === 'string' && forbiddenWord.trim()) {
+							searchTargets.push(forbiddenWord.trim());
+						}
+					});
+				}
 			} else {
 				searchTargets.push(entry[field as keyof VocabularyEntry] as string);
 			}
@@ -303,6 +325,30 @@ export async function POST({ request, url }: RequestEvent) {
 					suggestions.add(word);
 				}
 			});
+
+			// 이음동의어 제안
+			if (entry.synonyms && Array.isArray(entry.synonyms)) {
+				entry.synonyms.forEach((synonym) => {
+					if (typeof synonym === 'string' && synonym.trim()) {
+						const synonymLower = synonym.trim().toLowerCase();
+						if (synonymLower.startsWith(queryLower)) {
+							suggestions.add(synonym.trim());
+						}
+					}
+				});
+			}
+
+			// 금칙어 제안
+			if (entry.forbiddenWords && Array.isArray(entry.forbiddenWords)) {
+				entry.forbiddenWords.forEach((forbiddenWord) => {
+					if (typeof forbiddenWord === 'string' && forbiddenWord.trim()) {
+						const forbiddenWordLower = forbiddenWord.trim().toLowerCase();
+						if (forbiddenWordLower.startsWith(queryLower)) {
+							suggestions.add(forbiddenWord.trim());
+						}
+					}
+				});
+			}
 		});
 
 		// 제한된 수만큼 반환 (가나다순 정렬)

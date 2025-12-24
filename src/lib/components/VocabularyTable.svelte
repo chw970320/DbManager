@@ -309,8 +309,13 @@
 
 	/**
 	 * 도메인 미매핑 여부 확인
+	 * 형식단어여부가 N이면 도메인분류명이 의미가 없으므로 highlighting 하지 않음
 	 */
 	function isDomainUnmapped(entry: VocabularyEntry): boolean {
+		// 형식단어여부가 N이면 highlighting 하지 않음
+		if (entry.isFormalWord === false) {
+			return false;
+		}
 		return !entry.domainGroup || entry.isDomainCategoryMapped === false;
 	}
 

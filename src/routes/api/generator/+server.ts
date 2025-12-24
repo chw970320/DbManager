@@ -1,20 +1,37 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse, VocabularyData } from '$lib/types/vocabulary.js';
-import { loadVocabularyData } from '$lib/utils/file-handler.js';
+import { loadVocabularyData, loadTermData } from '$lib/utils/file-handler.js';
 
-let vocabularyCache: VocabularyData | null = null;
-const koToEnMap: Map<string, string[]> = new Map();
-const enToKoMap: Map<string, string[]> = new Map();
+// 파일별로 캐시 관리
+const vocabularyCache: Map<string, VocabularyData> = new Map();
+const koToEnMapCache: Map<string, Map<string, string[]>> = new Map();
+const enToKoMapCache: Map<string, Map<string, string[]>> = new Map();
 
-async function initializeCache() {
-	if (vocabularyCache) return;
+async function initializeCache(filename: string = 'term.json') {
+	// 캐시 확인
+	if (vocabularyCache.has(filename)) {
+		return vocabularyCache.get(filename)!;
+	}
 
 	try {
-		vocabularyCache = await loadVocabularyData();
-		koToEnMap.clear();
-		enToKoMap.clear();
+		// 용어 파일의 매핑 정보 로드
+		const termData = await loadTermData(filename);
+		const mapping = termData.mapping || {
+			vocabulary: 'vocabulary.json',
+			domain: 'domain.json'
+		};
 
-		for (const entry of vocabularyCache.entries) {
+		// 매핑된 단어집 파일만 로드
+		const vocabularyData = await loadVocabularyData(mapping.vocabulary);
+
+		// 캐시에 저장
+		vocabularyCache.set(filename, vocabularyData);
+
+		// Map 생성 및 캐시
+		const koToEnMap = new Map<string, string[]>();
+		const enToKoMap = new Map<string, string[]>();
+
+		for (const entry of vocabularyData.entries) {
 			const koKey = entry.standardName.toLowerCase();
 			const enKey = entry.abbreviation.toLowerCase();
 
@@ -27,17 +44,23 @@ async function initializeCache() {
 			enValues.push(entry.standardName);
 			enToKoMap.set(enKey, enValues);
 		}
+
+		koToEnMapCache.set(filename, koToEnMap);
+		enToKoMapCache.set(filename, enToKoMap);
+
+		return vocabularyData;
 	} catch (error) {
 		console.error('단어집 캐시 초기화 중 오류:', error);
-		vocabularyCache = null;
+		return null;
 	}
 }
 
-export async function POST({ request }: RequestEvent) {
+export async function POST({ request, url }: RequestEvent) {
 	try {
-		await initializeCache();
+		const filename = url.searchParams.get('filename') || 'term.json';
+		const vocabularyData = await initializeCache(filename);
 
-		if (!vocabularyCache) {
+		if (!vocabularyData) {
 			return json(
 				{
 					success: false,
@@ -61,7 +84,8 @@ export async function POST({ request }: RequestEvent) {
 			);
 		}
 
-		const sourceMap = direction === 'ko-to-en' ? koToEnMap : enToKoMap;
+		const sourceMap =
+			direction === 'ko-to-en' ? koToEnMapCache.get(filename)! : enToKoMapCache.get(filename)!;
 		const separator = term.includes(' ') ? ' ' : '_';
 		const terms = term.split(separator);
 

@@ -1,6 +1,7 @@
 <script lang="ts">
 	// @ts-nocheck
 	import { createEventDispatcher } from 'svelte';
+	import { tick } from 'svelte';
 	import { get } from 'svelte/store';
 	import { vocabularyStore } from '$lib/stores/vocabulary-store';
 	import { domainStore } from '$lib/stores/domain-store';
@@ -13,9 +14,10 @@
 		entry?: Partial<TermEntry>;
 		isEditMode?: boolean;
 		serverError?: string;
+		filename?: string; // 현재 선택된 용어 파일명
 	}
 
-	let { entry = {}, isEditMode = false, serverError = '' }: Props = $props();
+	let { entry = {}, isEditMode = false, serverError = '', filename = 'term.json' }: Props = $props();
 
 	// Event dispatcher
 	const dispatch = createEventDispatcher<{
@@ -427,12 +429,72 @@
 	}
 
 	// Handle save
-	function handleSave() {
+	async function handleSave() {
 		if (!isFormValid()) {
+			// 모든 에러 메시지 수집
+			const errorMessages: string[] = [];
+			if (errors.termName) {
+				errorMessages.push(errors.termName);
+			}
+			if (errors.columnName) {
+				errorMessages.push(errors.columnName);
+			}
+			if (errors.domainName) {
+				errorMessages.push(errors.domainName);
+			}
+			
+			// 에러 팝업 표시
+			if (errorMessages.length > 0) {
+				await tick();
+				alert('입력 오류\n\n' + errorMessages.join('\n'));
+			}
 			return;
 		}
 
+		// 전송 전 서버 validation 수행 (용어명 접미사, 유일성 검사)
 		isSubmitting = true;
+		try {
+			const validationErrors: string[] = [];
+			
+			// 용어명 접미사 및 유일성 validation
+			try {
+				const validationResponse = await fetch(`/api/term/validate?filename=${encodeURIComponent(filename)}`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						termName: formData.termName.trim(),
+						columnName: formData.columnName.trim(),
+						domainName: formData.domainName.trim(),
+						entryId: entry.id // 수정 모드인 경우 현재 entry ID 전달
+					})
+				});
+				
+				if (validationResponse.ok) {
+					const validationResult = await validationResponse.json();
+					if (!validationResult.success) {
+						if (validationResult.error) {
+							validationErrors.push(validationResult.error);
+						}
+					}
+				}
+			} catch (validationErr) {
+				console.warn('Validation API 호출 실패:', validationErr);
+				// validation API 실패 시에도 계속 진행 (서버에서 다시 검증)
+			}
+			
+			// validation 에러가 있으면 팝업 표시하고 전송 중단
+			if (validationErrors.length > 0) {
+				await tick();
+				alert('입력 오류\n\n' + validationErrors.join('\n'));
+				isSubmitting = false;
+				return;
+			}
+		} catch (err) {
+			console.warn('전송 전 validation 중 오류:', err);
+			// validation 실패 시에도 계속 진행 (서버에서 다시 검증)
+		}
 
 		const editedEntry: TermEntry = {
 			id: entry.id || '',

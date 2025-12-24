@@ -328,10 +328,11 @@ export async function OPTIONS({ url }: RequestEvent) {
  * 새로운 도메인 추가 API
  * POST /api/domain
  */
-export async function POST({ request }: RequestEvent) {
+export async function POST({ request, url }: RequestEvent) {
 	try {
+		const filename = url.searchParams.get('filename') || 'domain.json';
 		const body = await request.json();
-		const { filename = 'domain.json', ...entryData } = body;
+		const entryData = body;
 
 		// 필수 필드 검증 (standardDomainName은 자동 생성되므로 제외)
 		const requiredFields = ['domainGroup', 'domainCategory', 'physicalDataType'];
@@ -465,12 +466,14 @@ export async function POST({ request }: RequestEvent) {
 	}
 }
 
-export async function PUT({ request }: RequestEvent) {
+export async function PUT({ request, url }: RequestEvent) {
 	try {
+		const filename = url.searchParams.get('filename') || 'domain.json';
 		const body = await request.json();
-		const { id, filename = 'domain.json', ...updateFields } = body;
+		const { id, ...updateFields } = body;
 
-		if (!id) {
+		// ID가 없거나 빈 문자열인 경우 에러
+		if (!id || typeof id !== 'string' || id.trim() === '') {
 			return json(
 				{ success: false, error: 'ID가 필요합니다.', message: 'ID required' },
 				{ status: 400 }

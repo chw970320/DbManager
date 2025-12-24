@@ -435,10 +435,14 @@
 		loading = true;
 		editorServerError = '';
 
+		// 새 도메인 추가인지 수정인지 판단
+		const isEditMode = !!currentEditingEntry && !!currentEditingEntry.id && currentEditingEntry.id.trim() !== '';
+		const method = isEditMode ? 'PUT' : 'POST';
+
 		try {
 			const params = new URLSearchParams({ filename: selectedFilename });
 			const response = await fetch(`/api/domain?${params}`, {
-				method: 'PUT',
+				method,
 				headers: {
 					'Content-Type': 'application/json'
 				},
@@ -466,8 +470,8 @@
 							'Content-Type': 'application/json'
 						},
 						body: JSON.stringify({
-							action: 'update',
-							targetId: editedEntry.id,
+							action: isEditMode ? 'update' : 'add',
+							targetId: editedEntry.id || result.data.id,
 							targetName: editedEntry.standardDomainName,
 							details: {
 								before: originalEntry
@@ -499,11 +503,11 @@
 				}
 			} else {
 				// 에러 발생 시 모달 내부에 표시
-				const errorMsg = result.error || '도메인 수정에 실패했습니다.';
+				const errorMsg = result.error || (isEditMode ? '도메인 수정에 실패했습니다.' : '도메인 추가에 실패했습니다.');
 				editorServerError = errorMsg;
 			}
 		} catch (error) {
-			console.error('도메인 수정 중 오류:', error);
+			console.error(isEditMode ? '도메인 수정 중 오류:' : '도메인 추가 중 오류:', error);
 			const errorMsg = '서버 연결 오류가 발생했습니다.';
 			editorServerError = errorMsg;
 		} finally {
@@ -768,6 +772,33 @@
 
 						<!-- 액션 버튼들 -->
 						<div class="mb-4 flex items-center space-x-3">
+							<!-- 새 도메인 추가 버튼 -->
+							<button
+								type="button"
+								onclick={() => {
+									currentEditingEntry = null;
+									editorServerError = '';
+									showEditor = true;
+								}}
+								disabled={loading}
+								class="group inline-flex items-center space-x-2 rounded-xl border border-purple-200/50 bg-purple-50/80 px-6 py-3 text-sm font-medium text-purple-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-purple-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+							>
+								<svg
+									class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M12 4v16m8-8H4"
+									/>
+								</svg>
+								<span>새 도메인 추가</span>
+							</button>
+
 							<!-- XLSX 다운로드 버튼 -->
 							<button
 								type="button"
@@ -825,6 +856,7 @@
 						entry={currentEditingEntry || {}}
 						isEditMode={!!currentEditingEntry}
 						serverError={editorServerError}
+						filename={selectedFilename}
 						on:save={handleSave}
 						on:delete={handleDelete}
 						on:cancel={handleCancel}

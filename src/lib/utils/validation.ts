@@ -535,3 +535,182 @@ export function validateTermNameUniqueness(
 
 	return null;
 }
+
+/**
+ * 용어 유일성 validation (termName, columnName, domainName 조합)
+ * @param termName - 검증할 용어명
+ * @param columnName - 검증할 컬럼명
+ * @param domainName - 검증할 도메인명
+ * @param allTermEntries - 모든 용어 엔트리 배열
+ * @param excludeId - 제외할 엔트리 ID (수정 시 사용)
+ * @returns validation 결과 (에러 메시지 또는 null)
+ */
+export function validateTermUniqueness(
+	termName: string,
+	columnName: string,
+	domainName: string,
+	allTermEntries: Array<{ id: string; termName: string; columnName: string; domainName: string }>,
+	excludeId?: string
+): string | null {
+	if (!termName || typeof termName !== 'string') {
+		return null;
+	}
+
+	const trimmedTermName = termName.trim().toLowerCase();
+	const trimmedColumnName = columnName?.trim().toLowerCase() || '';
+	const trimmedDomainName = domainName?.trim().toLowerCase() || '';
+
+	// 동일한 조합(termName, columnName, domainName)이 이미 존재하는지 확인
+	const duplicate = allTermEntries.find(
+		(entry) =>
+			entry.id !== excludeId &&
+			entry.termName.trim().toLowerCase() === trimmedTermName &&
+			entry.columnName.trim().toLowerCase() === trimmedColumnName &&
+			entry.domainName.trim().toLowerCase() === trimmedDomainName
+	);
+
+	if (duplicate) {
+		return `동일한 용어명, 컬럼명, 도메인명 조합이 이미 존재합니다. (용어명: ${termName}, 컬럼명: ${columnName}, 도메인명: ${domainName})`;
+	}
+
+	return null;
+}
+
+/**
+ * 용어명 매핑 validation
+ * 용어명의 모든 부분이 단어집에 식별되는지 확인
+ * @param termName - 검증할 용어명
+ * @param vocabularyEntries - 단어집 엔트리 배열
+ * @returns validation 결과 (에러 메시지 또는 null)
+ */
+export function validateTermNameMapping(
+	termName: string,
+	vocabularyEntries: Array<{ standardName: string; abbreviation: string }>
+): string | null {
+	if (!termName || typeof termName !== 'string') {
+		return '용어명이 필요합니다.';
+	}
+
+	const termParts = termName
+		.split('_')
+		.map((p) => p.trim())
+		.filter((p) => p.length > 0);
+
+	if (termParts.length === 0) {
+		return '용어명이 비어있습니다.';
+	}
+
+	// 단어집 맵 생성
+	const vocabularyMap = new Map<string, { standardName: string; abbreviation: string }>();
+	vocabularyEntries.forEach((entry) => {
+		const standardNameKey = entry.standardName.trim().toLowerCase();
+		const abbreviationKey = entry.abbreviation.trim().toLowerCase();
+		vocabularyMap.set(standardNameKey, {
+			standardName: entry.standardName,
+			abbreviation: entry.abbreviation
+		});
+		vocabularyMap.set(abbreviationKey, {
+			standardName: entry.standardName,
+			abbreviation: entry.abbreviation
+		});
+	});
+
+	// 각 부분이 단어집에 있는지 확인
+	const unmappedParts: string[] = [];
+	for (const part of termParts) {
+		const partLower = part.toLowerCase();
+		let found = false;
+		for (const [key] of vocabularyMap.entries()) {
+			if (key === partLower) {
+				found = true;
+				break;
+			}
+		}
+		if (!found) {
+			unmappedParts.push(part);
+		}
+	}
+
+	if (unmappedParts.length > 0) {
+		return `용어명의 다음 부분이 단어집에 등록되지 않았습니다: ${unmappedParts.join(', ')}`;
+	}
+
+	return null;
+}
+
+/**
+ * 컬럼명 매핑 validation
+ * 컬럼명의 모든 부분이 영문약어로 식별되는지 확인
+ * @param columnName - 검증할 컬럼명
+ * @param vocabularyEntries - 단어집 엔트리 배열
+ * @returns validation 결과 (에러 메시지 또는 null)
+ */
+export function validateColumnNameMapping(
+	columnName: string,
+	vocabularyEntries: Array<{ standardName: string; abbreviation: string }>
+): string | null {
+	if (!columnName || typeof columnName !== 'string') {
+		return '컬럼명이 필요합니다.';
+	}
+
+	const columnParts = columnName
+		.split('_')
+		.map((p) => p.trim())
+		.filter((p) => p.length > 0);
+
+	if (columnParts.length === 0) {
+		return '컬럼명이 비어있습니다.';
+	}
+
+	// 단어집 맵 생성 (abbreviation만 사용)
+	const abbreviationMap = new Set<string>();
+	vocabularyEntries.forEach((entry) => {
+		const abbreviationKey = entry.abbreviation.trim().toLowerCase();
+		abbreviationMap.add(abbreviationKey);
+	});
+
+	// 각 부분이 영문약어로 식별되는지 확인
+	const unmappedParts: string[] = [];
+	for (const part of columnParts) {
+		const partLower = part.toLowerCase();
+		if (!abbreviationMap.has(partLower)) {
+			unmappedParts.push(part);
+		}
+	}
+
+	if (unmappedParts.length > 0) {
+		return `컬럼명의 다음 부분이 영문약어로 등록되지 않았습니다: ${unmappedParts.join(', ')}`;
+	}
+
+	return null;
+}
+
+/**
+ * 도메인명 매핑 validation
+ * 도메인명이 도메인 데이터에 존재하는지 확인
+ * @param domainName - 검증할 도메인명
+ * @param domainEntries - 도메인 엔트리 배열
+ * @returns validation 결과 (에러 메시지 또는 null)
+ */
+export function validateDomainNameMapping(
+	domainName: string,
+	domainEntries: Array<{ standardDomainName: string }>
+): string | null {
+	if (!domainName || typeof domainName !== 'string') {
+		return '도메인명이 필요합니다.';
+	}
+
+	const domainNameLower = domainName.trim().toLowerCase();
+	const domainMap = new Set<string>();
+	domainEntries.forEach((entry) => {
+		if (entry.standardDomainName) {
+			domainMap.add(entry.standardDomainName.trim().toLowerCase());
+		}
+	});
+
+	if (!domainMap.has(domainNameLower)) {
+		return `도메인명 '${domainName}'이(가) 도메인 데이터에 존재하지 않습니다.`;
+	}
+
+	return null;
+}

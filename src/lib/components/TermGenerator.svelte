@@ -3,6 +3,13 @@
 	import { debounce } from '$lib/utils/debounce';
 	import { createEventDispatcher } from 'svelte';
 
+	// Props
+	interface Props {
+		filename?: string; // 현재 선택된 용어 파일명
+	}
+
+	let { filename = 'term.json' }: Props = $props();
+
 	// --- Component State ---
 	let sourceTerm = $state('');
 	let direction = $state<'ko-to-en' | 'en-to-ko'>('ko-to-en');
@@ -19,6 +26,8 @@
 		isSynonym: boolean;
 		recommendations: string[];
 	} | null>(null);
+	// 각 결과에 대한 validation 상태 저장
+	let validationResults = $state<Map<string, { isValid: boolean; error?: string }>>(new Map());
 
 	// 검색 입력 필드 참조
 	let searchInput: HTMLInputElement | undefined;
@@ -48,7 +57,7 @@
 
 		isLoadingCombinations = true;
 		try {
-			const response = await fetch('/api/generator/segment', {
+			const response = await fetch(`/api/generator/segment?filename=${encodeURIComponent(filename)}`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ term: sourceTerm, direction })
@@ -77,6 +86,7 @@
 		debouncedFindCombinations.cancel();
 
 		error = null;
+		validationResults = new Map();
 
 		if (!segment) {
 			finalResults = [];
@@ -93,7 +103,7 @@
 
 		isLoadingResult = true;
 		try {
-			const response = await fetch('/api/generator', {
+			const response = await fetch(`/api/generator?filename=${encodeURIComponent(filename)}`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ term: segment, direction })
@@ -105,6 +115,11 @@
 			const data = await response.json();
 			// 성공적으로 데이터를 받은 후에만 결과 업데이트
 			finalResults = data.results || [];
+			
+			// 각 결과에 대해 접미사 validation 수행
+			if (direction === 'ko-to-en' && finalResults.length > 0) {
+				await validateSegmentResults(segment);
+			}
 		} catch (err) {
 			const errorMsg = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
 			error = errorMsg;
@@ -113,6 +128,39 @@
 		} finally {
 			isLoadingResult = false;
 		}
+	}
+	
+	// 단어 조합에 대한 접미사 validation 수행
+	async function validateSegmentResults(segment: string) {
+		try {
+			const response = await fetch('/api/term/validate', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					termName: segment,
+					columnName: finalResults[0] || '',
+					domainName: ''
+				})
+			});
+			
+			if (response.ok) {
+				const result = await response.json();
+				if (result.success) {
+					// validation 통과
+					validationResults.set(segment, { isValid: true });
+				} else {
+					// validation 실패
+					validationResults.set(segment, { isValid: false, error: result.error });
+				}
+			} else {
+				// API 호출 실패 시 validation 실패로 간주
+				validationResults.set(segment, { isValid: false, error: 'Validation 확인 실패' });
+			}
+		} catch (err) {
+			console.warn('Validation 확인 중 오류:', err);
+			validationResults.set(segment, { isValid: false, error: 'Validation 확인 실패' });
+		}
+		validationResults = new Map(validationResults); // 반응성 트리거
 	}
 
 	function handleCopy(text: string) {
@@ -432,28 +480,83 @@
 												{/if}
 											</button>
 										</CopyToClipboard>
-										<button
-											type="button"
-											onclick={() => handleAddTerm(result)}
-											class="rounded p-1 text-blue-600 transition-colors hover:bg-blue-100 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-											aria-label="새 용어 추가"
-											title="새 용어 추가"
-										>
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												width="20"
-												height="20"
-												viewBox="0 0 24 24"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="2"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-											>
-												<line x1="12" y1="5" x2="12" y2="19"></line>
-												<line x1="5" y1="12" x2="19" y2="12"></line>
-											</svg>
-										</button>
+										{#if selectedSegment}
+											{@const validation = validationResults.get(selectedSegment)}
+											{#if validation?.isValid === true}
+												<!-- Validation 통과: + 버튼 -->
+												<button
+													type="button"
+													onclick={() => handleAddTerm(result)}
+													class="rounded p-1 text-blue-600 transition-colors hover:bg-blue-100 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+													aria-label="새 용어 추가"
+													title="새 용어 추가"
+												>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														width="20"
+														height="20"
+														viewBox="0 0 24 24"
+														fill="none"
+														stroke="currentColor"
+														stroke-width="2"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+													>
+														<line x1="12" y1="5" x2="12" y2="19"></line>
+														<line x1="5" y1="12" x2="19" y2="12"></line>
+													</svg>
+												</button>
+											{:else if validation?.isValid === false}
+												<!-- Validation 실패: 금지 버튼 -->
+												<button
+													type="button"
+													disabled
+													class="rounded p-1 text-red-600 opacity-50 cursor-not-allowed"
+													aria-label="Validation 실패"
+													title={validation.error || '접미사 validation 실패'}
+												>
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														width="20"
+														height="20"
+														viewBox="0 0 24 24"
+														fill="none"
+														stroke="currentColor"
+														stroke-width="2"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+													>
+														<circle cx="12" cy="12" r="10"></circle>
+														<line x1="12" y1="8" x2="12" y2="12"></line>
+														<line x1="12" y1="16" x2="12.01" y2="16"></line>
+													</svg>
+												</button>
+											{:else}
+												<!-- Validation 진행 중: 로딩 표시 -->
+												<div class="rounded p-1 text-gray-400">
+													<svg
+														class="h-5 w-5 animate-spin"
+														xmlns="http://www.w3.org/2000/svg"
+														fill="none"
+														viewBox="0 0 24 24"
+													>
+														<circle
+															class="opacity-25"
+															cx="12"
+															cy="12"
+															r="10"
+															stroke="currentColor"
+															stroke-width="4"
+														></circle>
+														<path
+															class="opacity-75"
+															fill="currentColor"
+															d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+														></path>
+													</svg>
+												</div>
+											{/if}
+										{/if}
 									</div>
 								</div>
 							{/each}

@@ -527,7 +527,7 @@
 				showEditor = false;
 				editorServerError = ''; // 에러 상태 초기화
 				currentEditingEntry = null;
-				// 데이터 새로고침
+				// 데이터 새로고침 (성공한 경우에만)
 				await loadVocabularyData();
 
 				// 히스토리 로그 기록
@@ -571,10 +571,11 @@
 					console.warn('히스토리 로그 기록 실패:', historyError);
 				}
 			} else {
-				// 에러 발생 시 모달 내부에 표시
+				// 에러 발생 시 모달 내부에 표시 (모달 유지, 새로고침하지 않음)
 				const errorMsg =
 					result.error || (isEditMode ? '단어 수정에 실패했습니다.' : '단어 추가에 실패했습니다.');
 				editorServerError = errorMsg;
+				// validation 오류 시 데이터 새로고침하지 않음
 			}
 		} catch (error) {
 			console.error(isEditMode ? '단어 수정 중 오류:' : '단어 추가 중 오류:', error);
@@ -982,6 +983,7 @@
 						entry={currentEditingEntry || {}}
 						isEditMode={!!currentEditingEntry}
 						serverError={editorServerError}
+						filename={selectedFilename}
 						on:save={handleSave}
 						on:delete={handleDelete}
 						on:cancel={() => {

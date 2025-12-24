@@ -1,21 +1,37 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse, VocabularyEntry } from '$lib/types/vocabulary.js';
-import { loadVocabularyData, listVocabularyFiles } from '$lib/utils/file-handler.js';
+import { loadVocabularyData, loadTermData } from '$lib/utils/file-handler.js';
 
 // --- 캐시 ---
-let dictionaryCache: { ko: Set<string>; en: Set<string> } | null = null;
+// 파일별로 캐시 관리: dictionaryCache[filename] = { ko: Set, en: Set }
+const dictionaryCache: Map<string, { ko: Set<string>; en: Set<string> }> = new Map();
 
-async function getDictionary() {
-	if (dictionaryCache) {
-		return dictionaryCache;
+async function getDictionary(filename: string = 'term.json') {
+	// 캐시 확인
+	const cached = dictionaryCache.get(filename);
+	if (cached) {
+		return cached;
 	}
+
 	try {
-		const vocabularyData = await loadVocabularyData();
+		// 용어 파일의 매핑 정보 로드
+		const termData = await loadTermData(filename);
+		const mapping = termData.mapping || {
+			vocabulary: 'vocabulary.json',
+			domain: 'domain.json'
+		};
+
+		// 매핑된 단어집 파일만 로드
+		const vocabularyData = await loadVocabularyData(mapping.vocabulary);
+
 		const ko = new Set(vocabularyData.entries.map((e) => e.standardName.toLowerCase()));
 		const en = new Set(vocabularyData.entries.map((e) => e.abbreviation.toLowerCase()));
-		dictionaryCache = { ko, en };
+		const dictionary = { ko, en };
 
-		return dictionaryCache;
+		// 캐시에 저장
+		dictionaryCache.set(filename, dictionary);
+
+		return dictionary;
 	} catch (error) {
 		console.error('사전 캐시 초기화 오류:', error);
 		return null;
@@ -66,24 +82,17 @@ function segmentPart(originalPart: string, wordSet: Set<string>): string[] {
  */
 async function checkForbiddenWordsAndSynonyms(
 	term: string,
-	direction: 'ko-to-en' | 'en-to-ko'
+	direction: 'ko-to-en' | 'en-to-ko',
+	vocabularyFilename: string
 ): Promise<{
 	isForbidden: boolean;
 	isSynonym: boolean;
 	recommendations: string[];
 }> {
 	try {
-		// 모든 단어집 파일 로드
-		const allVocabularyFiles = await listVocabularyFiles();
-		const allVocabularyEntries: VocabularyEntry[] = [];
-		for (const file of allVocabularyFiles) {
-			try {
-				const fileData = await loadVocabularyData(file);
-				allVocabularyEntries.push(...fileData.entries);
-			} catch (error) {
-				console.warn(`단어집 파일 ${file} 로드 실패:`, error);
-			}
-		}
+		// 매핑된 단어집 파일만 로드
+		const vocabularyData = await loadVocabularyData(vocabularyFilename);
+		const allVocabularyEntries: VocabularyEntry[] = vocabularyData.entries;
 
 		const termLower = term.trim().toLowerCase();
 		const recommendations: string[] = [];
@@ -116,11 +125,33 @@ async function checkForbiddenWordsAndSynonyms(
 
 		const isSynonym = allSynonyms.has(termLower);
 
-		// 금칙어 또는 이음동의어인 경우, 해당 단어를 포함하는 표준단어명 추천
+		// 금칙어 또는 이음동의어인 경우, 해당 금칙어/이음동의어를 포함하는 표준단어명 추천
 		if (isForbidden || isSynonym) {
+			// 금칙어나 이음동의어가 포함된 표준단어명 찾기
 			for (const entry of allVocabularyEntries) {
-				if (entry.standardName && entry.standardName.toLowerCase().includes(termLower)) {
-					recommendations.push(entry.standardName);
+				if (!entry.standardName) continue;
+
+				// 표준단어명의 금칙어 목록 확인
+				if (entry.forbiddenWords && Array.isArray(entry.forbiddenWords)) {
+					for (const forbiddenWord of entry.forbiddenWords) {
+						if (
+							typeof forbiddenWord === 'string' &&
+							forbiddenWord.trim().toLowerCase() === termLower
+						) {
+							recommendations.push(entry.standardName);
+							break;
+						}
+					}
+				}
+
+				// 표준단어명의 이음동의어 목록 확인
+				if (entry.synonyms && Array.isArray(entry.synonyms)) {
+					for (const synonym of entry.synonyms) {
+						if (typeof synonym === 'string' && synonym.trim().toLowerCase() === termLower) {
+							recommendations.push(entry.standardName);
+							break;
+						}
+					}
 				}
 			}
 		}
@@ -140,12 +171,26 @@ async function checkForbiddenWordsAndSynonyms(
  * 지능형 단어 조합 분석 API (Word Segmentation)
  * POST /api/generator/segment
  */
-export async function POST({ request }: RequestEvent) {
+export async function POST({ request, url }: RequestEvent) {
 	try {
 		const { term, direction = 'ko-to-en' } = await request.json();
+		const filename = url.searchParams.get('filename') || 'term.json';
 
 		if (!term || typeof term !== 'string') {
 			return json({ success: false, error: '분석할 단어를 제공해야 합니다.' }, { status: 400 });
+		}
+
+		// 용어 파일의 매핑 정보 로드
+		let vocabularyFilename = 'vocabulary.json';
+		try {
+			const termData = await loadTermData(filename);
+			const mapping = termData.mapping || {
+				vocabulary: 'vocabulary.json',
+				domain: 'domain.json'
+			};
+			vocabularyFilename = mapping.vocabulary;
+		} catch (error) {
+			console.warn(`용어 파일 ${filename} 로드 실패, 기본값 사용:`, error);
 		}
 
 		// 금칙어 및 이음동의어 확인 (한영 변환 방향일 때만)
@@ -156,10 +201,10 @@ export async function POST({ request }: RequestEvent) {
 		} | null = null;
 
 		if (direction === 'ko-to-en') {
-			forbiddenWordInfo = await checkForbiddenWordsAndSynonyms(term, direction);
+			forbiddenWordInfo = await checkForbiddenWordsAndSynonyms(term, direction, vocabularyFilename);
 		}
 
-		const dictionary = await getDictionary();
+		const dictionary = await getDictionary(filename);
 		if (!dictionary) {
 			return json({ success: false, error: '사전을 불러올 수 없습니다.' }, { status: 500 });
 		}

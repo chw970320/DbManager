@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
+	import { tick } from 'svelte';
 	import type { DomainEntry } from '$lib/types/domain';
 	import { generateStandardDomainName } from '$lib/utils/validation';
 
@@ -8,9 +9,10 @@
 		entry?: Partial<DomainEntry>;
 		isEditMode?: boolean;
 		serverError?: string;
+		filename?: string; // 현재 선택된 도메인 파일명
 	}
 
-	let { entry = {}, isEditMode = false, serverError = '' }: Props = $props();
+	let { entry = {}, isEditMode = false, serverError = '', filename = 'domain.json' }: Props = $props();
 
 	// Event dispatcher
 	const dispatch = createEventDispatcher<{
@@ -119,15 +121,77 @@
 	}
 
 	// Handle save
-	function handleSave() {
+	async function handleSave() {
 		if (!isFormValid()) {
+			// 모든 에러 메시지 수집
+			const errorMessages: string[] = [];
+			if (errors.domainGroup) {
+				errorMessages.push(errors.domainGroup);
+			}
+			if (errors.domainCategory) {
+				errorMessages.push(errors.domainCategory);
+			}
+			if (errors.physicalDataType) {
+				errorMessages.push(errors.physicalDataType);
+			}
+			
+			// 에러 팝업 표시
+			if (errorMessages.length > 0) {
+				await tick();
+				alert('입력 오류\n\n' + errorMessages.join('\n'));
+			}
 			return;
 		}
 
+		// 전송 전 서버 validation 수행 (도메인명 중복 검사)
 		isSubmitting = true;
+		try {
+			const validationErrors: string[] = [];
+			
+			// 도메인명 중복 검사
+			try {
+				const validationResponse = await fetch(`/api/domain/validate?filename=${encodeURIComponent(filename)}`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json'
+					},
+					body: JSON.stringify({
+						domainCategory: formData.domainCategory.trim(),
+						physicalDataType: formData.physicalDataType.trim(),
+						dataLength: formData.dataLength.trim() || undefined,
+						decimalPlaces: formData.decimalPlaces.trim() || undefined,
+						entryId: entry.id && entry.id.trim() ? entry.id : undefined // 수정 모드인 경우에만 ID 전달
+					})
+				});
+				
+				if (validationResponse.ok) {
+					const validationResult = await validationResponse.json();
+					if (!validationResult.success) {
+						if (validationResult.error) {
+							validationErrors.push(validationResult.error);
+						}
+					}
+				}
+			} catch (validationErr) {
+				console.warn('Validation API 호출 실패:', validationErr);
+				// validation API 실패 시에도 계속 진행 (서버에서 다시 검증)
+			}
+			
+			// validation 에러가 있으면 팝업 표시하고 전송 중단
+			if (validationErrors.length > 0) {
+				await tick();
+				alert('입력 오류\n\n' + validationErrors.join('\n'));
+				isSubmitting = false;
+				return;
+			}
+		} catch (err) {
+			console.warn('전송 전 validation 중 오류:', err);
+			// validation 실패 시에도 계속 진행 (서버에서 다시 검증)
+		}
 
+		// 새 도메인 추가 시 id를 제외하고, 수정 시에만 id 포함
 		const editedEntry: DomainEntry = {
-			id: entry.id || '',
+			...(isEditMode && entry.id && entry.id.trim() ? { id: entry.id } : {}),
 			domainGroup: formData.domainGroup.trim(),
 			domainCategory: formData.domainCategory.trim(),
 			standardDomainName: generatedDomainName, // 자동 생성된 도메인명 사용
@@ -195,7 +259,7 @@
 	onclick={handleBackgroundClick}
 	role="dialog"
 	aria-modal="true"
-	aria-label="도메인 수정"
+	aria-label={isEditMode ? '도메인 수정' : '새 도메인 추가'}
 >
 	<!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
 	<div
@@ -203,12 +267,14 @@
 		onclick={(e) => e.stopPropagation()}
 	>
 		<div class="flex flex-shrink-0 items-center justify-between border-b p-6">
-			<h2 class="text-xl font-bold text-gray-900">도메인 수정</h2>
+			<h2 class="text-xl font-bold text-gray-900">
+				{isEditMode ? '도메인 수정' : '새 도메인 추가'}
+			</h2>
 			<button
 				onclick={handleCancel}
 				class="text-gray-400 hover:text-gray-600"
 				disabled={isSubmitting}
-				aria-label="도메인 수정 닫기"
+				aria-label={isEditMode ? '도메인 수정 닫기' : '새 도메인 추가 닫기'}
 			>
 				<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path
@@ -556,7 +622,7 @@
 							{#if isSubmitting}
 								저장 중...
 							{:else}
-								수정
+								{isEditMode ? '수정' : '저장'}
 							{/if}
 						</button>
 					</div>

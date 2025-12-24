@@ -365,12 +365,8 @@
 				throw new Error(`다운로드 실패: ${response.status} ${response.statusText}`);
 			}
 			const blob = await response.blob();
-			// 파일명: term_YYYY-MM-DD.xlsx
-			const today = new Date();
-			const yyyy = today.getFullYear();
-			const mm = String(today.getMonth() + 1).padStart(2, '0');
-			const dd = String(today.getDate()).padStart(2, '0');
-			let filename = `term_${yyyy}-${mm}-${dd}.xlsx`;
+			// 파일명은 서버에서 설정한 Content-Disposition 헤더 사용
+			let filename = 'term.xlsx'; // 기본값
 			const contentDisposition = response.headers.get('Content-Disposition');
 			if (contentDisposition) {
 				const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
@@ -428,7 +424,6 @@
 		showEditor = true;
 		editorServerError = '';
 	}
-
 
 	/**
 	 * 용어 저장 처리
@@ -865,8 +860,9 @@
 				{#if showEditor}
 					<TermEditor
 						entry={currentEditingEntry || {}}
-						isEditMode={!!currentEditingEntry}
+						isEditMode={!!(currentEditingEntry?.id && currentEditingEntry.id !== '')}
 						serverError={editorServerError}
+						filename={selectedFilename}
 						on:save={handleSave}
 						on:delete={handleDelete}
 						on:cancel={handleCancel}
@@ -886,7 +882,7 @@
 
 				<!-- 용어 변환기 -->
 				<div class="mb-8">
-					<TermGenerator on:addTerm={handleAddTermFromGenerator} />
+					<TermGenerator filename={selectedFilename} on:addTerm={handleAddTermFromGenerator} />
 				</div>
 
 				<!-- 에러 메시지 -->

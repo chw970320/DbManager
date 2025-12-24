@@ -2,7 +2,14 @@ import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse } from '$lib/types/vocabulary.js';
 import type { TermData, TermEntry } from '$lib/types/term.js';
 import { loadTermData, mergeTermData } from '$lib/utils/file-handler.js';
-import { validateXlsxFile } from '$lib/utils/validation.js';
+import {
+	validateXlsxFile,
+	validateTermNameSuffix,
+	validateTermNameUniqueness,
+	validateTermNameMapping,
+	validateColumnNameMapping,
+	validateDomainNameMapping
+} from '$lib/utils/validation.js';
 import { parseTermXlsxToJson } from '$lib/utils/xlsx-parser.js';
 import { addHistoryLog } from '$lib/utils/history-handler.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -248,7 +255,7 @@ export async function POST({ request }: RequestEvent) {
 			// 각 엔트리에 대해 validation 수행
 			const validationErrors: string[] = [];
 			for (const entry of parsedEntries) {
-				// 용어명 접미사 validation
+				// 1. 용어명 접미사 validation
 				const suffixValidationError = validateTermNameSuffix(
 					entry.termName,
 					vocabularyData.entries
@@ -257,7 +264,34 @@ export async function POST({ request }: RequestEvent) {
 					validationErrors.push(`${entry.termName}: ${suffixValidationError}`);
 				}
 
-				// 용어명 유일성 validation
+				// 2. 용어명 매핑 validation (모든 부분이 단어집에 식별되는지)
+				const termMappingError = validateTermNameMapping(
+					entry.termName,
+					vocabularyData.entries
+				);
+				if (termMappingError) {
+					validationErrors.push(`${entry.termName}: ${termMappingError}`);
+				}
+
+				// 3. 컬럼명 매핑 validation (모든 부분이 영문약어로 식별되는지)
+				const columnMappingError = validateColumnNameMapping(
+					entry.columnName,
+					vocabularyData.entries
+				);
+				if (columnMappingError) {
+					validationErrors.push(`${entry.termName} (컬럼명: ${entry.columnName}): ${columnMappingError}`);
+				}
+
+				// 4. 도메인명 매핑 validation
+				const domainMappingError = validateDomainNameMapping(
+					entry.domainName,
+					domainData.entries
+				);
+				if (domainMappingError) {
+					validationErrors.push(`${entry.termName} (도메인명: ${entry.domainName}): ${domainMappingError}`);
+				}
+
+				// 5. 용어명 유일성 validation
 				const uniquenessError = validateTermNameUniqueness(
 					entry.termName,
 					allTermEntries

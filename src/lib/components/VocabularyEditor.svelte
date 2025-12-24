@@ -34,6 +34,8 @@
 	});
 
 	let isSubmitting = $state(false);
+	let domainCategoryOptions = $state<string[]>([]);
+	let isLoadingDomainCategories = $state(false);
 
 	// 실시간 검증: 도메인/용어 에디터와 동일 패턴
 	$effect(() => {
@@ -46,6 +48,29 @@
 
 	$effect(() => {
 		errors.englishName = formData.englishName.trim() ? '' : '영문명은 필수 입력 항목입니다.';
+	});
+
+	// 도메인분류명 목록 로드
+	async function loadDomainCategories() {
+		isLoadingDomainCategories = true;
+		try {
+			const response = await fetch('/api/domain/filter-options?filename=domain.json');
+			if (response.ok) {
+				const result = await response.json();
+				if (result.success && result.data && result.data.domainCategory) {
+					domainCategoryOptions = result.data.domainCategory;
+				}
+			}
+		} catch (err) {
+			console.warn('도메인분류명 목록 로드 실패:', err);
+		} finally {
+			isLoadingDomainCategories = false;
+		}
+	}
+
+	// 컴포넌트 마운트 시 도메인분류명 목록 로드
+	$effect(() => {
+		void loadDomainCategories();
 	});
 
 	$effect(() => {
@@ -292,23 +317,36 @@
 						<div>
 							<label for="domainCategory" class="mb-1 block text-sm font-medium text-gray-900">
 								도메인분류명
+								<span class="ml-2 text-xs font-normal text-gray-500">(선택만 가능)</span>
 								{#if isEditMode}
 									<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
 								{/if}
 							</label>
-							<input
-								id="domainCategory"
-								type="text"
-								class="input"
-								class:bg-gray-50={isEditMode}
-								bind:value={formData.domainCategory}
-								placeholder="예: 사용자관리"
-								disabled={isSubmitting || isEditMode}
-								readonly={isEditMode}
-							/>
+							{#if isLoadingDomainCategories}
+								<div class="input bg-gray-50">
+									<span class="text-sm text-gray-500">도메인분류명 목록을 불러오는 중...</span>
+								</div>
+							{:else}
+								<select
+									id="domainCategory"
+									class="input"
+									class:bg-gray-50={isEditMode}
+									bind:value={formData.domainCategory}
+									disabled={isSubmitting || isEditMode}
+								>
+									<option value="">선택 안 함</option>
+									{#each domainCategoryOptions as option (option)}
+										<option value={option}>{option}</option>
+									{/each}
+								</select>
+							{/if}
 							{#if isEditMode}
 								<p class="mt-1 text-xs text-gray-500">
 									도메인분류명은 validation 처리되는 값으로 수정할 수 없습니다.
+								</p>
+							{:else}
+								<p class="mt-1 text-xs text-gray-500">
+									도메인 데이터에서 등록된 도메인분류명만 선택할 수 있습니다.
 								</p>
 							{/if}
 						</div>

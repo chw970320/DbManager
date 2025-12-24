@@ -23,7 +23,8 @@
 		description: entry.description || '',
 		domainCategory: entry.domainCategory || '',
 		isFormalWord: entry.isFormalWord ?? false,
-		synonyms: entry.synonyms?.join(', ') || ''
+		synonyms: entry.synonyms?.join(', ') || '',
+		forbiddenWords: entry.forbiddenWords?.join(', ') || ''
 	});
 
 	let errors = $state({
@@ -55,6 +56,7 @@
 		formData.domainCategory = entry.domainCategory || '';
 		formData.isFormalWord = entry.isFormalWord ?? false;
 		formData.synonyms = entry.synonyms?.join(', ') || '';
+		formData.forbiddenWords = entry.forbiddenWords?.join(', ') || '';
 	});
 
 	function isFormValid(): boolean {
@@ -79,6 +81,10 @@
 			.split(',')
 			.map((s) => s.trim())
 			.filter(Boolean);
+		const forbiddenWords = formData.forbiddenWords
+			.split(',')
+			.map((f) => f.trim())
+			.filter(Boolean);
 
 		const editedEntry: VocabularyEntry = {
 			id: entry.id || crypto.randomUUID(),
@@ -88,7 +94,8 @@
 			description: formData.description.trim(),
 			domainCategory: formData.domainCategory.trim(),
 			isFormalWord: formData.isFormalWord,
-			synonyms,
+			synonyms: synonyms.length > 0 ? synonyms : undefined,
+			forbiddenWords: forbiddenWords.length > 0 ? forbiddenWords : undefined,
 			createdAt: entry.createdAt || now,
 			updatedAt: now
 		};
@@ -114,6 +121,7 @@
 				domainCategory: formData.domainCategory?.trim() || entry.domainCategory || '',
 				isFormalWord: entry.isFormalWord ?? false,
 				synonyms: entry.synonyms || [],
+				forbiddenWords: entry.forbiddenWords || [],
 				createdAt: entry.createdAt || '',
 				updatedAt: entry.updatedAt || ''
 			};
@@ -305,6 +313,22 @@
 								placeholder="예: 고객, 사용자"
 								disabled={isSubmitting}
 							/>
+						</div>
+						<div>
+							<label for="forbiddenWords" class="mb-1 block text-sm font-medium text-gray-900">
+								금칙어 (쉼표 구분)
+							</label>
+							<input
+								id="forbiddenWords"
+								type="text"
+								class="input"
+								bind:value={formData.forbiddenWords}
+								placeholder="예: 테스트, 샘플"
+								disabled={isSubmitting}
+							/>
+							<p class="mt-1 text-xs text-gray-500">
+								이 단어집 파일에만 적용되는 금칙어 목록입니다.
+							</p>
 						</div>
 					</div>
 				</div>

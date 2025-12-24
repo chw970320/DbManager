@@ -334,3 +334,204 @@ export function sanitizeSearchQuery(query: string): string {
 	// 특수문자 이스케이프 (정규식 안전성)
 	return sanitized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
+
+/**
+ * 금칙어 및 이음동의어 validation
+ * @param standardName - 검증할 표준단어명
+ * @param allVocabularyEntries - 모든 단어집 파일의 엔트리 배열
+ * @returns validation 결과 (에러 메시지 또는 null)
+ */
+export function validateForbiddenWordsAndSynonyms(
+	standardName: string,
+	allVocabularyEntries: VocabularyEntry[]
+): string | null {
+	if (!standardName || typeof standardName !== 'string') {
+		return null;
+	}
+
+	const trimmedName = standardName.trim().toLowerCase();
+
+	// 모든 단어집 파일의 금칙어 합집합 생성
+	const allForbiddenWords = new Set<string>();
+	for (const entry of allVocabularyEntries) {
+		if (entry.forbiddenWords && Array.isArray(entry.forbiddenWords)) {
+			for (const word of entry.forbiddenWords) {
+				if (typeof word === 'string' && word.trim()) {
+					allForbiddenWords.add(word.trim().toLowerCase());
+				}
+			}
+		}
+	}
+
+	// 표준단어명이 금칙어와 정확히 일치하는지 확인
+	if (allForbiddenWords.has(trimmedName)) {
+		return `'${standardName}'은(는) 금칙어로 등록되어 있어 사용할 수 없습니다.`;
+	}
+
+	// 모든 단어집 파일의 이음동의어 합집합 생성
+	const allSynonyms = new Set<string>();
+	for (const entry of allVocabularyEntries) {
+		if (entry.synonyms && Array.isArray(entry.synonyms)) {
+			for (const synonym of entry.synonyms) {
+				if (typeof synonym === 'string' && synonym.trim()) {
+					allSynonyms.add(synonym.trim().toLowerCase());
+				}
+			}
+		}
+	}
+
+	// 표준단어명이 이음동의어와 정확히 일치하는지 확인
+	if (allSynonyms.has(trimmedName)) {
+		return `'${standardName}'은(는) 이음동의어로 등록되어 있어 사용할 수 없습니다.`;
+	}
+
+	return null;
+}
+
+/**
+ * 도메인명 자동 생성
+ * @param domainCategory - 도메인분류명
+ * @param physicalDataType - 물리데이터타입
+ * @param dataLength - 데이터길이
+ * @param decimalPlaces - 소수점자리수
+ * @returns 생성된 표준 도메인명
+ */
+export function generateStandardDomainName(
+	domainCategory: string,
+	physicalDataType: string,
+	dataLength?: string | number,
+	decimalPlaces?: string | number
+): string {
+	const category = (domainCategory || '').trim();
+	const dataType = (physicalDataType || '').trim();
+	
+	// 물리데이터타입의 첫 글자 추출
+	const dataTypeFirstChar = dataType.length > 0 ? dataType[0].toUpperCase() : '';
+	
+	// 데이터길이 처리
+	const length = dataLength !== undefined && dataLength !== null && dataLength !== '' 
+		? String(dataLength).trim() 
+		: '';
+	
+	// 소수점자리수 처리
+	const decimal = decimalPlaces !== undefined && decimalPlaces !== null && decimalPlaces !== ''
+		? String(decimalPlaces).trim()
+		: '';
+	
+	// 도메인명 생성
+	let domainName = category + dataTypeFirstChar;
+	
+	if (length) {
+		domainName += length;
+		if (decimal) {
+			domainName += ',' + decimal;
+		}
+	}
+	
+	return domainName;
+}
+
+/**
+ * 도메인명 유일성 validation
+ * @param standardDomainName - 검증할 표준 도메인명
+ * @param allDomainEntries - 모든 도메인 엔트리 배열
+ * @param excludeId - 제외할 엔트리 ID (수정 시 사용)
+ * @returns validation 결과 (에러 메시지 또는 null)
+ */
+export function validateDomainNameUniqueness(
+	standardDomainName: string,
+	allDomainEntries: Array<{ id: string; standardDomainName: string }>,
+	excludeId?: string
+): string | null {
+	if (!standardDomainName || typeof standardDomainName !== 'string') {
+		return null;
+	}
+
+	const trimmedName = standardDomainName.trim().toLowerCase();
+
+	// 동일한 표준 도메인명이 이미 존재하는지 확인
+	const duplicate = allDomainEntries.find(
+		(entry) =>
+			entry.id !== excludeId &&
+			entry.standardDomainName.trim().toLowerCase() === trimmedName
+	);
+
+	if (duplicate) {
+		return `'${standardDomainName}'은(는) 이미 사용 중인 도메인명입니다.`;
+	}
+
+	return null;
+}
+
+/**
+ * 용어명 접미사 validation
+ * @param termName - 검증할 용어명 (예: "사용자_이름")
+ * @param vocabularyEntries - 단어집 엔트리 배열
+ * @returns validation 결과 (에러 메시지 또는 null)
+ */
+export function validateTermNameSuffix(
+	termName: string,
+	vocabularyEntries: Array<{ standardName: string; isFormalWord?: boolean }>
+): string | null {
+	if (!termName || typeof termName !== 'string') {
+		return null;
+	}
+
+	// 용어명을 언더스코어로 분리
+	const parts = termName.split('_').map((p) => p.trim()).filter((p) => p.length > 0);
+	
+	if (parts.length === 0) {
+		return '용어명이 비어있습니다.';
+	}
+
+	// 마지막 단어(접미사) 추출
+	const suffix = parts[parts.length - 1].toLowerCase();
+
+	// 단어집에서 접미사에 해당하는 단어 찾기
+	const vocabularyWord = vocabularyEntries.find(
+		(entry) => entry.standardName.trim().toLowerCase() === suffix
+	);
+
+	if (!vocabularyWord) {
+		return `'${suffix}'는 단어집에 등록되지 않은 단어입니다.`;
+	}
+
+	// 형식단어여부 확인
+	if (vocabularyWord.isFormalWord !== true) {
+		return `'${suffix}'는 형식단어가 아니므로 용어명의 접미사로 사용할 수 없습니다. (형식단어여부: N)`;
+	}
+
+	return null;
+}
+
+/**
+ * 용어명 유일성 validation
+ * @param termName - 검증할 용어명
+ * @param allTermEntries - 모든 용어 엔트리 배열
+ * @param excludeId - 제외할 엔트리 ID (수정 시 사용)
+ * @returns validation 결과 (에러 메시지 또는 null)
+ */
+export function validateTermNameUniqueness(
+	termName: string,
+	allTermEntries: Array<{ id: string; termName: string }>,
+	excludeId?: string
+): string | null {
+	if (!termName || typeof termName !== 'string') {
+		return null;
+	}
+
+	const trimmedName = termName.trim().toLowerCase();
+
+	// 동일한 용어명이 이미 존재하는지 확인
+	const duplicate = allTermEntries.find(
+		(entry) =>
+			entry.id !== excludeId &&
+			entry.termName.trim().toLowerCase() === trimmedName
+	);
+
+	if (duplicate) {
+		return `'${termName}'은(는) 이미 사용 중인 용어명입니다.`;
+	}
+
+	return null;
+}

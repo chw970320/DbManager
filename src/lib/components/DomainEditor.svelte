@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import type { DomainEntry } from '$lib/types/domain';
+	import { generateStandardDomainName } from '$lib/utils/validation';
 
 	// Props
 	interface Props {
@@ -22,7 +23,6 @@
 	let formData = $state({
 		domainGroup: entry.domainGroup || '',
 		domainCategory: entry.domainCategory || '',
-		standardDomainName: entry.standardDomainName || '',
 		physicalDataType: entry.physicalDataType || '',
 		dataLength: entry.dataLength || '',
 		decimalPlaces: entry.decimalPlaces || '',
@@ -34,11 +34,20 @@
 		allowedValues: entry.allowedValues || ''
 	});
 
+	// 생성된 도메인명 (파생 상태)
+	let generatedDomainName = $derived(
+		generateStandardDomainName(
+			formData.domainCategory,
+			formData.physicalDataType,
+			formData.dataLength,
+			formData.decimalPlaces
+		)
+	);
+
 	// Validation errors
 	let errors = $state({
 		domainGroup: '',
 		domainCategory: '',
-		standardDomainName: '',
 		physicalDataType: ''
 	});
 
@@ -50,7 +59,6 @@
 		if (entry) {
 			formData.domainGroup = entry.domainGroup || '';
 			formData.domainCategory = entry.domainCategory || '';
-			formData.standardDomainName = entry.standardDomainName || '';
 			formData.physicalDataType = entry.physicalDataType || '';
 			formData.dataLength = entry.dataLength || '';
 			formData.decimalPlaces = entry.decimalPlaces || '';
@@ -78,13 +86,6 @@
 		return '';
 	}
 
-	function validateStandardDomainName(value: string): string {
-		if (!value.trim()) {
-			return '표준 도메인명은 필수 입력 항목입니다.';
-		}
-		return '';
-	}
-
 	function validatePhysicalDataType(value: string): string {
 		if (!value.trim()) {
 			return '물리 데이터타입은 필수 입력 항목입니다.';
@@ -102,10 +103,6 @@
 	});
 
 	$effect(() => {
-		errors.standardDomainName = validateStandardDomainName(formData.standardDomainName);
-	});
-
-	$effect(() => {
 		errors.physicalDataType = validatePhysicalDataType(formData.physicalDataType);
 	});
 
@@ -114,11 +111,9 @@
 		return (
 			!errors.domainGroup &&
 			!errors.domainCategory &&
-			!errors.standardDomainName &&
 			!errors.physicalDataType &&
 			!!formData.domainGroup.trim() &&
 			!!formData.domainCategory.trim() &&
-			!!formData.standardDomainName.trim() &&
 			!!formData.physicalDataType.trim()
 		);
 	}
@@ -135,7 +130,7 @@
 			id: entry.id || '',
 			domainGroup: formData.domainGroup.trim(),
 			domainCategory: formData.domainCategory.trim(),
-			standardDomainName: formData.standardDomainName.trim(),
+			standardDomainName: generatedDomainName, // 자동 생성된 도메인명 사용
 			physicalDataType: formData.physicalDataType.trim(),
 			dataLength: formData.dataLength.trim() || undefined,
 			decimalPlaces: formData.decimalPlaces.trim() || undefined,
@@ -169,7 +164,7 @@
 				id: entry.id,
 				domainGroup: formData.domainGroup.trim() || entry.domainGroup || '',
 				domainCategory: formData.domainCategory.trim() || entry.domainCategory || '',
-				standardDomainName: formData.standardDomainName.trim() || entry.standardDomainName || '',
+				standardDomainName: generatedDomainName || entry.standardDomainName || '',
 				physicalDataType: formData.physicalDataType.trim() || entry.physicalDataType || '',
 				dataLength: formData.dataLength.trim() || entry.dataLength || undefined,
 				decimalPlaces: formData.decimalPlaces.trim() || entry.decimalPlaces || undefined,
@@ -299,23 +294,18 @@
 						{/if}
 					</div>
 
-					<!-- 표준 도메인명 -->
+					<!-- 표준 도메인명 (자동 생성, 읽기 전용) -->
 					<div>
 						<label for="standardDomainName" class="mb-1 block text-sm font-medium text-gray-900">
 							표준 도메인명 <span class="text-red-700">*</span>
+							<span class="ml-2 text-xs font-normal text-gray-500">(자동 생성)</span>
 						</label>
-						<input
-							id="standardDomainName"
-							type="text"
-							bind:value={formData.standardDomainName}
-							placeholder="예: 공통표준도메인명"
-							class="input"
-							class:input-error={errors.standardDomainName}
-							disabled={isSubmitting}
-						/>
-						{#if errors.standardDomainName}
-							<p class="text-error mt-1 text-sm">{errors.standardDomainName}</p>
-						{/if}
+						<div class="rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+							{generatedDomainName || '(입력 필요)'}
+						</div>
+						<p class="mt-1 text-xs text-gray-500">
+							도메인분류명, 물리데이터타입, 데이터길이, 소수점자리수로 자동 생성됩니다.
+						</p>
 					</div>
 
 					<!-- 물리 데이터타입 -->

@@ -3,12 +3,13 @@ import type { ApiResponse, VocabularyData, VocabularyEntry } from '$lib/types/vo
 import {
 	loadVocabularyData,
 	saveVocabularyData,
-	loadForbiddenWordsData,
-	checkVocabularyReferences
+	checkVocabularyReferences,
+	listVocabularyFiles
 } from '$lib/utils/file-handler.js';
 import { getDuplicateDetails } from '$lib/utils/duplicate-handler.js';
 import { safeMerge } from '$lib/utils/type-guards.js';
 import { invalidateCache } from '$lib/utils/cache.js';
+import { validateForbiddenWordsAndSynonyms } from '$lib/utils/validation.js';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -242,57 +243,36 @@ export async function POST({ request, url }: RequestEvent) {
 
 		const vocabularyData = await loadVocabularyData(filename);
 
-		// 필수 필드가 검증되었으므로 안전하게 사용
-		const standardNameLower = newEntry.standardName.toLowerCase();
-		const abbreviationLower = newEntry.abbreviation.toLowerCase();
-
-		// 금지어 검사
+		// 모든 단어집 파일 로드하여 금칙어 및 이음동의어 검사
 		try {
-			const forbiddenWordsData = await loadForbiddenWordsData();
+			const allVocabularyFiles = await listVocabularyFiles();
+			const allVocabularyEntries: VocabularyEntry[] = [];
+			for (const file of allVocabularyFiles) {
+				try {
+					const fileData = await loadVocabularyData(file);
+					allVocabularyEntries.push(...fileData.entries);
+				} catch (error) {
+					console.warn(`단어집 파일 ${file} 로드 실패:`, error);
+				}
+			}
 
-			// 표준단어명이 금지어에 해당하는지 확인
-			const standardNameForbidden = forbiddenWordsData.entries.find(
-				(entry) =>
-					entry.keyword.toLowerCase() === standardNameLower && entry.type === 'standardName'
+			// 금칙어 및 이음동의어 validation
+			const validationError = validateForbiddenWordsAndSynonyms(
+				newEntry.standardName,
+				allVocabularyEntries
 			);
-
-			if (standardNameForbidden) {
-				const errorMessage = standardNameForbidden.reason
-					? `금지된 단어입니다. 사유: ${standardNameForbidden.reason}`
-					: '금지된 단어입니다.';
-
+			if (validationError) {
 				return json(
 					{
 						success: false,
-						error: errorMessage,
-						message: 'Forbidden word detected'
+						error: validationError,
+						message: 'Forbidden word or synonym detected'
 					} as ApiResponse,
 					{ status: 400 }
 				);
 			}
-
-			// 영문약어가 금지어에 해당하는지 확인
-			const abbreviationForbidden = forbiddenWordsData.entries.find(
-				(entry) =>
-					entry.keyword.toLowerCase() === abbreviationLower && entry.type === 'abbreviation'
-			);
-
-			if (abbreviationForbidden) {
-				const errorMessage = abbreviationForbidden.reason
-					? `금지된 단어입니다. 사유: ${abbreviationForbidden.reason}`
-					: '금지된 단어입니다.';
-
-				return json(
-					{
-						success: false,
-						error: errorMessage,
-						message: 'Forbidden word detected'
-					} as ApiResponse,
-					{ status: 400 }
-				);
-			}
-		} catch (forbiddenError) {
-			console.warn('금지어 확인 중 오류 (계속 진행):', forbiddenError);
+		} catch (validationError) {
+			console.warn('금칙어 및 이음동의어 확인 중 오류 (계속 진행):', validationError);
 		}
 
 		// 영문약어 중복 검사 (표준단어명 중복은 허용)
@@ -319,6 +299,9 @@ export async function POST({ request, url }: RequestEvent) {
 			domainCategory: newEntry.domainCategory || undefined,
 			domainGroup: newEntry.domainGroup || undefined,
 			isDomainCategoryMapped: newEntry.isDomainCategoryMapped ?? false,
+			isFormalWord: newEntry.isFormalWord ?? undefined,
+			synonyms: newEntry.synonyms || undefined,
+			forbiddenWords: newEntry.forbiddenWords || undefined,
 			createdAt: new Date().toISOString(),
 			updatedAt: new Date().toISOString()
 		};
@@ -380,6 +363,46 @@ export async function PUT({ request, url }: RequestEvent) {
 				} as ApiResponse,
 				{ status: 404 }
 			);
+		}
+
+		// 표준단어명이 변경되는 경우 금칙어 및 이음동의어 validation
+		const existingEntry = vocabularyData.entries[entryIndex];
+		if (
+			updatedEntry.standardName &&
+			updatedEntry.standardName !== existingEntry.standardName
+		) {
+			try {
+				const allVocabularyFiles = await listVocabularyFiles();
+				const allVocabularyEntries: VocabularyEntry[] = [];
+				for (const file of allVocabularyFiles) {
+					try {
+						const fileData = await loadVocabularyData(file);
+						// 현재 수정 중인 엔트리는 제외하고 검사
+						const filteredEntries = fileData.entries.filter((e) => e.id !== updatedEntry.id);
+						allVocabularyEntries.push(...filteredEntries);
+					} catch (error) {
+						console.warn(`단어집 파일 ${file} 로드 실패:`, error);
+					}
+				}
+
+				// 금칙어 및 이음동의어 validation
+				const validationError = validateForbiddenWordsAndSynonyms(
+					updatedEntry.standardName,
+					allVocabularyEntries
+				);
+				if (validationError) {
+					return json(
+						{
+							success: false,
+							error: validationError,
+							message: 'Forbidden word or synonym detected'
+						} as ApiResponse,
+						{ status: 400 }
+					);
+				}
+			} catch (validationError) {
+				console.warn('금칙어 및 이음동의어 확인 중 오류 (계속 진행):', validationError);
+			}
 		}
 
 		// 기존 데이터를 유지하면서 업데이트 (undefined 값은 무시)

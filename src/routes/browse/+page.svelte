@@ -4,7 +4,6 @@
 	import SearchBar from '$lib/components/SearchBar.svelte';
 	import VocabularyTable from '$lib/components/VocabularyTable.svelte';
 	import VocabularyEditor from '$lib/components/VocabularyEditor.svelte';
-	import ForbiddenWordManager from '$lib/components/ForbiddenWordManager.svelte';
 	import VocabularyFileManager from '$lib/components/VocabularyFileManager.svelte';
 	import HistoryLog from '$lib/components/HistoryLog.svelte';
 	import type { VocabularyEntry, ApiResponse } from '$lib/types/vocabulary.js';
@@ -47,7 +46,6 @@
 	// UI 상태
 	let showEditor = $state(false);
 	let editorServerError = $state('');
-	let showForbiddenWordManager = $state(false);
 	let isFileManagerOpen = $state(false);
 	let sidebarOpen = $state(false);
 	let currentEditingEntry = $state<VocabularyEntry | null>(null);
@@ -900,31 +898,6 @@
 
 						<!-- 액션 버튼들 -->
 						<div class="mb-4 flex items-center space-x-3">
-							<!-- 금지어 관리 버튼 -->
-							<button
-								type="button"
-								onclick={() => {
-									showForbiddenWordManager = true;
-								}}
-								disabled={loading}
-								class="group inline-flex items-center space-x-2 rounded-xl border border-red-200/50 bg-red-50/80 px-6 py-3 text-sm font-medium text-red-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-red-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-							>
-								<svg
-									class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728L5.636 5.636m12.728 12.728L18 12l-2.364-2.364M5.636 5.636L12 12l2.364-2.364"
-									/>
-								</svg>
-								<span>금지어 관리</span>
-							</button>
-
 							<!-- 새 단어 추가 버튼 -->
 							<button
 								type="button"
@@ -1018,14 +991,6 @@
 						}}
 					/>
 				{/if}
-
-				<!-- ForbiddenWordManager 모달 -->
-				<ForbiddenWordManager
-					isOpen={showForbiddenWordManager}
-					on:close={() => {
-						showForbiddenWordManager = false;
-					}}
-				/>
 
 				<!-- VocabularyFileManager 모달 -->
 				<VocabularyFileManager

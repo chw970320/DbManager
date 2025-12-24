@@ -7,9 +7,7 @@ import type {
 	VocabularyEntry,
 	VocabularyData,
 	HistoryLogEntry,
-	HistoryData,
-	ForbiddenWordEntry,
-	ForbiddenWordsData
+	HistoryData
 } from '$lib/types/vocabulary';
 import type {
 	DomainEntry,
@@ -367,58 +365,6 @@ export function isTermHistoryData(value: unknown): value is TermHistoryData {
 
 	// logs 배열의 각 항목 검증
 	if (!value.logs.every(isTermHistoryLogEntry)) return false;
-
-	return true;
-}
-
-// ============================================================================
-// ForbiddenWords 타입 가드
-// ============================================================================
-
-const VALID_FORBIDDEN_TYPES = ['standardName', 'abbreviation'] as const;
-
-function isValidForbiddenType(value: unknown): value is 'standardName' | 'abbreviation' {
-	return (
-		isString(value) &&
-		VALID_FORBIDDEN_TYPES.includes(value as (typeof VALID_FORBIDDEN_TYPES)[number])
-	);
-}
-
-/**
- * ForbiddenWordEntry 타입 가드
- */
-export function isForbiddenWordEntry(value: unknown): value is ForbiddenWordEntry {
-	if (!isObject(value)) return false;
-
-	// 필수 필드 검증
-	const required =
-		isString(value.id) &&
-		isString(value.keyword) &&
-		isValidForbiddenType(value.type) &&
-		isString(value.createdAt);
-
-	if (!required) return false;
-
-	// 선택적 필드 검증
-	if (value.reason !== undefined && !isString(value.reason)) return false;
-	if (value.targetFile !== undefined && !isString(value.targetFile)) return false;
-
-	return true;
-}
-
-/**
- * ForbiddenWordsData 타입 가드
- */
-export function isForbiddenWordsData(value: unknown): value is ForbiddenWordsData {
-	if (!isObject(value)) return false;
-
-	// 필수 필드 검증
-	if (!isArray(value.entries)) return false;
-	if (!isString(value.lastUpdated)) return false;
-	if (!isNumber(value.totalCount)) return false;
-
-	// entries 배열의 각 항목 검증
-	if (!value.entries.every(isForbiddenWordEntry)) return false;
 
 	return true;
 }

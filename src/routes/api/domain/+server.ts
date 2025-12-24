@@ -1,10 +1,10 @@
-// @ts-nocheck
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse } from '$lib/types/vocabulary';
-import type { DomainData, DomainEntry } from '$lib/types/domain';
-import { saveDomainData, loadDomainData, checkDomainReferences } from '$lib/utils/file-handler.js';
+import type { DomainData, DomainEntry, DomainApiResponse } from '$lib/types/domain';
+import { saveDomainData, loadDomainData, checkDomainReferences, listDomainFiles } from '$lib/utils/file-handler.js';
 import { safeMerge } from '$lib/utils/type-guards.js';
 import { invalidateCache } from '$lib/utils/cache.js';
+import { generateStandardDomainName, validateDomainNameUniqueness } from '$lib/utils/validation.js';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -333,13 +333,8 @@ export async function POST({ request }: RequestEvent) {
 		const body = await request.json();
 		const { filename = 'domain.json', ...entryData } = body;
 
-		// 필수 필드 검증
-		const requiredFields = [
-			'domainGroup',
-			'domainCategory',
-			'standardDomainName',
-			'physicalDataType'
-		];
+		// 필수 필드 검증 (standardDomainName은 자동 생성되므로 제외)
+		const requiredFields = ['domainGroup', 'domainCategory', 'physicalDataType'];
 		const missingFields = requiredFields.filter((field) => !entryData[field]);
 
 		if (missingFields.length > 0) {
@@ -352,6 +347,14 @@ export async function POST({ request }: RequestEvent) {
 				{ status: 400 }
 			);
 		}
+
+		// 도메인명 자동 생성
+		const generatedDomainName = generateStandardDomainName(
+			entryData.domainCategory,
+			entryData.physicalDataType,
+			entryData.dataLength,
+			entryData.decimalPlaces
+		);
 
 		// 기존 데이터 로드
 		let domainData: DomainData;
@@ -366,23 +369,36 @@ export async function POST({ request }: RequestEvent) {
 			};
 		}
 
-		// 중복 검사 (도메인 그룹 + 분류 + 표준도메인명)
-		const isDuplicate = domainData.entries.some(
-			(entry) =>
-				entry.domainGroup === entryData.domainGroup &&
-				entry.domainCategory === entryData.domainCategory &&
-				entry.standardDomainName === entryData.standardDomainName
-		);
+		// 모든 도메인 파일 로드하여 도메인명 유일성 검사
+		try {
+			const allDomainFiles = await listDomainFiles();
+			const allDomainEntries: DomainEntry[] = [];
+			for (const file of allDomainFiles) {
+				try {
+					const fileData = await loadDomainData(file);
+					allDomainEntries.push(...fileData.entries);
+				} catch (error) {
+					console.warn(`도메인 파일 ${file} 로드 실패:`, error);
+				}
+			}
 
-		if (isDuplicate) {
-			return json(
-				{
-					success: false,
-					error: '이미 동일한 도메인이 존재합니다.',
-					message: 'Duplicate domain entry'
-				} as ApiResponse,
-				{ status: 409 }
+			// 도메인명 유일성 validation
+			const validationError = validateDomainNameUniqueness(
+				generatedDomainName,
+				allDomainEntries
 			);
+			if (validationError) {
+				return json(
+					{
+						success: false,
+						error: validationError,
+						message: 'Duplicate domain name'
+					} as ApiResponse,
+					{ status: 409 }
+				);
+			}
+		} catch (validationError) {
+			console.warn('도메인명 유일성 확인 중 오류 (계속 진행):', validationError);
 		}
 
 		// 새 도메인 엔트리 생성
@@ -391,10 +407,11 @@ export async function POST({ request }: RequestEvent) {
 			id: uuidv4(),
 			domainGroup: entryData.domainGroup,
 			domainCategory: entryData.domainCategory,
-			standardDomainName: entryData.standardDomainName,
+			standardDomainName: generatedDomainName, // 자동 생성된 도메인명 사용
 			physicalDataType: entryData.physicalDataType,
 			dataLength: entryData.dataLength || undefined,
 			decimalPlaces: entryData.decimalPlaces || undefined,
+			logicalDataType: entryData.logicalDataType || undefined,
 			measurementUnit: entryData.measurementUnit || undefined,
 			revision: entryData.revision || undefined,
 			description: entryData.description || undefined,
@@ -470,9 +487,60 @@ export async function PUT({ request }: RequestEvent) {
 			);
 		}
 
-		// 데이터 수정 (undefined 값은 무시)
+		const existingEntry = domainData.entries[entryIndex];
+		
+		// 도메인명 자동 생성 (도메인분류명, 물리데이터타입, 데이터길이, 소수점자리수가 변경되면 재생성)
+		const finalDomainCategory = updateFields.domainCategory ?? existingEntry.domainCategory;
+		const finalPhysicalDataType = updateFields.physicalDataType ?? existingEntry.physicalDataType;
+		const finalDataLength = updateFields.dataLength ?? existingEntry.dataLength;
+		const finalDecimalPlaces = updateFields.decimalPlaces ?? existingEntry.decimalPlaces;
+		
+		const generatedDomainName = generateStandardDomainName(
+			finalDomainCategory,
+			finalPhysicalDataType,
+			finalDataLength,
+			finalDecimalPlaces
+		);
+
+		// 도메인명이 변경되는 경우 유일성 validation
+		if (generatedDomainName !== existingEntry.standardDomainName) {
+			try {
+				const allDomainFiles = await listDomainFiles();
+				const allDomainEntries: DomainEntry[] = [];
+				for (const file of allDomainFiles) {
+					try {
+						const fileData = await loadDomainData(file);
+						allDomainEntries.push(...fileData.entries);
+					} catch (error) {
+						console.warn(`도메인 파일 ${file} 로드 실패:`, error);
+					}
+				}
+
+				// 도메인명 유일성 validation
+				const validationError = validateDomainNameUniqueness(
+					generatedDomainName,
+					allDomainEntries,
+					id // 현재 수정 중인 엔트리는 제외
+				);
+				if (validationError) {
+					return json(
+						{
+							success: false,
+							error: validationError,
+							message: 'Duplicate domain name'
+						} as ApiResponse,
+						{ status: 409 }
+					);
+				}
+			} catch (validationError) {
+				console.warn('도메인명 유일성 확인 중 오류 (계속 진행):', validationError);
+			}
+		}
+
+		// 데이터 수정 (undefined 값은 무시, 도메인명은 자동 생성된 값 사용)
 		domainData.entries[entryIndex] = {
 			...safeMerge(domainData.entries[entryIndex], updateFields),
+			standardDomainName: generatedDomainName, // 자동 생성된 도메인명 사용
 			updatedAt: new Date().toISOString()
 		};
 

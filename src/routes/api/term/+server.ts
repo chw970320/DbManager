@@ -1,9 +1,10 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse } from '$lib/types/vocabulary.js';
 import type { TermData, TermEntry } from '$lib/types/term.js';
-import { saveTermData, loadTermData } from '$lib/utils/file-handler.js';
+import { saveTermData, loadTermData, listTermFiles } from '$lib/utils/file-handler.js';
 import { safeMerge } from '$lib/utils/type-guards.js';
 import { getCachedVocabularyData, getCachedDomainData, invalidateCache } from '$lib/utils/cache.js';
+import { validateTermNameSuffix, validateTermNameUniqueness } from '$lib/utils/validation.js';
 
 /**
  * 용어 매핑 로직 (업로드 API와 동일)
@@ -371,6 +372,53 @@ export async function POST({ request }: RequestEvent) {
 			domainMap.set(key, domainEntry.standardDomainName);
 		});
 
+		// 용어명 접미사 validation
+		const suffixValidationError = validateTermNameSuffix(
+			entry.termName.trim(),
+			vocabularyData.entries
+		);
+		if (suffixValidationError) {
+			return json(
+				{
+					success: false,
+					error: suffixValidationError,
+					message: 'Term name suffix validation failed'
+				} as ApiResponse,
+				{ status: 400 }
+			);
+		}
+
+		// 용어명 유일성 validation
+		try {
+			const allTermFiles = await listTermFiles();
+			const allTermEntries: TermEntry[] = [];
+			for (const file of allTermFiles) {
+				try {
+					const fileData = await loadTermData(file);
+					allTermEntries.push(...fileData.entries);
+				} catch (error) {
+					console.warn(`용어 파일 ${file} 로드 실패:`, error);
+				}
+			}
+
+			const uniquenessError = validateTermNameUniqueness(
+				entry.termName.trim(),
+				allTermEntries
+			);
+			if (uniquenessError) {
+				return json(
+					{
+						success: false,
+						error: uniquenessError,
+						message: 'Duplicate term name'
+					} as ApiResponse,
+					{ status: 409 }
+				);
+			}
+		} catch (validationError) {
+			console.warn('용어명 유일성 확인 중 오류 (계속 진행):', validationError);
+		}
+
 		// 매핑 검증
 		const mappingResult = checkTermMapping(
 			entry.termName.trim(),
@@ -490,6 +538,59 @@ export async function PUT({ request }: RequestEvent) {
 		const termName = entry.termName?.trim() || termData.entries[index].termName;
 		const columnName = entry.columnName?.trim() || termData.entries[index].columnName;
 		const domainName = entry.domainName?.trim() || termData.entries[index].domainName;
+
+		const existingEntry = termData.entries[index];
+
+		// 용어명이 변경되는 경우 validation 수행
+		if (entry.termName && entry.termName.trim() !== existingEntry.termName) {
+			// 용어명 접미사 validation
+			const suffixValidationError = validateTermNameSuffix(
+				termName,
+				vocabularyData.entries
+			);
+			if (suffixValidationError) {
+				return json(
+					{
+						success: false,
+						error: suffixValidationError,
+						message: 'Term name suffix validation failed'
+					} as ApiResponse,
+					{ status: 400 }
+				);
+			}
+
+			// 용어명 유일성 validation
+			try {
+				const allTermFiles = await listTermFiles();
+				const allTermEntries: TermEntry[] = [];
+				for (const file of allTermFiles) {
+					try {
+						const fileData = await loadTermData(file);
+						allTermEntries.push(...fileData.entries);
+					} catch (error) {
+						console.warn(`용어 파일 ${file} 로드 실패:`, error);
+					}
+				}
+
+				const uniquenessError = validateTermNameUniqueness(
+					termName,
+					allTermEntries,
+					entry.id // 현재 수정 중인 엔트리는 제외
+				);
+				if (uniquenessError) {
+					return json(
+						{
+							success: false,
+							error: uniquenessError,
+							message: 'Duplicate term name'
+						} as ApiResponse,
+						{ status: 409 }
+					);
+				}
+			} catch (validationError) {
+				console.warn('용어명 유일성 확인 중 오류 (계속 진행):', validationError);
+			}
+		}
 
 		// 매핑 검증
 		const mappingResult = checkTermMapping(

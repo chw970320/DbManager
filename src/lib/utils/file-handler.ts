@@ -1,14 +1,13 @@
 import { writeFile, readFile, mkdir, readdir, rename, unlink, stat } from 'fs/promises';
 import { existsSync } from 'fs';
 import { join, resolve, basename } from 'path';
-import type { ForbiddenWordsData, VocabularyData, VocabularyEntry } from '$lib/types/vocabulary';
+import type { VocabularyData, VocabularyEntry } from '$lib/types/vocabulary';
 import type { DomainData, DomainEntry } from '$lib/types/domain';
 import type { TermData, TermEntry } from '$lib/types/term';
 import {
 	isVocabularyData,
 	isDomainData,
 	isTermData,
-	isForbiddenWordsData,
 	safeJsonParse,
 	TypeValidationError
 } from './type-guards';
@@ -31,7 +30,6 @@ const TERM_DIR = join(DATA_DIR, 'term');
 const DEFAULT_VOCABULARY_FILE = 'vocabulary.json';
 const DEFAULT_DOMAIN_FILE = 'domain.json';
 const DEFAULT_TERM_FILE = 'term.json';
-const FORBIDDEN_WORDS_FILE = 'forbidden-words.json';
 const HISTORY_FILE = 'history.json';
 
 /**
@@ -117,7 +115,6 @@ async function migrateDataFiles(): Promise<void> {
 			// 시스템 파일 이동
 			if (
 				file === DEFAULT_VOCABULARY_FILE ||
-				file === FORBIDDEN_WORDS_FILE ||
 				file === HISTORY_FILE ||
 				file.includes('_backup_') // 백업 파일은 일단 vocabulary로 가정 (내용 확인 필요할 수도 있음)
 			) {
@@ -444,7 +441,6 @@ export async function listVocabularyFiles(): Promise<string[]> {
 		return files.filter((file) => {
 			return (
 				file.endsWith('.json') &&
-				file !== FORBIDDEN_WORDS_FILE &&
 				file !== HISTORY_FILE &&
 				!file.includes('_backup_')
 			);
@@ -477,7 +473,6 @@ export async function renameVocabularyFile(
 ): Promise<void> {
 	// 시스템 파일 보호
 	if (
-		oldFilename === FORBIDDEN_WORDS_FILE ||
 		oldFilename === DEFAULT_VOCABULARY_FILE ||
 		oldFilename === HISTORY_FILE
 	) {
@@ -493,7 +488,6 @@ export async function renameVocabularyFile(
 export async function deleteVocabularyFile(filename: string): Promise<void> {
 	// 시스템 파일 보호
 	if (
-		filename === FORBIDDEN_WORDS_FILE ||
 		filename === DEFAULT_VOCABULARY_FILE ||
 		filename === HISTORY_FILE
 	) {
@@ -501,101 +495,6 @@ export async function deleteVocabularyFile(filename: string): Promise<void> {
 	}
 	await ensureDataDirectory();
 	await deleteDataFile('vocabulary', filename);
-}
-
-/**
- * 금지어 데이터를 JSON 파일에서 불러오기
- * @throws TypeValidationError - 타입 검증 실패 시
- */
-export async function loadForbiddenWordsData(): Promise<ForbiddenWordsData> {
-	try {
-		await ensureDataDirectory();
-		const dataPath = getDataPath(FORBIDDEN_WORDS_FILE, 'forbidden');
-
-		// 안전한 파일 읽기 (백업 복구 지원)
-		const fileContent = await safeReadFile(dataPath);
-
-		// 파일이 없거나 빈 파일이면 기본 데이터 생성
-		if (!fileContent || !fileContent.trim()) {
-			const defaultData: ForbiddenWordsData = {
-				entries: [],
-				lastUpdated: new Date().toISOString(),
-				totalCount: 0
-			};
-			await saveForbiddenWordsData(defaultData);
-			return defaultData;
-		}
-
-		// 타입 가드를 사용한 안전한 JSON 파싱
-		const data = safeJsonParse(fileContent, isForbiddenWordsData, 'ForbiddenWordsData');
-
-		return {
-			...data,
-			totalCount: data.entries.length
-		};
-	} catch (error) {
-		console.error('금지어 데이터 로드 실패:', error);
-		if (error instanceof FileReadError) {
-			throw new Error(`금지어 파일 읽기 실패: ${error.message}`);
-		}
-		if (error instanceof TypeValidationError) {
-			throw new Error(`금지어 데이터 형식 오류: ${error.message}`);
-		}
-		throw new Error(
-			`금지어 데이터 로드 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`
-		);
-	}
-}
-
-/**
- * 금지어 데이터를 JSON 파일로 저장 (파일 락 적용)
- */
-export async function saveForbiddenWordsData(data: ForbiddenWordsData): Promise<void> {
-	try {
-		await ensureDataDirectory();
-
-		if (!data || !Array.isArray(data.entries)) {
-			throw new Error('유효하지 않은 금지어 데이터입니다.');
-		}
-
-		const validEntries = data.entries.filter((entry) => {
-			const hasRequiredFields = entry.id && entry.keyword && entry.type && entry.createdAt;
-			if (!hasRequiredFields) return false;
-
-			// 형식 검증 (경고만 출력)
-			if (!isValidUUID(entry.id)) {
-				console.warn(`[검증 경고] 금지어 엔트리 ID가 UUID 형식이 아닙니다: ${entry.id}`);
-			}
-			if (!isValidISODate(entry.createdAt)) {
-				console.warn(
-					`[검증 경고] 금지어 엔트리 생성일이 ISO 8601 형식이 아닙니다: ${entry.createdAt}`
-				);
-			}
-
-			return true;
-		});
-
-		if (validEntries.length === 0 && data.entries.length > 0) {
-			throw new Error('저장할 유효한 금지어 데이터가 없습니다.');
-		}
-
-		const finalData: ForbiddenWordsData = {
-			entries: validEntries,
-			lastUpdated: new Date().toISOString(),
-			totalCount: validEntries.length
-		};
-
-		const dataPath = getDataPath(FORBIDDEN_WORDS_FILE, 'forbidden');
-		const jsonData = JSON.stringify(finalData, null, 2);
-
-		// 파일 락 + 원자적 쓰기를 사용한 안전한 저장
-		await safeWriteFile(dataPath, jsonData);
-	} catch (error) {
-		console.error('금지어 데이터 저장 실패:', error);
-		throw new Error(
-			`금지어 데이터 저장 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`
-		);
-	}
 }
 
 /**

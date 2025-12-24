@@ -1,8 +1,8 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type { ApiResponse, UploadResult, VocabularyData } from '$lib/types/vocabulary.js';
-import { validateXlsxFile } from '$lib/utils/validation.js';
+import type { ApiResponse, UploadResult, VocabularyData, VocabularyEntry } from '$lib/types/vocabulary.js';
+import { validateXlsxFile, validateForbiddenWordsAndSynonyms } from '$lib/utils/validation.js';
 import { parseXlsxToJson } from '$lib/utils/xlsx-parser.js';
-import { mergeVocabularyData } from '$lib/utils/file-handler.js';
+import { mergeVocabularyData, loadVocabularyData, listVocabularyFiles } from '$lib/utils/file-handler.js';
 import { addHistoryLog } from '$lib/utils/history-handler.js';
 import {
 	getRequiredFile,
@@ -57,7 +57,7 @@ export async function POST({ request }: RequestEvent) {
 		const replaceExisting = getOptionalBoolean(formData, 'replace');
 
 		// xlsx 파일 파싱 (교체 모드일 때는 파일 내 중복 체크 건너뛰기)
-		let parsedEntries;
+		let parsedEntries: VocabularyEntry[];
 		try {
 			parsedEntries = parseXlsxToJson(buffer, !replaceExisting);
 		} catch (parseError) {
@@ -69,6 +69,50 @@ export async function POST({ request }: RequestEvent) {
 				} as ApiResponse,
 				{ status: 422 }
 			);
+		}
+
+		// 모든 단어집 파일 로드하여 금칙어 및 이음동의어 검사
+		try {
+			const allVocabularyFiles = await listVocabularyFiles();
+			const allVocabularyEntries: VocabularyEntry[] = [];
+			for (const file of allVocabularyFiles) {
+				try {
+					const fileData = await loadVocabularyData(file);
+					// 교체 모드가 아닌 경우 현재 파일의 기존 엔트리는 제외
+					if (!replaceExisting && file === filename) {
+						// 병합 모드에서는 현재 파일의 기존 엔트리를 제외하고 검사
+						continue;
+					}
+					allVocabularyEntries.push(...fileData.entries);
+				} catch (error) {
+					console.warn(`단어집 파일 ${file} 로드 실패:`, error);
+				}
+			}
+
+			// 업로드된 각 엔트리에 대해 금칙어 및 이음동의어 validation
+			const validationErrors: string[] = [];
+			for (const entry of parsedEntries) {
+				const validationError = validateForbiddenWordsAndSynonyms(
+					entry.standardName,
+					allVocabularyEntries
+				);
+				if (validationError) {
+					validationErrors.push(`${entry.standardName}: ${validationError}`);
+				}
+			}
+
+			if (validationErrors.length > 0) {
+				return json(
+					{
+						success: false,
+						error: `다음 단어들이 금칙어 또는 이음동의어로 등록되어 있습니다:\n${validationErrors.join('\n')}`,
+						message: 'Forbidden words or synonyms detected in upload'
+					} as ApiResponse,
+					{ status: 400 }
+				);
+			}
+		} catch (validationError) {
+			console.warn('금칙어 및 이음동의어 확인 중 오류 (계속 진행):', validationError);
 		}
 
 		let finalData: VocabularyData;

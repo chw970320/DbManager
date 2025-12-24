@@ -1,7 +1,6 @@
 const VOCABULARY_SYSTEM_FILE = 'vocabulary.json';
 const _DOMAIN_SYSTEM_FILE = 'domain.json';
 const TERM_SYSTEM_FILE = 'term.json';
-const FORBIDDEN_WORDS_FILE = 'forbidden-words.json';
 const HISTORY_FILE = 'history.json';
 
 /**
@@ -10,7 +9,7 @@ const HISTORY_FILE = 'history.json';
  * @returns 시스템 파일 여부
  */
 export function isSystemVocabularyFile(file: string): boolean {
-	return file === VOCABULARY_SYSTEM_FILE || file === FORBIDDEN_WORDS_FILE || file === HISTORY_FILE;
+	return file === VOCABULARY_SYSTEM_FILE || file === HISTORY_FILE;
 }
 
 /**

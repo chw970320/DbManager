@@ -25,6 +25,7 @@
 		isForbidden: boolean;
 		isSynonym: boolean;
 		recommendations: string[];
+		recommendationMappings?: Array<{ recommendation: string; originalPart: string }>;
 	} | null>(null);
 	// 각 결과에 대한 validation 상태 저장
 	let validationResults = $state<Map<string, { isValid: boolean; error?: string }>>(new Map());
@@ -134,13 +135,30 @@
 
 	// 단어 조합에 대한 접미사 validation 수행
 	async function validateSegmentResults(segment: string) {
+		// columnName이 없으면 validation 건너뛰기
+		const columnName = finalResults[0] || '';
+		if (!columnName || !columnName.trim()) {
+			return;
+		}
+
+		// termName이 2단어 이상의 조합인지 사전 확인 (언더스코어로 분리)
+		const termParts = segment
+			.trim()
+			.split('_')
+			.map((p) => p.trim())
+			.filter((p) => p.length > 0);
+		if (termParts.length < 2) {
+			// 단일 단어는 validation 대상이 아님
+			return;
+		}
+
 		try {
 			const response = await fetch('/api/term/validate', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					termName: segment,
-					columnName: finalResults[0] || '',
+					columnName: columnName,
 					domainName: ''
 				})
 			});
@@ -173,9 +191,8 @@
 				}
 			}
 		} catch (err) {
-			console.warn('Validation 확인 중 오류:', err);
-			const errorMessage = err instanceof Error ? err.message : 'Validation 확인 실패';
-			validationResults.set(segment, { isValid: false, error: errorMessage });
+			// 네트워크 오류 등 예외 상황은 조용히 처리 (validation은 선택적 기능)
+			// 콘솔 에러는 출력하지 않음 (사용자 경험에 영향을 주지 않도록)
 		}
 		validationResults = new Map(validationResults); // 반응성 트리거
 	}
@@ -327,11 +344,32 @@
 							</p>
 							<div class="mt-2 flex flex-wrap gap-2">
 								{#each forbiddenWordInfo.recommendations as rec (rec)}
+									{@const mapping = forbiddenWordInfo.recommendationMappings?.find(
+										(m) => m.recommendation === rec
+									)}
+									{@const originalPart = mapping?.originalPart || rec}
 									<button
 										type="button"
 										class="rounded border border-yellow-300 bg-yellow-100 px-2 py-1 text-xs text-yellow-800 hover:bg-yellow-200"
 										onclick={() => {
-											sourceTerm = rec;
+											// 합성 단어인 경우 해당 부분만 교체
+											if (mapping && originalPart !== sourceTerm) {
+												// 원본 문자열에서 해당 부분을 찾아서 추천 단어로 교체 (대소문자 구분 없이)
+												const originalPartEscaped = originalPart.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+												const regex = new RegExp(originalPartEscaped, 'gi');
+												// 원본 문자열에서 실제로 매칭되는 부분을 찾아서 그 부분만 교체
+												const match = sourceTerm.match(regex);
+												if (match) {
+													// 첫 번째 매칭된 부분의 원본 문자열(대소문자 포함)을 추천 단어로 교체
+													sourceTerm = sourceTerm.replace(regex, rec);
+												} else {
+													// 매칭 실패 시 전체 교체
+													sourceTerm = rec;
+												}
+											} else {
+												// 단일 단어이거나 매핑 정보가 없는 경우 전체 교체
+												sourceTerm = rec;
+											}
 											forbiddenWordInfo = null;
 										}}
 									>

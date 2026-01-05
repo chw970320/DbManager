@@ -12,14 +12,12 @@
 	// Props
 	interface Props {
 		entry?: Partial<TermEntry>;
-		isEditMode?: boolean;
 		serverError?: string;
 		filename?: string; // 현재 선택된 용어 파일명
 	}
 
 	let {
 		entry = {},
-		isEditMode = false,
 		serverError = '',
 		filename = 'term.json'
 	}: Props = $props();
@@ -28,7 +26,6 @@
 	const dispatch = createEventDispatcher<{
 		save: TermEntry;
 		cancel: void;
-		delete: TermEntry;
 	}>();
 
 	// Form data
@@ -474,8 +471,7 @@
 						body: JSON.stringify({
 							termName: formData.termName.trim(),
 							columnName: formData.columnName.trim(),
-							domainName: formData.domainName.trim(),
-							entryId: entry.id // 수정 모드인 경우 현재 entry ID 전달
+							domainName: formData.domainName.trim()
 						})
 					}
 				);
@@ -506,14 +502,14 @@
 		}
 
 		const editedEntry: TermEntry = {
-			id: entry.id || '',
+			id: '',
 			termName: formData.termName.trim(),
 			columnName: formData.columnName.trim(),
 			domainName: formData.domainName.trim(),
-			isMappedTerm: entry.isMappedTerm || false,
-			isMappedColumn: entry.isMappedColumn || false,
-			isMappedDomain: entry.isMappedDomain || false,
-			createdAt: entry.createdAt || new Date().toISOString(),
+			isMappedTerm: false,
+			isMappedColumn: false,
+			isMappedDomain: false,
+			createdAt: new Date().toISOString(),
 			updatedAt: new Date().toISOString()
 		};
 
@@ -524,28 +520,6 @@
 	// Handle cancel
 	function handleCancel() {
 		dispatch('cancel');
-	}
-
-	// Handle delete
-	function handleDelete() {
-		if (!entry.id) {
-			return;
-		}
-
-		if (confirm('정말로 이 항목을 삭제하시겠습니까?')) {
-			const entryToDelete: TermEntry = {
-				id: entry.id,
-				termName: formData.termName.trim() || entry.termName || '',
-				columnName: formData.columnName.trim() || entry.columnName || '',
-				domainName: formData.domainName.trim() || entry.domainName || '',
-				isMappedTerm: entry.isMappedTerm || false,
-				isMappedColumn: entry.isMappedColumn || false,
-				isMappedDomain: entry.isMappedDomain || false,
-				createdAt: entry.createdAt || '',
-				updatedAt: entry.updatedAt || ''
-			};
-			dispatch('delete', entryToDelete);
-		}
 	}
 
 	// Handle background click
@@ -607,9 +581,7 @@
 		onclick={(e) => e.stopPropagation()}
 	>
 		<div class="flex flex-shrink-0 items-center justify-between border-b p-6">
-			<h2 class="text-xl font-bold text-gray-900">
-				{isEditMode ? '용어 수정' : '새 용어 추가'}
-			</h2>
+			<h2 class="text-xl font-bold text-gray-900">새 용어 추가</h2>
 			<button
 				onclick={handleCancel}
 				class="text-gray-400 hover:text-gray-600"
@@ -662,9 +634,6 @@
 				<div class="autocomplete-container relative">
 					<label for="termName" class="mb-1 block text-sm font-medium text-gray-900">
 						용어명 <span class="text-red-700">*</span>
-						{#if isEditMode}
-							<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
-						{/if}
 					</label>
 					<input
 						id="termName"
@@ -680,14 +649,12 @@
 						placeholder="예: 데이터베이스_관리자"
 						class="autocomplete-input input"
 						class:input-error={errors.termName}
-						class:bg-gray-50={isEditMode}
-						disabled={isSubmitting || isEditMode}
-						readonly={isEditMode}
+						disabled={isSubmitting}
 					/>
 					{#if errors.termName}
 						<p class="text-error mt-1 text-sm">{errors.termName}</p>
 					{/if}
-					{#if !isEditMode && showTermNameSuggestions && termNameSuggestions.length > 0}
+					{#if showTermNameSuggestions && termNameSuggestions.length > 0}
 						<div
 							class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-300 bg-white shadow-lg"
 						>
@@ -704,11 +671,7 @@
 						</div>
 					{/if}
 					<p class="mt-1 text-xs text-gray-500">
-						{#if isEditMode}
-							용어명은 validation 처리되는 값으로 수정할 수 없습니다.
-						{:else}
-							단어집의 표준단어명을 언더스코어(_)로 연결하여 입력하세요
-						{/if}
+						단어집의 표준단어명을 언더스코어(_)로 연결하여 입력하세요
 					</p>
 				</div>
 
@@ -716,9 +679,6 @@
 				<div class="autocomplete-container relative">
 					<label for="columnName" class="mb-1 block text-sm font-medium text-gray-900">
 						컬럼명 <span class="text-red-700">*</span>
-						{#if isEditMode}
-							<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
-						{/if}
 					</label>
 					<input
 						id="columnName"
@@ -734,14 +694,12 @@
 						placeholder="예: DB_ADMIN"
 						class="autocomplete-input input uppercase"
 						class:input-error={errors.columnName}
-						class:bg-gray-50={isEditMode}
-						disabled={isSubmitting || isEditMode}
-						readonly={isEditMode}
+						disabled={isSubmitting}
 					/>
 					{#if errors.columnName}
 						<p class="text-error mt-1 text-sm">{errors.columnName}</p>
 					{/if}
-					{#if !isEditMode && showColumnNameSuggestions && columnNameSuggestions.length > 0}
+					{#if showColumnNameSuggestions && columnNameSuggestions.length > 0}
 						<div
 							class="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-md border border-gray-300 bg-white shadow-lg"
 						>
@@ -758,11 +716,7 @@
 						</div>
 					{/if}
 					<p class="mt-1 text-xs text-gray-500">
-						{#if isEditMode}
-							컬럼명은 validation 처리되는 값으로 수정할 수 없습니다.
-						{:else}
-							단어집의 영문약어를 언더스코어(_)로 연결하여 입력하세요
-						{/if}
+						단어집의 영문약어를 언더스코어(_)로 연결하여 입력하세요
 					</p>
 				</div>
 
@@ -813,32 +767,7 @@
 				</div>
 
 				<!-- 버튼 그룹 -->
-				<div class="flex justify-between border-t border-gray-200 pt-4">
-					{#if isEditMode && entry.id}
-						<button
-							type="button"
-							onclick={handleDelete}
-							class="group inline-flex items-center space-x-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 shadow-sm transition-all duration-200 hover:border-red-400 hover:bg-red-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-red-300 disabled:hover:bg-red-50 disabled:hover:shadow-sm"
-							disabled={isSubmitting}
-						>
-							<svg
-								class="h-4 w-4 transition-transform duration-200 group-hover:scale-110"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-								/>
-							</svg>
-							<span>삭제</span>
-						</button>
-					{:else}
-						<div></div>
-					{/if}
+				<div class="flex justify-end border-t border-gray-200 pt-4">
 					<div class="flex space-x-3">
 						<button
 							type="button"
@@ -856,7 +785,7 @@
 							{#if isSubmitting}
 								저장 중...
 							{:else}
-								{isEditMode ? '수정' : '저장'}
+								저장
 							{/if}
 						</button>
 					</div>

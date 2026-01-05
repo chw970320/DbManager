@@ -109,8 +109,6 @@ async function checkForbiddenWordsAndSynonyms(
 			}
 		}
 
-		const isForbidden = allForbiddenWords.has(termLower);
-
 		// 이음동의어 확인 (표준단어명에 대해서만)
 		const allSynonyms = new Set<string>();
 		for (const entry of allVocabularyEntries) {
@@ -123,11 +121,34 @@ async function checkForbiddenWordsAndSynonyms(
 			}
 		}
 
-		const isSynonym = allSynonyms.has(termLower);
+		// 전체 문자열 확인
+		let isForbidden = allForbiddenWords.has(termLower);
+		let isSynonym = allSynonyms.has(termLower);
+
+		// 합성 단어인 경우 각 단어 부분도 확인 (공백/언더스코어로 분리)
+		const termParts = term.split(/[\s_]+/).filter((p) => p.length > 0);
+		if (termParts.length > 1) {
+			// 각 단어 부분에 대해 금칙어/이음동의어 확인
+			for (const part of termParts) {
+				const partLower = part.trim().toLowerCase();
+				if (allForbiddenWords.has(partLower)) {
+					isForbidden = true;
+				}
+				if (allSynonyms.has(partLower)) {
+					isSynonym = true;
+				}
+			}
+		}
 
 		// 금칙어 또는 이음동의어인 경우, 해당 금칙어/이음동의어를 포함하는 표준단어명 추천
+		// 추천 단어와 매칭되는 원본 부분 단어 정보도 함께 저장
+		const recommendationsWithMapping: Array<{
+			recommendation: string;
+			originalPart: string;
+		}> = [];
+
 		if (isForbidden || isSynonym) {
-			// 금칙어나 이음동의어가 포함된 표준단어명 찾기
+			// 전체 문자열에 대한 추천
 			for (const entry of allVocabularyEntries) {
 				if (!entry.standardName) continue;
 
@@ -138,7 +159,10 @@ async function checkForbiddenWordsAndSynonyms(
 							typeof forbiddenWord === 'string' &&
 							forbiddenWord.trim().toLowerCase() === termLower
 						) {
-							recommendations.push(entry.standardName);
+							recommendationsWithMapping.push({
+								recommendation: entry.standardName,
+								originalPart: term
+							});
 							break;
 						}
 					}
@@ -148,22 +172,79 @@ async function checkForbiddenWordsAndSynonyms(
 				if (entry.synonyms && Array.isArray(entry.synonyms)) {
 					for (const synonym of entry.synonyms) {
 						if (typeof synonym === 'string' && synonym.trim().toLowerCase() === termLower) {
-							recommendations.push(entry.standardName);
+							recommendationsWithMapping.push({
+								recommendation: entry.standardName,
+								originalPart: term
+							});
 							break;
+						}
+					}
+				}
+			}
+
+			// 각 단어 부분에 대한 추천 (합성 단어인 경우)
+			if (termParts.length > 1) {
+				for (const part of termParts) {
+					const partLower = part.trim().toLowerCase();
+					for (const entry of allVocabularyEntries) {
+						if (!entry.standardName) continue;
+
+						// 표준단어명의 금칙어 목록 확인
+						if (entry.forbiddenWords && Array.isArray(entry.forbiddenWords)) {
+							for (const forbiddenWord of entry.forbiddenWords) {
+								if (
+									typeof forbiddenWord === 'string' &&
+									forbiddenWord.trim().toLowerCase() === partLower
+								) {
+									recommendationsWithMapping.push({
+										recommendation: entry.standardName,
+										originalPart: part
+									});
+									break;
+								}
+							}
+						}
+
+						// 표준단어명의 이음동의어 목록 확인
+						if (entry.synonyms && Array.isArray(entry.synonyms)) {
+							for (const synonym of entry.synonyms) {
+								if (typeof synonym === 'string' && synonym.trim().toLowerCase() === partLower) {
+									recommendationsWithMapping.push({
+										recommendation: entry.standardName,
+										originalPart: part
+									});
+									break;
+								}
+							}
 						}
 					}
 				}
 			}
 		}
 
+		// 중복 제거 (recommendation과 originalPart 조합 기준)
+		const uniqueRecommendations = new Map<string, string>();
+		for (const item of recommendationsWithMapping) {
+			const key = `${item.recommendation}|${item.originalPart}`;
+			if (!uniqueRecommendations.has(key)) {
+				uniqueRecommendations.set(key, item.recommendation);
+			}
+		}
+
 		return {
 			isForbidden,
 			isSynonym,
-			recommendations: [...new Set(recommendations)]
+			recommendations: Array.from(uniqueRecommendations.values()),
+			recommendationMappings: recommendationsWithMapping
 		};
 	} catch (error) {
 		console.warn('금칙어 및 이음동의어 확인 중 오류:', error);
-		return { isForbidden: false, isSynonym: false, recommendations: [] };
+		return {
+			isForbidden: false,
+			isSynonym: false,
+			recommendations: [],
+			recommendationMappings: []
+		};
 	}
 }
 
@@ -198,6 +279,7 @@ export async function POST({ request, url }: RequestEvent) {
 			isForbidden: boolean;
 			isSynonym: boolean;
 			recommendations: string[];
+			recommendationMappings?: Array<{ recommendation: string; originalPart: string }>;
 		} | null = null;
 
 		if (direction === 'ko-to-en') {

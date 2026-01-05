@@ -39,7 +39,7 @@
 	// 편집기 상태
 	let showEditor = $state(false);
 	let editorServerError = $state('');
-	let currentEditingEntry = $state<TermEntry | null>(null);
+	let initialEntry = $state<Partial<TermEntry>>({});
 
 	// 이벤트 상세 타입 정의
 	type SearchDetail = { query: string; field: string; exact: boolean };
@@ -415,17 +415,6 @@
 	}
 
 	/**
-	 * 항목 클릭 처리 (팝업 열기)
-	 */
-	function handleEntryClick(event: CustomEvent<{ entry: TermEntry }> | { entry: TermEntry }) {
-		// CustomEvent인 경우와 직접 객체인 경우 모두 처리
-		const entry = 'detail' in event ? event.detail.entry : event.entry;
-		currentEditingEntry = entry;
-		showEditor = true;
-		editorServerError = '';
-	}
-
-	/**
 	 * 용어 저장 처리
 	 */
 	async function handleSave(event: CustomEvent<TermEntry>) {
@@ -434,16 +423,14 @@
 		editorServerError = '';
 
 		try {
-			const isNewEntry = !editedEntry.id || editedEntry.id === '';
 			const url = '/api/term';
-			const method = isNewEntry ? 'POST' : 'PUT';
 			const body = JSON.stringify({
 				entry: editedEntry,
 				filename: selectedFilename
 			});
 
 			const response = await fetch(url, {
-				method,
+				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body
 			});
@@ -451,13 +438,13 @@
 			const result: ApiResponse = await response.json();
 
 			if (result.success) {
-				// 히스토리 로그 기록 (모달 닫기 전에 originalEntry 사용)
-				const originalEntry = currentEditingEntry;
+				// 서버에서 생성된 엔트리 정보 가져오기
+				const savedEntry = result.data as TermEntry;
 
 				// 모달 닫기
 				showEditor = false;
 				editorServerError = '';
-				currentEditingEntry = null;
+				initialEntry = {};
 				// 데이터 새로고침
 				if (searchQuery) {
 					await executeSearch();
@@ -473,22 +460,14 @@
 							'Content-Type': 'application/json'
 						},
 						body: JSON.stringify({
-							action: isNewEntry ? 'add' : 'update',
-							targetId: editedEntry.id,
-							targetName: editedEntry.termName,
+							action: 'add',
+							targetId: savedEntry.id,
+							targetName: savedEntry.termName,
 							details: {
-								before:
-									originalEntry && !isNewEntry
-										? {
-												termName: originalEntry.termName,
-												columnName: originalEntry.columnName,
-												domainName: originalEntry.domainName
-											}
-										: undefined,
 								after: {
-									termName: editedEntry.termName,
-									columnName: editedEntry.columnName,
-									domainName: editedEntry.domainName
+									termName: savedEntry.termName,
+									columnName: savedEntry.columnName,
+									domainName: savedEntry.domainName
 								}
 							}
 						})
@@ -518,92 +497,12 @@
 	}
 
 	/**
-	 * 용어 삭제 처리
-	 */
-	async function handleDelete(event: CustomEvent<TermEntry>) {
-		const entryToDelete = event.detail;
-		loading = true;
-		editorServerError = '';
-
-		try {
-			const response = await fetch('/api/term', {
-				method: 'DELETE',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					id: entryToDelete.id,
-					filename: selectedFilename
-				})
-			});
-
-			const result: ApiResponse = await response.json();
-
-			if (result.success) {
-				// 히스토리 로그 기록 (모달 닫기 전에 originalEntry 사용)
-				const originalEntry = currentEditingEntry;
-
-				// 모달 닫기
-				showEditor = false;
-				editorServerError = '';
-				currentEditingEntry = null;
-				// 데이터 새로고침
-				if (searchQuery) {
-					await executeSearch();
-				} else {
-					await loadTermData();
-				}
-
-				// 히스토리 로그 기록
-				try {
-					await fetch('/api/history?type=term', {
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json'
-						},
-						body: JSON.stringify({
-							action: 'delete',
-							targetId: entryToDelete.id,
-							targetName: entryToDelete.termName,
-							details: {
-								before: originalEntry
-									? {
-											termName: originalEntry.termName,
-											columnName: originalEntry.columnName,
-											domainName: originalEntry.domainName
-										}
-									: undefined
-							}
-						})
-					});
-
-					// 히스토리 UI 새로고침
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					if (typeof window !== 'undefined' && (window as any).refreshTermHistoryLog) {
-						// eslint-disable-next-line @typescript-eslint/no-explicit-any
-						(window as any).refreshTermHistoryLog();
-					}
-				} catch (historyError: unknown) {
-					console.warn('히스토리 로그 기록 실패:', historyError);
-				}
-			} else {
-				const errorMsg = result.error || '용어 삭제에 실패했습니다.';
-				editorServerError = errorMsg;
-			}
-		} catch (error) {
-			console.error('용어 삭제 중 오류:', error);
-			const errorMsg = '서버 연결 오류가 발생했습니다.';
-			editorServerError = errorMsg;
-		} finally {
-			loading = false;
-		}
-	}
-
-	/**
 	 * 편집기 취소 처리
 	 */
 	function handleCancel() {
 		showEditor = false;
 		editorServerError = '';
-		currentEditingEntry = null;
+		initialEntry = {};
 	}
 
 	/**
@@ -613,16 +512,10 @@
 		event: CustomEvent<{ termName: string; columnName: string }>
 	) {
 		const { termName, columnName } = event.detail;
-		currentEditingEntry = {
-			id: '',
+		initialEntry = {
 			termName,
 			columnName,
-			domainName: '',
-			isMappedTerm: false,
-			isMappedColumn: false,
-			isMappedDomain: false,
-			createdAt: '',
-			updatedAt: ''
+			domainName: ''
 		};
 		showEditor = true;
 		editorServerError = '';
@@ -859,12 +752,10 @@
 				<!-- TermEditor 모달 -->
 				{#if showEditor}
 					<TermEditor
-						entry={currentEditingEntry || {}}
-						isEditMode={!!(currentEditingEntry?.id && currentEditingEntry.id !== '')}
+						entry={initialEntry}
 						serverError={editorServerError}
 						filename={selectedFilename}
 						on:save={handleSave}
-						on:delete={handleDelete}
 						on:cancel={handleCancel}
 					/>
 				{/if}
@@ -985,7 +876,6 @@
 								onsort={handleSort}
 								onpagechange={handlePageChange}
 								onfilter={handleFilter}
-								onentryclick={handleEntryClick}
 								onClearAllFilters={handleClearAllFilters}
 							/>
 						</div>

@@ -12,10 +12,6 @@
 		page: number;
 	};
 
-	type EntryClickEvent = {
-		entry: TermEntry;
-	};
-
 	type FilterEvent = {
 		column: string;
 		value: string | null;
@@ -39,7 +35,6 @@
 		onsort,
 		onpagechange,
 		onfilter,
-		onentryclick,
 		onClearAllFilters
 	}: {
 		entries?: TermEntry[];
@@ -58,29 +53,13 @@
 		onsort: (detail: SortEvent) => void;
 		onpagechange: (detail: PageChangeEvent) => void;
 		onfilter?: (detail: FilterEvent) => void;
-		onentryclick?: (detail: EntryClickEvent) => void;
 		onClearAllFilters?: () => void;
 	} = $props();
 
 	// Event dispatcher
 	const dispatch = createEventDispatcher<{
-		entryclick: EntryClickEvent;
 		filter: FilterEvent;
 	}>();
-
-	// 행 클릭 핸들러
-	function handleRowClick(entry: TermEntry, event: MouseEvent) {
-		// 버튼이나 링크 클릭 시에는 이벤트 전파 방지
-		const target = event.target as HTMLElement;
-		if (target.tagName === 'BUTTON' || target.closest('button')) {
-			return;
-		}
-
-		if (onentryclick) {
-			onentryclick({ entry });
-		}
-		dispatch('entryclick', { entry });
-	}
 
 	// 테이블 컬럼 정의
 	type ColumnAlignment = 'left' | 'center' | 'right';
@@ -528,19 +507,7 @@
 				{:else}
 					<!-- 데이터 행 -->
 					{#each entries as entry (entry.id)}
-						<tr
-							class="cursor-pointer border-t border-gray-300 transition-colors hover:bg-blue-50"
-							onclick={(e: MouseEvent) => handleRowClick(entry, e)}
-							role="button"
-							tabindex="0"
-							onkeydown={(e: KeyboardEvent) => {
-								if (e.key === 'Enter' || e.key === ' ') {
-									e.preventDefault();
-									handleRowClick(entry, e as unknown as MouseEvent);
-								}
-							}}
-							aria-label="항목 클릭하여 상세 정보 보기"
-						>
+						<tr class="border-t border-gray-300">
 							{#each columns as column (column.key)}
 								<td
 									class="whitespace-normal break-words px-6 py-4 text-sm text-gray-700 {column.align ===

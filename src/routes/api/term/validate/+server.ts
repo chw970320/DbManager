@@ -1,12 +1,12 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type { ApiResponse, TermEntry } from '$lib/types/term.js';
+import type { ApiResponse } from '$lib/types/vocabulary.js';
+import type { TermEntry } from '$lib/types/term.js';
+import { loadTermData, listTermFiles, loadVocabularyData } from '$lib/utils/file-handler.js';
 import {
-	loadTermData,
-	listTermFiles,
-	loadVocabularyData,
-	loadDomainData
-} from '$lib/utils/file-handler.js';
-import { validateTermNameSuffix, validateTermUniqueness } from '$lib/utils/validation.js';
+	validateTermNameSuffix,
+	validateTermUniqueness,
+	validateTermNameUniqueness
+} from '$lib/utils/validation.js';
 
 /**
  * 용어 validation API
@@ -46,11 +46,28 @@ export async function POST({ request, url }: RequestEvent) {
 		// domainName은 선택적 필드 (용어 변환기에서는 아직 선택하지 않을 수 있음)
 		const hasDomainName = domainName && typeof domainName === 'string' && domainName.trim();
 
+		// 0. 용어명이 2단어 이상의 조합인지 확인
+		const termParts = termName
+			.trim()
+			.split('_')
+			.map((p) => p.trim())
+			.filter((p) => p.length > 0);
+		if (termParts.length < 2) {
+			return json(
+				{
+					success: false,
+					error: '용어명은 2단어 이상의 조합이어야 합니다.',
+					message: 'Term name must consist of at least 2 words'
+				} as ApiResponse,
+				{ status: 400 }
+			);
+		}
+
 		// 매핑 정보 로드
 		let termData;
 		try {
 			termData = await loadTermData(filename);
-		} catch (loadError) {
+		} catch {
 			return json(
 				{
 					success: false,
@@ -88,43 +105,62 @@ export async function POST({ request, url }: RequestEvent) {
 			);
 		}
 
-		// 2. 용어명 유일성 validation (domainName이 제공된 경우에만 수행)
-		if (hasDomainName) {
-			try {
-				const allTermFiles = await listTermFiles();
-				const allTermEntries: TermEntry[] = [];
-				for (const file of allTermFiles) {
-					try {
-						const fileData = await loadTermData(file);
-						// 수정 모드인 경우 현재 entry 제외
-						const filteredEntries = entryId
-							? fileData.entries.filter((e) => e.id !== entryId)
-							: fileData.entries;
-						allTermEntries.push(...filteredEntries);
-					} catch (error) {
-						console.warn(`용어 파일 ${file} 로드 실패:`, error);
-					}
+		// 2. 모든 용어 파일 로드 (중복 검사에 사용)
+		const allTermEntries: TermEntry[] = [];
+		try {
+			const allTermFiles = await listTermFiles();
+			for (const file of allTermFiles) {
+				try {
+					const fileData = await loadTermData(file);
+					// 수정 모드인 경우 현재 entry 제외
+					const filteredEntries = entryId
+						? fileData.entries.filter((e) => e.id !== entryId)
+						: fileData.entries;
+					allTermEntries.push(...filteredEntries);
+				} catch (error) {
+					console.warn(`용어 파일 ${file} 로드 실패:`, error);
 				}
+			}
+		} catch (loadError) {
+			console.warn('용어 파일 목록 로드 실패:', loadError);
+		}
 
-				const uniquenessError = validateTermUniqueness(
-					termName.trim(),
-					columnName.trim(),
-					domainName.trim(),
-					allTermEntries
+		// 3. 용어명 중복 검사 (이미 등록된 용어명인지 확인)
+		if (allTermEntries.length > 0) {
+			const termNameUniquenessError = validateTermNameUniqueness(
+				termName.trim(),
+				allTermEntries,
+				entryId
+			);
+			if (termNameUniquenessError) {
+				return json(
+					{
+						success: false,
+						error: termNameUniquenessError,
+						message: 'Duplicate term name'
+					} as ApiResponse,
+					{ status: 409 }
 				);
-				if (uniquenessError) {
-					return json(
-						{
-							success: false,
-							error: uniquenessError,
-							message: 'Duplicate term'
-						} as ApiResponse,
-						{ status: 409 }
-					);
-				}
-			} catch (validationError) {
-				console.warn('용어명 유일성 확인 중 오류:', validationError);
-				// validation 실패 시에도 성공으로 반환 (서버에서 다시 검증)
+			}
+		}
+
+		// 4. 용어명 유일성 validation (termName, columnName, domainName 조합) - domainName이 제공된 경우에만 수행
+		if (hasDomainName && allTermEntries.length > 0) {
+			const uniquenessError = validateTermUniqueness(
+				termName.trim(),
+				columnName.trim(),
+				domainName.trim(),
+				allTermEntries
+			);
+			if (uniquenessError) {
+				return json(
+					{
+						success: false,
+						error: uniquenessError,
+						message: 'Duplicate term'
+					} as ApiResponse,
+					{ status: 409 }
+				);
 			}
 		}
 

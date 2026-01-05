@@ -497,12 +497,12 @@ export function validateTermNameSuffix(
 	);
 
 	if (!vocabularyWord) {
-		return `'${suffix}'는 단어집에 등록되지 않은 단어입니다.`;
+		return `'${suffix}'은(는) 단어집에 등록되지 않은 단어입니다.`;
 	}
 
 	// 형식단어여부 확인
 	if (vocabularyWord.isFormalWord !== true) {
-		return `'${suffix}'는 형식단어가 아니므로 용어명의 접미사로 사용할 수 없습니다. (형식단어여부: N)`;
+		return `'${suffix}'은(는) 형식단어가 아니므로 용어명의 접미사로 사용할 수 없습니다. (형식단어여부: N)`;
 	}
 
 	return null;

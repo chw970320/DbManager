@@ -151,16 +151,31 @@
 					// validation 통과
 					validationResults.set(segment, { isValid: true });
 				} else {
-					// validation 실패
-					validationResults.set(segment, { isValid: false, error: result.error });
+					// validation 실패 - API에서 반환된 오류 메시지 사용
+					const errorMessage = result.error || result.message || 'Validation 확인 실패';
+					validationResults.set(segment, { isValid: false, error: errorMessage });
 				}
 			} else {
-				// API 호출 실패 시 validation 실패로 간주
-				validationResults.set(segment, { isValid: false, error: 'Validation 확인 실패' });
+				// API 호출 실패 시 응답 본문에서 오류 메시지 추출 시도
+				try {
+					const errorData = await response.json();
+					const errorMessage =
+						errorData.error ||
+						errorData.message ||
+						`Validation 확인 실패 (HTTP ${response.status})`;
+					validationResults.set(segment, { isValid: false, error: errorMessage });
+				} catch {
+					// JSON 파싱 실패 시 기본 메시지 사용
+					validationResults.set(segment, {
+						isValid: false,
+						error: `Validation 확인 실패 (HTTP ${response.status})`
+					});
+				}
 			}
 		} catch (err) {
 			console.warn('Validation 확인 중 오류:', err);
-			validationResults.set(segment, { isValid: false, error: 'Validation 확인 실패' });
+			const errorMessage = err instanceof Error ? err.message : 'Validation 확인 실패';
+			validationResults.set(segment, { isValid: false, error: errorMessage });
 		}
 		validationResults = new Map(validationResults); // 반응성 트리거
 	}
@@ -474,7 +489,7 @@
 													disabled
 													class="cursor-not-allowed rounded p-1 text-red-600 opacity-50"
 													aria-label="Validation 실패"
-													title={validation.error || '접미사 validation 실패'}
+													title={validation.error || 'Validation 확인 실패'}
 												>
 													<svg
 														xmlns="http://www.w3.org/2000/svg"

@@ -612,7 +612,7 @@
 			<!-- 좌측 고정 사이드바 (데스크탑) -->
 			<aside class="hidden h-full w-64 lg:block">
 				<div
-					class="sticky top-24 rounded-2xl border border-gray-200/50 bg-white/95 p-4 shadow-xl backdrop-blur-md"
+					class="sticky top-20 rounded-2xl border border-gray-200/50 bg-white/95 p-4 shadow-xl backdrop-blur-md"
 				>
 					<div class="mb-4 flex items-center justify-between">
 						<h2 class="text-lg font-bold text-gray-900">도메인 파일</h2>
@@ -662,7 +662,7 @@
 			{#if sidebarOpen}
 				<div class="fixed inset-0 z-40 flex lg:hidden">
 					<div
-						class="w-64 transform bg-white p-4 shadow-2xl transition-transform duration-300"
+						class="w-64 transform bg-white p-4 pt-20 shadow-2xl transition-transform duration-300"
 						role="dialog"
 						aria-modal="true"
 					>

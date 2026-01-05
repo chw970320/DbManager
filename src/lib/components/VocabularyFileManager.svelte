@@ -42,7 +42,7 @@
 
 	// 업로드 관련 상태
 	let selectedUploadFile = $state('vocabulary.json');
-	let uploadMode = $state<'replace' | 'merge'>('merge');
+	let uploadMode = $state<'validated-replace' | 'simple-replace'>('validated-replace');
 	type UploadSuccessDetail = { result: UploadResult };
 	type UploadErrorDetail = { error: string };
 
@@ -767,7 +767,7 @@
 							<FileUpload
 								disabled={isSubmitting || files.length === 0}
 								filename={selectedUploadFile}
-								replaceExisting={uploadMode === 'replace'}
+								replaceExisting={true}
 								onuploadstart={handleUploadStart}
 								onuploadsuccess={handleUploadSuccess}
 								onuploaderror={handleUploadError}

@@ -35,7 +35,9 @@
 	let dragOver = $state(false);
 	let uploadResult = $state('');
 	let errorMessage = $state('');
-	let selectedMode = $state<'replace' | 'merge'>(replaceExisting ? 'replace' : 'merge');
+	let selectedMode = $state<'validated-replace' | 'simple-replace'>(
+		replaceExisting ? 'validated-replace' : 'simple-replace'
+	);
 
 	// 파생 상태
 	let dragoverClass = $derived(
@@ -127,10 +129,21 @@
 			return;
 		}
 
-		// 교체 모드일 때 확인 메시지
-		if (selectedMode === 'replace') {
+		// 단순 교체 모드일 때 백업 권장 메시지
+		if (selectedMode === 'simple-replace') {
 			const confirmed = confirm(
-				`교체 모드를 선택하셨습니다.\n\n기존 ${contentType}이 완전히 삭제되고 새로운 데이터로 교체됩니다.\n히스토리도 초기화됩니다.\n\n정말로 교체하시겠습니까?`
+				`단순 교체 모드를 선택하셨습니다.\n\n기존 ${contentType}이 완전히 삭제되고 새로운 데이터로 교체됩니다.\n히스토리도 초기화됩니다.\n\n⚠️ 파일 백업을 권장합니다.\n\n정말로 교체하시겠습니까?`
+			);
+
+			if (!confirmed) {
+				return; // 사용자가 취소한 경우 업로드 중단
+			}
+		}
+
+		// 검증 교체 모드일 때 확인 메시지
+		if (selectedMode === 'validated-replace') {
+			const confirmed = confirm(
+				`검증 교체 모드를 선택하셨습니다.\n\n기존 ${contentType}이 완전히 삭제되고 새로운 데이터로 교체됩니다.\n데이터 검증 후 업로드됩니다.\n히스토리도 초기화됩니다.\n\n정말로 교체하시겠습니까?`
 			);
 
 			if (!confirmed) {
@@ -151,7 +164,10 @@
 			// FormData 생성
 			const formData = new FormData();
 			formData.append('file', file);
-			formData.append('replace', (selectedMode === 'replace').toString());
+			// 두 모드 모두 교체 모드이므로 replace는 항상 true
+			formData.append('replace', 'true');
+			// validation 파라미터 추가: 검증 교체 모드일 때만 true
+			formData.append('validation', (selectedMode === 'validated-replace').toString());
 			if (filename) {
 				formData.append('filename', filename);
 			}
@@ -228,16 +244,15 @@
 				<input
 					type="radio"
 					name="uploadMode"
-					value="replace"
+					value="validated-replace"
 					bind:group={selectedMode}
 					class="mt-0.5 h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
 					{disabled}
 				/>
 				<div class="flex-1">
-					<div class="text-sm font-medium text-gray-900">교체 (Replace)</div>
+					<div class="text-sm font-medium text-gray-900">검증 교체 모드</div>
 					<div class="text-xs text-gray-600">
-						기존 {contentType}을 완전히 삭제하고 새로운 데이터로 교체합니다. 히스토리도
-						초기화됩니다.
+						기존 {contentType}을 완전히 삭제하고 새로운 데이터로 교체합니다. 데이터 검증 후 업로드됩니다. 히스토리도 초기화됩니다.
 					</div>
 				</div>
 			</label>
@@ -245,15 +260,15 @@
 				<input
 					type="radio"
 					name="uploadMode"
-					value="merge"
+					value="simple-replace"
 					bind:group={selectedMode}
 					class="mt-0.5 h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
 					{disabled}
 				/>
 				<div class="flex-1">
-					<div class="text-sm font-medium text-gray-900">병합 (Merge)</div>
+					<div class="text-sm font-medium text-gray-900">단순 교체 모드</div>
 					<div class="text-xs text-gray-600">
-						기존 {contentType}에 새로운 데이터를 추가합니다. 중복된 항목은 자동으로 제거됩니다.
+						기존 {contentType}을 완전히 삭제하고 새로운 데이터로 교체합니다. 검증 없이 바로 교체됩니다. 히스토리도 초기화됩니다. 파일 백업을 권장합니다.
 					</div>
 				</div>
 			</label>

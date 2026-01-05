@@ -33,7 +33,7 @@
 
 	// 업로드 관련 상태
 	let selectedUploadFile = $state('domain.json');
-	let uploadMode = $state<'replace' | 'merge'>('merge');
+	let uploadMode = $state<'validated-replace' | 'simple-replace'>('validated-replace');
 	type UploadSuccessDetail = { result: UploadResult };
 	type UploadErrorDetail = { error: string };
 
@@ -578,7 +578,7 @@
 								apiEndpoint="/api/domain/upload"
 								contentType="도메인"
 								filename={selectedUploadFile}
-								replaceExisting={uploadMode === 'replace'}
+								replaceExisting={true}
 								onuploadstart={handleUploadStart}
 								onuploadsuccess={handleUploadSuccess}
 								onuploaderror={handleUploadError}

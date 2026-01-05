@@ -1,7 +1,7 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse } from '$lib/types/vocabulary.js';
 import type { TermData, TermEntry } from '$lib/types/term.js';
-import { loadTermData, mergeTermData } from '$lib/utils/file-handler.js';
+import { loadTermData, mergeTermData, listTermFiles } from '$lib/utils/file-handler.js';
 import {
 	validateXlsxFile,
 	validateTermNameSuffix,
@@ -171,6 +171,8 @@ export async function POST({ request }: RequestEvent) {
 		// 기존 데이터와 병합 (replace 옵션 확인)
 		const replaceExisting = getOptionalBoolean(formData, 'replace');
 		const filename = getOptionalString(formData, 'filename', 'term.json');
+		// validation 옵션 확인 (기본값: true - 검증 교체 모드)
+		const performValidation = getOptionalBoolean(formData, 'validation', true);
 
 		// 용어 파일의 매핑 정보 로드
 		const termData = await loadTermData(filename);
@@ -234,80 +236,83 @@ export async function POST({ request }: RequestEvent) {
 			domainMap.set(key, entry.standardDomainName);
 		});
 
-		// 용어명 접미사 및 유일성 validation
-		try {
-			// 모든 용어 파일 로드
-			const allTermFiles = await listTermFiles();
-			const allTermEntries: TermEntry[] = [];
-			for (const file of allTermFiles) {
-				try {
-					const fileData = await loadTermData(file);
-					// 교체 모드가 아닌 경우 현재 파일의 기존 엔트리는 제외
-					if (!replaceExisting && file === filename) {
-						continue;
+		// 검증 교체 모드일 때만 validation 수행
+		if (performValidation) {
+			// 용어명 접미사 및 유일성 validation
+			try {
+				// 모든 용어 파일 로드
+				const allTermFiles = await listTermFiles();
+				const allTermEntries: TermEntry[] = [];
+				for (const file of allTermFiles) {
+					try {
+						const fileData = await loadTermData(file);
+						// 교체 모드가 아닌 경우 현재 파일의 기존 엔트리는 제외
+						if (!replaceExisting && file === filename) {
+							continue;
+						}
+						allTermEntries.push(...fileData.entries);
+					} catch (error) {
+						console.warn(`용어 파일 ${file} 로드 실패:`, error);
 					}
-					allTermEntries.push(...fileData.entries);
-				} catch (error) {
-					console.warn(`용어 파일 ${file} 로드 실패:`, error);
-				}
-			}
-
-			// 각 엔트리에 대해 validation 수행
-			const validationErrors: string[] = [];
-			for (const entry of parsedEntries) {
-				// 1. 용어명 접미사 validation
-				const suffixValidationError = validateTermNameSuffix(
-					entry.termName,
-					vocabularyData.entries
-				);
-				if (suffixValidationError) {
-					validationErrors.push(`${entry.termName}: ${suffixValidationError}`);
 				}
 
-				// 2. 용어명 매핑 validation (모든 부분이 단어집에 식별되는지)
-				const termMappingError = validateTermNameMapping(entry.termName, vocabularyData.entries);
-				if (termMappingError) {
-					validationErrors.push(`${entry.termName}: ${termMappingError}`);
+				// 각 엔트리에 대해 validation 수행
+				const validationErrors: string[] = [];
+				for (const entry of parsedEntries) {
+					// 1. 용어명 접미사 validation
+					const suffixValidationError = validateTermNameSuffix(
+						entry.termName,
+						vocabularyData.entries
+					);
+					if (suffixValidationError) {
+						validationErrors.push(`${entry.termName}: ${suffixValidationError}`);
+					}
+
+					// 2. 용어명 매핑 validation (모든 부분이 단어집에 식별되는지)
+					const termMappingError = validateTermNameMapping(entry.termName, vocabularyData.entries);
+					if (termMappingError) {
+						validationErrors.push(`${entry.termName}: ${termMappingError}`);
+					}
+
+					// 3. 컬럼명 매핑 validation (모든 부분이 영문약어로 식별되는지)
+					const columnMappingError = validateColumnNameMapping(
+						entry.columnName,
+						vocabularyData.entries
+					);
+					if (columnMappingError) {
+						validationErrors.push(
+							`${entry.termName} (컬럼명: ${entry.columnName}): ${columnMappingError}`
+						);
+					}
+
+					// 4. 도메인명 매핑 validation
+					const domainMappingError = validateDomainNameMapping(entry.domainName, domainData.entries);
+					if (domainMappingError) {
+						validationErrors.push(
+							`${entry.termName} (도메인명: ${entry.domainName}): ${domainMappingError}`
+						);
+					}
+
+					// 5. 용어명 유일성 validation
+					const uniquenessError = validateTermNameUniqueness(entry.termName, allTermEntries);
+					if (uniquenessError) {
+						validationErrors.push(`${entry.termName}: ${uniquenessError}`);
+					}
 				}
 
-				// 3. 컬럼명 매핑 validation (모든 부분이 영문약어로 식별되는지)
-				const columnMappingError = validateColumnNameMapping(
-					entry.columnName,
-					vocabularyData.entries
-				);
-				if (columnMappingError) {
-					validationErrors.push(
-						`${entry.termName} (컬럼명: ${entry.columnName}): ${columnMappingError}`
+				if (validationErrors.length > 0) {
+					return json(
+						{
+							success: false,
+							error: `다음 용어들이 유효하지 않거나 중복됩니다:\n${validationErrors.join('\n')}`,
+							message: 'Term validation failed in upload'
+						} as ApiResponse,
+						{ status: 400 }
 					);
 				}
-
-				// 4. 도메인명 매핑 validation
-				const domainMappingError = validateDomainNameMapping(entry.domainName, domainData.entries);
-				if (domainMappingError) {
-					validationErrors.push(
-						`${entry.termName} (도메인명: ${entry.domainName}): ${domainMappingError}`
-					);
-				}
-
-				// 5. 용어명 유일성 validation
-				const uniquenessError = validateTermNameUniqueness(entry.termName, allTermEntries);
-				if (uniquenessError) {
-					validationErrors.push(`${entry.termName}: ${uniquenessError}`);
-				}
+			} catch (validationError) {
+				console.warn('용어명 validation 확인 중 오류 (계속 진행):', validationError);
 			}
-
-			if (validationErrors.length > 0) {
-				return json(
-					{
-						success: false,
-						error: `다음 용어들이 유효하지 않거나 중복됩니다:\n${validationErrors.join('\n')}`,
-						message: 'Term validation failed in upload'
-					} as ApiResponse,
-					{ status: 400 }
-				);
-			}
-		} catch (validationError) {
-			console.warn('용어명 validation 확인 중 오류 (계속 진행):', validationError);
 		}
 
 		// 매핑 확인 및 TermEntry 생성

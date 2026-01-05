@@ -34,7 +34,7 @@
 
 	// 업로드 관련 상태
 	let selectedUploadFile = $state(selectedFilename);
-	let uploadMode = $state<'replace' | 'merge'>('merge');
+	let uploadMode = $state<'validated-replace' | 'simple-replace'>('validated-replace');
 	type UploadSuccessDetail = { result: UploadResult };
 	type UploadErrorDetail = { error: string };
 
@@ -790,7 +790,7 @@
 								apiEndpoint="/api/term/upload"
 								contentType="용어"
 								filename={selectedUploadFile}
-								replaceExisting={uploadMode === 'replace'}
+								replaceExisting={true}
 								onuploadstart={handleUploadStart}
 								onuploadsuccess={handleUploadSuccess}
 								onuploaderror={handleUploadError}

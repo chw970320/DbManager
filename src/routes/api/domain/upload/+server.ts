@@ -100,6 +100,8 @@ export async function POST({ request }: RequestEvent) {
 		// 기존 데이터와 병합 (replace 옵션 확인)
 		const replaceExisting = getOptionalBoolean(formData, 'replace');
 		const filename = getOptionalString(formData, 'filename', 'domain.json');
+		// validation 옵션 확인 (기본값: true - 검증 교체 모드)
+		const performValidation = getOptionalBoolean(formData, 'validation', true);
 
 		// xlsx 파일 파싱 (교체 모드일 때는 파일 내 중복 체크 건너뛰기)
 		let parsedEntries: DomainEntry[];
@@ -127,54 +129,67 @@ export async function POST({ request }: RequestEvent) {
 			);
 		}
 
-		// 도메인명 자동 생성 및 validation
-		try {
-			const allDomainFiles = await listDomainFiles();
-			const allDomainEntries: DomainEntry[] = [];
-			for (const file of allDomainFiles) {
-				try {
-					const fileData = await loadDomainData(file);
-					// 교체 모드가 아닌 경우 현재 파일의 기존 엔트리는 제외
-					if (!replaceExisting && file === filename) {
-						continue;
+		// 검증 교체 모드일 때만 validation 수행
+		if (performValidation) {
+			// 도메인명 자동 생성 및 validation
+			try {
+				const allDomainFiles = await listDomainFiles();
+				const allDomainEntries: DomainEntry[] = [];
+				for (const file of allDomainFiles) {
+					try {
+						const fileData = await loadDomainData(file);
+						// 교체 모드가 아닌 경우 현재 파일의 기존 엔트리는 제외
+						if (!replaceExisting && file === filename) {
+							continue;
+						}
+						allDomainEntries.push(...fileData.entries);
+					} catch (error) {
+						console.warn(`도메인 파일 ${file} 로드 실패:`, error);
 					}
-					allDomainEntries.push(...fileData.entries);
-				} catch (error) {
-					console.warn(`도메인 파일 ${file} 로드 실패:`, error);
 				}
-			}
 
-			// 각 엔트리에 대해 도메인명 자동 생성 및 validation
-			const validationErrors: string[] = [];
+				// 각 엔트리에 대해 도메인명 자동 생성 및 validation
+				const validationErrors: string[] = [];
+				for (const entry of parsedEntries) {
+					// 도메인명 자동 생성
+					const generatedDomainName = generateStandardDomainName(
+						entry.domainCategory,
+						entry.physicalDataType,
+						entry.dataLength,
+						entry.decimalPlaces
+					);
+					entry.standardDomainName = generatedDomainName;
+
+					// 도메인명 유일성 validation
+					const validationError = validateDomainNameUniqueness(generatedDomainName, allDomainEntries);
+					if (validationError) {
+						validationErrors.push(`${entry.domainCategory}: ${validationError}`);
+					}
+				}
+
+				if (validationErrors.length > 0) {
+					return json(
+						{
+							success: false,
+							error: `다음 도메인들이 중복되거나 유효하지 않습니다:\n${validationErrors.join('\n')}`,
+							message: 'Domain validation failed in upload'
+						} as ApiResponse,
+						{ status: 400 }
+					);
+				}
+			} catch (validationError) {
+				console.warn('도메인명 validation 확인 중 오류 (계속 진행):', validationError);
+			}
+		} else {
+			// 단순 교체 모드: 도메인명 자동 생성만 수행 (validation 없음)
 			for (const entry of parsedEntries) {
-				// 도메인명 자동 생성
-				const generatedDomainName = generateStandardDomainName(
+				entry.standardDomainName = generateStandardDomainName(
 					entry.domainCategory,
 					entry.physicalDataType,
 					entry.dataLength,
 					entry.decimalPlaces
 				);
-				entry.standardDomainName = generatedDomainName;
-
-				// 도메인명 유일성 validation
-				const validationError = validateDomainNameUniqueness(generatedDomainName, allDomainEntries);
-				if (validationError) {
-					validationErrors.push(`${entry.domainCategory}: ${validationError}`);
-				}
 			}
-
-			if (validationErrors.length > 0) {
-				return json(
-					{
-						success: false,
-						error: `다음 도메인들이 중복되거나 유효하지 않습니다:\n${validationErrors.join('\n')}`,
-						message: 'Domain validation failed in upload'
-					} as ApiResponse,
-					{ status: 400 }
-				);
-			}
-		} catch (validationError) {
-			console.warn('도메인명 validation 확인 중 오류 (계속 진행):', validationError);
 		}
 
 		let finalData: DomainData;

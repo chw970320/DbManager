@@ -20,6 +20,9 @@ export async function POST({ request, url }: RequestEvent) {
 		const { termName, columnName, domainName, entryId } = body;
 		const filename = url.searchParams.get('filename') || 'term.json';
 
+		// entryId가 빈 문자열이거나 유효하지 않은 경우 undefined로 처리
+		const validEntryId = entryId && typeof entryId === 'string' && entryId.trim() !== '' ? entryId.trim() : undefined;
+
 		// 필수 필드 검증
 		if (!termName || typeof termName !== 'string' || !termName.trim()) {
 			return json(
@@ -105,62 +108,60 @@ export async function POST({ request, url }: RequestEvent) {
 			);
 		}
 
-		// 2. 모든 용어 파일 로드 (중복 검사에 사용)
-		const allTermEntries: TermEntry[] = [];
-		try {
-			const allTermFiles = await listTermFiles();
-			for (const file of allTermFiles) {
-				try {
-					const fileData = await loadTermData(file);
-					// 수정 모드인 경우 현재 entry 제외
-					const filteredEntries = entryId
-						? fileData.entries.filter((e) => e.id !== entryId)
-						: fileData.entries;
-					allTermEntries.push(...filteredEntries);
-				} catch (error) {
-					console.warn(`용어 파일 ${file} 로드 실패:`, error);
+		// 2. 수정 모드가 아닌 경우에만 중복 검사 수행
+		if (!validEntryId) {
+			// 모든 용어 파일 로드 (중복 검사에 사용)
+			const allTermEntries: TermEntry[] = [];
+			try {
+				const allTermFiles = await listTermFiles();
+				for (const file of allTermFiles) {
+					try {
+						const fileData = await loadTermData(file);
+						allTermEntries.push(...fileData.entries);
+					} catch (error) {
+						console.warn(`용어 파일 ${file} 로드 실패:`, error);
+					}
+				}
+			} catch (loadError) {
+				console.warn('용어 파일 목록 로드 실패:', loadError);
+			}
+
+			// 3. 용어명 중복 검사 (이미 등록된 용어명인지 확인)
+			if (allTermEntries.length > 0) {
+				const termNameUniquenessError = validateTermNameUniqueness(
+					termName.trim(),
+					allTermEntries
+				);
+				if (termNameUniquenessError) {
+					return json(
+						{
+							success: false,
+							error: termNameUniquenessError,
+							message: 'Duplicate term name'
+						} as ApiResponse,
+						{ status: 409 }
+					);
 				}
 			}
-		} catch (loadError) {
-			console.warn('용어 파일 목록 로드 실패:', loadError);
-		}
 
-		// 3. 용어명 중복 검사 (이미 등록된 용어명인지 확인)
-		if (allTermEntries.length > 0) {
-			const termNameUniquenessError = validateTermNameUniqueness(
-				termName.trim(),
-				allTermEntries,
-				entryId
-			);
-			if (termNameUniquenessError) {
-				return json(
-					{
-						success: false,
-						error: termNameUniquenessError,
-						message: 'Duplicate term name'
-					} as ApiResponse,
-					{ status: 409 }
+			// 4. 용어명 유일성 validation (termName, columnName, domainName 조합) - domainName이 제공된 경우에만 수행
+			if (hasDomainName && allTermEntries.length > 0) {
+				const uniquenessError = validateTermUniqueness(
+					termName.trim(),
+					columnName.trim(),
+					domainName.trim(),
+					allTermEntries
 				);
-			}
-		}
-
-		// 4. 용어명 유일성 validation (termName, columnName, domainName 조합) - domainName이 제공된 경우에만 수행
-		if (hasDomainName && allTermEntries.length > 0) {
-			const uniquenessError = validateTermUniqueness(
-				termName.trim(),
-				columnName.trim(),
-				domainName.trim(),
-				allTermEntries
-			);
-			if (uniquenessError) {
-				return json(
-					{
-						success: false,
-						error: uniquenessError,
-						message: 'Duplicate term'
-					} as ApiResponse,
-					{ status: 409 }
-				);
+				if (uniquenessError) {
+					return json(
+						{
+							success: false,
+							error: uniquenessError,
+							message: 'Duplicate term'
+						} as ApiResponse,
+						{ status: 409 }
+					);
+				}
 			}
 		}
 

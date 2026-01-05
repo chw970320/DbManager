@@ -14,9 +14,10 @@
 		entry?: Partial<TermEntry>;
 		serverError?: string;
 		filename?: string; // 현재 선택된 용어 파일명
+		isEditMode?: boolean; // 수정 모드 여부
 	}
 
-	let { entry = {}, serverError = '', filename = 'term.json' }: Props = $props();
+	let { entry = {}, serverError = '', filename = 'term.json', isEditMode = false }: Props = $props();
 
 	// Event dispatcher
 	const dispatch = createEventDispatcher<{
@@ -467,7 +468,8 @@
 						body: JSON.stringify({
 							termName: formData.termName.trim(),
 							columnName: formData.columnName.trim(),
-							domainName: formData.domainName.trim()
+							domainName: formData.domainName.trim(),
+							entryId: isEditMode && entry.id && typeof entry.id === 'string' && entry.id.trim() !== '' ? entry.id.trim() : undefined
 						})
 					}
 				);
@@ -498,14 +500,14 @@
 		}
 
 		const editedEntry: TermEntry = {
-			id: '',
+			id: isEditMode && entry.id ? entry.id : '',
 			termName: formData.termName.trim(),
 			columnName: formData.columnName.trim(),
 			domainName: formData.domainName.trim(),
 			isMappedTerm: false,
 			isMappedColumn: false,
 			isMappedDomain: false,
-			createdAt: new Date().toISOString(),
+			createdAt: isEditMode && entry.createdAt ? entry.createdAt : new Date().toISOString(),
 			updatedAt: new Date().toISOString()
 		};
 
@@ -577,7 +579,7 @@
 		onclick={(e) => e.stopPropagation()}
 	>
 		<div class="flex flex-shrink-0 items-center justify-between border-b p-6">
-			<h2 class="text-xl font-bold text-gray-900">새 용어 추가</h2>
+			<h2 class="text-xl font-bold text-gray-900">{isEditMode ? '용어 수정' : '새 용어 추가'}</h2>
 			<button
 				onclick={handleCancel}
 				class="text-gray-400 hover:text-gray-600"

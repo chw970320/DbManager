@@ -445,31 +445,40 @@ export async function POST({ request }: RequestEvent) {
 		}
 
 		// 용어명 유일성 validation
-		try {
-			const allTermFiles = await listTermFiles();
-			const allTermEntries: TermEntry[] = [];
-			for (const file of allTermFiles) {
-				try {
-					const fileData = await loadTermData(file);
-					allTermEntries.push(...fileData.entries);
-				} catch (error) {
-					console.warn(`용어 파일 ${file} 로드 실패:`, error);
-				}
-			}
+		// entry.id가 있으면 수정 모드이므로 중복 검사 건너뛰기
+		const entryId =
+			entry.id && typeof entry.id === 'string' && entry.id.trim() !== ''
+				? entry.id.trim()
+				: undefined;
 
-			const uniquenessError = validateTermNameUniqueness(entry.termName.trim(), allTermEntries);
-			if (uniquenessError) {
-				return json(
-					{
-						success: false,
-						error: uniquenessError,
-						message: 'Duplicate term name'
-					} as ApiResponse,
-					{ status: 409 }
-				);
+		// 수정 모드가 아닌 경우에만 중복 검사 수행
+		if (!entryId) {
+			try {
+				const allTermFiles = await listTermFiles();
+				const allTermEntries: TermEntry[] = [];
+				for (const file of allTermFiles) {
+					try {
+						const fileData = await loadTermData(file);
+						allTermEntries.push(...fileData.entries);
+					} catch (error) {
+						console.warn(`용어 파일 ${file} 로드 실패:`, error);
+					}
+				}
+
+				const uniquenessError = validateTermNameUniqueness(entry.termName.trim(), allTermEntries);
+				if (uniquenessError) {
+					return json(
+						{
+							success: false,
+							error: uniquenessError,
+							message: 'Duplicate term name'
+						} as ApiResponse,
+						{ status: 409 }
+					);
+				}
+			} catch (validationError) {
+				console.warn('용어명 유일성 확인 중 오류 (계속 진행):', validationError);
 			}
-		} catch (validationError) {
-			console.warn('용어명 유일성 확인 중 오류 (계속 진행):', validationError);
 		}
 
 		// 매핑 검증
@@ -481,36 +490,81 @@ export async function POST({ request }: RequestEvent) {
 			domainMap
 		);
 
-		const newEntry: TermEntry = {
-			id: entry.id || crypto.randomUUID(),
-			termName: entry.termName.trim(),
-			columnName: entry.columnName.trim(),
-			domainName: entry.domainName.trim(),
-			isMappedTerm: mappingResult.isMappedTerm,
-			isMappedColumn: mappingResult.isMappedColumn,
-			isMappedDomain: mappingResult.isMappedDomain,
-			unmappedTermParts:
-				mappingResult.unmappedTermParts.length > 0 ? mappingResult.unmappedTermParts : undefined,
-			unmappedColumnParts:
-				mappingResult.unmappedColumnParts.length > 0
-					? mappingResult.unmappedColumnParts
-					: undefined,
-			createdAt: entry.createdAt || new Date().toISOString(),
-			updatedAt: new Date().toISOString()
-		};
+		// entry.id가 있으면 수정 모드, 없으면 추가 모드
+		if (entryId) {
+			// 수정 모드: 기존 항목 찾아서 업데이트
+			const entryIndex = termData.entries.findIndex((e) => e.id === entryId);
+			if (entryIndex === -1) {
+				return json(
+					{
+						success: false,
+						error: '수정할 용어를 찾을 수 없습니다.',
+						message: 'Entry not found'
+					} as ApiResponse,
+					{ status: 404 }
+				);
+			}
 
-		termData.entries.push(newEntry);
-		termData.totalCount = termData.entries.length;
-		termData.lastUpdated = new Date().toISOString();
+			// 기존 항목 업데이트
+			termData.entries[entryIndex] = {
+				...termData.entries[entryIndex],
+				termName: entry.termName.trim(),
+				columnName: entry.columnName.trim(),
+				domainName: entry.domainName.trim(),
+				isMappedTerm: mappingResult.isMappedTerm,
+				isMappedColumn: mappingResult.isMappedColumn,
+				isMappedDomain: mappingResult.isMappedDomain,
+				unmappedTermParts:
+					mappingResult.unmappedTermParts.length > 0 ? mappingResult.unmappedTermParts : undefined,
+				unmappedColumnParts:
+					mappingResult.unmappedColumnParts.length > 0
+						? mappingResult.unmappedColumnParts
+						: undefined,
+				updatedAt: new Date().toISOString()
+			};
 
-		await saveTermData(termData, filename);
-		invalidateCache('term', filename); // 캐시 무효화
+			termData.lastUpdated = new Date().toISOString();
+			await saveTermData(termData, filename);
+			invalidateCache('term', filename); // 캐시 무효화
 
-		return json({
-			success: true,
-			data: newEntry,
-			message: 'Term added successfully'
-		} as ApiResponse);
+			return json({
+				success: true,
+				data: termData.entries[entryIndex],
+				message: 'Term updated successfully'
+			} as ApiResponse);
+		} else {
+			// 추가 모드: 새 항목 생성
+			const newEntry: TermEntry = {
+				id: crypto.randomUUID(),
+				termName: entry.termName.trim(),
+				columnName: entry.columnName.trim(),
+				domainName: entry.domainName.trim(),
+				isMappedTerm: mappingResult.isMappedTerm,
+				isMappedColumn: mappingResult.isMappedColumn,
+				isMappedDomain: mappingResult.isMappedDomain,
+				unmappedTermParts:
+					mappingResult.unmappedTermParts.length > 0 ? mappingResult.unmappedTermParts : undefined,
+				unmappedColumnParts:
+					mappingResult.unmappedColumnParts.length > 0
+						? mappingResult.unmappedColumnParts
+						: undefined,
+				createdAt: new Date().toISOString(),
+				updatedAt: new Date().toISOString()
+			};
+
+			termData.entries.push(newEntry);
+			termData.totalCount = termData.entries.length;
+			termData.lastUpdated = new Date().toISOString();
+
+			await saveTermData(termData, filename);
+			invalidateCache('term', filename); // 캐시 무효화
+
+			return json({
+				success: true,
+				data: newEntry,
+				message: 'Term added successfully'
+			} as ApiResponse);
+		}
 	} catch (error) {
 		console.error('용어 추가 중 오류:', error);
 		return json(

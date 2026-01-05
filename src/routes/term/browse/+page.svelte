@@ -893,6 +893,7 @@
 						entry={initialEntry}
 						serverError={editorServerError}
 						filename={selectedFilename}
+						isEditMode={!!initialEntry.id}
 						on:save={handleSave}
 						on:cancel={handleCancel}
 					/>

@@ -439,11 +439,7 @@ export async function listVocabularyFiles(): Promise<string[]> {
 		await ensureDataDirectory();
 		const files = await readdir(VOCABULARY_DIR);
 		return files.filter((file) => {
-			return (
-				file.endsWith('.json') &&
-				file !== HISTORY_FILE &&
-				!file.includes('_backup_')
-			);
+			return file.endsWith('.json') && file !== HISTORY_FILE && !file.includes('_backup_');
 		});
 	} catch (error) {
 		console.error('단어집 파일 목록 조회 실패:', error);
@@ -472,10 +468,7 @@ export async function renameVocabularyFile(
 	newFilename: string
 ): Promise<void> {
 	// 시스템 파일 보호
-	if (
-		oldFilename === DEFAULT_VOCABULARY_FILE ||
-		oldFilename === HISTORY_FILE
-	) {
+	if (oldFilename === DEFAULT_VOCABULARY_FILE || oldFilename === HISTORY_FILE) {
 		throw new Error('시스템 파일은 이름을 변경할 수 없습니다.');
 	}
 	await ensureDataDirectory();
@@ -487,10 +480,7 @@ export async function renameVocabularyFile(
  */
 export async function deleteVocabularyFile(filename: string): Promise<void> {
 	// 시스템 파일 보호
-	if (
-		filename === DEFAULT_VOCABULARY_FILE ||
-		filename === HISTORY_FILE
-	) {
+	if (filename === DEFAULT_VOCABULARY_FILE || filename === HISTORY_FILE) {
 		throw new Error('시스템 파일은 삭제할 수 없습니다.');
 	}
 	await ensureDataDirectory();

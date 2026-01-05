@@ -436,7 +436,8 @@
 		editorServerError = '';
 
 		// 새 도메인 추가인지 수정인지 판단
-		const isEditMode = !!currentEditingEntry && !!currentEditingEntry.id && currentEditingEntry.id.trim() !== '';
+		const isEditMode =
+			!!currentEditingEntry && !!currentEditingEntry.id && currentEditingEntry.id.trim() !== '';
 		const method = isEditMode ? 'PUT' : 'POST';
 
 		try {
@@ -503,7 +504,9 @@
 				}
 			} else {
 				// 에러 발생 시 모달 내부에 표시
-				const errorMsg = result.error || (isEditMode ? '도메인 수정에 실패했습니다.' : '도메인 추가에 실패했습니다.');
+				const errorMsg =
+					result.error ||
+					(isEditMode ? '도메인 수정에 실패했습니다.' : '도메인 추가에 실패했습니다.');
 				editorServerError = errorMsg;
 			}
 		} catch (error) {

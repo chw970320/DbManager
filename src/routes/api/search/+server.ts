@@ -134,7 +134,7 @@ export async function GET({ url }: RequestEvent) {
 			// 검색 대상 필드 설정
 			if (field === 'all') {
 				searchTargets.push(entry.standardName, entry.abbreviation, entry.englishName);
-				
+
 				// 이음동의어 배열의 각 항목 추가
 				if (entry.synonyms && Array.isArray(entry.synonyms)) {
 					entry.synonyms.forEach((synonym) => {
@@ -143,7 +143,7 @@ export async function GET({ url }: RequestEvent) {
 						}
 					});
 				}
-				
+
 				// 금칙어 배열의 각 항목 추가
 				if (entry.forbiddenWords && Array.isArray(entry.forbiddenWords)) {
 					entry.forbiddenWords.forEach((forbiddenWord) => {

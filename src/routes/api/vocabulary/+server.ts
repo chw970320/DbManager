@@ -371,10 +371,7 @@ export async function PUT({ request, url }: RequestEvent) {
 
 		// 표준단어명이 변경되는 경우 금칙어 및 이음동의어 validation
 		const existingEntry = vocabularyData.entries[entryIndex];
-		if (
-			updatedEntry.standardName &&
-			updatedEntry.standardName !== existingEntry.standardName
-		) {
+		if (updatedEntry.standardName && updatedEntry.standardName !== existingEntry.standardName) {
 			try {
 				const allVocabularyFiles = await listVocabularyFiles();
 				const allVocabularyEntries: VocabularyEntry[] = [];

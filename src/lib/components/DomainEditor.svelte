@@ -12,7 +12,12 @@
 		filename?: string; // 현재 선택된 도메인 파일명
 	}
 
-	let { entry = {}, isEditMode = false, serverError = '', filename = 'domain.json' }: Props = $props();
+	let {
+		entry = {},
+		isEditMode = false,
+		serverError = '',
+		filename = 'domain.json'
+	}: Props = $props();
 
 	// Event dispatcher
 	const dispatch = createEventDispatcher<{
@@ -134,7 +139,7 @@
 			if (errors.physicalDataType) {
 				errorMessages.push(errors.physicalDataType);
 			}
-			
+
 			// 에러 팝업 표시
 			if (errorMessages.length > 0) {
 				await tick();
@@ -147,23 +152,26 @@
 		isSubmitting = true;
 		try {
 			const validationErrors: string[] = [];
-			
+
 			// 도메인명 중복 검사
 			try {
-				const validationResponse = await fetch(`/api/domain/validate?filename=${encodeURIComponent(filename)}`, {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json'
-					},
-					body: JSON.stringify({
-						domainCategory: formData.domainCategory.trim(),
-						physicalDataType: formData.physicalDataType.trim(),
-						dataLength: formData.dataLength.trim() || undefined,
-						decimalPlaces: formData.decimalPlaces.trim() || undefined,
-						entryId: entry.id && entry.id.trim() ? entry.id : undefined // 수정 모드인 경우에만 ID 전달
-					})
-				});
-				
+				const validationResponse = await fetch(
+					`/api/domain/validate?filename=${encodeURIComponent(filename)}`,
+					{
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({
+							domainCategory: formData.domainCategory.trim(),
+							physicalDataType: formData.physicalDataType.trim(),
+							dataLength: formData.dataLength.trim() || undefined,
+							decimalPlaces: formData.decimalPlaces.trim() || undefined,
+							entryId: entry.id && entry.id.trim() ? entry.id : undefined // 수정 모드인 경우에만 ID 전달
+						})
+					}
+				);
+
 				if (validationResponse.ok) {
 					const validationResult = await validationResponse.json();
 					if (!validationResult.success) {
@@ -176,7 +184,7 @@
 				console.warn('Validation API 호출 실패:', validationErr);
 				// validation API 실패 시에도 계속 진행 (서버에서 다시 검증)
 			}
-			
+
 			// validation 에러가 있으면 팝업 표시하고 전송 중단
 			if (validationErrors.length > 0) {
 				await tick();
@@ -384,9 +392,13 @@
 					<div>
 						<label for="standardDomainName" class="mb-1 block text-sm font-medium text-gray-900">
 							표준 도메인명 <span class="text-red-700">*</span>
-							<span class="ml-2 text-xs font-normal text-gray-500">(자동 생성{#if isEditMode}, 수정 불가{/if})</span>
+							<span class="ml-2 text-xs font-normal text-gray-500"
+								>(자동 생성{#if isEditMode}, 수정 불가{/if})</span
+							>
 						</label>
-						<div class="rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+						<div
+							class="rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700"
+						>
 							{generatedDomainName || '(입력 필요)'}
 						</div>
 						<p class="mt-1 text-xs text-gray-500">

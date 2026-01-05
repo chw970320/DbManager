@@ -1,12 +1,17 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse, TermEntry } from '$lib/types/term.js';
-import { loadTermData, listTermFiles, loadVocabularyData, loadDomainData } from '$lib/utils/file-handler.js';
+import {
+	loadTermData,
+	listTermFiles,
+	loadVocabularyData,
+	loadDomainData
+} from '$lib/utils/file-handler.js';
 import { validateTermNameSuffix, validateTermUniqueness } from '$lib/utils/validation.js';
 
 /**
  * 용어 validation API
  * POST /api/term/validate
- * 
+ *
  * 클라이언트에서 전송 전에 validation을 수행하기 위한 엔드포인트
  */
 export async function POST({ request, url }: RequestEvent) {
@@ -38,16 +43,8 @@ export async function POST({ request, url }: RequestEvent) {
 			);
 		}
 
-		if (!domainName || typeof domainName !== 'string' || !domainName.trim()) {
-			return json(
-				{
-					success: false,
-					error: '도메인명이 필요합니다.',
-					message: 'Missing domainName'
-				} as ApiResponse,
-				{ status: 400 }
-			);
-		}
+		// domainName은 선택적 필드 (용어 변환기에서는 아직 선택하지 않을 수 있음)
+		const hasDomainName = domainName && typeof domainName === 'string' && domainName.trim();
 
 		// 매핑 정보 로드
 		let termData;
@@ -79,10 +76,7 @@ export async function POST({ request, url }: RequestEvent) {
 		}
 
 		// 1. 용어명 접미사 validation
-		const suffixValidationError = validateTermNameSuffix(
-			termName.trim(),
-			vocabularyData.entries
-		);
+		const suffixValidationError = validateTermNameSuffix(termName.trim(), vocabularyData.entries);
 		if (suffixValidationError) {
 			return json(
 				{
@@ -94,42 +88,44 @@ export async function POST({ request, url }: RequestEvent) {
 			);
 		}
 
-		// 2. 용어명 유일성 validation
-		try {
-			const allTermFiles = await listTermFiles();
-			const allTermEntries: TermEntry[] = [];
-			for (const file of allTermFiles) {
-				try {
-					const fileData = await loadTermData(file);
-					// 수정 모드인 경우 현재 entry 제외
-					const filteredEntries = entryId
-						? fileData.entries.filter((e) => e.id !== entryId)
-						: fileData.entries;
-					allTermEntries.push(...filteredEntries);
-				} catch (error) {
-					console.warn(`용어 파일 ${file} 로드 실패:`, error);
+		// 2. 용어명 유일성 validation (domainName이 제공된 경우에만 수행)
+		if (hasDomainName) {
+			try {
+				const allTermFiles = await listTermFiles();
+				const allTermEntries: TermEntry[] = [];
+				for (const file of allTermFiles) {
+					try {
+						const fileData = await loadTermData(file);
+						// 수정 모드인 경우 현재 entry 제외
+						const filteredEntries = entryId
+							? fileData.entries.filter((e) => e.id !== entryId)
+							: fileData.entries;
+						allTermEntries.push(...filteredEntries);
+					} catch (error) {
+						console.warn(`용어 파일 ${file} 로드 실패:`, error);
+					}
 				}
-			}
 
-			const uniquenessError = validateTermUniqueness(
-				termName.trim(),
-				columnName.trim(),
-				domainName.trim(),
-				allTermEntries
-			);
-			if (uniquenessError) {
-				return json(
-					{
-						success: false,
-						error: uniquenessError,
-						message: 'Duplicate term'
-					} as ApiResponse,
-					{ status: 409 }
+				const uniquenessError = validateTermUniqueness(
+					termName.trim(),
+					columnName.trim(),
+					domainName.trim(),
+					allTermEntries
 				);
+				if (uniquenessError) {
+					return json(
+						{
+							success: false,
+							error: uniquenessError,
+							message: 'Duplicate term'
+						} as ApiResponse,
+						{ status: 409 }
+					);
+				}
+			} catch (validationError) {
+				console.warn('용어명 유일성 확인 중 오류:', validationError);
+				// validation 실패 시에도 성공으로 반환 (서버에서 다시 검증)
 			}
-		} catch (validationError) {
-			console.warn('용어명 유일성 확인 중 오류:', validationError);
-			// validation 실패 시에도 성공으로 반환 (서버에서 다시 검증)
 		}
 
 		// 모든 validation 통과
@@ -152,4 +148,3 @@ export async function POST({ request, url }: RequestEvent) {
 		);
 	}
 }
-

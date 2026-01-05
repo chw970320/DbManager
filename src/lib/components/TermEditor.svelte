@@ -17,7 +17,12 @@
 		filename?: string; // 현재 선택된 용어 파일명
 	}
 
-	let { entry = {}, isEditMode = false, serverError = '', filename = 'term.json' }: Props = $props();
+	let {
+		entry = {},
+		isEditMode = false,
+		serverError = '',
+		filename = 'term.json'
+	}: Props = $props();
 
 	// Event dispatcher
 	const dispatch = createEventDispatcher<{
@@ -414,10 +419,11 @@
 
 	// Form validation
 	function isFormValid(): boolean {
-		const hasValidDomainName = 
-			formData.domainName.trim() && 
-			(domainRecommendations.length === 0 || domainRecommendations.includes(formData.domainName.trim()));
-		
+		const hasValidDomainName =
+			formData.domainName.trim() &&
+			(domainRecommendations.length === 0 ||
+				domainRecommendations.includes(formData.domainName.trim()));
+
 		return (
 			!errors.termName &&
 			!errors.columnName &&
@@ -442,7 +448,7 @@
 			if (errors.domainName) {
 				errorMessages.push(errors.domainName);
 			}
-			
+
 			// 에러 팝업 표시
 			if (errorMessages.length > 0) {
 				await tick();
@@ -455,22 +461,25 @@
 		isSubmitting = true;
 		try {
 			const validationErrors: string[] = [];
-			
+
 			// 용어명 접미사 및 유일성 validation
 			try {
-				const validationResponse = await fetch(`/api/term/validate?filename=${encodeURIComponent(filename)}`, {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json'
-					},
-					body: JSON.stringify({
-						termName: formData.termName.trim(),
-						columnName: formData.columnName.trim(),
-						domainName: formData.domainName.trim(),
-						entryId: entry.id // 수정 모드인 경우 현재 entry ID 전달
-					})
-				});
-				
+				const validationResponse = await fetch(
+					`/api/term/validate?filename=${encodeURIComponent(filename)}`,
+					{
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json'
+						},
+						body: JSON.stringify({
+							termName: formData.termName.trim(),
+							columnName: formData.columnName.trim(),
+							domainName: formData.domainName.trim(),
+							entryId: entry.id // 수정 모드인 경우 현재 entry ID 전달
+						})
+					}
+				);
+
 				if (validationResponse.ok) {
 					const validationResult = await validationResponse.json();
 					if (!validationResult.success) {
@@ -483,7 +492,7 @@
 				console.warn('Validation API 호출 실패:', validationErr);
 				// validation API 실패 시에도 계속 진행 (서버에서 다시 검증)
 			}
-			
+
 			// validation 에러가 있으면 팝업 표시하고 전송 중단
 			if (validationErrors.length > 0) {
 				await tick();
@@ -769,7 +778,8 @@
 							{#each domainRecommendations as rec (rec)}
 								<button
 									type="button"
-									class="rounded-full border px-3 py-1 text-xs transition-colors {formData.domainName === rec
+									class="rounded-full border px-3 py-1 text-xs transition-colors {formData.domainName ===
+									rec
 										? 'border-blue-500 bg-blue-100 text-blue-800'
 										: 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100'}"
 									onclick={() => (formData.domainName = rec)}
@@ -788,18 +798,15 @@
 						<p class="mt-1 text-xs text-gray-500">도메인 추천을 불러오는 중...</p>
 					{:else if formData.termName.trim()}
 						<p class="mt-1 text-xs text-gray-500">
-							({getLastSegment(formData.termName) || '없음'})에 매핑된 도메인이 없습니다. 용어명을 확인해주세요.
+							({getLastSegment(formData.termName) || '없음'})에 매핑된 도메인이 없습니다. 용어명을
+							확인해주세요.
 						</p>
 					{:else}
 						<p class="mt-1 text-xs text-gray-500">
 							용어명을 입력하면 단어집 표준단어명과 매핑된 도메인을 자동으로 추천합니다.
 						</p>
 					{/if}
-					<input
-						id="domainName"
-						type="hidden"
-						bind:value={formData.domainName}
-					/>
+					<input id="domainName" type="hidden" bind:value={formData.domainName} />
 					{#if errors.domainName}
 						<p class="text-error mt-1 text-sm">{errors.domainName}</p>
 					{/if}

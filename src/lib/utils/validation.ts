@@ -404,30 +404,32 @@ export function generateStandardDomainName(
 ): string {
 	const category = (domainCategory || '').trim();
 	const dataType = (physicalDataType || '').trim();
-	
+
 	// 물리데이터타입의 첫 글자 추출
 	const dataTypeFirstChar = dataType.length > 0 ? dataType[0].toUpperCase() : '';
-	
+
 	// 데이터길이 처리
-	const length = dataLength !== undefined && dataLength !== null && dataLength !== '' 
-		? String(dataLength).trim() 
-		: '';
-	
+	const length =
+		dataLength !== undefined && dataLength !== null && dataLength !== ''
+			? String(dataLength).trim()
+			: '';
+
 	// 소수점자리수 처리
-	const decimal = decimalPlaces !== undefined && decimalPlaces !== null && decimalPlaces !== ''
-		? String(decimalPlaces).trim()
-		: '';
-	
+	const decimal =
+		decimalPlaces !== undefined && decimalPlaces !== null && decimalPlaces !== ''
+			? String(decimalPlaces).trim()
+			: '';
+
 	// 도메인명 생성
 	let domainName = category + dataTypeFirstChar;
-	
+
 	if (length) {
 		domainName += length;
 		if (decimal) {
 			domainName += ',' + decimal;
 		}
 	}
-	
+
 	return domainName;
 }
 
@@ -452,8 +454,7 @@ export function validateDomainNameUniqueness(
 	// 동일한 표준 도메인명이 이미 존재하는지 확인
 	const duplicate = allDomainEntries.find(
 		(entry) =>
-			entry.id !== excludeId &&
-			entry.standardDomainName.trim().toLowerCase() === trimmedName
+			entry.id !== excludeId && entry.standardDomainName.trim().toLowerCase() === trimmedName
 	);
 
 	if (duplicate) {
@@ -478,8 +479,11 @@ export function validateTermNameSuffix(
 	}
 
 	// 용어명을 언더스코어로 분리
-	const parts = termName.split('_').map((p) => p.trim()).filter((p) => p.length > 0);
-	
+	const parts = termName
+		.split('_')
+		.map((p) => p.trim())
+		.filter((p) => p.length > 0);
+
 	if (parts.length === 0) {
 		return '용어명이 비어있습니다.';
 	}
@@ -524,9 +528,7 @@ export function validateTermNameUniqueness(
 
 	// 동일한 용어명이 이미 존재하는지 확인
 	const duplicate = allTermEntries.find(
-		(entry) =>
-			entry.id !== excludeId &&
-			entry.termName.trim().toLowerCase() === trimmedName
+		(entry) => entry.id !== excludeId && entry.termName.trim().toLowerCase() === trimmedName
 	);
 
 	if (duplicate) {

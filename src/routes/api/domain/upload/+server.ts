@@ -2,7 +2,11 @@ import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse } from '$lib/types/vocabulary.js';
 import type { DomainData, DomainEntry } from '$lib/types/domain.js';
 import { loadDomainData, mergeDomainData, listDomainFiles } from '$lib/utils/file-handler.js';
-import { validateXlsxFile, generateStandardDomainName, validateDomainNameUniqueness } from '$lib/utils/validation.js';
+import {
+	validateXlsxFile,
+	generateStandardDomainName,
+	validateDomainNameUniqueness
+} from '$lib/utils/validation.js';
 import { parseDomainXlsxToJson } from '$lib/utils/xlsx-parser.js';
 import { addHistoryLog } from '$lib/utils/history-handler.js';
 import {
@@ -153,10 +157,7 @@ export async function POST({ request }: RequestEvent) {
 				entry.standardDomainName = generatedDomainName;
 
 				// 도메인명 유일성 validation
-				const validationError = validateDomainNameUniqueness(
-					generatedDomainName,
-					allDomainEntries
-				);
+				const validationError = validateDomainNameUniqueness(generatedDomainName, allDomainEntries);
 				if (validationError) {
 					validationErrors.push(`${entry.domainCategory}: ${validationError}`);
 				}

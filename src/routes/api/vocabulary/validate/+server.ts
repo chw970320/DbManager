@@ -6,7 +6,7 @@ import { validateForbiddenWordsAndSynonyms } from '$lib/utils/validation.js';
 /**
  * 단어 validation API
  * POST /api/vocabulary/validate
- * 
+ *
  * 클라이언트에서 전송 전에 validation을 수행하기 위한 엔드포인트
  */
 export async function POST({ request, url }: RequestEvent) {
@@ -45,10 +45,7 @@ export async function POST({ request, url }: RequestEvent) {
 			}
 
 			// 금칙어 및 이음동의어 validation
-			const validationError = validateForbiddenWordsAndSynonyms(
-				standardName,
-				allVocabularyEntries
-			);
+			const validationError = validateForbiddenWordsAndSynonyms(standardName, allVocabularyEntries);
 			if (validationError) {
 				return json(
 					{
@@ -111,4 +108,3 @@ export async function POST({ request, url }: RequestEvent) {
 		);
 	}
 }
-

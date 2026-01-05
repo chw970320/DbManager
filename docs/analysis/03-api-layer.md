@@ -86,13 +86,14 @@ SvelteKit의 파일 기반 라우팅을 사용합니다:
 
 ### Generator (용어 변환기) API
 
-| HTTP 메소드 | 경로                      | 파일 위치                                      | 설명                         |
-| ----------- | ------------------------- | ---------------------------------------------- | ---------------------------- |
-| POST        | `/api/generator`          | `src/routes/api/generator/+server.ts`         | 단어 변환 (한영/영한)        |
-| POST        | `/api/generator/segment`  | `src/routes/api/generator/segment/+server.ts`  | 단어 조합 분석 및 금칙어 검사 |
-| POST        | `/api/term/recommend`     | `src/routes/api/term/recommend/+server.ts`     | 도메인 추천                  |
+| HTTP 메소드 | 경로                     | 파일 위치                                     | 설명                          |
+| ----------- | ------------------------ | --------------------------------------------- | ----------------------------- |
+| POST        | `/api/generator`         | `src/routes/api/generator/+server.ts`         | 단어 변환 (한영/영한)         |
+| POST        | `/api/generator/segment` | `src/routes/api/generator/segment/+server.ts` | 단어 조합 분석 및 금칙어 검사 |
+| POST        | `/api/term/recommend`    | `src/routes/api/term/recommend/+server.ts`    | 도메인 추천                   |
 
 **주요 변경사항 (프로젝트 고도화):**
+
 - 전역 금지어 API 제거 (`/api/forbidden-words` 삭제)
 - 금칙어 및 이음동의어 검색 및 추천 기능 추가 (`/api/generator/segment`)
 - 도메인명 자동 생성 기능 추가 (`/api/domain` POST)

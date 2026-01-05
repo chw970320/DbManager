@@ -10,7 +10,12 @@
 		filename?: string; // 현재 선택된 단어집 파일명
 	}
 
-	let { entry = {}, isEditMode = false, serverError = '', filename = 'vocabulary.json' }: Props = $props();
+	let {
+		entry = {},
+		isEditMode = false,
+		serverError = '',
+		filename = 'vocabulary.json'
+	}: Props = $props();
 
 	const dispatch = createEventDispatcher<{
 		save: VocabularyEntry;
@@ -64,7 +69,9 @@
 			// 단어집 파일의 매핑 정보 로드
 			let domainFilename = 'domain.json';
 			try {
-				const mappingResponse = await fetch(`/api/vocabulary/files/mapping?filename=${encodeURIComponent(filename)}`);
+				const mappingResponse = await fetch(
+					`/api/vocabulary/files/mapping?filename=${encodeURIComponent(filename)}`
+				);
 				if (mappingResponse.ok) {
 					const mappingResult = await mappingResponse.json();
 					if (mappingResult.success && mappingResult.data?.mapping?.domain) {
@@ -76,7 +83,9 @@
 			}
 
 			// 매핑된 도메인 파일의 도메인분류명 목록 로드
-			const response = await fetch(`/api/domain/filter-options?filename=${encodeURIComponent(domainFilename)}`);
+			const response = await fetch(
+				`/api/domain/filter-options?filename=${encodeURIComponent(domainFilename)}`
+			);
 			if (response.ok) {
 				const result = await response.json();
 				if (result.success && result.data && result.data.domainCategory) {
@@ -132,7 +141,7 @@
 			if (errors.englishName) {
 				errorMessages.push(errors.englishName);
 			}
-			
+
 			// 에러 팝업 표시
 			if (errorMessages.length > 0) {
 				await tick();
@@ -145,23 +154,26 @@
 		isSubmitting = true;
 		try {
 			const validationErrors: string[] = [];
-			
+
 			// 1. 금칙어 및 이음동의어 validation
 			const standardName = formData.standardName.trim();
 			if (standardName) {
 				try {
-					const validationResponse = await fetch(`/api/vocabulary/validate?filename=${encodeURIComponent(filename)}`, {
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json'
-						},
-						body: JSON.stringify({
-							standardName,
-							abbreviation: formData.abbreviation.trim(),
-							entryId: entry.id // 수정 모드인 경우 현재 entry ID 전달
-						})
-					});
-					
+					const validationResponse = await fetch(
+						`/api/vocabulary/validate?filename=${encodeURIComponent(filename)}`,
+						{
+							method: 'POST',
+							headers: {
+								'Content-Type': 'application/json'
+							},
+							body: JSON.stringify({
+								standardName,
+								abbreviation: formData.abbreviation.trim(),
+								entryId: entry.id // 수정 모드인 경우 현재 entry ID 전달
+							})
+						}
+					);
+
 					if (validationResponse.ok) {
 						const validationResult = await validationResponse.json();
 						if (!validationResult.success) {
@@ -175,9 +187,9 @@
 					// validation API 실패 시에도 계속 진행 (서버에서 다시 검증)
 				}
 			}
-			
+
 			// 2. 영문약어 중복 검사는 validation API에서 수행 (수정 모드인 경우 entryId 전달)
-			
+
 			// validation 에러가 있으면 팝업 표시하고 전송 중단
 			if (validationErrors.length > 0) {
 				await tick();

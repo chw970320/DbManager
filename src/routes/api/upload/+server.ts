@@ -1,8 +1,17 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type { ApiResponse, UploadResult, VocabularyData, VocabularyEntry } from '$lib/types/vocabulary.js';
+import type {
+	ApiResponse,
+	UploadResult,
+	VocabularyData,
+	VocabularyEntry
+} from '$lib/types/vocabulary.js';
 import { validateXlsxFile, validateForbiddenWordsAndSynonyms } from '$lib/utils/validation.js';
 import { parseXlsxToJson } from '$lib/utils/xlsx-parser.js';
-import { mergeVocabularyData, loadVocabularyData, listVocabularyFiles } from '$lib/utils/file-handler.js';
+import {
+	mergeVocabularyData,
+	loadVocabularyData,
+	listVocabularyFiles
+} from '$lib/utils/file-handler.js';
 import { addHistoryLog } from '$lib/utils/history-handler.js';
 import {
 	getRequiredFile,

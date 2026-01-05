@@ -6,7 +6,7 @@ import { generateStandardDomainName, validateDomainNameUniqueness } from '$lib/u
 /**
  * 도메인 validation API
  * POST /api/domain/validate
- * 
+ *
  * 클라이언트에서 전송 전에 validation을 수행하기 위한 엔드포인트
  */
 export async function POST({ request, url }: RequestEvent) {
@@ -63,10 +63,7 @@ export async function POST({ request, url }: RequestEvent) {
 				}
 			}
 
-			const uniquenessError = validateDomainNameUniqueness(
-				generatedDomainName,
-				allDomainEntries
-			);
+			const uniquenessError = validateDomainNameUniqueness(generatedDomainName, allDomainEntries);
 			if (uniquenessError) {
 				return json(
 					{
@@ -102,4 +99,3 @@ export async function POST({ request, url }: RequestEvent) {
 		);
 	}
 }
-

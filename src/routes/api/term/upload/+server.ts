@@ -265,10 +265,7 @@ export async function POST({ request }: RequestEvent) {
 				}
 
 				// 2. 용어명 매핑 validation (모든 부분이 단어집에 식별되는지)
-				const termMappingError = validateTermNameMapping(
-					entry.termName,
-					vocabularyData.entries
-				);
+				const termMappingError = validateTermNameMapping(entry.termName, vocabularyData.entries);
 				if (termMappingError) {
 					validationErrors.push(`${entry.termName}: ${termMappingError}`);
 				}
@@ -279,23 +276,21 @@ export async function POST({ request }: RequestEvent) {
 					vocabularyData.entries
 				);
 				if (columnMappingError) {
-					validationErrors.push(`${entry.termName} (컬럼명: ${entry.columnName}): ${columnMappingError}`);
+					validationErrors.push(
+						`${entry.termName} (컬럼명: ${entry.columnName}): ${columnMappingError}`
+					);
 				}
 
 				// 4. 도메인명 매핑 validation
-				const domainMappingError = validateDomainNameMapping(
-					entry.domainName,
-					domainData.entries
-				);
+				const domainMappingError = validateDomainNameMapping(entry.domainName, domainData.entries);
 				if (domainMappingError) {
-					validationErrors.push(`${entry.termName} (도메인명: ${entry.domainName}): ${domainMappingError}`);
+					validationErrors.push(
+						`${entry.termName} (도메인명: ${entry.domainName}): ${domainMappingError}`
+					);
 				}
 
 				// 5. 용어명 유일성 validation
-				const uniquenessError = validateTermNameUniqueness(
-					entry.termName,
-					allTermEntries
-				);
+				const uniquenessError = validateTermNameUniqueness(entry.termName, allTermEntries);
 				if (uniquenessError) {
 					validationErrors.push(`${entry.termName}: ${uniquenessError}`);
 				}

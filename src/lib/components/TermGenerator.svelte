@@ -56,11 +56,14 @@
 
 		isLoadingCombinations = true;
 		try {
-			const response = await fetch(`/api/generator/segment?filename=${encodeURIComponent(filename)}`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ term: sourceTerm, direction })
-			});
+			const response = await fetch(
+				`/api/generator/segment?filename=${encodeURIComponent(filename)}`,
+				{
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ term: sourceTerm, direction })
+				}
+			);
 			if (!response.ok) {
 				const errorData = await response.json();
 				throw new Error(errorData.error || `HTTP error: ${response.status}`);
@@ -114,7 +117,7 @@
 			const data = await response.json();
 			// 성공적으로 데이터를 받은 후에만 결과 업데이트
 			finalResults = data.results || [];
-			
+
 			// 각 결과에 대해 접미사 validation 수행
 			if (finalResults.length > 0) {
 				await validateSegmentResults(segment);
@@ -128,7 +131,7 @@
 			isLoadingResult = false;
 		}
 	}
-	
+
 	// 단어 조합에 대한 접미사 validation 수행
 	async function validateSegmentResults(segment: string) {
 		try {
@@ -141,7 +144,7 @@
 					domainName: ''
 				})
 			});
-			
+
 			if (response.ok) {
 				const result = await response.json();
 				if (result.success) {
@@ -299,7 +302,9 @@
 					</svg>
 					<div class="flex-1">
 						<p class="text-sm font-medium text-yellow-800">
-							{forbiddenWordInfo.isForbidden ? '금칙어가 입력되었습니다.' : '이음동의어가 입력되었습니다.'}
+							{forbiddenWordInfo.isForbidden
+								? '금칙어가 입력되었습니다.'
+								: '이음동의어가 입력되었습니다.'}
 						</p>
 						{#if forbiddenWordInfo.recommendations.length > 0}
 							<p class="mt-1 text-xs text-yellow-700">
@@ -467,7 +472,7 @@
 												<button
 													type="button"
 													disabled
-													class="rounded p-1 text-red-600 opacity-50 cursor-not-allowed"
+													class="cursor-not-allowed rounded p-1 text-red-600 opacity-50"
 													aria-label="Validation 실패"
 													title={validation.error || '접미사 validation 실패'}
 												>

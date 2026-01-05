@@ -401,10 +401,7 @@ export async function POST({ request }: RequestEvent) {
 				}
 			}
 
-			const uniquenessError = validateTermNameUniqueness(
-				entry.termName.trim(),
-				allTermEntries
-			);
+			const uniquenessError = validateTermNameUniqueness(entry.termName.trim(), allTermEntries);
 			if (uniquenessError) {
 				return json(
 					{
@@ -544,10 +541,7 @@ export async function PUT({ request }: RequestEvent) {
 		// 용어명이 변경되는 경우 validation 수행
 		if (entry.termName && entry.termName.trim() !== existingEntry.termName) {
 			// 용어명 접미사 validation
-			const suffixValidationError = validateTermNameSuffix(
-				termName,
-				vocabularyData.entries
-			);
+			const suffixValidationError = validateTermNameSuffix(termName, vocabularyData.entries);
 			if (suffixValidationError) {
 				return json(
 					{

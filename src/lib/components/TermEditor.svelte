@@ -548,7 +548,7 @@
 <svelte:window onclick={handleClickOutside} onkeydown={handleKeydown} />
 
 <div
-	class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+	class="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-50"
 	onclick={handleBackgroundClick}
 	role="button"
 	tabindex="0"

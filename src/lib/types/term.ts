@@ -48,3 +48,53 @@ export interface TermHistoryData {
 	lastUpdated: string;
 	totalCount: number;
 }
+
+/**
+ * Validation 오류 타입
+ */
+export type ValidationErrorType =
+	| 'TERM_NAME_LENGTH'
+	| 'TERM_NAME_SUFFIX'
+	| 'TERM_NAME_DUPLICATE'
+	| 'TERM_UNIQUENESS'
+	| 'TERM_NAME_MAPPING'
+	| 'COLUMN_NAME_MAPPING'
+	| 'DOMAIN_NAME_MAPPING';
+
+/**
+ * Validation 오류 정보
+ */
+export interface ValidationError {
+	type: ValidationErrorType;
+	message: string;
+	field?: string;
+}
+
+/**
+ * 자동 수정 제안
+ */
+export interface AutoFixSuggestion {
+	termName?: string;
+	columnName?: string;
+	domainName?: string;
+	reason?: string;
+}
+
+/**
+ * Validation 결과
+ */
+export interface ValidationResult {
+	entry: TermEntry;
+	errors: ValidationError[];
+	suggestions?: AutoFixSuggestion;
+}
+
+/**
+ * 전체 Validation 체크 결과
+ */
+export interface ValidationCheckResult {
+	totalCount: number;
+	failedCount: number;
+	passedCount: number;
+	failedEntries: ValidationResult[];
+}

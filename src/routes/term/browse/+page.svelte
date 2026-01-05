@@ -6,7 +6,13 @@
 	import TermEditor from '$lib/components/TermEditor.svelte';
 	import HistoryLog from '$lib/components/HistoryLog.svelte';
 	import TermGenerator from '$lib/components/TermGenerator.svelte';
-	import type { TermEntry } from '$lib/types/term.js';
+	import TermValidationPanel from '$lib/components/TermValidationPanel.svelte';
+	import type {
+		TermEntry,
+		ValidationCheckResult,
+		ValidationResult,
+		AutoFixSuggestion
+	} from '$lib/types/term.js';
 	import type { ApiResponse } from '$lib/types/vocabulary.js';
 	import { get } from 'svelte/store';
 	import { settingsStore } from '$lib/stores/settings-store';
@@ -40,6 +46,11 @@
 	let showEditor = $state(false);
 	let editorServerError = $state('');
 	let initialEntry = $state<Partial<TermEntry>>({});
+
+	// Validation 패널 상태
+	let showValidationPanel = $state(false);
+	let validationLoading = $state(false);
+	let validationResults = $state<ValidationCheckResult | null>(null);
 
 	// 이벤트 상세 타입 정의
 	type SearchDetail = { query: string; field: string; exact: boolean };
@@ -368,6 +379,82 @@
 			await executeSearch();
 		} else {
 			await loadTermData();
+		}
+	}
+
+	/**
+	 * 전체 유효성 검사 실행
+	 */
+	async function handleValidateAll() {
+		validationLoading = true;
+		showValidationPanel = true;
+		validationResults = null;
+
+		try {
+			const response = await fetch(`/api/term/validate-all?filename=${selectedFilename}`);
+			const result: ApiResponse = await response.json();
+
+			if (result.success && result.data) {
+				validationResults = result.data as ValidationCheckResult;
+				console.log('Validation 결과:', validationResults);
+				console.log('실패 항목 수:', validationResults.failedEntries?.length || 0);
+			} else {
+				errorMessage = result.error || '유효성 검사 중 오류가 발생했습니다.';
+				console.error('Validation 실패:', result);
+			}
+		} catch (error) {
+			console.error('유효성 검사 오류:', error);
+			errorMessage = '유효성 검사 중 오류가 발생했습니다.';
+		} finally {
+			validationLoading = false;
+		}
+	}
+
+	/**
+	 * Validation 패널에서 편집 요청 처리
+	 */
+	function handleValidationEdit(
+		event: CustomEvent<{ entryId: string; suggestions?: AutoFixSuggestion }>
+	) {
+		const { entryId, suggestions } = event.detail;
+
+		// validationResults.failedEntries에서 항목 찾기 (현재 페이지의 entries가 아닌 전체 검증 결과에서 찾기)
+		let entry: TermEntry | undefined;
+
+		if (validationResults?.failedEntries) {
+			const validationResult = validationResults.failedEntries.find((r) => r.entry.id === entryId);
+			if (validationResult) {
+				entry = validationResult.entry;
+			}
+		}
+
+		// validationResults에서 찾지 못한 경우, 현재 페이지의 entries에서도 시도
+		if (!entry) {
+			entry = entries.find((e) => e.id === entryId);
+		}
+
+		if (entry) {
+			// 자동 수정 제안이 있으면 적용
+			if (suggestions) {
+				initialEntry = {
+					...entry,
+					termName: suggestions.termName || entry.termName,
+					columnName: suggestions.columnName || entry.columnName,
+					domainName: suggestions.domainName || entry.domainName
+				};
+			} else {
+				initialEntry = { ...entry };
+			}
+			// 패널은 닫지 않고 에디터만 열기 (연속 작업 가능)
+			showEditor = true;
+			editorServerError = '';
+		} else {
+			// 항목을 찾지 못한 경우 에러 메시지 표시
+			console.error('항목을 찾을 수 없습니다:', entryId, {
+				validationResults: validationResults,
+				entriesLength: entries.length
+			});
+			editorServerError = '항목을 찾을 수 없습니다. 페이지를 새로고침한 후 다시 시도해주세요.';
 		}
 	}
 
@@ -726,6 +813,29 @@
 
 						<!-- 액션 버튼들 -->
 						<div class="mb-4 flex items-center space-x-3">
+							<!-- 전체 유효성 검사 버튼 -->
+							<button
+								type="button"
+								onclick={handleValidateAll}
+								disabled={loading || validationLoading}
+								class="group inline-flex items-center space-x-2 rounded-xl border border-blue-200/50 bg-blue-50/80 px-6 py-3 text-sm font-medium text-blue-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-blue-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+							>
+								<svg
+									class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+									/>
+								</svg>
+								<span>{validationLoading ? '검사 중...' : '전체 유효성 검사'}</span>
+							</button>
+
 							<!-- XLSX 다운로드 버튼 -->
 							<button
 								type="button"
@@ -785,6 +895,20 @@
 						filename={selectedFilename}
 						on:save={handleSave}
 						on:cancel={handleCancel}
+					/>
+				{/if}
+
+				<!-- Validation 패널 -->
+				{#if showValidationPanel}
+					<TermValidationPanel
+						results={validationResults?.failedEntries || []}
+						totalCount={validationResults?.totalCount || 0}
+						failedCount={validationResults?.failedCount || 0}
+						passedCount={validationResults?.passedCount || 0}
+						loading={validationLoading}
+						open={showValidationPanel}
+						on:close={() => (showValidationPanel = false)}
+						on:edit={handleValidationEdit}
 					/>
 				{/if}
 

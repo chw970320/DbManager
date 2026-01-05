@@ -355,7 +355,10 @@
 											// 합성 단어인 경우 해당 부분만 교체
 											if (mapping && originalPart !== sourceTerm) {
 												// 원본 문자열에서 해당 부분을 찾아서 추천 단어로 교체 (대소문자 구분 없이)
-												const originalPartEscaped = originalPart.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+												const originalPartEscaped = originalPart.replace(
+													/[.*+?^${}()|[\]\\]/g,
+													'\\$&'
+												);
 												const regex = new RegExp(originalPartEscaped, 'gi');
 												// 원본 문자열에서 실제로 매칭되는 부분을 찾아서 그 부분만 교체
 												const match = sourceTerm.match(regex);

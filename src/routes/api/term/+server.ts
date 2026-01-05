@@ -97,11 +97,36 @@ export async function GET({ url }: RequestEvent) {
 		// 쿼리 파라미터 추출
 		const page = parseInt(url.searchParams.get('page') || '1');
 		const limit = parseInt(url.searchParams.get('limit') || '20');
-		const sortBy = url.searchParams.get('sortBy') || 'createdAt';
-		const sortOrder = url.searchParams.get('sortOrder') || 'desc';
 		const searchQuery = url.searchParams.get('query') || '';
 		const searchField = url.searchParams.get('field') || 'all';
 		const filename = url.searchParams.get('filename') || 'term.json';
+
+		// 다중 정렬 파라미터 처리 (sortBy[]와 sortOrder[] 배열)
+		const sortByArray = url.searchParams.getAll('sortBy[]');
+		const sortOrderArray = url.searchParams.getAll('sortOrder[]');
+
+		// 하위 호환성: 단일 정렬 파라미터도 지원
+		const singleSortBy = url.searchParams.get('sortBy');
+		const singleSortOrder = url.searchParams.get('sortOrder');
+
+		// 정렬 설정 구성
+		type SortConfig = { column: string; direction: 'asc' | 'desc' };
+		const sortConfigs: SortConfig[] = [];
+
+		if (sortByArray.length > 0 && sortOrderArray.length > 0) {
+			// 다중 정렬
+			for (let i = 0; i < Math.min(sortByArray.length, sortOrderArray.length); i++) {
+				const direction = sortOrderArray[i];
+				if (direction === 'asc' || direction === 'desc') {
+					sortConfigs.push({ column: sortByArray[i], direction });
+				}
+			}
+		} else if (singleSortBy && singleSortOrder) {
+			// 단일 정렬 (하위 호환성)
+			if (singleSortOrder === 'asc' || singleSortOrder === 'desc') {
+				sortConfigs.push({ column: singleSortBy, direction: singleSortOrder });
+			}
+		}
 
 		// 컬럼 필터 파라미터 추출 (filters[columnKey]=value 형식)
 		const columnFilters: Record<string, string> = {};
@@ -125,16 +150,18 @@ export async function GET({ url }: RequestEvent) {
 		}
 
 		// 정렬 필드 유효성 검증
-		const validSortFields = ['termName', 'columnName', 'domainName', 'createdAt'];
-		if (!validSortFields.includes(sortBy)) {
-			return json(
-				{
-					success: false,
-					error: `지원하지 않는 정렬 필드입니다. 사용 가능: ${validSortFields.join(', ')}`,
-					message: 'Invalid sort field'
-				} as ApiResponse,
-				{ status: 400 }
-			);
+		const validSortFields = ['termName', 'columnName', 'domainName', 'createdAt', 'updatedAt'];
+		for (const config of sortConfigs) {
+			if (!validSortFields.includes(config.column)) {
+				return json(
+					{
+						success: false,
+						error: `지원하지 않는 정렬 필드입니다. 사용 가능: ${validSortFields.join(', ')}`,
+						message: 'Invalid sort field'
+					} as ApiResponse,
+					{ status: 400 }
+				);
+			}
 		}
 
 		// 검색 필드 유효성 검증
@@ -263,21 +290,51 @@ export async function GET({ url }: RequestEvent) {
 
 		// 정렬
 		filteredEntries = [...filteredEntries].sort((a, b) => {
-			const aValue: string | number = a[sortBy as keyof TermEntry] as string | number;
-			const bValue: string | number = b[sortBy as keyof TermEntry] as string | number;
+			// 다중 정렬: 각 정렬 조건을 순차적으로 적용
+			for (const config of sortConfigs) {
+				const aValue = a[config.column as keyof TermEntry];
+				const bValue = b[config.column as keyof TermEntry];
 
-			// 문자열 비교
-			if (typeof aValue === 'string' && typeof bValue === 'string') {
-				return sortOrder === 'asc'
-					? aValue.localeCompare(bValue, 'ko', { numeric: true })
-					: bValue.localeCompare(aValue, 'ko', { numeric: true });
+				// null/undefined 처리
+				if (aValue === null || aValue === undefined) {
+					if (bValue === null || bValue === undefined) continue;
+					return 1; // null은 뒤로
+				}
+				if (bValue === null || bValue === undefined) {
+					return -1; // null은 뒤로
+				}
+
+				// 문자열 비교
+				if (typeof aValue === 'string' && typeof bValue === 'string') {
+					const comparison = aValue.localeCompare(bValue, 'ko', { numeric: true });
+					if (comparison !== 0) {
+						return config.direction === 'asc' ? comparison : -comparison;
+					}
+					continue;
+				}
+
+				// 숫자 비교
+				if (typeof aValue === 'number' && typeof bValue === 'number') {
+					const comparison = aValue - bValue;
+					if (comparison !== 0) {
+						return config.direction === 'asc' ? comparison : -comparison;
+					}
+					continue;
+				}
+
+				// 기본 문자열 비교
+				const comparison = String(aValue).localeCompare(String(bValue), 'ko', { numeric: true });
+				if (comparison !== 0) {
+					return config.direction === 'asc' ? comparison : -comparison;
+				}
 			}
 
-			// 숫자 비교
-			if (typeof aValue === 'number' && typeof bValue === 'number') {
-				return sortOrder === 'asc' ? aValue - bValue : bValue - aValue;
+			// 모든 정렬 조건이 같으면 기본 정렬 적용 (updatedAt desc, 없으면 createdAt desc)
+			const aDate = a.updatedAt || a.createdAt || '';
+			const bDate = b.updatedAt || b.createdAt || '';
+			if (aDate && bDate) {
+				return bDate.localeCompare(aDate); // 내림차순
 			}
-
 			return 0;
 		});
 

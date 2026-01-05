@@ -21,9 +21,11 @@ export interface ColumnDefinition<T = unknown> {
 // 이벤트 타입
 // ============================================================================
 
+export type SortDirection = 'asc' | 'desc' | null;
+
 export interface SortEvent {
 	column: string;
-	direction: 'asc' | 'desc';
+	direction: SortDirection;
 }
 
 export interface PageChangeEvent {
@@ -46,8 +48,9 @@ export interface TableProps<T> {
 	currentPage?: number;
 	totalPages?: number;
 	pageSize?: number;
-	sortColumn?: string;
-	sortDirection?: 'asc' | 'desc';
+	sortColumn?: string; // 단일 정렬 (하위 호환성)
+	sortDirection?: 'asc' | 'desc'; // 단일 정렬 (하위 호환성)
+	sortConfig?: Record<string, SortDirection>; // 다중 정렬
 	searchField?: string;
 	selectedFilename?: string;
 	onsort: (detail: SortEvent) => void;

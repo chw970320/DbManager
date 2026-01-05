@@ -6,7 +6,7 @@
 
 	type SortEvent = {
 		column: string;
-		direction: 'asc' | 'desc';
+		direction: 'asc' | 'desc' | null;
 	};
 
 	type PageChangeEvent = {
@@ -31,8 +31,9 @@
 		currentPage?: number;
 		totalPages?: number;
 		pageSize?: number;
-		sortColumn?: string;
-		sortDirection?: 'asc' | 'desc';
+		sortColumn?: string; // 하위 호환성
+		sortDirection?: 'asc' | 'desc'; // 하위 호환성
+		sortConfig?: Record<string, 'asc' | 'desc' | null>;
 		searchField?: string;
 		_selectedFilename?: string;
 		activeFilters?: Record<string, string | null>;
@@ -58,8 +59,9 @@
 	let currentPage = $derived(props.currentPage ?? 1);
 	let totalPages = $derived(props.totalPages ?? 1);
 	let pageSize = $derived(props.pageSize ?? 20);
-	let sortColumn = $derived(props.sortColumn ?? '');
-	let sortDirection = $derived(props.sortDirection ?? 'asc');
+	let sortColumn = $derived(props.sortColumn ?? ''); // 하위 호환성
+	let sortDirection = $derived(props.sortDirection ?? 'asc'); // 하위 호환성
+	let sortConfig = $derived(props.sortConfig ?? {});
 	let searchField = $derived(props.searchField ?? 'all');
 	let _selectedFilename = $derived(props._selectedFilename ?? 'vocabulary.json');
 	let activeFilters = $derived(props.activeFilters ?? {});
@@ -228,13 +230,30 @@
 	}
 
 	/**
-	 * 컬럼 정렬 처리
+	 * 컬럼 정렬 처리 (3단계 순환: null → asc → desc → null)
 	 */
 	function handleSort(column: string) {
 		if (!loading) {
-			const newDirection = sortColumn === column && sortDirection === 'asc' ? 'desc' : 'asc';
+			const currentDirection = sortConfig[column] ?? null;
+			let newDirection: 'asc' | 'desc' | null;
+
+			if (currentDirection === null) {
+				newDirection = 'asc';
+			} else if (currentDirection === 'asc') {
+				newDirection = 'desc';
+			} else {
+				newDirection = null;
+			}
+
 			onsort({ column, direction: newDirection });
 		}
+	}
+
+	/**
+	 * 컬럼의 현재 정렬 방향 가져오기
+	 */
+	function getSortDirection(column: string): 'asc' | 'desc' | null {
+		return sortConfig[column] ?? null;
 	}
 
 	/**
@@ -423,7 +442,7 @@
 									: 'text-left'} {column.sortable
 								? 'cursor-pointer hover:bg-gray-200'
 								: ''} {column.filterable ? 'overflow-visible' : ''}"
-							class:bg-gray-200={sortColumn === column.key}
+							class:bg-gray-200={getSortDirection(column.key) !== null}
 							onclick={() => column.sortable && handleSort(column.key)}
 							onkeydown={(e) => {
 								if ((e.key === 'Enter' || e.key === ' ') && column.sortable) {
@@ -438,28 +457,27 @@
 							<div class="flex items-center justify-center space-x-1">
 								<span>{column.label}</span>
 								{#if column.sortable}
+									{@const colSortDir = getSortDirection(column.key)}
 									<svg
-										class="h-4 w-4 text-gray-400 {sortColumn === column.key ? 'text-gray-600' : ''}"
+										class="h-4 w-4 {colSortDir !== null ? 'text-gray-600' : 'text-gray-400'}"
 										fill="none"
 										stroke="currentColor"
 										viewBox="0 0 24 24"
 									>
-										{#if sortColumn === column.key}
-											{#if sortDirection === 'asc'}
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M5 15l7-7 7 7"
-												/>
-											{:else}
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M19 9l-7 7-7-7"
-												/>
-											{/if}
+										{#if colSortDir === 'asc'}
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M5 15l7-7 7 7"
+											/>
+										{:else if colSortDir === 'desc'}
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M19 9l-7 7-7-7"
+											/>
 										{:else}
 											<path
 												stroke-linecap="round"

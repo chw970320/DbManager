@@ -16,11 +16,7 @@
 		filename?: string; // 현재 선택된 용어 파일명
 	}
 
-	let {
-		entry = {},
-		serverError = '',
-		filename = 'term.json'
-	}: Props = $props();
+	let { entry = {}, serverError = '', filename = 'term.json' }: Props = $props();
 
 	// Event dispatcher
 	const dispatch = createEventDispatcher<{

@@ -21,8 +21,8 @@
 	let currentPage = $state(1);
 	let totalPages = $state(1);
 	let pageSize = $state(20);
-	let sortColumn = $state('standardDomainName');
-	let sortDirection = $state<'asc' | 'desc'>('asc');
+	// 다중 정렬 상태 관리 (각 컬럼별로 독립적인 정렬 상태)
+	let sortConfig = $state<Record<string, 'asc' | 'desc' | null>>({});
 	let _lastUpdated = $state('');
 	let errorMessage = $state('');
 	let columnFilters = $state<Record<string, string | null>>({}); // 컬럼 필터 상태
@@ -41,7 +41,7 @@
 
 	// 이벤트 상세 타입 정의
 	type SearchDetail = { query: string; field: string; exact: boolean };
-	type SortDetail = { column: string; direction: 'asc' | 'desc' };
+	type SortDetail = { column: string; direction: 'asc' | 'desc' | null };
 	type PageChangeDetail = { page: number };
 	type FilterDetail = { column: string; value: string | null };
 
@@ -156,9 +156,15 @@
 			const params = new URLSearchParams({
 				page: currentPage.toString(),
 				limit: pageSize.toString(),
-				sortBy: sortColumn,
-				sortOrder: sortDirection,
 				filename: selectedFilename
+			});
+
+			// 다중 정렬 파라미터 추가
+			Object.entries(sortConfig).forEach(([column, direction]) => {
+				if (direction !== null) {
+					params.append('sortBy[]', column);
+					params.append('sortOrder[]', direction);
+				}
 			});
 
 			// 컬럼 필터 파라미터 추가
@@ -229,9 +235,15 @@
 				field: searchField,
 				page: currentPage.toString(),
 				limit: pageSize.toString(),
-				sortBy: sortColumn,
-				sortOrder: sortDirection,
 				filename: selectedFilename
+			});
+
+			// 다중 정렬 파라미터 추가
+			Object.entries(sortConfig).forEach(([column, direction]) => {
+				if (direction !== null) {
+					params.append('sortBy[]', column);
+					params.append('sortOrder[]', direction);
+				}
 			});
 
 			// 컬럼 필터 파라미터 추가
@@ -266,12 +278,21 @@
 	}
 
 	/**
-	 * 정렬 처리
+	 * 정렬 처리 (3단계 순환: null → asc → desc → null)
 	 */
 	async function handleSort(detail: SortDetail) {
 		const { column, direction } = detail;
-		sortColumn = column;
-		sortDirection = direction;
+
+		// 정렬 상태 업데이트
+		if (direction === null) {
+			// null이면 해당 컬럼의 정렬 제거
+			const newConfig = { ...sortConfig };
+			delete newConfig[column];
+			sortConfig = newConfig;
+		} else {
+			// asc 또는 desc면 해당 컬럼의 정렬 설정
+			sortConfig = { ...sortConfig, [column]: direction };
+		}
 
 		if (searchQuery) {
 			await executeSearch();
@@ -335,10 +356,11 @@
 	}
 
 	/**
-	 * 모든 필터 초기화
+	 * 모든 필터 초기화 (정렬도 함께 초기화)
 	 */
 	async function handleClearAllFilters() {
 		columnFilters = {};
+		sortConfig = {}; // 정렬도 초기화
 		currentPage = 1;
 		if (searchQuery) {
 			await executeSearch();
@@ -354,10 +376,17 @@
 		loading = true;
 		try {
 			const params = new URLSearchParams({
-				sortBy: sortColumn,
-				sortOrder: sortDirection,
 				filename: selectedFilename
 			});
+
+			// 다중 정렬 파라미터 추가
+			Object.entries(sortConfig).forEach(([column, direction]) => {
+				if (direction !== null) {
+					params.append('sortBy[]', column);
+					params.append('sortOrder[]', direction);
+				}
+			});
+
 			const response = await fetch(`/api/domain/download?${params}`);
 			if (!response.ok) {
 				throw new Error(`다운로드 실패: ${response.status} ${response.statusText}`);
@@ -970,8 +999,7 @@
 								{currentPage}
 								{totalPages}
 								{pageSize}
-								{sortColumn}
-								{sortDirection}
+								{sortConfig}
 								{searchField}
 								_selectedFilename={selectedFilename}
 								activeFilters={columnFilters}

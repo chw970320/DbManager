@@ -27,6 +27,7 @@
 	const dispatch = createEventDispatcher<{
 		close: void;
 		edit: { entryId: string; suggestions?: AutoFixSuggestion };
+		autofix: { entryId: string; suggestions: AutoFixSuggestion; result: ValidationResult };
 	}>();
 
 	// 디버깅: props 확인
@@ -119,6 +120,20 @@
 
 	function handleEdit(entryId: string, suggestions?: AutoFixSuggestion) {
 		dispatch('edit', { entryId, suggestions });
+	}
+
+	function handleAutoFix(result: ValidationResult) {
+		if (result.suggestions && result.suggestions.actionType) {
+			dispatch('autofix', {
+				entryId: result.entry.id,
+				suggestions: result.suggestions,
+				result
+			});
+		}
+	}
+
+	function canAutoFix(suggestions?: AutoFixSuggestion): boolean {
+		return !!suggestions?.actionType;
 	}
 
 	function handleClose() {
@@ -330,12 +345,21 @@
 
 							<!-- 액션 버튼 -->
 							<div class="flex items-center justify-end gap-2">
+								{#if canAutoFix(result.suggestions)}
+									<button
+										type="button"
+										onclick={() => handleAutoFix(result)}
+										class="inline-flex items-center rounded-md border border-green-300 bg-green-50 px-3 py-1.5 text-xs font-medium text-green-700 hover:bg-green-100"
+									>
+										자동 수정
+									</button>
+								{/if}
 								<button
 									type="button"
 									onclick={() => handleEdit(result.entry.id, result.suggestions)}
 									class="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
 								>
-									수정
+									용어 수정
 								</button>
 							</div>
 						</div>

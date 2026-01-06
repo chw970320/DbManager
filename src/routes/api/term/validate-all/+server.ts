@@ -150,16 +150,19 @@ function findDuplicateEntries(
 }
 
 /**
- * 수정 제안 생성 (자동 수정이 아닌 가이드 제공)
+ * 수정 제안 생성 (자동 수정 메타데이터 포함)
  */
 function generateAutoFixSuggestions(
 	entry: TermEntry,
 	errors: ValidationError[],
 	vocabularyEntries: VocabularyEntry[],
 	domainEntries: DomainEntry[],
-	allEntries: TermEntry[]
+	allEntries: TermEntry[],
+	mapping: { vocabulary: string; domain: string }
 ): AutoFixSuggestion | undefined {
-	const suggestions: AutoFixSuggestion = {};
+	const suggestions: AutoFixSuggestion = {
+		metadata: {}
+	};
 	const recommendationParts: string[] = [];
 
 	// 단어집 맵 생성
@@ -181,11 +184,17 @@ function generateAutoFixSuggestions(
 	const sortedErrors = sortErrorsByPriority(errors);
 
 	for (const error of sortedErrors) {
+		// 이미 actionType이 설정되어 있으면 더 낮은 우선순위 오류는 건너뛰기
+		if (suggestions.actionType) {
+			break;
+		}
+
 		switch (error.type) {
 			case 'TERM_NAME_LENGTH':
 				recommendationParts.push(
 					`용어명 '${entry.termName}'은(는) 2단어 이상의 조합이어야 합니다. 현재 단일 단어로 등록되어 잘못된 등록으로 판별됩니다. 해당 항목을 삭제해주세요.`
 				);
+				suggestions.actionType = 'DELETE_TERM';
 				break;
 
 			case 'TERM_NAME_DUPLICATE': {
@@ -195,6 +204,9 @@ function generateAutoFixSuggestions(
 					recommendationParts.push(
 						`용어명 '${entry.termName}'은(는) 현재 파일 내에서 중복되어 사용되고 있습니다. 중복된 항목 ID: ${duplicateIds}. 중복 항목 중 하나를 삭제해주세요.`
 					);
+					suggestions.actionType = 'DELETE_DUPLICATE';
+					if (!suggestions.metadata) suggestions.metadata = {};
+					suggestions.metadata.duplicateEntryIds = [entry.id, ...duplicates.map((d) => d.id)];
 				}
 				break;
 			}
@@ -206,12 +218,19 @@ function generateAutoFixSuggestions(
 					recommendationParts.push(
 						`용어명 '${entry.termName}', 컬럼명 '${entry.columnName}', 도메인명 '${entry.domainName}' 조합이 현재 파일 내에서 중복되어 사용되고 있습니다. 중복된 항목 ID: ${duplicateIds}. 중복 항목 중 하나를 삭제해주세요.`
 					);
+					suggestions.actionType = 'DELETE_DUPLICATE';
+					if (!suggestions.metadata) suggestions.metadata = {};
+					suggestions.metadata.duplicateEntryIds = [entry.id, ...duplicates.map((d) => d.id)];
 				}
 				break;
 			}
 
 			case 'TERM_NAME_MAPPING': {
 				const termParts = entry.termName
+					.split('_')
+					.map((p) => p.trim())
+					.filter((p) => p.length > 0);
+				const columnParts = entry.columnName
 					.split('_')
 					.map((p) => p.trim())
 					.filter((p) => p.length > 0);
@@ -241,13 +260,14 @@ function generateAutoFixSuggestions(
 				}
 
 				if (unmappedParts.length > 0) {
-					const partsWithRecommendations: string[] = [];
+					const partsWithRecommendations: Array<{ part: string; recommendations: string[] }> = [];
 					const partsWithoutRecommendations: string[] = [];
 
 					for (const part of unmappedParts) {
 						const recommendations = recommendationsByPart.get(part);
 						if (recommendations && recommendations.length > 0) {
-							partsWithRecommendations.push(
+							partsWithRecommendations.push({ part, recommendations });
+							recommendationParts.push(
 								`'${part}' → 표준단어명 '${recommendations.join("' 또는 '")}'로 수정 권장`
 							);
 						} else {
@@ -257,13 +277,38 @@ function generateAutoFixSuggestions(
 
 					if (partsWithRecommendations.length > 0) {
 						recommendationParts.push(
-							`용어명의 다음 단어들이 단어집에 등록되지 않았습니다. ${partsWithRecommendations.join(', ')}.`
+							`용어명의 다음 단어들이 단어집에 등록되지 않았습니다. ${partsWithRecommendations.map((p) => `'${p.part}' → 표준단어명 '${p.recommendations.join("' 또는 '")}'로 수정 권장`).join(', ')}.`
 						);
+						// 동음이의어가 있으면 선택 팝업
+						suggestions.actionType = 'SELECT_SYNONYM';
+						if (!suggestions.metadata) suggestions.metadata = {};
+						suggestions.metadata.unmappedParts = partsWithRecommendations;
 					}
 					if (partsWithoutRecommendations.length > 0) {
 						recommendationParts.push(
 							`용어명의 다음 단어들을 단어집에 표준단어명으로 추가해주세요: ${partsWithoutRecommendations.join(', ')}.`
 						);
+						// 동음이의어가 없으면 단어 추가 팝업
+						if (!suggestions.actionType) {
+							suggestions.actionType = 'ADD_VOCABULARY';
+							if (!suggestions.metadata) suggestions.metadata = {};
+							suggestions.metadata.vocabularyFilename = mapping.vocabulary;
+							// 컬럼명에서 영문약어 추출
+							suggestions.metadata.vocabularyToAdd = partsWithoutRecommendations.map(
+								(part, idx) => {
+									// 용어명에서 해당 단어의 인덱스 찾기
+									const partIndex = termParts.findIndex((p) => p === part);
+									const abbreviation =
+										partIndex >= 0 && partIndex < columnParts.length
+											? columnParts[partIndex]
+											: part.toUpperCase().replace(/[^A-Z0-9]/g, '');
+									return {
+										standardName: part,
+										abbreviation: abbreviation
+									};
+								}
+							);
+						}
 					}
 				}
 				break;
@@ -299,6 +344,8 @@ function generateAutoFixSuggestions(
 
 					if (unmappedColumnIndices.length > 0) {
 						const recommendations: string[] = [];
+						const columnNameFixes: Array<{ index: number; oldValue: string; newValue: string }> =
+							[];
 						for (const idx of unmappedColumnIndices) {
 							const termPart = termParts[idx];
 							const termPartLower = termPart.toLowerCase();
@@ -307,10 +354,24 @@ function generateAutoFixSuggestions(
 								recommendations.push(
 									`컬럼명의 ${idx + 1}번째 단어 '${columnParts[idx]}' → 용어명의 ${idx + 1}번째 단어 '${termPart}'에 해당하는 영문약어 '${vocabEntry.abbreviation}'로 수정 권장`
 								);
+								columnNameFixes.push({
+									index: idx,
+									oldValue: columnParts[idx],
+									newValue: vocabEntry.abbreviation
+								});
 							}
 						}
 						if (recommendations.length > 0) {
 							recommendationParts.push(recommendations.join(', '));
+							suggestions.actionType = 'FIX_COLUMN_NAME';
+							if (!suggestions.metadata) suggestions.metadata = {};
+							suggestions.metadata.columnNameFixes = columnNameFixes;
+							// 수정된 컬럼명 생성
+							const newColumnParts = [...columnParts];
+							for (const fix of columnNameFixes) {
+								newColumnParts[fix.index] = fix.newValue;
+							}
+							suggestions.columnName = newColumnParts.join('_');
 						}
 					}
 				} else {
@@ -332,39 +393,70 @@ function generateAutoFixSuggestions(
 			}
 
 			case 'TERM_NAME_SUFFIX': {
-				// 용어명 매핑과 컬럼명 매핑이 성공했는지 확인
-				const termMappingError = errors.find((e) => e.type === 'TERM_NAME_MAPPING');
-				const columnMappingError = errors.find((e) => e.type === 'COLUMN_NAME_MAPPING');
-				const isTermMappingSuccess = !termMappingError;
-				const isColumnMappingSuccess = !columnMappingError;
+				const termParts = entry.termName
+					.split('_')
+					.map((p) => p.trim())
+					.filter((p) => p.length > 0);
+				const suffix = termParts[termParts.length - 1];
 
-				if (isTermMappingSuccess && isColumnMappingSuccess) {
-					const termParts = entry.termName
-						.split('_')
-						.map((p) => p.trim())
-						.filter((p) => p.length > 0);
-					const suffix = termParts[termParts.length - 1];
+				// 접미사 단어 찾기
+				const suffixWordEntry = vocabularyEntries.find(
+					(v) => v.standardName.trim().toLowerCase() === suffix.toLowerCase()
+				);
 
-					// 용어명 매핑과 컬럼명 매핑이 성공한 경우, 접미사는 단어집에 등록되어 있음
-					// 따라서 형식단어여부가 N인 경우만 발생함
-					recommendationParts.push(
-						`용어명의 접미사 '${suffix}'은(는) 단어집에 등록되어 있으며, 용어명 매핑과 컬럼명 매핑 검증을 통과했습니다. 그러나 형식단어여부가 N으로 설정되어 있어 접미사로 사용할 수 없습니다. 형식단어여부를 Y로 변경해주세요.`
-					);
+				if (suffixWordEntry) {
+					// 용어명 매핑과 컬럼명 매핑이 성공했는지 확인
+					const termMappingError = errors.find((e) => e.type === 'TERM_NAME_MAPPING');
+					const columnMappingError = errors.find((e) => e.type === 'COLUMN_NAME_MAPPING');
+					const isTermMappingSuccess = !termMappingError;
+					const isColumnMappingSuccess = !columnMappingError;
+
+					if (isTermMappingSuccess && isColumnMappingSuccess) {
+						// 용어명 매핑과 컬럼명 매핑이 성공한 경우, 접미사는 단어집에 등록되어 있음
+						// 따라서 형식단어여부가 N인 경우만 발생함
+						recommendationParts.push(
+							`용어명의 접미사 '${suffix}'은(는) 단어집에 등록되어 있으며, 용어명 매핑과 컬럼명 매핑 검증을 통과했습니다. 그러나 형식단어여부가 N으로 설정되어 있어 접미사로 사용할 수 없습니다. 형식단어여부를 Y로 변경해주세요.`
+						);
+					} else {
+						recommendationParts.push(
+							`용어명의 접미사 '${suffix}'은(는) 형식단어여부가 N으로 설정되어 있어 사용할 수 없습니다. 형식단어여부를 Y로 변경해주세요.`
+						);
+					}
+
+					suggestions.actionType = 'FIX_VOCABULARY_SUFFIX';
+					if (!suggestions.metadata) suggestions.metadata = {};
+					suggestions.metadata.suffixWord = suffix;
+					suggestions.metadata.vocabularyFilename = mapping.vocabulary;
+					suggestions.metadata.vocabularyEntryId = suffixWordEntry.id;
+					// 이미 찾은 단어 정보를 metadata에 포함 (클라이언트에서 다시 찾을 필요 없음)
+					suggestions.metadata.vocabularyEntry = {
+						id: suffixWordEntry.id,
+						standardName: suffixWordEntry.standardName,
+						abbreviation: suffixWordEntry.abbreviation,
+						englishName: suffixWordEntry.englishName,
+						description: suffixWordEntry.description || '',
+						domainCategory: suffixWordEntry.domainCategory,
+						isFormalWord: suffixWordEntry.isFormalWord,
+						synonyms: suffixWordEntry.synonyms,
+						forbiddenWords: suffixWordEntry.forbiddenWords
+					};
 				}
 				break;
 			}
 
 			case 'DOMAIN_NAME_MAPPING': {
-				// 용어명 접미사가 성공했는지 확인
-				const suffixError = errors.find((e) => e.type === 'TERM_NAME_SUFFIX');
-				const isSuffixSuccess = !suffixError;
+				const termParts = entry.termName
+					.split('_')
+					.map((p) => p.trim())
+					.filter((p) => p.length > 0);
+				const suffix = termParts[termParts.length - 1];
 
-				if (isSuffixSuccess) {
-					const termParts = entry.termName
-						.split('_')
-						.map((p) => p.trim())
-						.filter((p) => p.length > 0);
-					const suffix = termParts[termParts.length - 1];
+				// 접미사 단어 찾기
+				const suffixWordEntry = vocabularyEntries.find(
+					(v) => v.standardName.trim().toLowerCase() === suffix.toLowerCase()
+				);
+
+				if (suffixWordEntry) {
 					const recommendedDomainNames = findDomainNamesBySuffix(
 						suffix,
 						vocabularyEntries,
@@ -373,12 +465,22 @@ function generateAutoFixSuggestions(
 
 					if (recommendedDomainNames.length > 0) {
 						recommendationParts.push(
-							`용어명 접미사 '${suffix}'와 매핑된 도메인명을 찾지 못했습니다. 혹은 도메인명 '${entry.domainName}'이 존재하지 않습니다. ${recommendedDomainNames.join(', ')} 중 하나로 수정해주세요.`
+							`용어명 접미사 '${suffix}'와(과) 매핑된 도메인명을 찾지 못했습니다. 혹은 도메인명 '${entry.domainName}'이(가) 존재하지 않습니다. ${recommendedDomainNames.join(', ')} 중 하나로 수정해주세요.`
 						);
 					} else {
 						recommendationParts.push(
-							`용어명 접미사 '${suffix}'와 매핑된 도메인명을 찾지 못했습니다. 혹은 도메인명 '${entry.domainName}'이 존재하지 않습니다. 올바른 도메인명으로 수정해주세요.`
+							`용어명 접미사 '${suffix}'와(과) 매핑된 도메인명을 찾지 못했습니다. 혹은 도메인명 '${entry.domainName}'이(가) 존재하지 않습니다. 올바른 도메인명으로 수정해주세요.`
 						);
+					}
+
+					// 도메인명 매핑 오류는 용어 수정 팝업을 열어서 도메인명을 수정하도록 함
+					suggestions.actionType = 'AUTO_FIX_TERM_EDITOR';
+					if (!suggestions.metadata) suggestions.metadata = {};
+					suggestions.metadata.suffixWord = suffix;
+					if (recommendedDomainNames.length > 0) {
+						suggestions.metadata.recommendedDomainNames = recommendedDomainNames;
+						// 추천 도메인명이 있으면 첫 번째 것을 기본값으로 설정
+						suggestions.domainName = recommendedDomainNames[0];
 					}
 				}
 				break;
@@ -554,7 +656,8 @@ export async function GET({ url }: RequestEvent) {
 					sortedErrors,
 					vocabularyData.entries,
 					domainData.entries,
-					currentFileEntries
+					currentFileEntries,
+					mapping
 				);
 				validationResults.push({
 					entry,

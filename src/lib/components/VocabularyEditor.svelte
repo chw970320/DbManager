@@ -8,13 +8,15 @@
 		isEditMode?: boolean;
 		serverError?: string;
 		filename?: string; // 현재 선택된 단어집 파일명
+		allowEditFormalWordAndDomain?: boolean; // 형식단어 여부와 도메인 분류명 수정 허용 (TERM_NAME_SUFFIX 오류 시 사용)
 	}
 
 	let {
 		entry = {},
 		isEditMode = false,
 		serverError = '',
-		filename = 'vocabulary.json'
+		filename = 'vocabulary.json',
+		allowEditFormalWordAndDomain = false
 	}: Props = $props();
 
 	const dispatch = createEventDispatcher<{
@@ -279,7 +281,12 @@
 		onkeydown={(e) => e.stopPropagation()}
 	>
 		<div class="flex flex-shrink-0 items-center justify-between border-b p-6">
-			<h2 class="text-xl font-bold text-gray-900">{isEditMode ? '단어 수정' : '새 단어 추가'}</h2>
+			<div>
+				<h2 class="text-xl font-bold text-gray-900">{isEditMode ? '단어 수정' : '새 단어 추가'}</h2>
+				{#if allowEditFormalWordAndDomain && filename}
+					<p class="mt-1 text-sm text-gray-500">파일: {filename}</p>
+				{/if}
+			</div>
 			<button
 				onclick={handleCancel}
 				class="text-gray-400 hover:text-gray-600"
@@ -415,7 +422,7 @@
 						<div>
 							<label for="isFormalWord" class="mb-1 block text-sm font-medium text-gray-900">
 								형식단어 여부
-								{#if isEditMode}
+								{#if isEditMode && !allowEditFormalWordAndDomain}
 									<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
 								{/if}
 							</label>
@@ -424,18 +431,18 @@
 									id="isFormalWord"
 									type="checkbox"
 									bind:checked={formData.isFormalWord}
-									disabled={isSubmitting || isEditMode}
-									readonly={isEditMode}
+									disabled={isSubmitting || (isEditMode && !allowEditFormalWordAndDomain)}
+									readonly={isEditMode && !allowEditFormalWordAndDomain}
 								/>
 								<label for="isFormalWord" class="text-sm text-gray-700">
 									형식단어 여부 (Y: 체크, N: 미체크)
 								</label>
 							</div>
-							{#if isEditMode}
+							{#if isEditMode && !allowEditFormalWordAndDomain}
 								<p class="mt-1 text-xs text-gray-500">
 									형식단어 여부는 validation 처리되는 값으로 수정할 수 없습니다.
 								</p>
-							{:else}
+							{:else if !isEditMode || allowEditFormalWordAndDomain}
 								<p class="mt-1 text-xs text-gray-500">
 									형식단어 여부가 Y인 경우에만 도메인분류명을 선택할 수 있습니다.
 								</p>
@@ -445,7 +452,7 @@
 							<label for="domainCategory" class="mb-1 block text-sm font-medium text-gray-900">
 								도메인분류명
 								<span class="ml-2 text-xs font-normal text-gray-500">(선택만 가능)</span>
-								{#if isEditMode}
+								{#if isEditMode && !allowEditFormalWordAndDomain}
 									<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
 								{/if}
 							</label>
@@ -457,9 +464,9 @@
 								<select
 									id="domainCategory"
 									class="input"
-									class:bg-gray-50={isEditMode || !formData.isFormalWord}
+									class:bg-gray-50={(isEditMode && !allowEditFormalWordAndDomain) || !formData.isFormalWord}
 									bind:value={formData.domainCategory}
-									disabled={isSubmitting || isEditMode || !formData.isFormalWord}
+									disabled={isSubmitting || (isEditMode && !allowEditFormalWordAndDomain) || !formData.isFormalWord}
 								>
 									<option value="">선택 안 함</option>
 									{#each domainCategoryOptions as option (option)}
@@ -467,7 +474,7 @@
 									{/each}
 								</select>
 							{/if}
-							{#if isEditMode}
+							{#if isEditMode && !allowEditFormalWordAndDomain}
 								<p class="mt-1 text-xs text-gray-500">
 									도메인분류명은 validation 처리되는 값으로 수정할 수 없습니다.
 								</p>

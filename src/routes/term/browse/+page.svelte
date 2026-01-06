@@ -7,13 +7,14 @@
 	import HistoryLog from '$lib/components/HistoryLog.svelte';
 	import TermGenerator from '$lib/components/TermGenerator.svelte';
 	import TermValidationPanel from '$lib/components/TermValidationPanel.svelte';
+	import VocabularyEditor from '$lib/components/VocabularyEditor.svelte';
 	import type {
 		TermEntry,
 		ValidationCheckResult,
 		ValidationResult,
 		AutoFixSuggestion
 	} from '$lib/types/term.js';
-	import type { ApiResponse } from '$lib/types/vocabulary.js';
+	import type { ApiResponse, VocabularyEntry } from '$lib/types/vocabulary.js';
 	import { get } from 'svelte/store';
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { termStore } from '$lib/stores/term-store';
@@ -51,6 +52,25 @@
 	let showValidationPanel = $state(false);
 	let validationLoading = $state(false);
 	let validationResults = $state<ValidationCheckResult | null>(null);
+
+	// 자동 수정 관련 상태
+	let showDuplicateSelection = $state(false);
+	let duplicateEntries = $state<TermEntry[]>([]);
+	let duplicateSelectionCallback: ((selectedId: string) => Promise<void>) | null = null;
+
+	let showSynonymSelection = $state(false);
+	let synonymSelectionData = $state<{
+		part: string;
+		recommendations: string[];
+		entry: TermEntry;
+	} | null>(null);
+
+	let showVocabularyEditor = $state(false);
+	let vocabularyEditorEntry = $state<Partial<VocabularyEntry>>({});
+	let vocabularyEditorFilename = $state('');
+	let vocabularyEditorMode = $state<'add' | 'edit'>('add');
+	let vocabularyEditorTitle = $state('');
+	let currentAutoFixActionType = $state<AutoFixSuggestion['actionType'] | undefined>(undefined);
 
 	// 이벤트 상세 타입 정의
 	type SearchDetail = { query: string; field: string; exact: boolean };
@@ -411,6 +431,227 @@
 	}
 
 	/**
+	 * Validation 패널에서 자동 수정 요청 처리
+	 */
+	async function handleValidationAutoFix(
+		event: CustomEvent<{
+			entryId: string;
+			suggestions: AutoFixSuggestion;
+			result: ValidationResult;
+		}>
+	) {
+		const { entryId, suggestions, result } = event.detail;
+		const { actionType, metadata } = suggestions;
+
+		// 현재 처리 중인 actionType을 저장 (VocabularyEditor에서 사용)
+		currentAutoFixActionType = actionType;
+
+		try {
+			switch (actionType) {
+				case 'DELETE_TERM': {
+					// TERM_NAME_LENGTH: 삭제 확인 alert → 삭제
+					if (confirm(`용어명 '${result.entry.termName}'을(를) 삭제하시겠습니까?`)) {
+						await deleteTerm(entryId);
+						await refreshValidation();
+					}
+					break;
+				}
+
+				case 'DELETE_DUPLICATE': {
+					// TERM_NAME_DUPLICATE/TERM_UNIQUENESS: 중복 목록 팝업 → 선택 삭제
+					if (metadata?.duplicateEntryIds && metadata.duplicateEntryIds.length > 0) {
+						// 중복 항목들 찾기
+						const allEntries = validationResults?.failedEntries || [];
+						const duplicates: TermEntry[] = [];
+						for (const id of metadata.duplicateEntryIds) {
+							const found = allEntries.find((r) => r.entry.id === id);
+							if (found) {
+								duplicates.push(found.entry);
+							} else {
+								// 현재 페이지의 entries에서도 찾기
+								const foundInPage = entries.find((e) => e.id === id);
+								if (foundInPage) {
+									duplicates.push(foundInPage);
+								}
+							}
+						}
+
+						if (duplicates.length > 0) {
+							duplicateEntries = duplicates;
+							duplicateSelectionCallback = async (selectedId: string) => {
+								await deleteTerm(selectedId);
+								await refreshValidation();
+								showDuplicateSelection = false;
+								duplicateSelectionCallback = null;
+							};
+							showDuplicateSelection = true;
+						}
+					}
+					break;
+				}
+
+				case 'SELECT_SYNONYM': {
+					// TERM_NAME_MAPPING: 동음이의어 선택 팝업
+					if (metadata?.unmappedParts && metadata.unmappedParts.length > 0) {
+						// 첫 번째 unmapped part 처리 (여러 개면 순차적으로 처리)
+						const firstPart = metadata.unmappedParts[0];
+						if (firstPart.recommendations && firstPart.recommendations.length > 0) {
+							synonymSelectionData = {
+								part: firstPart.part,
+								recommendations: firstPart.recommendations,
+								entry: result.entry
+							};
+							showSynonymSelection = true;
+						}
+					}
+					break;
+				}
+
+				case 'ADD_VOCABULARY': {
+					// TERM_NAME_MAPPING: 단어 추가 팝업
+					if (metadata?.vocabularyToAdd && metadata.vocabularyToAdd.length > 0) {
+						// 첫 번째 단어 추가 (여러 개면 순차적으로 처리)
+						const firstWord = metadata.vocabularyToAdd[0];
+						// TermEditor가 열려있으면 닫기
+						if (showEditor) {
+							showEditor = false;
+							initialEntry = {};
+						}
+						vocabularyEditorEntry = {
+							standardName: firstWord.standardName,
+							abbreviation: firstWord.abbreviation,
+							englishName: '',
+							description: '',
+							isFormalWord: false
+						};
+						vocabularyEditorFilename = metadata.vocabularyFilename || 'vocabulary.json';
+						vocabularyEditorMode = 'add';
+						vocabularyEditorTitle = `단어 추가 (${vocabularyEditorFilename})`;
+						showVocabularyEditor = true;
+					}
+					break;
+				}
+
+				case 'FIX_COLUMN_NAME': {
+					// COLUMN_NAME_MAPPING: 컬럼명 자동 수정
+					if (suggestions.columnName) {
+						const oldColumnName = result.entry.columnName;
+						const newColumnName = suggestions.columnName;
+						const confirmMessage = `컬럼명을 수정하시겠습니까?\n\n기존: ${oldColumnName}\n수정: ${newColumnName}`;
+
+						if (confirm(confirmMessage)) {
+							const updatedEntry = {
+								...result.entry,
+								columnName: newColumnName
+							};
+							await updateTerm(updatedEntry);
+							await refreshValidation();
+						}
+					}
+					break;
+				}
+
+				case 'AUTO_FIX_TERM_EDITOR': {
+					// DOMAIN_NAME_MAPPING: 용어 수정 팝업 (도메인명 수정)
+					if (suggestions.domainName || metadata?.recommendedDomainNames) {
+						// TermEditor 열기
+						initialEntry = {
+							...result.entry,
+							domainName: suggestions.domainName || result.entry.domainName
+						};
+						showEditor = true;
+						editorServerError = '';
+					}
+					break;
+				}
+
+				case 'FIX_VOCABULARY_SUFFIX': {
+					// TERM_NAME_SUFFIX: 단어 수정 팝업
+					// validation에서 이미 찾은 단어 정보를 metadata에 포함시켰으므로 API 호출 불필요
+					if (metadata?.vocabularyEntry && metadata?.vocabularyFilename) {
+						// TermEditor가 열려있으면 닫기
+						if (showEditor) {
+							showEditor = false;
+							initialEntry = {};
+						}
+						// 형식단어여부를 Y로 설정
+						vocabularyEditorEntry = {
+							...metadata.vocabularyEntry,
+							isFormalWord: true
+						};
+						vocabularyEditorFilename = metadata.vocabularyFilename;
+						vocabularyEditorMode = 'edit';
+						vocabularyEditorTitle = `단어 수정 (형식단어여부 변경) (${vocabularyEditorFilename})`;
+						showVocabularyEditor = true;
+					} else {
+						console.error('필수 메타데이터가 없습니다:', metadata);
+						alert('단어 정보가 없습니다.');
+					}
+					break;
+				}
+			}
+		} catch (error) {
+			console.error('자동 수정 중 오류:', error);
+			alert('자동 수정 중 오류가 발생했습니다.');
+		}
+	}
+
+	/**
+	 * 용어 삭제
+	 */
+	async function deleteTerm(entryId: string) {
+		try {
+			const response = await fetch('/api/term', {
+				method: 'DELETE',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					id: entryId,
+					filename: selectedFilename
+				})
+			});
+
+			const result: ApiResponse = await response.json();
+			if (!result.success) {
+				throw new Error(result.error || '삭제 실패');
+			}
+		} catch (error) {
+			console.error('용어 삭제 중 오류:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * 용어 수정
+	 */
+	async function updateTerm(entry: TermEntry) {
+		try {
+			const response = await fetch('/api/term', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					entry,
+					filename: selectedFilename
+				})
+			});
+
+			const result: ApiResponse = await response.json();
+			if (!result.success) {
+				throw new Error(result.error || '수정 실패');
+			}
+		} catch (error) {
+			console.error('용어 수정 중 오류:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Validation 재실행 (검색 조건 유지)
+	 */
+	async function refreshValidation() {
+		await handleValidateAll();
+	}
+
+	/**
 	 * Validation 패널에서 편집 요청 처리
 	 */
 	function handleValidationEdit(
@@ -537,6 +778,9 @@
 		loading = true;
 		editorServerError = '';
 
+		// 수정 전 데이터 저장 (히스토리 로그용)
+		const beforeEntry = initialEntry.id ? { ...initialEntry } : undefined;
+
 		try {
 			const url = '/api/term';
 			const body = JSON.stringify({
@@ -555,16 +799,23 @@
 			if (result.success) {
 				// 서버에서 생성된 엔트리 정보 가져오기
 				const savedEntry = result.data as TermEntry;
+				const isEditMode = !!editedEntry.id;
 
 				// 모달 닫기
 				showEditor = false;
 				editorServerError = '';
 				initialEntry = {};
+
 				// 데이터 새로고침
 				if (searchQuery) {
 					await executeSearch();
 				} else {
 					await loadTermData();
+				}
+
+				// validation 패널이 열려있으면 재실행
+				if (showValidationPanel) {
+					await refreshValidation();
 				}
 
 				// 히스토리 로그 기록
@@ -575,16 +826,30 @@
 							'Content-Type': 'application/json'
 						},
 						body: JSON.stringify({
-							action: 'add',
+							action: isEditMode ? 'update' : 'add',
 							targetId: savedEntry.id,
 							targetName: savedEntry.termName,
-							details: {
-								after: {
-									termName: savedEntry.termName,
-									columnName: savedEntry.columnName,
-									domainName: savedEntry.domainName
-								}
-							}
+							details:
+								isEditMode && beforeEntry
+									? {
+											before: {
+												termName: beforeEntry.termName,
+												columnName: beforeEntry.columnName,
+												domainName: beforeEntry.domainName
+											},
+											after: {
+												termName: savedEntry.termName,
+												columnName: savedEntry.columnName,
+												domainName: savedEntry.domainName
+											}
+										}
+									: {
+											after: {
+												termName: savedEntry.termName,
+												columnName: savedEntry.columnName,
+												domainName: savedEntry.domainName
+											}
+										}
 						})
 					});
 
@@ -910,6 +1175,7 @@
 						open={showValidationPanel}
 						on:close={() => (showValidationPanel = false)}
 						on:edit={handleValidationEdit}
+						on:autofix={handleValidationAutoFix}
 					/>
 				{/if}
 
@@ -920,6 +1186,185 @@
 					on:close={() => (isFileManagerOpen = false)}
 					on:change={handleFileChange}
 				/>
+
+				<!-- 중복 선택 팝업 -->
+				{#if showDuplicateSelection}
+					<div
+						class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+						role="button"
+						tabindex="-1"
+						onclick={(e) => {
+							if (e.target === e.currentTarget) {
+								showDuplicateSelection = false;
+								duplicateSelectionCallback = null;
+							}
+						}}
+						onkeydown={(e) => {
+							if (e.key === 'Escape' && e.target === e.currentTarget) {
+								showDuplicateSelection = false;
+								duplicateSelectionCallback = null;
+							}
+						}}
+					>
+						<div
+							class="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl"
+							onclick={(e) => e.stopPropagation()}
+							role="dialog"
+							aria-modal="true"
+						>
+							<h2 class="mb-4 text-xl font-bold text-gray-900">중복된 용어 선택</h2>
+							<p class="mb-4 text-sm text-gray-600">다음 중 삭제할 용어를 선택해주세요:</p>
+							<div class="mb-4 max-h-96 space-y-2 overflow-y-auto">
+								{#each duplicateEntries as entry (entry.id)}
+									<button
+										type="button"
+										onclick={async () => {
+											if (duplicateSelectionCallback) {
+												await duplicateSelectionCallback(entry.id);
+											}
+										}}
+										class="w-full rounded-lg border border-gray-200 bg-white p-4 text-left transition-colors hover:bg-gray-50"
+									>
+										<div class="font-medium text-gray-900">{entry.termName}</div>
+										<div class="mt-1 text-xs text-gray-500">
+											컬럼명: {entry.columnName} | 도메인명: {entry.domainName}
+										</div>
+										<div class="mt-1 text-xs text-gray-400">ID: {entry.id}</div>
+									</button>
+								{/each}
+							</div>
+							<div class="flex justify-end">
+								<button
+									type="button"
+									onclick={() => {
+										showDuplicateSelection = false;
+										duplicateSelectionCallback = null;
+									}}
+									class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+								>
+									취소
+								</button>
+							</div>
+						</div>
+					</div>
+				{/if}
+
+				<!-- 동음이의어 선택 팝업 -->
+				{#if showSynonymSelection && synonymSelectionData}
+					<div
+						class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+						role="button"
+						tabindex="-1"
+						onclick={(e) => {
+							if (e.target === e.currentTarget) {
+								showSynonymSelection = false;
+								synonymSelectionData = null;
+							}
+						}}
+						onkeydown={(e) => {
+							if (e.key === 'Escape' && e.target === e.currentTarget) {
+								showSynonymSelection = false;
+								synonymSelectionData = null;
+							}
+						}}
+					>
+						<div
+							class="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl"
+							onclick={(e) => e.stopPropagation()}
+							role="dialog"
+							aria-modal="true"
+						>
+							<h2 class="mb-4 text-xl font-bold text-gray-900">동음이의어 선택</h2>
+							{#if synonymSelectionData}
+								<p class="mb-4 text-sm text-gray-600">
+									용어명의 '{synonymSelectionData.part}'에 해당하는 표준단어명을 선택해주세요:
+								</p>
+								<div class="mb-4 max-h-96 space-y-2 overflow-y-auto">
+									{#each synonymSelectionData.recommendations as recommendation (recommendation)}
+										<button
+											type="button"
+											onclick={async () => {
+												const data = synonymSelectionData;
+												if (!data) return;
+												// 용어명 수정
+												const termParts = data.entry.termName.split('_');
+												const partIndex = termParts.findIndex(
+													(p: string) => p.trim().toLowerCase() === data.part.toLowerCase()
+												);
+												if (partIndex >= 0) {
+													termParts[partIndex] = recommendation;
+													const updatedEntry = {
+														...data.entry,
+														termName: termParts.join('_')
+													};
+													await updateTerm(updatedEntry);
+													await refreshValidation();
+												}
+												showSynonymSelection = false;
+												synonymSelectionData = null;
+											}}
+											class="w-full rounded-lg border border-gray-200 bg-white p-4 text-left transition-colors hover:bg-gray-50"
+										>
+											<div class="font-medium text-gray-900">{recommendation}</div>
+										</button>
+									{/each}
+								</div>
+							{/if}
+							<div class="flex justify-end">
+								<button
+									type="button"
+									onclick={() => {
+										showSynonymSelection = false;
+										synonymSelectionData = null;
+									}}
+									class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+								>
+									취소
+								</button>
+							</div>
+						</div>
+					</div>
+				{/if}
+
+				<!-- VocabularyEditor 모달 -->
+				{#if showVocabularyEditor}
+					<VocabularyEditor
+						entry={vocabularyEditorEntry}
+						isEditMode={vocabularyEditorMode === 'edit'}
+						filename={vocabularyEditorFilename}
+						allowEditFormalWordAndDomain={vocabularyEditorMode === 'edit' &&
+							(currentAutoFixActionType === 'FIX_VOCABULARY_SUFFIX' ||
+								currentAutoFixActionType === 'FIX_VOCABULARY_DOMAIN')}
+						on:save={async (e) => {
+							const vocabularyEntry = e.detail;
+							try {
+								const params = new URLSearchParams({ filename: vocabularyEditorFilename });
+								const method = vocabularyEditorMode === 'edit' ? 'PUT' : 'POST';
+								const response = await fetch(`/api/vocabulary?${params}`, {
+									method,
+									headers: { 'Content-Type': 'application/json' },
+									body: JSON.stringify(vocabularyEntry)
+								});
+
+								const result: ApiResponse = await response.json();
+								if (result.success) {
+									showVocabularyEditor = false;
+									vocabularyEditorEntry = {};
+									await refreshValidation();
+								} else {
+									alert(result.error || '단어 저장에 실패했습니다.');
+								}
+							} catch (error) {
+								console.error('단어 저장 중 오류:', error);
+								alert('단어 저장 중 오류가 발생했습니다.');
+							}
+						}}
+						on:cancel={() => {
+							showVocabularyEditor = false;
+							vocabularyEditorEntry = {};
+						}}
+					/>
+				{/if}
 
 				<!-- 히스토리 로그 -->
 				<HistoryLog type="term" />

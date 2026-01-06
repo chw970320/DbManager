@@ -21,7 +21,8 @@ export async function POST({ request, url }: RequestEvent) {
 		const filename = url.searchParams.get('filename') || 'term.json';
 
 		// entryId가 빈 문자열이거나 유효하지 않은 경우 undefined로 처리
-		const validEntryId = entryId && typeof entryId === 'string' && entryId.trim() !== '' ? entryId.trim() : undefined;
+		const validEntryId =
+			entryId && typeof entryId === 'string' && entryId.trim() !== '' ? entryId.trim() : undefined;
 
 		// 필수 필드 검증
 		if (!termName || typeof termName !== 'string' || !termName.trim()) {
@@ -128,10 +129,7 @@ export async function POST({ request, url }: RequestEvent) {
 
 			// 3. 용어명 중복 검사 (이미 등록된 용어명인지 확인)
 			if (allTermEntries.length > 0) {
-				const termNameUniquenessError = validateTermNameUniqueness(
-					termName.trim(),
-					allTermEntries
-				);
+				const termNameUniquenessError = validateTermNameUniqueness(termName.trim(), allTermEntries);
 				if (termNameUniquenessError) {
 					return json(
 						{

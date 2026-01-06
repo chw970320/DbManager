@@ -286,7 +286,10 @@ export async function POST({ request }: RequestEvent) {
 					}
 
 					// 4. 도메인명 매핑 validation
-					const domainMappingError = validateDomainNameMapping(entry.domainName, domainData.entries);
+					const domainMappingError = validateDomainNameMapping(
+						entry.domainName,
+						domainData.entries
+					);
 					if (domainMappingError) {
 						validationErrors.push(
 							`${entry.termName} (도메인명: ${entry.domainName}): ${domainMappingError}`

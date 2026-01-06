@@ -17,7 +17,12 @@
 		isEditMode?: boolean; // 수정 모드 여부
 	}
 
-	let { entry = {}, serverError = '', filename = 'term.json', isEditMode = false }: Props = $props();
+	let {
+		entry = {},
+		serverError = '',
+		filename = 'term.json',
+		isEditMode = false
+	}: Props = $props();
 
 	// Event dispatcher
 	const dispatch = createEventDispatcher<{
@@ -469,7 +474,10 @@
 							termName: formData.termName.trim(),
 							columnName: formData.columnName.trim(),
 							domainName: formData.domainName.trim(),
-							entryId: isEditMode && entry.id && typeof entry.id === 'string' && entry.id.trim() !== '' ? entry.id.trim() : undefined
+							entryId:
+								isEditMode && entry.id && typeof entry.id === 'string' && entry.id.trim() !== ''
+									? entry.id.trim()
+									: undefined
 						})
 					}
 				);

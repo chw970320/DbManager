@@ -161,7 +161,10 @@ export async function POST({ request }: RequestEvent) {
 					entry.standardDomainName = generatedDomainName;
 
 					// 도메인명 유일성 validation
-					const validationError = validateDomainNameUniqueness(generatedDomainName, allDomainEntries);
+					const validationError = validateDomainNameUniqueness(
+						generatedDomainName,
+						allDomainEntries
+					);
 					if (validationError) {
 						validationErrors.push(`${entry.domainCategory}: ${validationError}`);
 					}

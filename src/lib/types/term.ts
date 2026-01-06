@@ -94,38 +94,38 @@ export interface AutoFixSuggestion {
 	columnName?: string;
 	domainName?: string;
 	reason?: string;
-	
+
 	// 자동 수정 메타데이터
 	actionType?: AutoFixActionType;
 	metadata?: {
 		// DELETE_DUPLICATE용
 		duplicateEntryIds?: string[];
-		
+
 		// FIX_TERM_NAME용 (동음이의어 선택)
 		unmappedParts?: Array<{
 			part: string;
 			recommendations: string[];
 		}>;
-		
+
 		// ADD_VOCABULARY용
 		vocabularyToAdd?: Array<{
 			standardName: string;
 			abbreviation: string;
 		}>;
-		
+
 		// FIX_COLUMN_NAME용
 		columnNameFixes?: Array<{
 			index: number;
 			oldValue: string;
 			newValue: string;
 		}>;
-		
+
 		// FIX_VOCABULARY_SUFFIX, FIX_VOCABULARY_DOMAIN용
 		suffixWord?: string; // 접미사 단어
 		vocabularyFilename?: string; // 단어집 파일명
 		vocabularyEntryId?: string; // 단어 ID (수정 모드용)
 		vocabularyEntry?: Partial<VocabularyEntry>; // 이미 찾은 단어 정보 (API 호출 불필요)
-		
+
 		// DOMAIN_NAME_MAPPING용
 		recommendedDomainNames?: string[];
 	};

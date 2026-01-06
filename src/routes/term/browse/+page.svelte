@@ -544,7 +544,8 @@
 								...result.entry,
 								columnName: newColumnName
 							};
-							await updateTerm(updatedEntry);
+							// 자동 수정 중이므로 형식단어 검증 건너뛰기
+							await updateTerm(updatedEntry, true);
 							await refreshValidation();
 						}
 					}
@@ -582,6 +583,7 @@
 						vocabularyEditorFilename = metadata.vocabularyFilename;
 						vocabularyEditorMode = 'edit';
 						vocabularyEditorTitle = `단어 수정 (형식단어여부 변경) (${vocabularyEditorFilename})`;
+						currentAutoFixActionType = 'FIX_VOCABULARY_SUFFIX';
 						showVocabularyEditor = true;
 					} else {
 						console.error('필수 메타데이터가 없습니다:', metadata);
@@ -623,14 +625,15 @@
 	/**
 	 * 용어 수정
 	 */
-	async function updateTerm(entry: TermEntry) {
+	async function updateTerm(entry: TermEntry, skipSuffixValidation = false) {
 		try {
 			const response = await fetch('/api/term', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					entry,
-					filename: selectedFilename
+					filename: selectedFilename,
+					skipSuffixValidation
 				})
 			});
 
@@ -1350,6 +1353,10 @@
 								if (result.success) {
 									showVocabularyEditor = false;
 									vocabularyEditorEntry = {};
+									const wasAutoFix = currentAutoFixActionType === 'FIX_VOCABULARY_SUFFIX';
+									currentAutoFixActionType = undefined;
+
+									// 자동 수정 후 validation 재실행 (검색 조건 유지)
 									await refreshValidation();
 								} else {
 									alert(result.error || '단어 저장에 실패했습니다.');

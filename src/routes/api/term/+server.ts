@@ -429,19 +429,23 @@ export async function POST({ request }: RequestEvent) {
 		});
 
 		// 용어명 접미사 validation
-		const suffixValidationError = validateTermNameSuffix(
-			entry.termName.trim(),
-			vocabularyData.entries
-		);
-		if (suffixValidationError) {
-			return json(
-				{
-					success: false,
-					error: suffixValidationError,
-					message: 'Term name suffix validation failed'
-				} as ApiResponse,
-				{ status: 400 }
+		// 자동 수정 중이 아닐 때만 검증 (자동 수정 중에는 형식단어 여부가 변경 중일 수 있음)
+		const skipSuffixValidation = body.skipSuffixValidation === true;
+		if (!skipSuffixValidation) {
+			const suffixValidationError = validateTermNameSuffix(
+				entry.termName.trim(),
+				vocabularyData.entries
 			);
+			if (suffixValidationError) {
+				return json(
+					{
+						success: false,
+						error: suffixValidationError,
+						message: 'Term name suffix validation failed'
+					} as ApiResponse,
+					{ status: 400 }
+				);
+			}
 		}
 
 		// 용어명 유일성 validation

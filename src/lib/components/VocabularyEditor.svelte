@@ -464,9 +464,12 @@
 								<select
 									id="domainCategory"
 									class="input"
-									class:bg-gray-50={(isEditMode && !allowEditFormalWordAndDomain) || !formData.isFormalWord}
+									class:bg-gray-50={(isEditMode && !allowEditFormalWordAndDomain) ||
+										!formData.isFormalWord}
 									bind:value={formData.domainCategory}
-									disabled={isSubmitting || (isEditMode && !allowEditFormalWordAndDomain) || !formData.isFormalWord}
+									disabled={isSubmitting ||
+										(isEditMode && !allowEditFormalWordAndDomain) ||
+										!formData.isFormalWord}
 								>
 									<option value="">선택 안 함</option>
 									{#each domainCategoryOptions as option (option)}

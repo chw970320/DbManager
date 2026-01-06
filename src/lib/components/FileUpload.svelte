@@ -252,7 +252,8 @@
 				<div class="flex-1">
 					<div class="text-sm font-medium text-gray-900">검증 교체 모드</div>
 					<div class="text-xs text-gray-600">
-						기존 {contentType}을 완전히 삭제하고 새로운 데이터로 교체합니다. 데이터 검증 후 업로드됩니다. 히스토리도 초기화됩니다.
+						기존 {contentType}을 완전히 삭제하고 새로운 데이터로 교체합니다. 데이터 검증 후
+						업로드됩니다. 히스토리도 초기화됩니다.
 					</div>
 				</div>
 			</label>
@@ -268,7 +269,8 @@
 				<div class="flex-1">
 					<div class="text-sm font-medium text-gray-900">단순 교체 모드</div>
 					<div class="text-xs text-gray-600">
-						기존 {contentType}을 완전히 삭제하고 새로운 데이터로 교체합니다. 검증 없이 바로 교체됩니다. 히스토리도 초기화됩니다. 파일 백업을 권장합니다.
+						기존 {contentType}을 완전히 삭제하고 새로운 데이터로 교체합니다. 검증 없이 바로
+						교체됩니다. 히스토리도 초기화됩니다. 파일 백업을 권장합니다.
 					</div>
 				</div>
 			</label>

@@ -23,5 +23,9 @@ Thumbs.db
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
+# local workspace
+references
+
+# static data
 /static/data
 /static/global

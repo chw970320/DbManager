@@ -8,7 +8,15 @@ import { existsSync } from 'fs';
 import { join, resolve, basename } from 'path';
 
 // 데이터 타입 정의
-export type DataType = 'vocabulary' | 'domain' | 'term';
+export type DataType =
+	| 'vocabulary'
+	| 'domain'
+	| 'term'
+	| 'database'
+	| 'entity'
+	| 'attribute'
+	| 'table'
+	| 'column';
 
 // 데이터 저장 경로 설정
 const DATA_DIR = process.env.DATA_PATH || 'static/data';
@@ -16,7 +24,12 @@ const DATA_DIR = process.env.DATA_PATH || 'static/data';
 const DATA_DIRS: Record<DataType, string> = {
 	vocabulary: join(DATA_DIR, 'vocabulary'),
 	domain: join(DATA_DIR, 'domain'),
-	term: join(DATA_DIR, 'term')
+	term: join(DATA_DIR, 'term'),
+	database: join(DATA_DIR, 'database'),
+	entity: join(DATA_DIR, 'entity'),
+	attribute: join(DATA_DIR, 'attribute'),
+	table: join(DATA_DIR, 'table'),
+	column: join(DATA_DIR, 'column')
 };
 
 /**

@@ -24,9 +24,14 @@ export async function GET({ url }: RequestEvent) {
 		if (sortByArray.length > 0 && sortOrderArray.length > 0) {
 			for (let i = 0; i < Math.min(sortByArray.length, sortOrderArray.length); i++) {
 				const direction = sortOrderArray[i];
-				if (direction === 'asc' || direction === 'desc') sortConfigs.push({ column: sortByArray[i], direction });
+				if (direction === 'asc' || direction === 'desc')
+					sortConfigs.push({ column: sortByArray[i], direction });
 			}
-		} else if (singleSortBy && singleSortOrder && (singleSortOrder === 'asc' || singleSortOrder === 'desc')) {
+		} else if (
+			singleSortBy &&
+			singleSortOrder &&
+			(singleSortOrder === 'asc' || singleSortOrder === 'desc')
+		) {
 			sortConfigs.push({ column: singleSortBy, direction: singleSortOrder });
 		}
 
@@ -37,12 +42,24 @@ export async function GET({ url }: RequestEvent) {
 		});
 
 		if (page < 1 || limit < 1 || limit > 100) {
-			return json({ success: false, error: '잘못된 페이지네이션 파라미터입니다.' } as DbDesignApiResponse, { status: 400 });
+			return json(
+				{ success: false, error: '잘못된 페이지네이션 파라미터입니다.' } as DbDesignApiResponse,
+				{ status: 400 }
+			);
 		}
 
 		let columnData: ColumnData;
-		try { columnData = await loadColumnData(filename); }
-		catch (e) { return json({ success: false, error: e instanceof Error ? e.message : '데이터 로드 실패' } as DbDesignApiResponse, { status: 500 }); }
+		try {
+			columnData = await loadColumnData(filename);
+		} catch (e) {
+			return json(
+				{
+					success: false,
+					error: e instanceof Error ? e.message : '데이터 로드 실패'
+				} as DbDesignApiResponse,
+				{ status: 500 }
+			);
+		}
 
 		let filteredEntries = columnData.entries;
 
@@ -55,37 +72,50 @@ export async function GET({ url }: RequestEvent) {
 			};
 			filteredEntries = columnData.entries.filter((entry) => {
 				switch (searchField) {
-					case 'schemaName': return matchFn(entry.schemaName);
-					case 'tableEnglishName': return matchFn(entry.tableEnglishName);
-					case 'columnEnglishName': return matchFn(entry.columnEnglishName);
-					case 'columnKoreanName': return matchFn(entry.columnKoreanName);
-					case 'dataType': return matchFn(entry.dataType);
+					case 'schemaName':
+						return matchFn(entry.schemaName);
+					case 'tableEnglishName':
+						return matchFn(entry.tableEnglishName);
+					case 'columnEnglishName':
+						return matchFn(entry.columnEnglishName);
+					case 'columnKoreanName':
+						return matchFn(entry.columnKoreanName);
+					case 'dataType':
+						return matchFn(entry.dataType);
 					case 'all':
 					default:
-						return matchFn(entry.schemaName) ||
+						return (
+							matchFn(entry.schemaName) ||
 							matchFn(entry.tableEnglishName) ||
 							matchFn(entry.columnEnglishName) ||
 							matchFn(entry.columnKoreanName) ||
-							matchFn(entry.dataType);
+							matchFn(entry.dataType)
+						);
 				}
 			});
 		}
 
 		if (Object.keys(columnFilters).length > 0) {
-			filteredEntries = filteredEntries.filter((entry) => Object.entries(columnFilters).every(([k, v]) => {
-				const val = entry[k as keyof ColumnEntry];
-				// "(빈값)" 필터 처리
-				if (v === '(빈값)') {
-					return val === null || val === undefined || val === '';
-				}
-				return val != null && String(val).toLowerCase().includes(v.toLowerCase());
-			}));
+			filteredEntries = filteredEntries.filter((entry) =>
+				Object.entries(columnFilters).every(([k, v]) => {
+					const val = entry[k as keyof ColumnEntry];
+					// "(빈값)" 필터 처리
+					if (v === '(빈값)') {
+						return val === null || val === undefined || val === '';
+					}
+					return val != null && String(val).toLowerCase().includes(v.toLowerCase());
+				})
+			);
 		}
 
 		filteredEntries.sort((a, b) => {
 			for (const config of sortConfigs) {
-				const aVal = a[config.column as keyof ColumnEntry], bVal = b[config.column as keyof ColumnEntry];
-				if (aVal == null) { if (bVal == null) continue; return 1; }
+				const aVal = a[config.column as keyof ColumnEntry],
+					bVal = b[config.column as keyof ColumnEntry];
+				if (aVal == null) {
+					if (bVal == null) continue;
+					return 1;
+				}
 				if (bVal == null) return -1;
 				const cmp = String(aVal).localeCompare(String(bVal), 'ko');
 				if (cmp !== 0) return config.direction === 'desc' ? -cmp : cmp;
@@ -97,12 +127,32 @@ export async function GET({ url }: RequestEvent) {
 		const paginatedEntries = filteredEntries.slice(startIndex, startIndex + limit);
 		const totalPages = Math.ceil(filteredEntries.length / limit);
 
-		return json({
-			success: true,
-			data: { entries: paginatedEntries, pagination: { currentPage: page, totalPages, totalCount: filteredEntries.length, limit, hasNextPage: page < totalPages, hasPrevPage: page > 1 }, lastUpdated: columnData.lastUpdated }
-		} as DbDesignApiResponse, { status: 200 });
+		return json(
+			{
+				success: true,
+				data: {
+					entries: paginatedEntries,
+					pagination: {
+						currentPage: page,
+						totalPages,
+						totalCount: filteredEntries.length,
+						limit,
+						hasNextPage: page < totalPages,
+						hasPrevPage: page > 1
+					},
+					lastUpdated: columnData.lastUpdated
+				}
+			} as DbDesignApiResponse,
+			{ status: 200 }
+		);
 	} catch (error) {
-		return json({ success: false, error: '서버에서 데이터 조회 중 오류가 발생했습니다.' } as DbDesignApiResponse, { status: 500 });
+		return json(
+			{
+				success: false,
+				error: '서버에서 데이터 조회 중 오류가 발생했습니다.'
+			} as DbDesignApiResponse,
+			{ status: 500 }
+		);
 	}
 }
 
@@ -111,8 +161,23 @@ export async function POST({ request, url }: RequestEvent) {
 		const filename = url.searchParams.get('filename') || 'column.json';
 		const body = await request.json();
 
-		const requiredFields = ['scopeFlag', 'subjectArea', 'schemaName', 'tableEnglishName', 'columnEnglishName', 'columnKoreanName', 'relatedEntityName', 'dataType', 'notNullFlag', 'personalInfoFlag', 'encryptionFlag', 'publicFlag'];
-		const missingFields = requiredFields.filter((field) => !body[field] || (typeof body[field] === 'string' && body[field].trim() === ''));
+		const requiredFields = [
+			'scopeFlag',
+			'subjectArea',
+			'schemaName',
+			'tableEnglishName',
+			'columnEnglishName',
+			'columnKoreanName',
+			'relatedEntityName',
+			'dataType',
+			'notNullFlag',
+			'personalInfoFlag',
+			'encryptionFlag',
+			'publicFlag'
+		];
+		const missingFields = requiredFields.filter(
+			(field) => !body[field] || (typeof body[field] === 'string' && body[field].trim() === '')
+		);
 
 		if (missingFields.length > 0) {
 			return json(
@@ -126,8 +191,11 @@ export async function POST({ request, url }: RequestEvent) {
 		}
 
 		let columnData: ColumnData;
-		try { columnData = await loadColumnData(filename); }
-		catch { columnData = { entries: [], lastUpdated: new Date().toISOString(), totalCount: 0 }; }
+		try {
+			columnData = await loadColumnData(filename);
+		} catch {
+			columnData = { entries: [], lastUpdated: new Date().toISOString(), totalCount: 0 };
+		}
 
 		const now = new Date().toISOString();
 		const newEntry: ColumnEntry = {
@@ -163,9 +231,22 @@ export async function POST({ request, url }: RequestEvent) {
 		columnData.totalCount = columnData.entries.length;
 		await saveColumnData(columnData, filename);
 
-		return json({ success: true, data: newEntry, message: '컬럼 정의서가 성공적으로 추가되었습니다.' } as DbDesignApiResponse, { status: 201 });
+		return json(
+			{
+				success: true,
+				data: newEntry,
+				message: '컬럼 정의서가 성공적으로 추가되었습니다.'
+			} as DbDesignApiResponse,
+			{ status: 201 }
+		);
 	} catch (error) {
-		return json({ success: false, error: '서버에서 데이터 추가 중 오류가 발생했습니다.' } as DbDesignApiResponse, { status: 500 });
+		return json(
+			{
+				success: false,
+				error: '서버에서 데이터 추가 중 오류가 발생했습니다.'
+			} as DbDesignApiResponse,
+			{ status: 500 }
+		);
 	}
 }
 
@@ -176,8 +257,25 @@ export async function PUT({ request, url }: RequestEvent) {
 		const { id, ...updateFields } = body;
 		if (!id) return json({ success: false, error: 'ID가 필요합니다.' }, { status: 400 });
 
-		const requiredFields = ['scopeFlag', 'subjectArea', 'schemaName', 'tableEnglishName', 'columnEnglishName', 'columnKoreanName', 'relatedEntityName', 'dataType', 'notNullFlag', 'personalInfoFlag', 'encryptionFlag', 'publicFlag'];
-		const missingFields = requiredFields.filter((field) => !updateFields[field] || (typeof updateFields[field] === 'string' && updateFields[field].trim() === ''));
+		const requiredFields = [
+			'scopeFlag',
+			'subjectArea',
+			'schemaName',
+			'tableEnglishName',
+			'columnEnglishName',
+			'columnKoreanName',
+			'relatedEntityName',
+			'dataType',
+			'notNullFlag',
+			'personalInfoFlag',
+			'encryptionFlag',
+			'publicFlag'
+		];
+		const missingFields = requiredFields.filter(
+			(field) =>
+				!updateFields[field] ||
+				(typeof updateFields[field] === 'string' && updateFields[field].trim() === '')
+		);
 
 		if (missingFields.length > 0) {
 			return json(
@@ -192,12 +290,19 @@ export async function PUT({ request, url }: RequestEvent) {
 
 		const columnData = await loadColumnData(filename);
 		const idx = columnData.entries.findIndex((e) => e.id === id);
-		if (idx === -1) return json({ success: false, error: '수정할 데이터를 찾을 수 없습니다.' }, { status: 404 });
+		if (idx === -1)
+			return json({ success: false, error: '수정할 데이터를 찾을 수 없습니다.' }, { status: 404 });
 
-		columnData.entries[idx] = { ...safeMerge(columnData.entries[idx], updateFields), updatedAt: new Date().toISOString() };
+		columnData.entries[idx] = {
+			...safeMerge(columnData.entries[idx], updateFields),
+			updatedAt: new Date().toISOString()
+		};
 		await saveColumnData(columnData, filename);
 
-		return json({ success: true, data: columnData.entries[idx], message: '수정 완료' }, { status: 200 });
+		return json(
+			{ success: true, data: columnData.entries[idx], message: '수정 완료' },
+			{ status: 200 }
+		);
 	} catch (error) {
 		return json({ success: false, error: '서버 오류' }, { status: 500 });
 	}
@@ -210,7 +315,8 @@ export async function DELETE({ url }: RequestEvent) {
 		if (!id) return json({ success: false, error: '삭제할 ID가 필요합니다.' }, { status: 400 });
 
 		const columnData = await loadColumnData(filename);
-		if (!columnData.entries.find((e) => e.id === id)) return json({ success: false, error: '삭제할 데이터를 찾을 수 없습니다.' }, { status: 404 });
+		if (!columnData.entries.find((e) => e.id === id))
+			return json({ success: false, error: '삭제할 데이터를 찾을 수 없습니다.' }, { status: 404 });
 
 		columnData.entries = columnData.entries.filter((e) => e.id !== id);
 		await saveColumnData(columnData, filename);
@@ -220,4 +326,3 @@ export async function DELETE({ url }: RequestEvent) {
 		return json({ success: false, error: '서버 오류' }, { status: 500 });
 	}
 }
-

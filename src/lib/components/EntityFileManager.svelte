@@ -352,7 +352,12 @@
 						aria-label="닫기"
 					>
 						<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M6 18L18 6M6 6l12 12"
+							/>
 						</svg>
 					</button>
 				</div>
@@ -369,7 +374,8 @@
 					</button>
 					<button
 						onclick={() => (activeTab = 'upload')}
-						class="border-b-2 px-4 py-2 text-sm font-medium transition-colors {activeTab === 'upload'
+						class="border-b-2 px-4 py-2 text-sm font-medium transition-colors {activeTab ===
+						'upload'
 							? 'border-blue-600 text-blue-600'
 							: 'border-transparent text-gray-500 hover:text-gray-700'}"
 					>
@@ -472,7 +478,9 @@
 											>
 												{file}
 												{#if isSystemFile(file)}
-													<span class="ml-2 rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-800">
+													<span
+														class="ml-2 rounded bg-blue-100 px-1.5 py-0.5 text-xs font-medium text-blue-800"
+													>
 														시스템 파일
 													</span>
 												{/if}
@@ -485,8 +493,18 @@
 														disabled={isSubmitting}
 														aria-label="이름변경"
 													>
-														<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-															<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+														<svg
+															class="h-4 w-4"
+															fill="none"
+															stroke="currentColor"
+															viewBox="0 0 24 24"
+														>
+															<path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																stroke-width="2"
+																d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+															/>
 														</svg>
 													</button>
 													<button
@@ -495,8 +513,18 @@
 														disabled={isSubmitting}
 														aria-label="삭제"
 													>
-														<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-															<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+														<svg
+															class="h-4 w-4"
+															fill="none"
+															stroke="currentColor"
+															viewBox="0 0 24 24"
+														>
+															<path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																stroke-width="2"
+																d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+															/>
 														</svg>
 													</button>
 												{/if}

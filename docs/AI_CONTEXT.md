@@ -38,6 +38,7 @@
 **역할**: 한국어 표준 용어와 그에 대응하는 영문 약어/전체명을 관리하는 사전
 
 **핵심 필드**:
+
 - `standardName`: 한국어 표준 용어 (예: "사용자")
 - `abbreviation`: 데이터베이스 컬럼명에 사용 (예: "USER")
 - `englishName`: 전체 영문명 (예: "User")
@@ -45,6 +46,7 @@
 - `domainGroup`: 매핑된 도메인 그룹명 (자동 설정)
 
 **비즈니스 가치**:
+
 - 표준 용어의 중앙 집중식 관리
 - 용어 일관성 보장
 - 용어 재사용 촉진
@@ -58,12 +60,14 @@
 **역할**: 공통표준도메인 정보를 관리하는 표준 도메인 사전
 
 **핵심 필드**:
+
 - `domainGroup`: 공통표준도메인그룹명 (예: "공통표준도메인그룹")
 - `domainCategory`: 공통표준도메인분류명 (예: "사용자분류")
-- `standardDomainName`: 계산된 값 (예: "공통표준도메인그룹_사용자분류")
+- `standardDomainName`: 계산된 값 (예: "공통표준도메인그룹\_사용자분류")
 - `physicalDataType`: VARCHAR, INT 등
 
 **비즈니스 가치**:
+
 - 도메인 표준의 중앙 관리
 - 단어집과 도메인 간 자동 동기화
 - 데이터 타입 표준화
@@ -77,14 +81,16 @@
 **역할**: 실제 데이터베이스에서 사용할 용어명, 컬럼명, 도메인명을 조합한 최종 용어
 
 **핵심 필드**:
-- `termName`: 한국어 용어 (예: "사용자_이름") ← Vocabulary.standardName 참조
+
+- `termName`: 한국어 용어 (예: "사용자\_이름") ← Vocabulary.standardName 참조
 - `columnName`: 영문 컬럼명 (예: "USER_NAME") ← Vocabulary.abbreviation 참조
-- `domainName`: 표준 도메인명 (예: "공통표준도메인그룹_사용자분류") ← Domain.standardDomainName 참조
+- `domainName`: 표준 도메인명 (예: "공통표준도메인그룹\_사용자분류") ← Domain.standardDomainName 참조
 - `isMappedTerm`: 용어명 매핑 성공 여부
 - `isMappedColumn`: 컬럼명 매핑 성공 여부
 - `isMappedDomain`: 도메인 매핑 성공 여부
 
 **비즈니스 가치**:
+
 - 표준 용어 기반 데이터베이스 설계
 - 용어 일관성 자동 검증
 - 매핑 상태 추적
@@ -100,11 +106,13 @@
 **매핑 키**: `domainCategory`
 
 **매핑 방식**:
+
 ```typescript
 VocabularyEntry.domainCategory ↔ DomainEntry.domainCategory
 ```
 
 **자동 설정**:
+
 - 매핑 성공 시 `VocabularyEntry.domainGroup`에 `DomainEntry.domainGroup` 자동 설정
 - `VocabularyEntry.isDomainCategoryMapped` 플래그로 매핑 상태 표시
 
@@ -113,6 +121,7 @@ VocabularyEntry.domainCategory ↔ DomainEntry.domainCategory
 **구현 위치**: `src/routes/api/vocabulary/sync-domain/+server.ts`
 
 **비즈니스 의미**:
+
 - 단어집의 각 단어가 어떤 도메인 분류에 속하는지 명시
 - 도메인 표준 변경 시 단어집 자동 업데이트
 
@@ -123,28 +132,31 @@ VocabularyEntry.domainCategory ↔ DomainEntry.domainCategory
 **매핑 방식**:
 
 #### termName 검증
+
 ```typescript
 // termName: "사용자_이름" → ["사용자", "이름"]
 // 각 단어가 VocabularyEntry.standardName에 존재해야 함
-const termParts = termName.split('_').map(p => p.trim().toLowerCase());
-const isMappedTerm = termParts.every(part => 
-  vocabularyMap.has(part) // VocabularyEntry.standardName과 일치
+const termParts = termName.split('_').map((p) => p.trim().toLowerCase());
+const isMappedTerm = termParts.every(
+	(part) => vocabularyMap.has(part) // VocabularyEntry.standardName과 일치
 );
 ```
 
 #### columnName 검증
+
 ```typescript
 // columnName: "USER_NAME" → ["USER", "NAME"]
 // 각 단어가 VocabularyEntry.abbreviation에 존재해야 함
-const columnParts = columnName.split('_').map(p => p.trim().toLowerCase());
-const isMappedColumn = columnParts.every(part => 
-  vocabularyMap.has(part) // VocabularyEntry.abbreviation과 일치
+const columnParts = columnName.split('_').map((p) => p.trim().toLowerCase());
+const isMappedColumn = columnParts.every(
+	(part) => vocabularyMap.has(part) // VocabularyEntry.abbreviation과 일치
 );
 ```
 
 **구현 위치**: `src/routes/api/term/sync/+server.ts`, `src/routes/api/term/+server.ts`
 
 **비즈니스 의미**:
+
 - 모든 용어가 표준 용어집 기반으로 생성됨을 보장
 - 비표준 용어 사용 방지
 
@@ -153,6 +165,7 @@ const isMappedColumn = columnParts.every(part =>
 ### 3. Domain → Term 매핑 검증
 
 **매핑 방식**:
+
 ```typescript
 // domainName: "공통표준도메인그룹_사용자분류"
 // DomainEntry.standardDomainName과 정확히 일치해야 함
@@ -162,6 +175,7 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 **구현 위치**: `src/routes/api/term/sync/+server.ts`
 
 **비즈니스 의미**:
+
 - 모든 용어가 표준 도메인을 사용함을 보장
 - 도메인 표준 준수
 
@@ -170,6 +184,7 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 ### 4. 용어 자동 생성 (Term Generator)
 
 **로직**:
+
 1. 한국어 용어 입력 (예: "사용자 이름")
 2. 단어집을 기반으로 가능한 조합 생성
    - "사용자" → ["USER", "MEMBER", ...]
@@ -181,6 +196,7 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 **구현 위치**: `src/routes/api/generator/+server.ts`, `src/lib/components/TermGenerator.svelte`
 
 **비즈니스 의미**:
+
 - 표준 용어 기반 컬럼명 생성
 - 여러 가능한 조합 제시
 - 매핑 상태 자동 검증
@@ -222,16 +238,19 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 ### 1. 파일 기반 저장소
 
 **특징**:
+
 - 전통적인 데이터베이스 대신 JSON 파일 사용
 - `static/data/` 디렉토리에 저장
 - 파일별로 독립적인 데이터 관리
 
 **제약사항**:
+
 - 동시성 제어 필요 (파일 락 메커니즘 구현됨: `src/lib/utils/file-lock.ts`)
 - 대용량 데이터 처리 제한
 - 트랜잭션 없음 (원자적 쓰기 패턴으로 보완: `atomicWriteFile`)
 
 **의미**:
+
 - 간단한 배포 (파일 복사만으로 백업/복원)
 - 버전 관리 용이 (Git으로 추적 가능)
 - 데이터베이스 설정 불필요
@@ -241,11 +260,13 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 ### 2. 다중 파일 지원
 
 **특징**:
+
 - Vocabulary, Domain, Term 모두 여러 파일 지원
 - 파일별 독립적인 데이터 관리
 - 파일 간 매핑 관계 설정 (`mapping` 필드)
 
 **의미**:
+
 - 프로젝트별/부서별 용어집 분리 관리
 - 표준 용어집과 프로젝트 용어집 구분
 
@@ -254,11 +275,13 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 ### 3. 매핑 기반 검증 시스템
 
 **핵심 원칙**:
+
 - 모든 Term은 Vocabulary와 Domain을 참조해야 함
 - 매핑 실패 시 자동 수정 제안
 - 매핑 상태 추적 (`isMapped*` 플래그)
 
 **의미**:
+
 - 표준 준수 자동화
 - 비표준 용어 사용 방지
 - 데이터 품질 보장
@@ -268,11 +291,13 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 ### 4. 히스토리 추적 시스템
 
 **특징**:
+
 - 모든 변경사항 히스토리 로그 기록
 - 파일별 히스토리 관리 (Vocabulary만)
 - 변경 전/후 데이터 저장
 
 **의미**:
+
 - 감사 추적 (Audit Trail)
 - 변경 이력 추적
 - 롤백 가능성
@@ -284,6 +309,7 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 ### 파일 구조 패턴
 
 **바렐 패턴** 사용:
+
 ```
 src/lib/
 ├── components/     # 재사용 가능한 Svelte 컴포넌트
@@ -312,12 +338,13 @@ src/lib/
 ### 에러 처리 패턴
 
 **API 응답 형식**:
+
 ```typescript
 interface ApiResponse {
-  success: boolean;
-  data?: unknown;
-  error?: string;
-  message?: string;
+	success: boolean;
+	data?: unknown;
+	error?: string;
+	message?: string;
 }
 ```
 
@@ -335,6 +362,7 @@ interface ApiResponse {
 6. **아이콘 버튼**: 이름변경/삭제 버튼은 텍스트가 아닌 아이콘으로 표시
 
 **필수 설정 키** (settings-store.ts와 settings.ts):
+
 - `showVocabularySystemFiles` (기본값: false)
 - `showDomainSystemFiles` (기본값: false)
 - `showTermSystemFiles` (기본값: false)
@@ -344,7 +372,8 @@ interface ApiResponse {
 - `showTableSystemFiles` (기본값: false)
 - `showColumnSystemFiles` (기본값: false)
 
-**⚠️ 중요**: 
+**⚠️ 중요**:
+
 - 설정은 `static/global/settings.json`에 저장되며 새로고침/서비스 재시작 후에도 유지됩니다.
 - `src/lib/utils/settings.ts`에서 서버 사이드 설정을 처리합니다.
 - `src/lib/stores/settings-store.ts`에서 클라이언트 사이드 상태를 관리합니다.
@@ -359,6 +388,7 @@ interface ApiResponse {
 3. **스크롤 위치**: 모달 전체가 아닌 내부 콘텐츠만 스크롤
 
 **올바른 Editor 스크롤 구조**:
+
 ```svelte
 <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
 	<div class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl">
@@ -376,6 +406,7 @@ interface ApiResponse {
 ```
 
 **❌ 잘못된 구조** (전체 모달 스크롤):
+
 ```svelte
 <div class="max-h-[90vh] overflow-y-auto">
 	<div class="sticky top-0">헤더</div>
@@ -387,15 +418,16 @@ interface ApiResponse {
 
 각 메뉴별 통합검색 대상 항목:
 
-| 메뉴 | 검색 필드 |
-|------|-----------|
-| **DB** | 기관명, 논리DB명, 물리DB명 |
-| **엔터티** | 스키마명, 엔터티명, 주식별자, 수퍼타입엔터티명, 테이블한글명 |
-| **속성** | 스키마명, 엔터티명, 속성명 |
+| 메뉴       | 검색 필드                                                            |
+| ---------- | -------------------------------------------------------------------- |
+| **DB**     | 기관명, 논리DB명, 물리DB명                                           |
+| **엔터티** | 스키마명, 엔터티명, 주식별자, 수퍼타입엔터티명, 테이블한글명         |
+| **속성**   | 스키마명, 엔터티명, 속성명                                           |
 | **테이블** | 물리DB명, 스키마명, 테이블영문명, 테이블한글명, 테이블유형, 주제영역 |
-| **컬럼** | 스키마명, 테이블영문명, 컬럼영문명, 컬럼한글명, 자료타입 |
+| **컬럼**   | 스키마명, 테이블영문명, 컬럼영문명, 컬럼한글명, 자료타입             |
 
 **Browse 페이지에서 SearchBar 사용 예시**:
+
 ```svelte
 <SearchBar
 	bind:query={searchQuery}
@@ -412,6 +444,7 @@ interface ApiResponse {
 ```
 
 **API 엔드포인트 검색 필터 처리**:
+
 - 각 API의 `switch (searchField)` 블록에 해당 필드들을 모두 포함해야 함
 - `case 'all'` 또는 `default`에서는 해당 메뉴의 모든 검색 필드를 OR 조건으로 검색
 - 검색 파라미터: `q` 또는 `query` 모두 지원 (호환성을 위해)
@@ -447,7 +480,7 @@ const nullableColumns = new Set(['column1', 'column2', ...]);
 filterableColumns.forEach((columnKey) => {
 	const values = new Set<string>();
 	let hasEmptyValue = false;
-	
+
 	data.entries.forEach((entry) => {
 		const value = entry[columnKey as keyof EntryType];
 		if (value !== null && value !== undefined && value !== '') {
@@ -456,7 +489,7 @@ filterableColumns.forEach((columnKey) => {
 			hasEmptyValue = true;
 		}
 	});
-	
+
 	const sortedValues = Array.from(values).sort();
 	// Nullable 필드이고 빈값이 있으면 "(빈값)" 옵션 추가
 	if (nullableColumns.has(columnKey) && hasEmptyValue) {
@@ -467,6 +500,7 @@ filterableColumns.forEach((columnKey) => {
 ```
 
 **API 필터링 로직에서 빈값 처리**:
+
 ```typescript
 // 컬럼 필터 적용 시
 if (filterValue === '(빈값)') {
@@ -475,6 +509,7 @@ if (filterValue === '(빈값)') {
 ```
 
 **Browse 페이지에서 호출 패턴**:
+
 ```typescript
 async function loadFilterOptions() {
 	const params = new URLSearchParams({ filename: selectedFilename });
@@ -498,6 +533,7 @@ async function handleFileSelect(filename: string) {
 ```
 
 **테이블 컴포넌트에서 사용**:
+
 ```svelte
 options={filterOptions[column.key] || column.filterOptions || getUniqueValues(column.key)}
 ```
@@ -507,10 +543,11 @@ options={filterOptions[column.key] || column.filterOptions || getUniqueValues(co
 Editor 컴포넌트에서 삭제 버튼은 **브라우저 confirm() 다이얼로그**를 사용합니다:
 
 **✅ 올바른 패턴** (confirm 다이얼로그 사용):
+
 ```typescript
 function handleDelete() {
 	if (!entry.id) return;
-	
+
 	if (confirm('정말로 이 항목을 삭제하시겠습니까?')) {
 		const entryToDelete = { ... };
 		dispatch('delete', entryToDelete);
@@ -519,17 +556,19 @@ function handleDelete() {
 ```
 
 **❌ 잘못된 패턴** (인라인 확인 UI 사용):
+
 ```svelte
 {#if showDeleteConfirm}
 	<span>정말 삭제하시겠습니까?</span>
 	<button onclick={handleDelete}>확인</button>
-	<button onclick={() => showDeleteConfirm = false}>취소</button>
+	<button onclick={() => (showDeleteConfirm = false)}>취소</button>
 {:else}
-	<button onclick={() => showDeleteConfirm = true}>삭제</button>
+	<button onclick={() => (showDeleteConfirm = true)}>삭제</button>
 {/if}
 ```
 
 **삭제 버튼 스타일 (DomainEditor 참고)**:
+
 ```svelte
 <button
 	type="button"
@@ -543,6 +582,7 @@ function handleDelete() {
 ```
 
 **저장/취소 버튼**:
+
 ```svelte
 <button type="button" onclick={handleCancel} class="btn btn-secondary">취소</button>
 <button type="submit" class="btn btn-primary">{isEditMode ? '수정' : '저장'}</button>
@@ -551,12 +591,14 @@ function handleDelete() {
 ### FileUpload 컴포넌트 패턴
 
 **지원 모드**:
+
 - `validated-replace`: 검증 교체 모드 (데이터 검증 후 교체)
 - `simple-replace`: 단순 교체 모드 (검증 없이 바로 교체)
 
 **⚠️ 주의**: 병합(merge) 모드와 덮어쓰기(replace) 모드는 더 이상 지원되지 않습니다.
 
 **올바른 Props 사용**:
+
 - `apiEndpoint`: 업로드 API 엔드포인트
 - `contentType`: 데이터 타입명
 - `filename`: 대상 파일명
@@ -564,6 +606,7 @@ function handleDelete() {
 - `onuploadstart`, `onuploadsuccess`, `onuploaderror`, `onuploadcomplete`: 콜백 함수
 
 **잘못된 Props** (사용하지 말 것):
+
 - `uploadUrl` → `apiEndpoint` 사용
 - `mode` → FileUpload 내부에서 처리
 - `on:success` → `onuploadsuccess` 사용 (Svelte 5 방식)
@@ -580,14 +623,19 @@ function handleDelete() {
 	currentValue={activeFilters[column.key] || null}
 	options={filterOptions[column.key] || getUniqueValues(column.key)}
 	isOpen={openFilterColumn === column.key}
-	onOpen={(key) => { openFilterColumn = key; }}
-	onClose={() => { openFilterColumn = null; }}
+	onOpen={(key) => {
+		openFilterColumn = key;
+	}}
+	onClose={() => {
+		openFilterColumn = null;
+	}}
 	onApply={(value) => handleFilter(column.key, value)}
 	onClear={() => handleFilter(column.key, null)}
 />
 ```
 
 **❌ 잘못된 Props** (사용하지 말 것):
+
 - `value` → `currentValue` 사용
 - `type` → `filterType` 사용
 - `onselect` → `onApply` 사용
@@ -619,9 +667,9 @@ API 응답에서 pagination 정보는 `result.data.pagination`에 위치합니�
 ```typescript
 const result: ApiResponse = await response.json();
 if (result.success && result.data) {
-	const data = result.data as { 
-		entries: Entry[]; 
-		pagination?: { totalCount: number; totalPages: number } 
+	const data = result.data as {
+		entries: Entry[];
+		pagination?: { totalCount: number; totalPages: number };
 	};
 	entries = data.entries || [];
 	// ⚠️ result.pagination이 아닌 data.pagination 사용
@@ -654,10 +702,12 @@ const field2 = parseRequiredText(row[1]); // B열
 ### Vocabulary 변경 시
 
 **영향 범위**:
+
 - Term의 `termName`, `columnName` 매핑 재검증 필요
 - `POST /api/term/sync` 호출 필요
 
 **주의사항**:
+
 - `standardName` 변경 시 해당 단어를 사용하는 모든 Term 재검증
 - `abbreviation` 변경 시 해당 약어를 사용하는 모든 Term 재검증
 - `domainCategory` 변경 시 Domain 매핑 재검증 필요
@@ -667,10 +717,12 @@ const field2 = parseRequiredText(row[1]); // B열
 ### Domain 변경 시
 
 **영향 범위**:
+
 - Vocabulary의 `domainGroup` 자동 업데이트 필요
 - Term의 `domainName` 매핑 재검증 필요
 
 **주의사항**:
+
 - `domainCategory` 변경 시 해당 분류를 사용하는 Vocabulary 재매핑
 - `standardDomainName` 변경 시 해당 도메인을 사용하는 Term 재검증
 
@@ -679,10 +731,12 @@ const field2 = parseRequiredText(row[1]); // B열
 ### 매핑 로직 변경 시
 
 **영향 범위**:
+
 - 모든 Term 재검증 필요
 - 모든 Vocabulary-Domain 매핑 재검증 필요
 
 **주의사항**:
+
 - `src/routes/api/term/sync/+server.ts`의 `checkTermMapping` 함수 변경 시
 - `src/routes/api/vocabulary/sync-domain/+server.ts`의 매핑 로직 변경 시
 - 기존 데이터와의 호환성 확인 필요
@@ -692,11 +746,13 @@ const field2 = parseRequiredText(row[1]); // B열
 ### 파일 구조 변경 시
 
 **영향 범위**:
+
 - 파일 핸들러 (`src/lib/utils/file-handler.ts`)
 - API 엔드포인트의 파일 경로 처리
 - 파일 필터 (`src/lib/utils/file-filter.ts`)
 
 **주의사항**:
+
 - 경로 검증 로직 (`validateFilename`) 확인
 - 파일 락 메커니즘 (`file-lock.ts`) 확인
 - 다중 파일 지원 로직 확인
@@ -706,22 +762,26 @@ const field2 = parseRequiredText(row[1]); // B열
 ## 핵심 파일 위치
 
 ### 타입 정의
+
 - `src/lib/types/vocabulary.ts`: Vocabulary 타입
 - `src/lib/types/domain.ts`: Domain 타입
 - `src/lib/types/term.ts`: Term 타입
 
 ### 핵심 비즈니스 로직
+
 - `src/routes/api/vocabulary/sync-domain/+server.ts`: Vocabulary-Domain 매핑
 - `src/routes/api/term/sync/+server.ts`: Term 매핑 검증
 - `src/routes/api/term/+server.ts`: Term CRUD 및 매핑 검증
 - `src/routes/api/generator/+server.ts`: 용어 자동 생성
 
 ### 파일 관리
+
 - `src/lib/utils/file-handler.ts`: 파일 읽기/쓰기
 - `src/lib/utils/file-lock.ts`: 파일 락 및 원자적 쓰기
 - `src/lib/utils/file-operations.ts`: 제네릭 파일 관리
 
 ### 검증 및 매핑
+
 - `src/lib/utils/type-guards.ts`: 타입 가드 및 검증
 - `src/lib/utils/validation.ts`: 데이터 검증
 - `src/lib/utils/cache.ts`: 메모리 캐싱
@@ -738,4 +798,3 @@ const field2 = parseRequiredText(row[1]); // B열
 ---
 
 **마지막 업데이트**: 2026-01-08
-

@@ -116,7 +116,7 @@
 	 */
 	function handleDelete() {
 		if (!entry.id) return;
-		
+
 		if (confirm('정말로 이 항목을 삭제하시겠습니까?')) {
 			const entryToDelete: DatabaseEntry = {
 				id: entry.id,
@@ -184,11 +184,7 @@
 			<h2 id="modal-title" class="text-xl font-bold text-gray-900">
 				{isEditMode ? '데이터베이스 정의서 수정' : '새 데이터베이스 정의서'}
 			</h2>
-			<button
-				onclick={handleCancel}
-				class="text-gray-400 hover:text-gray-600"
-				aria-label="닫기"
-			>
+			<button onclick={handleCancel} class="text-gray-400 hover:text-gray-600" aria-label="닫기">
 				<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path
 						stroke-linecap="round"
@@ -202,245 +198,261 @@
 
 		<!-- 스크롤 가능한 내부 컨텐츠 -->
 		<div class="flex-1 overflow-y-auto p-6">
-			<form onsubmit={(e) => { e.preventDefault(); handleSave(); }}>
-			<!-- 서버 에러 표시 -->
-			{#if serverError}
-				<div class="mb-4 rounded-lg bg-red-50 p-4 text-red-700">
-					<p class="text-sm">{serverError}</p>
-				</div>
-			{/if}
-
-			<div class="space-y-4">
-				<!-- 기관명 (필수) -->
-				<div>
-					<label for="organizationName" class="mb-1 block text-sm font-medium text-gray-700">
-						기관명 <span class="text-red-500">*</span>
-					</label>
-					<input
-						id="organizationName"
-						type="text"
-						bind:value={formData.organizationName}
-						class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.organizationName ? 'border-red-500' : 'border-gray-300'}"
-						placeholder="기관명 입력"
-					/>
-					{#if errors.organizationName}
-						<p class="mt-1 text-xs text-red-500">{errors.organizationName}</p>
-					{/if}
-				</div>
-
-				<!-- 부서명 (필수) -->
-				<div>
-					<label for="departmentName" class="mb-1 block text-sm font-medium text-gray-700">
-						부서명 <span class="text-red-500">*</span>
-					</label>
-					<input
-						id="departmentName"
-						type="text"
-						bind:value={formData.departmentName}
-						class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.departmentName ? 'border-red-500' : 'border-gray-300'}"
-						placeholder="부서명 입력"
-					/>
-					{#if errors.departmentName}
-						<p class="mt-1 text-xs text-red-500">{errors.departmentName}</p>
-					{/if}
-				</div>
-
-				<!-- 적용업무 (필수) -->
-				<div>
-					<label for="appliedTask" class="mb-1 block text-sm font-medium text-gray-700">
-						적용업무 <span class="text-red-500">*</span>
-					</label>
-					<input
-						id="appliedTask"
-						type="text"
-						bind:value={formData.appliedTask}
-						class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.appliedTask ? 'border-red-500' : 'border-gray-300'}"
-						placeholder="적용업무 입력"
-					/>
-					{#if errors.appliedTask}
-						<p class="mt-1 text-xs text-red-500">{errors.appliedTask}</p>
-					{/if}
-				</div>
-
-				<!-- 관련법령 (선택) -->
-				<div>
-					<label for="relatedLaw" class="mb-1 block text-sm font-medium text-gray-700">
-						관련법령
-					</label>
-					<input
-						id="relatedLaw"
-						type="text"
-						bind:value={formData.relatedLaw}
-						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-						placeholder="관련법령 입력"
-					/>
-				</div>
-
-				<!-- 논리DB명 (필수) -->
-				<div>
-					<label for="logicalDbName" class="mb-1 block text-sm font-medium text-gray-700">
-						논리DB명 <span class="text-red-500">*</span>
-					</label>
-					<input
-						id="logicalDbName"
-						type="text"
-						bind:value={formData.logicalDbName}
-						class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.logicalDbName ? 'border-red-500' : 'border-gray-300'}"
-						placeholder="논리DB명 입력"
-					/>
-					{#if errors.logicalDbName}
-						<p class="mt-1 text-xs text-red-500">{errors.logicalDbName}</p>
-					{/if}
-				</div>
-
-				<!-- 물리DB명 (필수) -->
-				<div>
-					<label for="physicalDbName" class="mb-1 block text-sm font-medium text-gray-700">
-						물리DB명 <span class="text-red-500">*</span>
-					</label>
-					<input
-						id="physicalDbName"
-						type="text"
-						bind:value={formData.physicalDbName}
-						class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.physicalDbName ? 'border-red-500' : 'border-gray-300'}"
-						placeholder="물리DB명 입력"
-					/>
-					{#if errors.physicalDbName}
-						<p class="mt-1 text-xs text-red-500">{errors.physicalDbName}</p>
-					{/if}
-				</div>
-
-				<!-- 구축일자 (선택) -->
-				<div>
-					<label for="buildDate" class="mb-1 block text-sm font-medium text-gray-700">
-						구축일자
-					</label>
-					<input
-						id="buildDate"
-						type="date"
-						bind:value={formData.buildDate}
-						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-					/>
-				</div>
-
-				<!-- DBMS정보 (필수) -->
-				<div>
-					<label for="dbmsInfo" class="mb-1 block text-sm font-medium text-gray-700">
-						DBMS정보 <span class="text-red-500">*</span>
-					</label>
-					<select
-						id="dbmsInfo"
-						bind:value={formData.dbmsInfo}
-						class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.dbmsInfo ? 'border-red-500' : 'border-gray-300'}"
-					>
-						<option value="">선택</option>
-						<option value="Oracle">Oracle</option>
-						<option value="MySQL">MySQL</option>
-						<option value="PostgreSQL">PostgreSQL</option>
-						<option value="SQL Server">SQL Server</option>
-						<option value="MariaDB">MariaDB</option>
-						<option value="MongoDB">MongoDB</option>
-						<option value="기타">기타</option>
-					</select>
-					{#if errors.dbmsInfo}
-						<p class="mt-1 text-xs text-red-500">{errors.dbmsInfo}</p>
-					{/if}
-				</div>
-
-				<!-- 운영체제정보 (선택) -->
-				<div>
-					<label for="osInfo" class="mb-1 block text-sm font-medium text-gray-700">
-						운영체제정보
-					</label>
-					<input
-						id="osInfo"
-						type="text"
-						bind:value={formData.osInfo}
-						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-						placeholder="운영체제정보 입력"
-					/>
-				</div>
-
-				<!-- 수집제외사유 (선택) -->
-				<div>
-					<label for="exclusionReason" class="mb-1 block text-sm font-medium text-gray-700">
-						수집제외사유
-					</label>
-					<input
-						id="exclusionReason"
-						type="text"
-						bind:value={formData.exclusionReason}
-						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-						placeholder="수집제외사유 입력"
-					/>
-				</div>
-
-				<!-- DB설명 (선택) -->
-				<div>
-					<label for="dbDescription" class="mb-1 block text-sm font-medium text-gray-700">
-						DB설명
-					</label>
-					<textarea
-						id="dbDescription"
-						bind:value={formData.dbDescription}
-						rows="3"
-						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-						placeholder="DB설명 입력"
-					></textarea>
-				</div>
-			</div>
-
-			<!-- 버튼 그룹 -->
-			<div class="flex justify-between border-t border-gray-200 pt-4">
-				{#if isEditMode && entry.id}
-					<button
-						type="button"
-						onclick={handleDelete}
-						class="group inline-flex items-center space-x-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 shadow-sm transition-all duration-200 hover:border-red-400 hover:bg-red-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-						disabled={isSubmitting}
-					>
-						<svg
-							class="h-4 w-4 transition-transform duration-200 group-hover:scale-110"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-							/>
-						</svg>
-						<span>삭제</span>
-					</button>
-				{:else}
-					<div></div>
+			<form
+				onsubmit={(e) => {
+					e.preventDefault();
+					handleSave();
+				}}
+			>
+				<!-- 서버 에러 표시 -->
+				{#if serverError}
+					<div class="mb-4 rounded-lg bg-red-50 p-4 text-red-700">
+						<p class="text-sm">{serverError}</p>
+					</div>
 				{/if}
-				<div class="flex space-x-3">
-					<button
-						type="button"
-						onclick={handleCancel}
-						class="btn btn-secondary"
-						disabled={isSubmitting}
-					>
-						취소
-					</button>
-					<button
-						type="submit"
-						class="btn btn-primary disabled:cursor-not-allowed disabled:opacity-50"
-						disabled={isSubmitting}
-					>
-						{#if isSubmitting}
-							저장 중...
-						{:else}
-							{isEditMode ? '수정' : '저장'}
+
+				<div class="space-y-4">
+					<!-- 기관명 (필수) -->
+					<div>
+						<label for="organizationName" class="mb-1 block text-sm font-medium text-gray-700">
+							기관명 <span class="text-red-500">*</span>
+						</label>
+						<input
+							id="organizationName"
+							type="text"
+							bind:value={formData.organizationName}
+							class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.organizationName
+								? 'border-red-500'
+								: 'border-gray-300'}"
+							placeholder="기관명 입력"
+						/>
+						{#if errors.organizationName}
+							<p class="mt-1 text-xs text-red-500">{errors.organizationName}</p>
 						{/if}
-					</button>
+					</div>
+
+					<!-- 부서명 (필수) -->
+					<div>
+						<label for="departmentName" class="mb-1 block text-sm font-medium text-gray-700">
+							부서명 <span class="text-red-500">*</span>
+						</label>
+						<input
+							id="departmentName"
+							type="text"
+							bind:value={formData.departmentName}
+							class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.departmentName
+								? 'border-red-500'
+								: 'border-gray-300'}"
+							placeholder="부서명 입력"
+						/>
+						{#if errors.departmentName}
+							<p class="mt-1 text-xs text-red-500">{errors.departmentName}</p>
+						{/if}
+					</div>
+
+					<!-- 적용업무 (필수) -->
+					<div>
+						<label for="appliedTask" class="mb-1 block text-sm font-medium text-gray-700">
+							적용업무 <span class="text-red-500">*</span>
+						</label>
+						<input
+							id="appliedTask"
+							type="text"
+							bind:value={formData.appliedTask}
+							class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.appliedTask
+								? 'border-red-500'
+								: 'border-gray-300'}"
+							placeholder="적용업무 입력"
+						/>
+						{#if errors.appliedTask}
+							<p class="mt-1 text-xs text-red-500">{errors.appliedTask}</p>
+						{/if}
+					</div>
+
+					<!-- 관련법령 (선택) -->
+					<div>
+						<label for="relatedLaw" class="mb-1 block text-sm font-medium text-gray-700">
+							관련법령
+						</label>
+						<input
+							id="relatedLaw"
+							type="text"
+							bind:value={formData.relatedLaw}
+							class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+							placeholder="관련법령 입력"
+						/>
+					</div>
+
+					<!-- 논리DB명 (필수) -->
+					<div>
+						<label for="logicalDbName" class="mb-1 block text-sm font-medium text-gray-700">
+							논리DB명 <span class="text-red-500">*</span>
+						</label>
+						<input
+							id="logicalDbName"
+							type="text"
+							bind:value={formData.logicalDbName}
+							class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.logicalDbName
+								? 'border-red-500'
+								: 'border-gray-300'}"
+							placeholder="논리DB명 입력"
+						/>
+						{#if errors.logicalDbName}
+							<p class="mt-1 text-xs text-red-500">{errors.logicalDbName}</p>
+						{/if}
+					</div>
+
+					<!-- 물리DB명 (필수) -->
+					<div>
+						<label for="physicalDbName" class="mb-1 block text-sm font-medium text-gray-700">
+							물리DB명 <span class="text-red-500">*</span>
+						</label>
+						<input
+							id="physicalDbName"
+							type="text"
+							bind:value={formData.physicalDbName}
+							class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.physicalDbName
+								? 'border-red-500'
+								: 'border-gray-300'}"
+							placeholder="물리DB명 입력"
+						/>
+						{#if errors.physicalDbName}
+							<p class="mt-1 text-xs text-red-500">{errors.physicalDbName}</p>
+						{/if}
+					</div>
+
+					<!-- 구축일자 (선택) -->
+					<div>
+						<label for="buildDate" class="mb-1 block text-sm font-medium text-gray-700">
+							구축일자
+						</label>
+						<input
+							id="buildDate"
+							type="date"
+							bind:value={formData.buildDate}
+							class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+						/>
+					</div>
+
+					<!-- DBMS정보 (필수) -->
+					<div>
+						<label for="dbmsInfo" class="mb-1 block text-sm font-medium text-gray-700">
+							DBMS정보 <span class="text-red-500">*</span>
+						</label>
+						<select
+							id="dbmsInfo"
+							bind:value={formData.dbmsInfo}
+							class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.dbmsInfo
+								? 'border-red-500'
+								: 'border-gray-300'}"
+						>
+							<option value="">선택</option>
+							<option value="Oracle">Oracle</option>
+							<option value="MySQL">MySQL</option>
+							<option value="PostgreSQL">PostgreSQL</option>
+							<option value="SQL Server">SQL Server</option>
+							<option value="MariaDB">MariaDB</option>
+							<option value="MongoDB">MongoDB</option>
+							<option value="기타">기타</option>
+						</select>
+						{#if errors.dbmsInfo}
+							<p class="mt-1 text-xs text-red-500">{errors.dbmsInfo}</p>
+						{/if}
+					</div>
+
+					<!-- 운영체제정보 (선택) -->
+					<div>
+						<label for="osInfo" class="mb-1 block text-sm font-medium text-gray-700">
+							운영체제정보
+						</label>
+						<input
+							id="osInfo"
+							type="text"
+							bind:value={formData.osInfo}
+							class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+							placeholder="운영체제정보 입력"
+						/>
+					</div>
+
+					<!-- 수집제외사유 (선택) -->
+					<div>
+						<label for="exclusionReason" class="mb-1 block text-sm font-medium text-gray-700">
+							수집제외사유
+						</label>
+						<input
+							id="exclusionReason"
+							type="text"
+							bind:value={formData.exclusionReason}
+							class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+							placeholder="수집제외사유 입력"
+						/>
+					</div>
+
+					<!-- DB설명 (선택) -->
+					<div>
+						<label for="dbDescription" class="mb-1 block text-sm font-medium text-gray-700">
+							DB설명
+						</label>
+						<textarea
+							id="dbDescription"
+							bind:value={formData.dbDescription}
+							rows="3"
+							class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+							placeholder="DB설명 입력"
+						></textarea>
+					</div>
 				</div>
-			</div>
+
+				<!-- 버튼 그룹 -->
+				<div class="flex justify-between border-t border-gray-200 pt-4">
+					{#if isEditMode && entry.id}
+						<button
+							type="button"
+							onclick={handleDelete}
+							class="group inline-flex items-center space-x-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 shadow-sm transition-all duration-200 hover:border-red-400 hover:bg-red-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+							disabled={isSubmitting}
+						>
+							<svg
+								class="h-4 w-4 transition-transform duration-200 group-hover:scale-110"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+								/>
+							</svg>
+							<span>삭제</span>
+						</button>
+					{:else}
+						<div></div>
+					{/if}
+					<div class="flex space-x-3">
+						<button
+							type="button"
+							onclick={handleCancel}
+							class="btn btn-secondary"
+							disabled={isSubmitting}
+						>
+							취소
+						</button>
+						<button
+							type="submit"
+							class="btn btn-primary disabled:cursor-not-allowed disabled:opacity-50"
+							disabled={isSubmitting}
+						>
+							{#if isSubmitting}
+								저장 중...
+							{:else}
+								{isEditMode ? '수정' : '저장'}
+							{/if}
+						</button>
+					</div>
+				</div>
 			</form>
 		</div>
 	</div>
 </div>
-

@@ -173,5 +173,4 @@ DbManager 프로젝트에서 **새로운 화면/컴포넌트**를 추가할 때 
 - **사용자 기능 설명**: `docs/USER_GUIDE.md`
 - **프로젝트 분석/개념**: `docs/PROJECT_DEEP_ANALYSIS.md`
 
-새로운 UI/UX를 설계할 때는 이 문서를 기본 가이드로 삼되,  
-
+새로운 UI/UX를 설계할 때는 이 문서를 기본 가이드로 삼되,

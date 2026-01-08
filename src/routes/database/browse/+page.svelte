@@ -54,7 +54,7 @@
 			if (allDatabaseFiles.length > 0) {
 				const newFilteredFiles = filterDatabaseFiles(allDatabaseFiles, showSystemFiles);
 				databaseFiles = newFilteredFiles;
-				
+
 				// 현재 선택된 파일이 필터링된 목록에 없으면 첫 번째 파일로 전환
 				if (newFilteredFiles.length > 0 && !newFilteredFiles.includes(selectedFilename)) {
 					handleFileSelect(newFilteredFiles[0]);
@@ -204,7 +204,10 @@
 			const result: DbDesignApiResponse = await response.json();
 
 			if (result.success && result.data) {
-				const data = result.data as { entries: DatabaseEntry[]; pagination?: { totalCount: number; totalPages: number } };
+				const data = result.data as {
+					entries: DatabaseEntry[];
+					pagination?: { totalCount: number; totalPages: number };
+				};
 				entries = data.entries || [];
 				if (data.pagination) {
 					totalCount = data.pagination.totalCount || 0;
@@ -342,7 +345,8 @@
 				currentEditingEntry = null;
 				await loadDatabaseData();
 			} else {
-				editorServerError = result.error || (isEditMode ? '수정에 실패했습니다.' : '추가에 실패했습니다.');
+				editorServerError =
+					result.error || (isEditMode ? '수정에 실패했습니다.' : '추가에 실패했습니다.');
 			}
 		} catch (error) {
 			console.error('저장 중 오류:', error);
@@ -442,12 +446,16 @@
 	<meta name="description" content="데이터베이스 정의서를 관리하고 검색하세요." />
 </svelte:head>
 
-<div class="relative min-h-screen overflow-x-hidden bg-gradient-to-br from-slate-50 via-white to-blue-50 py-8">
+<div
+	class="relative min-h-screen overflow-x-hidden bg-gradient-to-br from-slate-50 via-white to-blue-50 py-8"
+>
 	<div class="mx-auto w-full px-4 sm:px-6 lg:px-8">
 		<div class="gap-8 lg:grid lg:grid-cols-[16rem_1fr] lg:items-start">
 			<!-- 좌측 고정 사이드바 (데스크탑) -->
 			<aside class="hidden h-full w-64 lg:block">
-				<div class="sticky top-20 rounded-2xl border border-gray-200/50 bg-white/95 p-4 shadow-xl backdrop-blur-md">
+				<div
+					class="sticky top-20 rounded-2xl border border-gray-200/50 bg-white/95 p-4 shadow-xl backdrop-blur-md"
+				>
 					<div class="mb-4 flex items-center justify-between">
 						<h2 class="text-lg font-bold text-gray-900">정의서 파일</h2>
 						<button
@@ -457,8 +465,18 @@
 							aria-label="파일 관리"
 						>
 							<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+								/>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+								/>
 							</svg>
 						</button>
 					</div>
@@ -467,7 +485,8 @@
 							<button
 								type="button"
 								onclick={() => handleFileSelect(file)}
-								class="w-full rounded-lg px-4 py-2 text-left text-sm font-medium transition-colors duration-200 {selectedFilename === file
+								class="w-full rounded-lg px-4 py-2 text-left text-sm font-medium transition-colors duration-200 {selectedFilename ===
+								file
 									? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
 									: 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}"
 							>
@@ -484,7 +503,11 @@
 			<!-- 모바일 드로어 사이드바 -->
 			{#if sidebarOpen}
 				<div class="fixed inset-0 z-40 flex lg:hidden">
-					<div class="w-64 transform bg-white p-4 pt-20 shadow-2xl transition-transform duration-300" role="dialog" aria-modal="true">
+					<div
+						class="w-64 transform bg-white p-4 pt-20 shadow-2xl transition-transform duration-300"
+						role="dialog"
+						aria-modal="true"
+					>
 						<div class="mb-4 flex items-center justify-between">
 							<h2 class="text-lg font-bold text-gray-900">정의서 파일</h2>
 							<div class="flex items-center space-x-2">
@@ -495,8 +518,18 @@
 									aria-label="파일 관리"
 								>
 									<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+										/>
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+										/>
 									</svg>
 								</button>
 								<button
@@ -506,7 +539,12 @@
 									aria-label="사이드바 닫기"
 								>
 									<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M6 18L18 6M6 6l12 12"
+										/>
 									</svg>
 								</button>
 							</div>
@@ -519,7 +557,8 @@
 										handleFileSelect(file);
 										sidebarOpen = false;
 									}}
-									class="w-full rounded-lg px-4 py-2 text-left text-sm font-medium transition-colors duration-200 {selectedFilename === file
+									class="w-full rounded-lg px-4 py-2 text-left text-sm font-medium transition-colors duration-200 {selectedFilename ===
+									file
 										? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
 										: 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}"
 								>
@@ -541,7 +580,9 @@
 			<main class="w-full min-w-0 overflow-x-hidden">
 				<!-- 페이지 헤더 -->
 				<div class="mb-10">
-					<div class="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+					<div
+						class="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0"
+					>
 						<div class="flex items-center space-x-4">
 							<!-- 모바일 사이드바 토글 버튼 -->
 							<button
@@ -551,11 +592,18 @@
 								aria-label="사이드바 열기"
 							>
 								<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M4 6h16M4 12h16M4 18h16"
+									/>
 								</svg>
 							</button>
 							<div>
-								<h1 class="bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-4xl font-bold text-transparent">
+								<h1
+									class="bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-4xl font-bold text-transparent"
+								>
 									데이터베이스 정의서
 								</h1>
 								<p class="mt-2 text-sm text-gray-500">
@@ -577,8 +625,18 @@
 								disabled={loading}
 								class="group inline-flex items-center space-x-2 rounded-xl border border-purple-200/50 bg-purple-50/80 px-6 py-3 text-sm font-medium text-purple-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-purple-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
 							>
-								<svg class="h-5 w-5 transition-transform duration-200 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+								<svg
+									class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M12 4v16m8-8H4"
+									/>
 								</svg>
 								<span>새 정의서 추가</span>
 							</button>
@@ -590,8 +648,18 @@
 								disabled={loading}
 								class="group inline-flex items-center space-x-2 rounded-xl border border-green-200/50 bg-green-50/80 px-6 py-3 text-sm font-medium text-green-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-green-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
 							>
-								<svg class="h-5 w-5 transition-transform duration-200 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+								<svg
+									class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+									/>
 								</svg>
 								<span>{loading ? '준비 중' : 'XLSX 다운로드'}</span>
 							</button>
@@ -603,8 +671,20 @@
 								disabled={loading}
 								class="btn btn-secondary group space-x-2 rounded-xl px-6 py-3 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
 							>
-								<svg class="h-5 w-5 transition-transform duration-200 {loading ? 'animate-spin' : 'group-hover:rotate-180'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+								<svg
+									class="h-5 w-5 transition-transform duration-200 {loading
+										? 'animate-spin'
+										: 'group-hover:rotate-180'}"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+									/>
 								</svg>
 								<span>{loading ? '로딩 중' : '새로고침'}</span>
 							</button>
@@ -640,7 +720,9 @@
 				/>
 
 				<!-- 검색 영역 -->
-				<div class="mb-8 rounded-2xl border border-gray-200/50 bg-white/80 p-4 shadow-sm backdrop-blur-sm">
+				<div
+					class="mb-8 rounded-2xl border border-gray-200/50 bg-white/80 p-4 shadow-sm backdrop-blur-sm"
+				>
 					<div class="mb-6">
 						<h2 class="text-2xl font-bold text-gray-900">통합검색</h2>
 						<p class="mt-2 text-gray-600">기관명, 논리DB명, 물리DB명 등으로 검색하세요</p>
@@ -664,7 +746,9 @@
 				</div>
 
 				<!-- 결과 테이블 영역 -->
-				<div class="min-w-0 rounded-2xl border border-gray-200/50 bg-white/80 p-8 shadow-sm backdrop-blur-sm">
+				<div
+					class="min-w-0 rounded-2xl border border-gray-200/50 bg-white/80 p-8 shadow-sm backdrop-blur-sm"
+				>
 					<div class="mb-6 flex items-center justify-between">
 						<div>
 							<h2 class="text-2xl font-bold text-gray-900">검색 결과</h2>
@@ -680,7 +764,12 @@
 						{#if entries.length > 0}
 							<div class="flex items-center space-x-2 text-sm text-gray-500">
 								<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+									/>
 								</svg>
 								<span>페이지 {currentPage} / {totalPages}</span>
 							</div>
@@ -713,4 +802,3 @@
 		</div>
 	</div>
 </div>
-

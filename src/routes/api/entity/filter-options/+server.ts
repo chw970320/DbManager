@@ -41,14 +41,12 @@ export async function GET({ url }: RequestEvent) {
 		// Nullable 필드 목록 (빈값도 옵션에 포함)
 		// 필수 필드: logicalDbName, schemaName, entityName, primaryIdentifier, tableKoreanName
 		// nullable 필드: superTypeEntityName
-		const nullableColumns = new Set([
-			'superTypeEntityName'
-		]);
+		const nullableColumns = new Set(['superTypeEntityName']);
 
 		filterableColumns.forEach((columnKey) => {
 			const values = new Set<string>();
 			let hasEmptyValue = false;
-			
+
 			entityData.entries.forEach((entry) => {
 				const value = entry[columnKey as keyof EntityEntry];
 				if (value !== null && value !== undefined && value !== '') {
@@ -57,7 +55,7 @@ export async function GET({ url }: RequestEvent) {
 					hasEmptyValue = true;
 				}
 			});
-			
+
 			const sortedValues = Array.from(values).sort();
 			// Nullable 필드이고 빈값이 있으면 "(빈값)" 옵션 추가
 			if (nullableColumns.has(columnKey) && hasEmptyValue) {

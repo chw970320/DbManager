@@ -856,4 +856,3 @@ export function exportColumnToXlsxBuffer(data: ColumnEntry[]): Buffer {
 		);
 	}
 }
-

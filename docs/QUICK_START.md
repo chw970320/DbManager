@@ -76,6 +76,7 @@ pnpm run dev
 ### 단계 4: 매핑 검증 확인
 
 생성된 용어의 매핑 상태를 확인:
+
 - ✅ **용어명 매핑**: 단어집의 `standardName`과 일치하는지 확인
 - ✅ **컬럼명 매핑**: 단어집의 `abbreviation`과 일치하는지 확인
 - ✅ **도메인 매핑**: 도메인의 `standardDomainName`과 일치하는지 확인
@@ -159,4 +160,3 @@ docker-compose up --build
 ---
 
 **마지막 업데이트**: 2024-12-12
-

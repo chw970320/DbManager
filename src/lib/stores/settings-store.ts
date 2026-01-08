@@ -30,16 +30,16 @@ if (browser) {
 		.then((res) => res.json())
 		.then((result) => {
 			if (result.success && result.data) {
-			settingsStore.set({
-				showVocabularySystemFiles: result.data.showVocabularySystemFiles ?? false,
-				showDomainSystemFiles: result.data.showDomainSystemFiles ?? false,
-				showTermSystemFiles: result.data.showTermSystemFiles ?? false,
-				showDatabaseSystemFiles: result.data.showDatabaseSystemFiles ?? false,
-				showEntitySystemFiles: result.data.showEntitySystemFiles ?? false,
-				showAttributeSystemFiles: result.data.showAttributeSystemFiles ?? false,
-				showTableSystemFiles: result.data.showTableSystemFiles ?? false,
-				showColumnSystemFiles: result.data.showColumnSystemFiles ?? false
-			});
+				settingsStore.set({
+					showVocabularySystemFiles: result.data.showVocabularySystemFiles ?? false,
+					showDomainSystemFiles: result.data.showDomainSystemFiles ?? false,
+					showTermSystemFiles: result.data.showTermSystemFiles ?? false,
+					showDatabaseSystemFiles: result.data.showDatabaseSystemFiles ?? false,
+					showEntitySystemFiles: result.data.showEntitySystemFiles ?? false,
+					showAttributeSystemFiles: result.data.showAttributeSystemFiles ?? false,
+					showTableSystemFiles: result.data.showTableSystemFiles ?? false,
+					showColumnSystemFiles: result.data.showColumnSystemFiles ?? false
+				});
 			}
 		})
 		.catch((error) => {

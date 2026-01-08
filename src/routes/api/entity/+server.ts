@@ -45,14 +45,23 @@ export async function GET({ url }: RequestEvent) {
 		});
 
 		if (page < 1 || limit < 1 || limit > 100) {
-			return json({ success: false, error: '잘못된 페이지네이션 파라미터입니다.' } as DbDesignApiResponse, { status: 400 });
+			return json(
+				{ success: false, error: '잘못된 페이지네이션 파라미터입니다.' } as DbDesignApiResponse,
+				{ status: 400 }
+			);
 		}
 
 		let entityData: EntityData;
 		try {
 			entityData = await loadEntityData(filename);
 		} catch (loadError) {
-			return json({ success: false, error: loadError instanceof Error ? loadError.message : '데이터 로드 실패' } as DbDesignApiResponse, { status: 500 });
+			return json(
+				{
+					success: false,
+					error: loadError instanceof Error ? loadError.message : '데이터 로드 실패'
+				} as DbDesignApiResponse,
+				{ status: 500 }
+			);
 		}
 
 		let filteredEntries = entityData.entries;
@@ -66,11 +75,16 @@ export async function GET({ url }: RequestEvent) {
 			};
 			filteredEntries = entityData.entries.filter((entry) => {
 				switch (searchField) {
-					case 'entityName': return matchFn(entry.entityName);
-					case 'schemaName': return matchFn(entry.schemaName);
-					case 'primaryIdentifier': return matchFn(entry.primaryIdentifier);
-					case 'superTypeEntityName': return matchFn(entry.superTypeEntityName);
-					case 'tableKoreanName': return matchFn(entry.tableKoreanName);
+					case 'entityName':
+						return matchFn(entry.entityName);
+					case 'schemaName':
+						return matchFn(entry.schemaName);
+					case 'primaryIdentifier':
+						return matchFn(entry.primaryIdentifier);
+					case 'superTypeEntityName':
+						return matchFn(entry.superTypeEntityName);
+					case 'tableKoreanName':
+						return matchFn(entry.tableKoreanName);
 					case 'all':
 					default:
 						return (
@@ -102,7 +116,10 @@ export async function GET({ url }: RequestEvent) {
 			for (const config of sortConfigs) {
 				const aValue = a[config.column as keyof EntityEntry];
 				const bValue = b[config.column as keyof EntityEntry];
-				if (aValue === null || aValue === undefined) { if (bValue === null || bValue === undefined) continue; return 1; }
+				if (aValue === null || aValue === undefined) {
+					if (bValue === null || bValue === undefined) continue;
+					return 1;
+				}
 				if (bValue === null || bValue === undefined) return -1;
 				const comparison = String(aValue).localeCompare(String(bValue), 'ko');
 				if (comparison !== 0) return config.direction === 'desc' ? -comparison : comparison;
@@ -114,17 +131,33 @@ export async function GET({ url }: RequestEvent) {
 		const paginatedEntries = filteredEntries.slice(startIndex, startIndex + limit);
 		const totalPages = Math.ceil(filteredEntries.length / limit);
 
-		return json({
-			success: true,
-			data: {
-				entries: paginatedEntries,
-				pagination: { currentPage: page, totalPages, totalCount: filteredEntries.length, limit, hasNextPage: page < totalPages, hasPrevPage: page > 1 },
-				lastUpdated: entityData.lastUpdated
-			}
-		} as DbDesignApiResponse, { status: 200 });
+		return json(
+			{
+				success: true,
+				data: {
+					entries: paginatedEntries,
+					pagination: {
+						currentPage: page,
+						totalPages,
+						totalCount: filteredEntries.length,
+						limit,
+						hasNextPage: page < totalPages,
+						hasPrevPage: page > 1
+					},
+					lastUpdated: entityData.lastUpdated
+				}
+			} as DbDesignApiResponse,
+			{ status: 200 }
+		);
 	} catch (error) {
 		console.error('엔터티 정의서 조회 중 오류:', error);
-		return json({ success: false, error: '서버에서 데이터 조회 중 오류가 발생했습니다.' } as DbDesignApiResponse, { status: 500 });
+		return json(
+			{
+				success: false,
+				error: '서버에서 데이터 조회 중 오류가 발생했습니다.'
+			} as DbDesignApiResponse,
+			{ status: 500 }
+		);
 	}
 }
 
@@ -133,8 +166,16 @@ export async function POST({ request, url }: RequestEvent) {
 		const filename = url.searchParams.get('filename') || 'entity.json';
 		const body = await request.json();
 
-		const requiredFields = ['logicalDbName', 'schemaName', 'entityName', 'primaryIdentifier', 'tableKoreanName'];
-		const missingFields = requiredFields.filter((field) => !body[field] || (typeof body[field] === 'string' && body[field].trim() === ''));
+		const requiredFields = [
+			'logicalDbName',
+			'schemaName',
+			'entityName',
+			'primaryIdentifier',
+			'tableKoreanName'
+		];
+		const missingFields = requiredFields.filter(
+			(field) => !body[field] || (typeof body[field] === 'string' && body[field].trim() === '')
+		);
 
 		if (missingFields.length > 0) {
 			return json(
@@ -148,8 +189,11 @@ export async function POST({ request, url }: RequestEvent) {
 		}
 
 		let entityData: EntityData;
-		try { entityData = await loadEntityData(filename); }
-		catch { entityData = { entries: [], lastUpdated: new Date().toISOString(), totalCount: 0 }; }
+		try {
+			entityData = await loadEntityData(filename);
+		} catch {
+			entityData = { entries: [], lastUpdated: new Date().toISOString(), totalCount: 0 };
+		}
 
 		const now = new Date().toISOString();
 		const newEntry: EntityEntry = {
@@ -170,10 +214,23 @@ export async function POST({ request, url }: RequestEvent) {
 		entityData.totalCount = entityData.entries.length;
 		await saveEntityData(entityData, filename);
 
-		return json({ success: true, data: newEntry, message: '엔터티 정의서가 성공적으로 추가되었습니다.' } as DbDesignApiResponse, { status: 201 });
+		return json(
+			{
+				success: true,
+				data: newEntry,
+				message: '엔터티 정의서가 성공적으로 추가되었습니다.'
+			} as DbDesignApiResponse,
+			{ status: 201 }
+		);
 	} catch (error) {
 		console.error('엔터티 정의서 추가 중 오류:', error);
-		return json({ success: false, error: '서버에서 데이터 추가 중 오류가 발생했습니다.' } as DbDesignApiResponse, { status: 500 });
+		return json(
+			{
+				success: false,
+				error: '서버에서 데이터 추가 중 오류가 발생했습니다.'
+			} as DbDesignApiResponse,
+			{ status: 500 }
+		);
 	}
 }
 
@@ -185,8 +242,18 @@ export async function PUT({ request, url }: RequestEvent) {
 
 		if (!id) return json({ success: false, error: 'ID가 필요합니다.' }, { status: 400 });
 
-		const requiredFields = ['logicalDbName', 'schemaName', 'entityName', 'primaryIdentifier', 'tableKoreanName'];
-		const missingFields = requiredFields.filter((field) => !updateFields[field] || (typeof updateFields[field] === 'string' && updateFields[field].trim() === ''));
+		const requiredFields = [
+			'logicalDbName',
+			'schemaName',
+			'entityName',
+			'primaryIdentifier',
+			'tableKoreanName'
+		];
+		const missingFields = requiredFields.filter(
+			(field) =>
+				!updateFields[field] ||
+				(typeof updateFields[field] === 'string' && updateFields[field].trim() === '')
+		);
 
 		if (missingFields.length > 0) {
 			return json(
@@ -201,12 +268,19 @@ export async function PUT({ request, url }: RequestEvent) {
 
 		const entityData = await loadEntityData(filename);
 		const entryIndex = entityData.entries.findIndex((e) => e.id === id);
-		if (entryIndex === -1) return json({ success: false, error: '수정할 데이터를 찾을 수 없습니다.' }, { status: 404 });
+		if (entryIndex === -1)
+			return json({ success: false, error: '수정할 데이터를 찾을 수 없습니다.' }, { status: 404 });
 
-		entityData.entries[entryIndex] = { ...safeMerge(entityData.entries[entryIndex], updateFields), updatedAt: new Date().toISOString() };
+		entityData.entries[entryIndex] = {
+			...safeMerge(entityData.entries[entryIndex], updateFields),
+			updatedAt: new Date().toISOString()
+		};
 		await saveEntityData(entityData, filename);
 
-		return json({ success: true, data: entityData.entries[entryIndex], message: '수정 완료' }, { status: 200 });
+		return json(
+			{ success: true, data: entityData.entries[entryIndex], message: '수정 완료' },
+			{ status: 200 }
+		);
 	} catch (error) {
 		console.error('엔터티 정의서 수정 중 오류:', error);
 		return json({ success: false, error: '서버 오류' }, { status: 500 });
@@ -220,7 +294,8 @@ export async function DELETE({ url }: RequestEvent) {
 		if (!id) return json({ success: false, error: '삭제할 ID가 필요합니다.' }, { status: 400 });
 
 		const entityData = await loadEntityData(filename);
-		if (!entityData.entries.find((e) => e.id === id)) return json({ success: false, error: '삭제할 데이터를 찾을 수 없습니다.' }, { status: 404 });
+		if (!entityData.entries.find((e) => e.id === id))
+			return json({ success: false, error: '삭제할 데이터를 찾을 수 없습니다.' }, { status: 404 });
 
 		entityData.entries = entityData.entries.filter((e) => e.id !== id);
 		await saveEntityData(entityData, filename);
@@ -231,4 +306,3 @@ export async function DELETE({ url }: RequestEvent) {
 		return json({ success: false, error: '서버 오류' }, { status: 500 });
 	}
 }
-

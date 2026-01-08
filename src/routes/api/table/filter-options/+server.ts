@@ -60,7 +60,7 @@ export async function GET({ url }: RequestEvent) {
 		filterableColumns.forEach((columnKey) => {
 			const values = new Set<string>();
 			let hasEmptyValue = false;
-			
+
 			tableData.entries.forEach((entry) => {
 				const value = entry[columnKey as keyof TableEntry];
 				if (value !== null && value !== undefined && value !== '') {
@@ -69,7 +69,7 @@ export async function GET({ url }: RequestEvent) {
 					hasEmptyValue = true;
 				}
 			});
-			
+
 			const sortedValues = Array.from(values).sort();
 			// Nullable 필드이고 빈값이 있으면 "(빈값)" 옵션 추가
 			if (nullableColumns.has(columnKey) && hasEmptyValue) {

@@ -97,7 +97,13 @@ export async function GET({ url }: RequestEvent) {
 		}
 
 		// 검색 필드 유효성 검증
-		const validSearchFields = ['all', 'domainGroup', 'domainCategory', 'standardDomainName', 'physicalDataType'];
+		const validSearchFields = [
+			'all',
+			'domainGroup',
+			'domainCategory',
+			'standardDomainName',
+			'physicalDataType'
+		];
 		if (!validSearchFields.includes(searchField)) {
 			return json(
 				{

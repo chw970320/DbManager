@@ -196,8 +196,17 @@ export async function POST({ request, url }: RequestEvent) {
 		const filename = url.searchParams.get('filename') || 'database.json';
 		const body = await request.json();
 
-		const requiredFields = ['organizationName', 'departmentName', 'appliedTask', 'logicalDbName', 'physicalDbName', 'dbmsInfo'];
-		const missingFields = requiredFields.filter((field) => !body[field] || (typeof body[field] === 'string' && body[field].trim() === ''));
+		const requiredFields = [
+			'organizationName',
+			'departmentName',
+			'appliedTask',
+			'logicalDbName',
+			'physicalDbName',
+			'dbmsInfo'
+		];
+		const missingFields = requiredFields.filter(
+			(field) => !body[field] || (typeof body[field] === 'string' && body[field].trim() === '')
+		);
 
 		if (missingFields.length > 0) {
 			return json(
@@ -283,8 +292,19 @@ export async function PUT({ request, url }: RequestEvent) {
 			);
 		}
 
-		const requiredFields = ['organizationName', 'departmentName', 'appliedTask', 'logicalDbName', 'physicalDbName', 'dbmsInfo'];
-		const missingFields = requiredFields.filter((field) => !updateFields[field] || (typeof updateFields[field] === 'string' && updateFields[field].trim() === ''));
+		const requiredFields = [
+			'organizationName',
+			'departmentName',
+			'appliedTask',
+			'logicalDbName',
+			'physicalDbName',
+			'dbmsInfo'
+		];
+		const missingFields = requiredFields.filter(
+			(field) =>
+				!updateFields[field] ||
+				(typeof updateFields[field] === 'string' && updateFields[field].trim() === '')
+		);
 
 		if (missingFields.length > 0) {
 			return json(

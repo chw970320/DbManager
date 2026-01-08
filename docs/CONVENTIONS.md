@@ -487,6 +487,7 @@ async function toggleSystemFiles(event: Event) {
 ```
 
 **시스템 파일 표시 체크박스 필수**:
+
 ```svelte
 <label class="flex cursor-pointer items-center gap-2 text-xs text-gray-600">
 	<input
@@ -502,6 +503,7 @@ async function toggleSystemFiles(event: Event) {
 **⚠️ 중요**: 시스템 파일 표시 설정은 해당 목록 페이지(browse 페이지)에도 영향을 주어야 합니다. `settingsStore`를 구독하여 파일 필터링을 수행하세요.
 
 **새 파일 생성 입력 필드에 Enter 키 이벤트 필수**:
+
 ```svelte
 <input
 	type="text"
@@ -513,6 +515,7 @@ async function toggleSystemFiles(event: Event) {
 ```
 
 **이름변경/삭제 버튼은 아이콘으로 표시**:
+
 ```svelte
 <!-- 이름변경 아이콘 버튼 -->
 <button onclick={startRename} title="이름 변경">
@@ -531,6 +534,7 @@ FileUpload 컴포넌트는 **검증 교체 모드**와 **단순 교체 모드**�
 (병합 모드와 덮어쓰기 모드는 삭제되었습니다)
 
 **올바른 사용법**:
+
 ```svelte
 <FileUpload
 	disabled={isSubmitting || files.length === 0}
@@ -546,6 +550,7 @@ FileUpload 컴포넌트는 **검증 교체 모드**와 **단순 교체 모드**�
 ```
 
 **Props 설명**:
+
 - `apiEndpoint`: 업로드 API 엔드포인트
 - `contentType`: 사용자에게 표시할 데이터 타입명
 - `filename`: 대상 파일명
@@ -556,6 +561,7 @@ FileUpload 컴포넌트는 **검증 교체 모드**와 **단순 교체 모드**�
 - `onuploadcomplete`: 업로드 완료 콜백
 
 **❌ 잘못된 사용법** (사용하지 말 것):
+
 ```svelte
 <!-- 이러한 props는 존재하지 않습니다 -->
 <FileUpload
@@ -587,6 +593,7 @@ FileUpload 컴포넌트는 **검증 교체 모드**와 **단순 교체 모드**�
 ```
 
 **❌ 잘못된 예** (복수 컬럼 레이아웃 사용하지 말 것):
+
 ```svelte
 <div class="grid gap-4 md:grid-cols-2">
 	<!-- 2열 레이아웃 사용 금지 -->
@@ -598,6 +605,7 @@ FileUpload 컴포넌트는 **검증 교체 모드**와 **단순 교체 모드**�
 Editor 모달의 스크롤은 **내부 콘텐츠만** 스크롤되어야 합니다 (전체 모달 스크롤 금지):
 
 **✅ 올바른 패턴** (내부 콘텐츠만 스크롤):
+
 ```svelte
 <div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
 	<div class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl">
@@ -615,6 +623,7 @@ Editor 모달의 스크롤은 **내부 콘텐츠만** 스크롤되어야 합니�
 ```
 
 **❌ 잘못된 패턴** (전체 모달 스크롤):
+
 ```svelte
 <div class="max-h-[90vh] w-full overflow-y-auto rounded-2xl bg-white">
 	<div class="sticky top-0 z-10 border-b bg-white">헤더</div>
@@ -626,15 +635,16 @@ Editor 모달의 스크롤은 **내부 콘텐츠만** 스크롤되어야 합니�
 
 각 Browse 페이지에서 SearchBar의 `searchFields` props를 통해 검색 대상 필드를 정의합니다:
 
-| 메뉴 | 검색 필드 키 | 레이블 |
-|------|------------|--------|
-| **DB** | `organizationName`, `logicalDbName`, `physicalDbName` | 기관명, 논리DB명, 물리DB명 |
-| **엔터티** | `schemaName`, `entityName`, `primaryIdentifier`, `superTypeEntityName`, `tableKoreanName` | 스키마명, 엔터티명, 주식별자, 수퍼타입엔터티명, 테이블한글명 |
-| **속성** | `schemaName`, `entityName`, `attributeName` | 스키마명, 엔터티명, 속성명 |
+| 메뉴       | 검색 필드 키                                                                                      | 레이블                                                               |
+| ---------- | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| **DB**     | `organizationName`, `logicalDbName`, `physicalDbName`                                             | 기관명, 논리DB명, 물리DB명                                           |
+| **엔터티** | `schemaName`, `entityName`, `primaryIdentifier`, `superTypeEntityName`, `tableKoreanName`         | 스키마명, 엔터티명, 주식별자, 수퍼타입엔터티명, 테이블한글명         |
+| **속성**   | `schemaName`, `entityName`, `attributeName`                                                       | 스키마명, 엔터티명, 속성명                                           |
 | **테이블** | `physicalDbName`, `schemaName`, `tableEnglishName`, `tableKoreanName`, `tableType`, `subjectArea` | 물리DB명, 스키마명, 테이블영문명, 테이블한글명, 테이블유형, 주제영역 |
-| **컬럼** | `schemaName`, `tableEnglishName`, `columnEnglishName`, `columnKoreanName`, `dataType` | 스키마명, 테이블영문명, 컬럼영문명, 컬럼한글명, 자료타입 |
+| **컬럼**   | `schemaName`, `tableEnglishName`, `columnEnglishName`, `columnKoreanName`, `dataType`             | 스키마명, 테이블영문명, 컬럼영문명, 컬럼한글명, 자료타입             |
 
 **사용 예시**:
+
 ```svelte
 <SearchBar
 	bind:query={searchQuery}
@@ -651,6 +661,7 @@ Editor 모달의 스크롤은 **내부 콘텐츠만** 스크롤되어야 합니�
 ```
 
 **API 엔드포인트 검색 필터 구현**:
+
 - 해당 필드들을 모두 API의 `switch (searchField)` 블록에 포함
 - `case 'all'` 또는 `default`에서는 모든 검색 필드를 OR 조건으로 검색
 - 검색 파라미터: `q` 또는 `query` 모두 지원
@@ -676,7 +687,7 @@ const matchFn = (value: string | undefined | null) => {
 ```typescript
 function handleDelete() {
 	if (!entry.id) return;
-	
+
 	if (confirm('정말로 이 항목을 삭제하시겠습니까?')) {
 		const entryToDelete = { id: entry.id, ... };
 		dispatch('delete', entryToDelete);
@@ -685,6 +696,7 @@ function handleDelete() {
 ```
 
 **❌ 잘못된 패턴** (인라인 확인 UI 사용 금지):
+
 ```svelte
 let showDeleteConfirm = $state(false);
 <!-- ... -->
@@ -692,7 +704,7 @@ let showDeleteConfirm = $state(false);
 	<span>정말 삭제하시겠습니까?</span>
 	<button>확인</button><button>취소</button>
 {:else}
-	<button onclick={() => showDeleteConfirm = true}>삭제</button>
+	<button onclick={() => (showDeleteConfirm = true)}>삭제</button>
 {/if}
 ```
 
@@ -703,30 +715,33 @@ let showDeleteConfirm = $state(false);
 모든 Editor 컴포넌트와 API는 **동일한 필수 필드 목록**을 사용하여 validation을 수행합니다.
 
 **Editor 컴포넌트 (`validate()` 함수)**:
+
 ```typescript
 function validate(): boolean {
 	const newErrors: Record<string, string> = {};
-	
+
 	// 필수 필드 정의 (API와 동일)
 	if (!formData.field1?.trim()) newErrors.field1 = '필드1은 필수입니다.';
 	if (!formData.field2?.trim()) newErrors.field2 = '필드2는 필수입니다.';
-	
+
 	errors = newErrors;
 	return Object.keys(newErrors).length === 0;
 }
 ```
 
 **UI 표시**:
+
 - 필수 필드 라벨에 `<span class="text-red-500">*</span>` 표시
 - 에러 발생 시 빨간색 테두리 (`border-red-500`) 및 에러 메시지 표시
 - 저장 버튼 비활성화: `disabled={!isFormValid() || isSubmitting}`
 
 **API Validation (POST/PUT 핸들러)**:
+
 ```typescript
 // POST/PUT 핸들러 모두 동일한 패턴
 const requiredFields = ['field1', 'field2', 'field3'];
-const missingFields = requiredFields.filter((field) => 
-	!body[field] || (typeof body[field] === 'string' && body[field].trim() === '')
+const missingFields = requiredFields.filter(
+	(field) => !body[field] || (typeof body[field] === 'string' && body[field].trim() === '')
 );
 
 if (missingFields.length > 0) {
@@ -742,6 +757,7 @@ if (missingFields.length > 0) {
 ```
 
 **각 엔터티별 필수 필드**:
+
 - **Database**: `organizationName`, `departmentName`, `appliedTask`, `logicalDbName`, `physicalDbName`, `dbmsInfo`
 - **Entity**: `logicalDbName`, `schemaName`, `entityName`, `primaryIdentifier`, `tableKoreanName`
 - **Attribute**: 없음 (모든 필드 선택)
@@ -753,36 +769,39 @@ if (missingFields.length > 0) {
 목록 테이블에 새로운 컬럼을 추가할 때는 다음 패턴을 따릅니다:
 
 **1. 컬럼 정의 추가** (`columns` 배열):
+
 ```typescript
 const columns = [
 	// 기존 컬럼들...
 	{
 		key: 'newField',
 		label: '새 필드명',
-		sortable: true,  // 텍스트 필드는 true, 플래그/설명 필드는 false
-		filterable: true,  // 필터 가능 여부
-		filterType: 'text',  // 'text' 또는 'select'
+		sortable: true, // 텍스트 필드는 true, 플래그/설명 필드는 false
+		filterable: true, // 필터 가능 여부
+		filterType: 'text', // 'text' 또는 'select'
 		width: 'min-w-[150px]',
-		align: 'left'  // 'left', 'center', 'right'
+		align: 'left' // 'left', 'center', 'right'
 	}
 ];
 ```
 
 **2. 필터 옵션 API 업데이트** (`filter-options/+server.ts`):
+
 ```typescript
 const filterableColumns = [
 	// 기존 필터 가능한 컬럼들...
-	'newField'  // filterable: true인 경우 추가
+	'newField' // filterable: true인 경우 추가
 ];
 
 // Nullable 필드인 경우 nullableColumns에도 추가
 const nullableColumns = new Set([
 	// 기존 nullable 필드들...
-	'newField'  // nullable 필드인 경우 추가
+	'newField' // nullable 필드인 경우 추가
 ]);
 ```
 
 **3. 컬럼 설정 가이드라인**:
+
 - **sortable**: 텍스트/숫자 필드는 `true`, 설명/비고 필드는 `false`
 - **filterable**: 고유값이 많은 필드는 `true`, 설명 필드는 `false`
 - **filterType**: 고유값이 많은 필드는 `'text'`, 제한된 값 집합(Y/N, 코드값)은 `'select'`
@@ -815,8 +834,12 @@ function handleFilter(column: string, value: string | null) {
 		currentValue={activeFilters[column.key] || null}
 		options={filterOptions[column.key] || getUniqueValues(column.key)}
 		isOpen={openFilterColumn === column.key}
-		onOpen={(key) => { openFilterColumn = key; }}
-		onClose={() => { openFilterColumn = null; }}
+		onOpen={(key) => {
+			openFilterColumn = key;
+		}}
+		onClose={() => {
+			openFilterColumn = null;
+		}}
 		onApply={(value) => handleFilter(column.key, value)}
 		onClear={() => handleFilter(column.key, null)}
 	/>
@@ -824,6 +847,7 @@ function handleFilter(column: string, value: string | null) {
 ```
 
 **⚠️ 잘못된 패턴** (사용하지 말 것):
+
 ```svelte
 <!-- 이전 방식 - 사용하지 말 것 -->
 <ColumnFilter
@@ -836,6 +860,7 @@ function handleFilter(column: string, value: string | null) {
 ```
 
 **Props 설명**:
+
 - `columnKey`: 컬럼 식별자
 - `columnLabel`: 사용자에게 표시할 컬럼 라벨
 - `filterType`: 필터 유형 (`'text'` | `'select'`)
@@ -874,7 +899,7 @@ async function loadFiles() {
 	if (result.success && Array.isArray(result.data)) {
 		allFiles = result.data;
 		files = filterXxxFiles(allFiles, showSystemFiles);
-		
+
 		// 현재 선택된 파일이 목록에 없으면 첫 번째 파일 선택
 		if (!files.includes(selectedFilename) && files.length > 0) {
 			handleFileSelect(files[0]);
@@ -933,19 +958,20 @@ for (let i = 0; i < dataRows.length; i++) {
 ```
 
 **⚠️ 주의사항**:
+
 - 엑셀 파일에 번호(순번) 열이 **없다고 가정**
 - A열 = `row[0]`, B열 = `row[1]`, ...
 - **절대로** `row[1]`부터 시작하지 말 것 (한 칸 밀림 발생)
 
 **각 정의서별 컬럼 매핑**:
 
-| 정의서 | A열 | B열 | C열 | ... |
-|--------|-----|-----|-----|-----|
-| 데이터베이스 | 기관명 | 부서명 | 적용업무 | ... |
-| 엔터티 | 논리DB명 | 스키마명 | 엔터티명 | ... |
-| 속성 | 스키마명 | 엔터티명 | 속성명 | ... |
-| 테이블 | 물리DB명 | 테이블소유자 | 주제영역 | ... |
-| 컬럼 | 사업범위여부 | 주제영역 | 스키마명 | ... |
+| 정의서       | A열          | B열          | C열      | ... |
+| ------------ | ------------ | ------------ | -------- | --- |
+| 데이터베이스 | 기관명       | 부서명       | 적용업무 | ... |
+| 엔터티       | 논리DB명     | 스키마명     | 엔터티명 | ... |
+| 속성         | 스키마명     | 엔터티명     | 속성명   | ... |
+| 테이블       | 물리DB명     | 테이블소유자 | 주제영역 | ... |
+| 컬럼         | 사업범위여부 | 주제영역     | 스키마명 | ... |
 
 ---
 
@@ -994,7 +1020,9 @@ export async function POST({ request, url }: RequestEvent) {
 
 		// 2. 필수 필드 검증 (v1.8.0 패턴)
 		const requiredFields = ['field1', 'field2', 'field3'];
-		const missingFields = requiredFields.filter((field) => !body[field] || (typeof body[field] === 'string' && body[field].trim() === ''));
+		const missingFields = requiredFields.filter(
+			(field) => !body[field] || (typeof body[field] === 'string' && body[field].trim() === '')
+		);
 
 		if (missingFields.length > 0) {
 			return json(
@@ -1042,7 +1070,11 @@ export async function PUT({ request, url }: RequestEvent) {
 
 		// 필수 필드 검증 (v1.8.0 패턴)
 		const requiredFields = ['field1', 'field2', 'field3'];
-		const missingFields = requiredFields.filter((field) => !updateFields[field] || (typeof updateFields[field] === 'string' && updateFields[field].trim() === ''));
+		const missingFields = requiredFields.filter(
+			(field) =>
+				!updateFields[field] ||
+				(typeof updateFields[field] === 'string' && updateFields[field].trim() === '')
+		);
 
 		if (missingFields.length > 0) {
 			return json(
@@ -1443,17 +1475,17 @@ Closes #123
 
 ## 변경 이력
 
-| 버전  | 날짜    | 변경 내용      | 작성자 |
-| ----- | ------- | -------------- | ------ |
-| 1.0.0 | 2024-12 | 초기 문서 작성 | -      |
-| 1.1.0 | 2026-01 | FileManager/Editor 컴포넌트 패턴 추가 | -      |
-| 1.2.0 | 2026-01 | ColumnFilter, Browse 페이지, XLSX 파서 패턴 추가 | -      |
-| 1.3.0 | 2026-01 | Editor 스크롤 패턴, SearchBar 검색 필드 정의 패턴 추가 | -      |
-| 1.4.0 | 2026-01 | API 검색 파라미터 통일, Editor 삭제 버튼 패턴 추가 | -      |
-| 1.5.0 | 2026-01 | 정확히 일치 검색(exact) 파라미터 지원 패턴 추가 | -      |
+| 버전  | 날짜    | 변경 내용                                                          | 작성자 |
+| ----- | ------- | ------------------------------------------------------------------ | ------ |
+| 1.0.0 | 2024-12 | 초기 문서 작성                                                     | -      |
+| 1.1.0 | 2026-01 | FileManager/Editor 컴포넌트 패턴 추가                              | -      |
+| 1.2.0 | 2026-01 | ColumnFilter, Browse 페이지, XLSX 파서 패턴 추가                   | -      |
+| 1.3.0 | 2026-01 | Editor 스크롤 패턴, SearchBar 검색 필드 정의 패턴 추가             | -      |
+| 1.4.0 | 2026-01 | API 검색 파라미터 통일, Editor 삭제 버튼 패턴 추가                 | -      |
+| 1.5.0 | 2026-01 | 정확히 일치 검색(exact) 파라미터 지원 패턴 추가                    | -      |
 | 1.6.0 | 2026-01 | filter-options API 패턴, 전체 데이터 기준 필터 옵션 로드 패턴 추가 | -      |
-| 1.7.0 | 2026-01 | nullable 필드 빈값 필터 옵션 추가 패턴 | -      |
-| 1.8.0 | 2026-01 | 필수 필드 validation 패턴, 테이블 컬럼 추가 패턴 | -      |
+| 1.7.0 | 2026-01 | nullable 필드 빈값 필터 옵션 추가 패턴                             | -      |
+| 1.8.0 | 2026-01 | 필수 필드 validation 패턴, 테이블 컬럼 추가 패턴                   | -      |
 
 ---
 

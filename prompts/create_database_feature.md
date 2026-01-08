@@ -135,3 +135,5 @@ isDomainCategoryMapped, isMappedTerm, isMappedColumn, isMappedDomain, unmappedTe
 - Attribute에도 필수 항목이 존재하며 스키마명, 엔터티명, 속성명, 속성유형이 필수야
 - Domain에는 논리 데이터타입이라는 항목이 실제로는 존재하지 않아. 관련된 모든 것들을 삭제해야 해
 - Entity에서 수퍼타입엔터티명을 수정해도 값 변경이 안 되는데 확인해봐. 원인을 발견하면 Entity 뿐만 아니라 다른 곳에서도 동일한 문제 없는지 사전 점검해
+
+---

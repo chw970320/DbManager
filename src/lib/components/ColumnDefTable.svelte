@@ -10,12 +10,23 @@
 	type FilterEvent = { column: string; value: string | null };
 
 	let props = $props<{
-		entries?: ColumnEntry[]; loading?: boolean; searchQuery?: string; totalCount?: number;
-		currentPage?: number; totalPages?: number; pageSize?: number;
-		sortConfig?: Record<string, 'asc' | 'desc' | null>; searchField?: string; _selectedFilename?: string;
-		activeFilters?: Record<string, string | null>; filterOptions?: Record<string, string[]>;
-		onsort: (detail: SortEvent) => void; onpagechange: (detail: PageChangeEvent) => void;
-		onfilter?: (detail: FilterEvent) => void; onentryclick?: (detail: EntryClickEvent) => void; onClearAllFilters?: () => void;
+		entries?: ColumnEntry[];
+		loading?: boolean;
+		searchQuery?: string;
+		totalCount?: number;
+		currentPage?: number;
+		totalPages?: number;
+		pageSize?: number;
+		sortConfig?: Record<string, 'asc' | 'desc' | null>;
+		searchField?: string;
+		_selectedFilename?: string;
+		activeFilters?: Record<string, string | null>;
+		filterOptions?: Record<string, string[]>;
+		onsort: (detail: SortEvent) => void;
+		onpagechange: (detail: PageChangeEvent) => void;
+		onfilter?: (detail: FilterEvent) => void;
+		onentryclick?: (detail: EntryClickEvent) => void;
+		onClearAllFilters?: () => void;
 	}>();
 
 	const dispatch = createEventDispatcher<{ entryclick: EntryClickEvent; filter: FilterEvent }>();
@@ -46,29 +57,206 @@
 	}
 
 	type ColumnAlignment = 'left' | 'center' | 'right';
-	const columns: Array<{ key: string; label: string; sortable: boolean; filterable: boolean; filterType?: 'text' | 'select'; width: string; align: ColumnAlignment }> = [
-		{ key: 'scopeFlag', label: '사업범위여부', sortable: false, filterable: true, filterType: 'select', width: 'min-w-[100px]', align: 'center' },
-		{ key: 'subjectArea', label: '주제영역', sortable: true, filterable: true, filterType: 'text', width: 'min-w-[120px]', align: 'left' },
-		{ key: 'schemaName', label: '스키마명', sortable: true, filterable: true, filterType: 'text', width: 'min-w-[120px]', align: 'left' },
-		{ key: 'tableEnglishName', label: '테이블영문명', sortable: true, filterable: true, filterType: 'text', width: 'min-w-[150px]', align: 'left' },
-		{ key: 'columnEnglishName', label: '컬럼영문명', sortable: true, filterable: true, filterType: 'text', width: 'min-w-[150px]', align: 'left' },
-		{ key: 'columnKoreanName', label: '컬럼한글명', sortable: true, filterable: true, filterType: 'text', width: 'min-w-[150px]', align: 'left' },
-		{ key: 'relatedEntityName', label: '연관엔터티명', sortable: true, filterable: true, filterType: 'text', width: 'min-w-[150px]', align: 'left' },
-		{ key: 'dataType', label: '자료타입', sortable: false, filterable: true, filterType: 'select', width: 'min-w-[100px]', align: 'center' },
-		{ key: 'dataLength', label: '자료길이', sortable: false, filterable: false, width: 'min-w-[80px]', align: 'center' },
-		{ key: 'dataDecimalLength', label: '자료소수점길이', sortable: false, filterable: false, width: 'min-w-[100px]', align: 'center' },
-		{ key: 'dataFormat', label: '자료형식', sortable: false, filterable: false, width: 'min-w-[100px]', align: 'left' },
-		{ key: 'notNullFlag', label: 'NOT NULL', sortable: false, filterable: true, filterType: 'select', width: 'min-w-[80px]', align: 'center' },
-		{ key: 'pkInfo', label: 'PK', sortable: false, filterable: true, filterType: 'select', width: 'min-w-[60px]', align: 'center' },
-		{ key: 'fkInfo', label: 'FK', sortable: false, filterable: true, filterType: 'select', width: 'min-w-[60px]', align: 'center' },
-		{ key: 'indexName', label: '인덱스명', sortable: false, filterable: false, width: 'min-w-[100px]', align: 'left' },
-		{ key: 'indexOrder', label: '인덱스순번', sortable: false, filterable: false, width: 'min-w-[100px]', align: 'center' },
-		{ key: 'akInfo', label: 'AK', sortable: false, filterable: true, filterType: 'select', width: 'min-w-[60px]', align: 'center' },
-		{ key: 'constraint', label: '제약조건', sortable: false, filterable: false, width: 'min-w-[150px]', align: 'left' },
-		{ key: 'personalInfoFlag', label: '개인정보여부', sortable: false, filterable: true, filterType: 'select', width: 'min-w-[100px]', align: 'center' },
-		{ key: 'encryptionFlag', label: '암호화여부', sortable: false, filterable: true, filterType: 'select', width: 'min-w-[100px]', align: 'center' },
-		{ key: 'publicFlag', label: '공개/비공개여부', sortable: false, filterable: true, filterType: 'select', width: 'min-w-[120px]', align: 'center' },
-		{ key: 'columnDescription', label: '컬럼설명', sortable: false, filterable: false, width: 'min-w-[200px]', align: 'left' }
+	const columns: Array<{
+		key: string;
+		label: string;
+		sortable: boolean;
+		filterable: boolean;
+		filterType?: 'text' | 'select';
+		width: string;
+		align: ColumnAlignment;
+	}> = [
+		{
+			key: 'scopeFlag',
+			label: '사업범위여부',
+			sortable: false,
+			filterable: true,
+			filterType: 'select',
+			width: 'min-w-[100px]',
+			align: 'center'
+		},
+		{
+			key: 'subjectArea',
+			label: '주제영역',
+			sortable: true,
+			filterable: true,
+			filterType: 'text',
+			width: 'min-w-[120px]',
+			align: 'left'
+		},
+		{
+			key: 'schemaName',
+			label: '스키마명',
+			sortable: true,
+			filterable: true,
+			filterType: 'text',
+			width: 'min-w-[120px]',
+			align: 'left'
+		},
+		{
+			key: 'tableEnglishName',
+			label: '테이블영문명',
+			sortable: true,
+			filterable: true,
+			filterType: 'text',
+			width: 'min-w-[150px]',
+			align: 'left'
+		},
+		{
+			key: 'columnEnglishName',
+			label: '컬럼영문명',
+			sortable: true,
+			filterable: true,
+			filterType: 'text',
+			width: 'min-w-[150px]',
+			align: 'left'
+		},
+		{
+			key: 'columnKoreanName',
+			label: '컬럼한글명',
+			sortable: true,
+			filterable: true,
+			filterType: 'text',
+			width: 'min-w-[150px]',
+			align: 'left'
+		},
+		{
+			key: 'relatedEntityName',
+			label: '연관엔터티명',
+			sortable: true,
+			filterable: true,
+			filterType: 'text',
+			width: 'min-w-[150px]',
+			align: 'left'
+		},
+		{
+			key: 'dataType',
+			label: '자료타입',
+			sortable: false,
+			filterable: true,
+			filterType: 'select',
+			width: 'min-w-[100px]',
+			align: 'center'
+		},
+		{
+			key: 'dataLength',
+			label: '자료길이',
+			sortable: false,
+			filterable: false,
+			width: 'min-w-[80px]',
+			align: 'center'
+		},
+		{
+			key: 'dataDecimalLength',
+			label: '자료소수점길이',
+			sortable: false,
+			filterable: false,
+			width: 'min-w-[100px]',
+			align: 'center'
+		},
+		{
+			key: 'dataFormat',
+			label: '자료형식',
+			sortable: false,
+			filterable: false,
+			width: 'min-w-[100px]',
+			align: 'left'
+		},
+		{
+			key: 'notNullFlag',
+			label: 'NOT NULL',
+			sortable: false,
+			filterable: true,
+			filterType: 'select',
+			width: 'min-w-[80px]',
+			align: 'center'
+		},
+		{
+			key: 'pkInfo',
+			label: 'PK',
+			sortable: false,
+			filterable: true,
+			filterType: 'select',
+			width: 'min-w-[60px]',
+			align: 'center'
+		},
+		{
+			key: 'fkInfo',
+			label: 'FK',
+			sortable: false,
+			filterable: true,
+			filterType: 'select',
+			width: 'min-w-[60px]',
+			align: 'center'
+		},
+		{
+			key: 'indexName',
+			label: '인덱스명',
+			sortable: false,
+			filterable: false,
+			width: 'min-w-[100px]',
+			align: 'left'
+		},
+		{
+			key: 'indexOrder',
+			label: '인덱스순번',
+			sortable: false,
+			filterable: false,
+			width: 'min-w-[100px]',
+			align: 'center'
+		},
+		{
+			key: 'akInfo',
+			label: 'AK',
+			sortable: false,
+			filterable: true,
+			filterType: 'select',
+			width: 'min-w-[60px]',
+			align: 'center'
+		},
+		{
+			key: 'constraint',
+			label: '제약조건',
+			sortable: false,
+			filterable: false,
+			width: 'min-w-[150px]',
+			align: 'left'
+		},
+		{
+			key: 'personalInfoFlag',
+			label: '개인정보여부',
+			sortable: false,
+			filterable: true,
+			filterType: 'select',
+			width: 'min-w-[100px]',
+			align: 'center'
+		},
+		{
+			key: 'encryptionFlag',
+			label: '암호화여부',
+			sortable: false,
+			filterable: true,
+			filterType: 'select',
+			width: 'min-w-[100px]',
+			align: 'center'
+		},
+		{
+			key: 'publicFlag',
+			label: '공개/비공개여부',
+			sortable: false,
+			filterable: true,
+			filterType: 'select',
+			width: 'min-w-[120px]',
+			align: 'center'
+		},
+		{
+			key: 'columnDescription',
+			label: '컬럼설명',
+			sortable: false,
+			filterable: false,
+			width: 'min-w-[200px]',
+			align: 'left'
+		}
 	];
 
 	let displayedPages = $derived(getPageNumbers());
@@ -76,7 +264,10 @@
 
 	function getUniqueValues(columnKey: string): string[] {
 		const values = new Set<string>();
-		entries.forEach((entry: ColumnEntry) => { const value = entry[columnKey as keyof ColumnEntry]; if (value !== null && value !== undefined && value !== '') values.add(String(value)); });
+		entries.forEach((entry: ColumnEntry) => {
+			const value = entry[columnKey as keyof ColumnEntry];
+			if (value !== null && value !== undefined && value !== '') values.add(String(value));
+		});
 		return Array.from(values).sort();
 	}
 
@@ -130,7 +321,11 @@
 		}
 	}
 
-	function highlightText(text: string | undefined | null, query: string, columnKey: string): string {
+	function highlightText(
+		text: string | undefined | null,
+		query: string,
+		columnKey: string
+	): string {
 		if (!text) return '-';
 		if (!query || (searchField !== 'all' && searchField !== columnKey)) return text;
 		const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
@@ -171,8 +366,19 @@
 						class="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
 						title="모든 필터 초기화"
 					>
-						<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+						<svg
+							class="h-4 w-4"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+							xmlns="http://www.w3.org/2000/svg"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M6 18L18 6M6 6l12 12"
+							/>
 						</svg>
 						필터 초기화
 					</button>
@@ -189,7 +395,14 @@
 					{#each columns as column (column.key)}
 						<th
 							scope="col"
-							class="relative text-nowrap px-6 py-3 text-xs font-medium uppercase tracking-wider text-gray-700 {column.width} whitespace-normal {column.align === 'center' ? 'text-center' : column.align === 'right' ? 'text-right' : 'text-left'} {column.sortable ? 'cursor-pointer hover:bg-gray-200' : ''} {column.filterable ? 'overflow-visible' : ''}"
+							class="relative text-nowrap px-6 py-3 text-xs font-medium uppercase tracking-wider text-gray-700 {column.width} whitespace-normal {column.align ===
+							'center'
+								? 'text-center'
+								: column.align === 'right'
+									? 'text-right'
+									: 'text-left'} {column.sortable
+								? 'cursor-pointer hover:bg-gray-200'
+								: ''} {column.filterable ? 'overflow-visible' : ''}"
 							class:bg-gray-200={getSortDirection(column.key) !== null}
 							onclick={() => column.sortable && handleSort(column.key)}
 							onkeydown={(e) => {
@@ -206,13 +419,33 @@
 								<span>{column.label}</span>
 								{#if column.sortable}
 									{@const colSortDir = getSortDirection(column.key)}
-									<svg class="h-4 w-4 {colSortDir !== null ? 'text-gray-600' : 'text-gray-400'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<svg
+										class="h-4 w-4 {colSortDir !== null ? 'text-gray-600' : 'text-gray-400'}"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+									>
 										{#if colSortDir === 'asc'}
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M5 15l7-7 7 7"
+											/>
 										{:else if colSortDir === 'desc'}
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M19 9l-7 7-7-7"
+											/>
 										{:else}
-											<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
+											<path
+												stroke-linecap="round"
+												stroke-linejoin="round"
+												stroke-width="2"
+												d="M8 9l4-4 4 4m0 6l-4 4-4-4"
+											/>
 										{/if}
 									</svg>
 								{/if}
@@ -224,8 +457,12 @@
 										currentValue={activeFilters[column.key] || null}
 										options={filterOptions[column.key] || getUniqueValues(column.key)}
 										isOpen={openFilterColumn === column.key}
-										onOpen={(key) => { openFilterColumn = key; }}
-										onClose={() => { openFilterColumn = null; }}
+										onOpen={(key) => {
+											openFilterColumn = key;
+										}}
+										onClose={() => {
+											openFilterColumn = null;
+										}}
 										onApply={(value) => handleFilter(column.key, value)}
 										onClear={() => handleFilter(column.key, null)}
 									/>
@@ -241,7 +478,9 @@
 					{#each Array(pageSize) as _, i (i)}
 						<tr class="animate-pulse">
 							{#each columns as _ (_.key)}
-								<td class="whitespace-nowrap px-6 py-4"><div class="h-4 w-3/4 rounded bg-gray-200"></div></td>
+								<td class="whitespace-nowrap px-6 py-4"
+									><div class="h-4 w-3/4 rounded bg-gray-200"></div></td
+								>
 							{/each}
 						</tr>
 					{/each}
@@ -249,8 +488,18 @@
 					<tr>
 						<td colspan={columns.length} class="px-6 py-12 text-center">
 							<div class="flex flex-col items-center space-y-3">
-								<svg class="h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+								<svg
+									class="h-12 w-12 text-gray-400"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+									/>
 								</svg>
 								<div class="text-gray-500">
 									{#if searchQuery}
@@ -281,9 +530,20 @@
 						>
 							{#each columns as column (column.key)}
 								{@const formattedValue = formatFieldValue(entry, column.key)}
-								<td class="whitespace-normal break-words px-6 py-4 text-sm text-gray-700 {column.align === 'center' ? 'text-center' : column.align === 'right' ? 'text-right' : 'text-left'}">
+								<td
+									class="whitespace-normal break-words px-6 py-4 text-sm text-gray-700 {column.align ===
+									'center'
+										? 'text-center'
+										: column.align === 'right'
+											? 'text-right'
+											: 'text-left'}"
+								>
 									<p class="break-words px-2 py-1">
-										{@html highlightText(formattedValue === '-' ? '' : formattedValue, searchQuery, column.key) || '-'}
+										{@html highlightText(
+											formattedValue === '-' ? '' : formattedValue,
+											searchQuery,
+											column.key
+										) || '-'}
 									</p>
 								</td>
 							{/each}
@@ -296,7 +556,9 @@
 
 	<!-- 페이지네이션 -->
 	{#if totalPages > 1}
-		<div class="flex flex-col items-center justify-between space-y-4 border-t border-gray-200 px-6 py-4 md:flex-row md:space-y-0">
+		<div
+			class="flex flex-col items-center justify-between space-y-4 border-t border-gray-200 px-6 py-4 md:flex-row md:space-y-0"
+		>
 			<div class="text-sm text-gray-600">
 				총 <span class="font-medium">{totalPages}</span> 페이지 중
 				<span class="font-medium">{currentPage}</span> 페이지
@@ -310,7 +572,11 @@
 				>
 					<span class="sr-only">이전</span>
 					<svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-						<path fill-rule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clip-rule="evenodd" />
+						<path
+							fill-rule="evenodd"
+							d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
+							clip-rule="evenodd"
+						/>
 					</svg>
 				</button>
 
@@ -319,12 +585,18 @@
 						<button
 							onclick={() => handlePageChange(page)}
 							disabled={loading}
-							class="relative inline-flex items-center px-4 py-2 text-sm font-semibold ring-1 ring-inset ring-gray-300 transition-colors focus:z-20 focus:outline-offset-0 disabled:cursor-not-allowed disabled:opacity-50 {currentPage === page ? 'z-10 bg-blue-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600' : 'text-gray-900 hover:bg-gray-50'}"
+							class="relative inline-flex items-center px-4 py-2 text-sm font-semibold ring-1 ring-inset ring-gray-300 transition-colors focus:z-20 focus:outline-offset-0 disabled:cursor-not-allowed disabled:opacity-50 {currentPage ===
+							page
+								? 'z-10 bg-blue-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600'
+								: 'text-gray-900 hover:bg-gray-50'}"
 						>
 							{page}
 						</button>
 					{:else}
-						<span class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300">...</span>
+						<span
+							class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300"
+							>...</span
+						>
 					{/if}
 				{/each}
 
@@ -335,7 +607,11 @@
 				>
 					<span class="sr-only">다음</span>
 					<svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-						<path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clip-rule="evenodd" />
+						<path
+							fill-rule="evenodd"
+							d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
+							clip-rule="evenodd"
+						/>
 					</svg>
 				</button>
 			</nav>

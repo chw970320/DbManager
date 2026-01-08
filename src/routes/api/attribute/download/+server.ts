@@ -14,10 +14,11 @@ export async function GET({ url }: RequestEvent) {
 		let entries: AttributeEntry[] = data.entries || [];
 
 		if (searchQuery) {
-			entries = entries.filter((entry) =>
-				entry.attributeName?.includes(searchQuery) ||
-				entry.entityName?.includes(searchQuery) ||
-				entry.attributeDescription?.includes(searchQuery)
+			entries = entries.filter(
+				(entry) =>
+					entry.attributeName?.includes(searchQuery) ||
+					entry.entityName?.includes(searchQuery) ||
+					entry.attributeDescription?.includes(searchQuery)
 			);
 		}
 
@@ -25,7 +26,9 @@ export async function GET({ url }: RequestEvent) {
 			const aValue = a[sortBy as keyof AttributeEntry] ?? '';
 			const bValue = b[sortBy as keyof AttributeEntry] ?? '';
 			if (typeof aValue === 'string' && typeof bValue === 'string') {
-				return sortOrder === 'desc' ? bValue.localeCompare(aValue, 'ko-KR') : aValue.localeCompare(bValue, 'ko-KR');
+				return sortOrder === 'desc'
+					? bValue.localeCompare(aValue, 'ko-KR')
+					: aValue.localeCompare(bValue, 'ko-KR');
 			}
 			return 0;
 		});
@@ -43,7 +46,9 @@ export async function GET({ url }: RequestEvent) {
 		});
 	} catch (error) {
 		console.error('XLSX 다운로드 중 오류:', error);
-		return json({ success: false, error: '서버에서 파일 생성 중 오류가 발생했습니다.' }, { status: 500 });
+		return json(
+			{ success: false, error: '서버에서 파일 생성 중 오류가 발생했습니다.' },
+			{ status: 500 }
+		);
 	}
 }
-

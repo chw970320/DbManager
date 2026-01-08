@@ -37,24 +37,22 @@
 	let isSubmitting = $state(false);
 
 	$effect(() => {
-		formData = {
-			physicalDbName: entry.physicalDbName || '',
-			tableOwner: entry.tableOwner || '',
-			subjectArea: entry.subjectArea || '',
-			schemaName: entry.schemaName || '',
-			tableEnglishName: entry.tableEnglishName || '',
-			tableKoreanName: entry.tableKoreanName || '',
-			tableType: entry.tableType || '',
-			relatedEntityName: entry.relatedEntityName || '',
-			tableDescription: entry.tableDescription || '',
-			businessClassification: entry.businessClassification || '',
-			retentionPeriod: entry.retentionPeriod || '',
-			tableVolume: entry.tableVolume || '',
-			occurrenceCycle: entry.occurrenceCycle || '',
-			publicFlag: entry.publicFlag || '',
-			nonPublicReason: entry.nonPublicReason || '',
-			openDataList: entry.openDataList || ''
-		};
+		formData.physicalDbName = entry.physicalDbName || '';
+		formData.tableOwner = entry.tableOwner || '';
+		formData.subjectArea = entry.subjectArea || '';
+		formData.schemaName = entry.schemaName || '';
+		formData.tableEnglishName = entry.tableEnglishName || '';
+		formData.tableKoreanName = entry.tableKoreanName || '';
+		formData.tableType = entry.tableType || '';
+		formData.relatedEntityName = entry.relatedEntityName || '';
+		formData.tableDescription = entry.tableDescription || '';
+		formData.businessClassification = entry.businessClassification || '';
+		formData.retentionPeriod = entry.retentionPeriod || '';
+		formData.tableVolume = entry.tableVolume || '';
+		formData.occurrenceCycle = entry.occurrenceCycle || '';
+		formData.publicFlag = entry.publicFlag || '';
+		formData.nonPublicReason = entry.nonPublicReason || '';
+		formData.openDataList = entry.openDataList || '';
 	});
 
 	function validate(): boolean {

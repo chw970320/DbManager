@@ -47,30 +47,28 @@
 	let isSubmitting = $state(false);
 
 	$effect(() => {
-		formData = {
-			scopeFlag: entry.scopeFlag || '',
-			subjectArea: entry.subjectArea || '',
-			schemaName: entry.schemaName || '',
-			tableEnglishName: entry.tableEnglishName || '',
-			columnEnglishName: entry.columnEnglishName || '',
-			columnKoreanName: entry.columnKoreanName || '',
-			columnDescription: entry.columnDescription || '',
-			relatedEntityName: entry.relatedEntityName || '',
-			dataType: entry.dataType || '',
-			dataLength: entry.dataLength || '',
-			dataDecimalLength: entry.dataDecimalLength || '',
-			dataFormat: entry.dataFormat || '',
-			notNullFlag: entry.notNullFlag || '',
-			pkInfo: entry.pkInfo || '',
-			fkInfo: entry.fkInfo || '',
-			indexName: entry.indexName || '',
-			indexOrder: entry.indexOrder || '',
-			akInfo: entry.akInfo || '',
-			constraint: entry.constraint || '',
-			personalInfoFlag: entry.personalInfoFlag || '',
-			encryptionFlag: entry.encryptionFlag || '',
-			publicFlag: entry.publicFlag || ''
-		};
+		formData.scopeFlag = entry.scopeFlag || '';
+		formData.subjectArea = entry.subjectArea || '';
+		formData.schemaName = entry.schemaName || '';
+		formData.tableEnglishName = entry.tableEnglishName || '';
+		formData.columnEnglishName = entry.columnEnglishName || '';
+		formData.columnKoreanName = entry.columnKoreanName || '';
+		formData.columnDescription = entry.columnDescription || '';
+		formData.relatedEntityName = entry.relatedEntityName || '';
+		formData.dataType = entry.dataType || '';
+		formData.dataLength = entry.dataLength || '';
+		formData.dataDecimalLength = entry.dataDecimalLength || '';
+		formData.dataFormat = entry.dataFormat || '';
+		formData.notNullFlag = entry.notNullFlag || '';
+		formData.pkInfo = entry.pkInfo || '';
+		formData.fkInfo = entry.fkInfo || '';
+		formData.indexName = entry.indexName || '';
+		formData.indexOrder = entry.indexOrder || '';
+		formData.akInfo = entry.akInfo || '';
+		formData.constraint = entry.constraint || '';
+		formData.personalInfoFlag = entry.personalInfoFlag || '';
+		formData.encryptionFlag = entry.encryptionFlag || '';
+		formData.publicFlag = entry.publicFlag || '';
 	});
 
 	function validate(): boolean {

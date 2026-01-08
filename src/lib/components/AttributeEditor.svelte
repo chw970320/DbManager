@@ -34,17 +34,15 @@
 	let isSubmitting = $state(false);
 
 	$effect(() => {
-		formData = {
-			schemaName: entry.schemaName || '',
-			entityName: entry.entityName || '',
-			attributeName: entry.attributeName || '',
-			attributeType: entry.attributeType || '',
-			requiredInput: entry.requiredInput || '',
-			identifierFlag: entry.identifierFlag || '',
-			refEntityName: entry.refEntityName || '',
-			refAttributeName: entry.refAttributeName || '',
-			attributeDescription: entry.attributeDescription || ''
-		};
+		formData.schemaName = entry.schemaName || '';
+		formData.entityName = entry.entityName || '';
+		formData.attributeName = entry.attributeName || '';
+		formData.attributeType = entry.attributeType || '';
+		formData.requiredInput = entry.requiredInput || '';
+		formData.identifierFlag = entry.identifierFlag || '';
+		formData.refEntityName = entry.refEntityName || '';
+		formData.refAttributeName = entry.refAttributeName || '';
+		formData.attributeDescription = entry.attributeDescription || '';
 	});
 
 	function validate(): boolean {

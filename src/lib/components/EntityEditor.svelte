@@ -33,15 +33,13 @@
 	let isSubmitting = $state(false);
 
 	$effect(() => {
-		formData = {
-			logicalDbName: entry.logicalDbName || '',
-			schemaName: entry.schemaName || '',
-			entityName: entry.entityName || '',
-			entityDescription: entry.entityDescription || '',
-			primaryIdentifier: entry.primaryIdentifier || '',
-			superTypeEntityName: entry.superTypeEntityName || '',
-			tableKoreanName: entry.tableKoreanName || ''
-		};
+		formData.logicalDbName = entry.logicalDbName || '';
+		formData.schemaName = entry.schemaName || '';
+		formData.entityName = entry.entityName || '';
+		formData.entityDescription = entry.entityDescription || '';
+		formData.primaryIdentifier = entry.primaryIdentifier || '';
+		formData.superTypeEntityName = entry.superTypeEntityName || '';
+		formData.tableKoreanName = entry.tableKoreanName || '';
 	});
 
 	function validate(): boolean {

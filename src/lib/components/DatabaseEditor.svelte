@@ -41,19 +41,17 @@
 
 	// 폼 데이터 초기화
 	$effect(() => {
-		formData = {
-			organizationName: entry.organizationName || '',
-			departmentName: entry.departmentName || '',
-			appliedTask: entry.appliedTask || '',
-			relatedLaw: entry.relatedLaw || '',
-			logicalDbName: entry.logicalDbName || '',
-			physicalDbName: entry.physicalDbName || '',
-			buildDate: entry.buildDate || '',
-			dbDescription: entry.dbDescription || '',
-			dbmsInfo: entry.dbmsInfo || '',
-			osInfo: entry.osInfo || '',
-			exclusionReason: entry.exclusionReason || ''
-		};
+		formData.organizationName = entry.organizationName || '';
+		formData.departmentName = entry.departmentName || '';
+		formData.appliedTask = entry.appliedTask || '';
+		formData.relatedLaw = entry.relatedLaw || '';
+		formData.logicalDbName = entry.logicalDbName || '';
+		formData.physicalDbName = entry.physicalDbName || '';
+		formData.buildDate = entry.buildDate || '';
+		formData.dbDescription = entry.dbDescription || '';
+		formData.dbmsInfo = entry.dbmsInfo || '';
+		formData.osInfo = entry.osInfo || '';
+		formData.exclusionReason = entry.exclusionReason || '';
 	});
 
 	/**

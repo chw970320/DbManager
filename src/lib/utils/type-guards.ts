@@ -3,19 +3,9 @@
  * JSON 파싱 결과의 안전한 타입 검증을 제공합니다.
  */
 
-import type {
-	VocabularyEntry,
-	VocabularyData,
-	HistoryLogEntry,
-	HistoryData
-} from '$lib/types/vocabulary';
-import type {
-	DomainEntry,
-	DomainData,
-	DomainHistoryLogEntry,
-	DomainHistoryData
-} from '$lib/types/domain';
-import type { TermEntry, TermData, TermHistoryLogEntry, TermHistoryData } from '$lib/types/term';
+import type { VocabularyEntry, VocabularyData } from '$lib/types/vocabulary';
+import type { DomainEntry, DomainData } from '$lib/types/domain';
+import type { TermEntry, TermData } from '$lib/types/term';
 
 // ============================================================================
 // 기본 유틸리티 함수
@@ -236,135 +226,6 @@ export function isTermData(value: unknown): value is TermData {
 		if (!isString(value.mapping.vocabulary)) return false;
 		if (!isString(value.mapping.domain)) return false;
 	}
-
-	return true;
-}
-
-// ============================================================================
-// History 타입 가드
-// ============================================================================
-
-const VALID_ACTIONS = ['add', 'update', 'delete', 'UPLOAD_MERGE'] as const;
-
-function isValidAction(value: unknown): value is 'add' | 'update' | 'delete' | 'UPLOAD_MERGE' {
-	return isString(value) && VALID_ACTIONS.includes(value as (typeof VALID_ACTIONS)[number]);
-}
-
-/**
- * HistoryLogEntry (Vocabulary) 타입 가드
- */
-export function isHistoryLogEntry(value: unknown): value is HistoryLogEntry {
-	if (!isObject(value)) return false;
-
-	// 필수 필드 검증
-	const required =
-		isString(value.id) &&
-		isValidAction(value.action) &&
-		isString(value.targetId) &&
-		isString(value.targetName) &&
-		isString(value.timestamp);
-
-	if (!required) return false;
-
-	// 선택적 필드 검증
-	if (value.filename !== undefined && !isString(value.filename)) return false;
-	if (value.details !== undefined && !isObject(value.details)) return false;
-
-	return true;
-}
-
-/**
- * HistoryData (Vocabulary) 타입 가드
- */
-export function isHistoryData(value: unknown): value is HistoryData {
-	if (!isObject(value)) return false;
-
-	// 필수 필드 검증
-	if (!isArray(value.logs)) return false;
-	if (!isString(value.lastUpdated)) return false;
-	if (!isNumber(value.totalCount)) return false;
-
-	// logs 배열의 각 항목 검증
-	if (!value.logs.every(isHistoryLogEntry)) return false;
-
-	return true;
-}
-
-/**
- * DomainHistoryLogEntry 타입 가드
- */
-export function isDomainHistoryLogEntry(value: unknown): value is DomainHistoryLogEntry {
-	if (!isObject(value)) return false;
-
-	// 필수 필드 검증
-	const required =
-		isString(value.id) &&
-		isValidAction(value.action) &&
-		isString(value.targetId) &&
-		isString(value.targetName) &&
-		isString(value.timestamp);
-
-	if (!required) return false;
-
-	// 선택적 필드 검증
-	if (value.details !== undefined && !isObject(value.details)) return false;
-
-	return true;
-}
-
-/**
- * DomainHistoryData 타입 가드
- */
-export function isDomainHistoryData(value: unknown): value is DomainHistoryData {
-	if (!isObject(value)) return false;
-
-	// 필수 필드 검증
-	if (!isArray(value.logs)) return false;
-	if (!isString(value.lastUpdated)) return false;
-	if (!isNumber(value.totalCount)) return false;
-
-	// logs 배열의 각 항목 검증
-	if (!value.logs.every(isDomainHistoryLogEntry)) return false;
-
-	return true;
-}
-
-/**
- * TermHistoryLogEntry 타입 가드
- */
-export function isTermHistoryLogEntry(value: unknown): value is TermHistoryLogEntry {
-	if (!isObject(value)) return false;
-
-	// 필수 필드 검증
-	const required =
-		isString(value.id) &&
-		isValidAction(value.action) &&
-		isString(value.targetId) &&
-		isString(value.targetName) &&
-		isString(value.timestamp);
-
-	if (!required) return false;
-
-	// 선택적 필드 검증
-	if (value.filename !== undefined && !isString(value.filename)) return false;
-	if (value.details !== undefined && !isObject(value.details)) return false;
-
-	return true;
-}
-
-/**
- * TermHistoryData 타입 가드
- */
-export function isTermHistoryData(value: unknown): value is TermHistoryData {
-	if (!isObject(value)) return false;
-
-	// 필수 필드 검증
-	if (!isArray(value.logs)) return false;
-	if (!isString(value.lastUpdated)) return false;
-	if (!isNumber(value.totalCount)) return false;
-
-	// logs 배열의 각 항목 검증
-	if (!value.logs.every(isTermHistoryLogEntry)) return false;
 
 	return true;
 }

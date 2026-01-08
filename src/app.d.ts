@@ -10,13 +10,6 @@ declare global {
 		// interface PageState {}
 		// interface Platform {}
 	}
-
-	// Window 인터페이스 확장 - 히스토리 로그 새로고침 함수들
-	interface Window {
-		refreshHistoryLog?: () => void;
-		refreshDomainHistoryLog?: () => void;
-		refreshTermHistoryLog?: () => void;
-	}
 }
 
 declare module 'svelte-copy-to-clipboard' {

@@ -216,11 +216,11 @@ export function exportDatabaseToXlsxBuffer(data: DatabaseEntry[]): Buffer {
 				entry.departmentName,
 				entry.appliedTask,
 				entry.relatedLaw,
-				entry.logicalDbName || '',
-				entry.physicalDbName || '',
+				entry.logicalDbName ?? '',
+				entry.physicalDbName ?? '',
 				entry.buildDate,
-				entry.dbDescription || '',
-				entry.dbmsInfo || '',
+				entry.dbDescription ?? '',
+				entry.dbmsInfo ?? '',
 				entry.osInfo,
 				entry.exclusionReason
 			];
@@ -341,13 +341,13 @@ export function exportEntityToXlsxBuffer(data: EntityEntry[]): Buffer {
 			const row = rowIndex + 1;
 			const values = [
 				rowIndex + 1,
-				entry.logicalDbName || '',
-				entry.schemaName || '',
-				entry.entityName || '',
-				entry.entityDescription || '',
-				entry.primaryIdentifier || '',
-				entry.superTypeEntityName,
-				entry.tableKoreanName || ''
+				entry.logicalDbName ?? '',
+				entry.schemaName ?? '',
+				entry.entityName ?? '',
+				entry.entityDescription ?? '',
+				entry.primaryIdentifier ?? '',
+				entry.superTypeEntityName ?? '',
+				entry.tableKoreanName ?? ''
 			];
 
 			values.forEach((value, colIndex) => {
@@ -472,15 +472,15 @@ export function exportAttributeToXlsxBuffer(data: AttributeEntry[]): Buffer {
 			const row = rowIndex + 1;
 			const values = [
 				rowIndex + 1,
-				entry.schemaName || '',
-				entry.entityName || '',
-				entry.attributeName || '',
-				entry.attributeType || '',
-				entry.requiredInput,
-				entry.identifierFlag || '',
-				entry.refEntityName,
-				entry.refAttributeName || '',
-				entry.attributeDescription || ''
+				entry.schemaName ?? '',
+				entry.entityName ?? '',
+				entry.attributeName ?? '',
+				entry.attributeType ?? '',
+				entry.requiredInput ?? '',
+				entry.identifierFlag ?? '',
+				entry.refEntityName ?? '',
+				entry.refAttributeName ?? '',
+				entry.attributeDescription ?? ''
 			];
 
 			values.forEach((value, colIndex) => {
@@ -628,20 +628,20 @@ export function exportTableToXlsxBuffer(data: TableEntry[]): Buffer {
 			const row = rowIndex + 1;
 			const values = [
 				rowIndex + 1,
-				entry.physicalDbName || '',
-				entry.tableOwner || '',
-				entry.subjectArea || '',
-				entry.schemaName || '',
-				entry.tableEnglishName || '',
-				entry.tableKoreanName || '',
-				entry.tableType || '',
-				entry.relatedEntityName || '',
-				entry.tableDescription || '',
+				entry.physicalDbName ?? '',
+				entry.tableOwner ?? '',
+				entry.subjectArea ?? '',
+				entry.schemaName ?? '',
+				entry.tableEnglishName ?? '',
+				entry.tableKoreanName ?? '',
+				entry.tableType ?? '',
+				entry.relatedEntityName ?? '',
+				entry.tableDescription ?? '',
 				entry.businessClassification,
-				entry.retentionPeriod || '',
+				entry.retentionPeriod ?? '',
 				entry.tableVolume,
-				entry.occurrenceCycle || '',
-				entry.publicFlag || '',
+				entry.occurrenceCycle ?? '',
+				entry.publicFlag ?? '',
 				entry.nonPublicReason,
 				entry.openDataList
 			];
@@ -811,28 +811,28 @@ export function exportColumnToXlsxBuffer(data: ColumnEntry[]): Buffer {
 			const row = rowIndex + 1;
 			const values = [
 				rowIndex + 1,
-				entry.scopeFlag || '',
-				entry.subjectArea || '',
-				entry.schemaName || '',
-				entry.tableEnglishName || '',
-				entry.columnEnglishName || '',
-				entry.columnKoreanName || '',
-				entry.columnDescription || '',
-				entry.relatedEntityName || '',
-				entry.dataType || '',
+				entry.scopeFlag ?? '',
+				entry.subjectArea ?? '',
+				entry.schemaName ?? '',
+				entry.tableEnglishName ?? '',
+				entry.columnEnglishName ?? '',
+				entry.columnKoreanName ?? '',
+				entry.columnDescription ?? '',
+				entry.relatedEntityName ?? '',
+				entry.dataType ?? '',
 				entry.dataLength,
 				entry.dataDecimalLength,
 				entry.dataFormat,
-				entry.notNullFlag || '',
+				entry.notNullFlag ?? '',
 				entry.pkInfo,
-				entry.fkInfo || '',
+				entry.fkInfo ?? '',
 				entry.indexName,
 				entry.indexOrder,
 				entry.akInfo,
 				entry.constraint,
-				entry.personalInfoFlag || '',
-				entry.encryptionFlag || '',
-				entry.publicFlag || ''
+				entry.personalInfoFlag ?? '',
+				entry.encryptionFlag ?? '',
+				entry.publicFlag ?? ''
 			];
 
 			values.forEach((value, colIndex) => {

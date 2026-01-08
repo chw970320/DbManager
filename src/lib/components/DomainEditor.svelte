@@ -3,6 +3,7 @@
 	import { tick } from 'svelte';
 	import type { DomainEntry } from '$lib/types/domain';
 	import { generateStandardDomainName } from '$lib/utils/validation';
+	import { v4 as uuidv4 } from 'uuid';
 
 	// Props
 	interface Props {
@@ -197,9 +198,8 @@
 			// validation 실패 시에도 계속 진행 (서버에서 다시 검증)
 		}
 
-		// 새 도메인 추가 시 id를 제외하고, 수정 시에만 id 포함
 		const editedEntry: DomainEntry = {
-			...(isEditMode && entry.id && entry.id.trim() ? { id: entry.id } : {}),
+			id: entry.id || uuidv4(),
 			domainGroup: formData.domainGroup.trim(),
 			domainCategory: formData.domainCategory.trim(),
 			standardDomainName: generatedDomainName, // 자동 생성된 도메인명 사용
@@ -212,8 +212,8 @@
 			storageFormat: formData.storageFormat.trim() || undefined,
 			displayFormat: formData.displayFormat.trim() || undefined,
 			allowedValues: formData.allowedValues.trim() || undefined,
-			createdAt: entry.createdAt || '',
-			updatedAt: entry.updatedAt || ''
+			createdAt: entry.createdAt || new Date().toISOString(),
+			updatedAt: new Date().toISOString()
 		};
 
 		dispatch('save', editedEntry);

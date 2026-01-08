@@ -11,7 +11,6 @@ import {
 	validateDomainNameMapping
 } from '$lib/utils/validation.js';
 import { parseTermXlsxToJson } from '$lib/utils/xlsx-parser.js';
-import { addHistoryLog } from '$lib/utils/history-handler.js';
 import { v4 as uuidv4 } from 'uuid';
 import {
 	getRequiredFile,
@@ -359,31 +358,6 @@ export async function POST({ request }: RequestEvent) {
 				} as ApiResponse,
 				{ status: 500 }
 			);
-		}
-
-		// 업로드 성공 히스토리 로그 추가 (병합 모드일 때만)
-		if (!replaceExisting) {
-			try {
-				await addHistoryLog(
-					{
-						id: `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-						action: 'UPLOAD_MERGE',
-						targetId: 'term_file',
-						targetName: `${file.name} (${termEntries.length}개 용어)`,
-						timestamp: new Date().toISOString(),
-						details: {
-							fileName: file.name,
-							fileSize: file.size,
-							processedCount: termEntries.length,
-							replaceMode: replaceExisting
-						}
-					},
-					'term'
-				);
-			} catch (historyError) {
-				console.warn('업로드 히스토리 로그 추가 실패:', historyError);
-				// 히스토리 로그 실패는 전체 업로드를 실패시키지 않음
-			}
 		}
 
 		// 성공 응답

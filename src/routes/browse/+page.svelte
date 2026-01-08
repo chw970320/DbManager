@@ -5,7 +5,6 @@
 	import VocabularyTable from '$lib/components/VocabularyTable.svelte';
 	import VocabularyEditor from '$lib/components/VocabularyEditor.svelte';
 	import VocabularyFileManager from '$lib/components/VocabularyFileManager.svelte';
-	import HistoryLog from '$lib/components/HistoryLog.svelte';
 	import type { VocabularyEntry, ApiResponse } from '$lib/types/vocabulary.js';
 	import { get } from 'svelte/store';
 	import { vocabularyStore } from '$lib/stores/vocabulary-store';
@@ -544,56 +543,12 @@
 				'abbreviation' in result.data &&
 				'englishName' in result.data
 			) {
-				// 히스토리 로그 기록 (모달 닫기 전에 originalEntry 사용)
-				const originalEntry = currentEditingEntry;
-
 				// 모달 닫기
 				showEditor = false;
 				editorServerError = ''; // 에러 상태 초기화
 				currentEditingEntry = null;
 				// 데이터 새로고침 (성공한 경우에만)
 				await loadVocabularyData();
-
-				// 히스토리 로그 기록
-				try {
-					const action = isEditMode ? 'update' : 'add';
-
-					await fetch('/api/history', {
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json'
-						},
-						body: JSON.stringify({
-							action,
-							targetId: result.data.id,
-							targetName: result.data.standardName,
-							filename: selectedFilename,
-							details: {
-								before: originalEntry
-									? {
-											standardName: originalEntry.standardName,
-											abbreviation: originalEntry.abbreviation,
-											englishName: originalEntry.englishName
-										}
-									: undefined,
-								after: {
-									standardName: result.data.standardName,
-									abbreviation: result.data.abbreviation,
-									englishName: result.data.englishName
-								}
-							}
-						})
-					});
-
-					// 히스토리 UI 새로고침
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					if (typeof window !== 'undefined' && (window as any).refreshHistoryLog) {
-						// eslint-disable-next-line @typescript-eslint/no-explicit-any
-						(window as any).refreshHistoryLog();
-					}
-				} catch (historyError: unknown) {
-					console.warn('히스토리 로그 기록 실패:', historyError);
-				}
 			} else {
 				// 에러 발생 시 모달 내부에 표시 (모달 유지, 새로고침하지 않음)
 				const errorMsg =
@@ -629,38 +584,6 @@
 				currentEditingEntry = null;
 				// 데이터 새로고침
 				await loadVocabularyData();
-
-				// 히스토리 로그 기록
-				try {
-					await fetch('/api/history', {
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json'
-						},
-						body: JSON.stringify({
-							action: 'delete',
-							targetId: entryToDelete.id,
-							targetName: entryToDelete.standardName,
-							filename: selectedFilename,
-							details: {
-								before: {
-									standardName: entryToDelete.standardName,
-									abbreviation: entryToDelete.abbreviation,
-									englishName: entryToDelete.englishName
-								}
-							}
-						})
-					});
-
-					// 히스토리 UI 새로고침
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					if (typeof window !== 'undefined' && (window as any).refreshHistoryLog) {
-						// eslint-disable-next-line @typescript-eslint/no-explicit-any
-						(window as any).refreshHistoryLog();
-					}
-				} catch (historyError: unknown) {
-					console.warn('히스토리 로그 기록 실패:', historyError);
-				}
 			} else {
 				const result: ApiResponse = await response.json();
 				const errorMsg = result.error || '삭제에 실패했습니다.';
@@ -1033,9 +956,6 @@
 						await loadVocabularyData();
 					}}
 				/>
-
-				<!-- 히스토리 로그 -->
-				<HistoryLog type="vocabulary" />
 
 				<!-- 검색 영역 -->
 				<div

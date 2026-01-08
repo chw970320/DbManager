@@ -14,6 +14,11 @@
 - 단어집: `static/data/vocabulary/`
 - 도메인: `static/data/domain/`
 - 용어: `static/data/term/`
+- 데이터베이스: `static/data/database/`
+- 엔터티: `static/data/entity/`
+- 속성: `static/data/attribute/`
+- 테이블: `static/data/table/`
+- 컬럼: `static/data/column/`
 
 ---
 
@@ -658,93 +663,6 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 
 ---
 
-## 7. HistoryLogEntry (히스토리 로그 엔트리)
-
-### 개요
-
-데이터 변경 이력을 추적하는 로그 엔트리입니다. 각 엔티티 타입별로 별도의 히스토리 로그를 유지합니다.
-
-**파일 위치:** `src/lib/types/vocabulary.ts` (vocabulary), `src/lib/types/domain.ts` (domain), `src/lib/types/term.ts` (term)
-
-### 필드 상세
-
-| 필드명                   | 타입       | 필수 | 기본값 | 설명                  | 용도                                            |
-| ------------------------ | ---------- | ---- | ------ | --------------------- | ----------------------------------------------- |
-| `id`                     | `string`   | ✅   | -      | 히스토리 로그 고유 ID | Primary Key, UUID v4                            |
-| `action`                 | `string`   | ✅   | -      | 수행된 작업 타입      | 'add' \| 'update' \| 'delete' \| 'UPLOAD_MERGE' |
-| `targetId`               | `string`   | ✅   | -      | 대상 엔트리의 ID      | Foreign Key (논리적)                            |
-| `targetName`             | `string`   | ✅   | -      | 대상 엔트리의 이름    | 표시용                                          |
-| `timestamp`              | `string`   | ✅   | -      | 작업 수행 시간        | ISO 8601 형식                                   |
-| `filename`               | `string?`  | ❌   | -      | 대상 파일명           | 다중 파일 지원 (vocabulary만)                   |
-| `details`                | `object?`  | ❌   | -      | 추가 세부 정보        | 상세 정보                                       |
-| `details.before`         | `object?`  | ❌   | -      | 변경 전 데이터        | update/delete 시                                |
-| `details.after`          | `object?`  | ❌   | -      | 변경 후 데이터        | add/update 시                                   |
-| `details.fileName`       | `string?`  | ❌   | -      | 업로드된 파일명       | upload action 시                                |
-| `details.fileSize`       | `number?`  | ❌   | -      | 파일 크기             | 바이트 단위                                     |
-| `details.processedCount` | `number?`  | ❌   | -      | 처리된 항목 수        | 업로드 처리 건수                                |
-| `details.replaceMode`    | `boolean?` | ❌   | -      | 교체 모드 여부        | 업로드 모드                                     |
-
-### Validation 규칙
-
-1. **`action`**
-   - 유효한 값: `'add'`, `'update'`, `'delete'`, `'UPLOAD_MERGE'`
-   - 유니온 타입으로 제한
-
-2. **`targetId`**
-   - 대상 엔트리의 `id`와 일치해야 함
-
-3. **`timestamp`**
-   - ISO 8601 형식
-   - 자동 생성
-
-### 예시 데이터
-
-```json
-{
-	"id": "880e8400-e29b-41d4-a716-446655440003",
-	"action": "add",
-	"targetId": "550e8400-e29b-41d4-a716-446655440000",
-	"targetName": "사용자",
-	"timestamp": "2024-01-15T10:30:00.000Z",
-	"filename": "vocabulary.json",
-	"details": {
-		"after": {
-			"id": "550e8400-e29b-41d4-a716-446655440000",
-			"standardName": "사용자",
-			"abbreviation": "USER",
-			"englishName": "User"
-		}
-	}
-}
-```
-
-### 관련 API 엔드포인트
-
-- **GET** `/api/history?type={vocabulary|domain|term}&filename={filename}&limit={limit}&offset={offset}`
-  - 히스토리 로그 조회
-  - Query Parameters:
-    - `type`: 엔티티 타입 (`vocabulary`, `domain`, `term`)
-    - `filename`: 파일명 (vocabulary만 필요)
-    - `limit`: 조회 개수 (기본값: 20, 최대: 200)
-    - `offset`: 오프셋 (기본값: 0)
-
-- **POST** `/api/history?type={vocabulary|domain|term}`
-  - 히스토리 로그 추가
-  - Request Body:
-    ```json
-    {
-    	"action": "add",
-    	"targetId": "entry-id",
-    	"targetName": "entry-name",
-    	"filename": "vocabulary.json",
-    	"details": {
-    		/* ... */
-    	}
-    }
-    ```
-
----
-
 ## 8. ForbiddenWordEntry (금지어 엔트리)
 
 ### 개요
@@ -808,6 +726,295 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 
 ---
 
+## 9. DatabaseEntry (데이터베이스 정의서 엔트리)
+
+### 개요
+
+데이터베이스 정의서의 개별 엔트리를 나타냅니다.
+
+**파일 위치:** `src/lib/types/database-design.ts`
+
+### 필드 상세
+
+| 필드명             | 타입      | 필수 | 설명         |
+| ------------------ | --------- | ---- | ------------ |
+| `id`               | `string`  | ✅   | 고유 식별자  |
+| `organizationName` | `string`  | ✅   | 기관명       |
+| `departmentName`   | `string`  | ✅   | 부서명       |
+| `appliedTask`      | `string`  | ✅   | 적용업무     |
+| `relatedLaw`       | `string`  | ✅   | 관련법령     |
+| `buildDate`        | `string`  | ✅   | 구축일자     |
+| `osInfo`           | `string`  | ✅   | 운영체제정보 |
+| `exclusionReason`  | `string`  | ✅   | 수집제외사유 |
+| `logicalDbName`    | `string?` | ❌   | 논리DB명     |
+| `physicalDbName`   | `string?` | ❌   | 물리DB명     |
+| `dbDescription`    | `string?` | ❌   | DB설명       |
+| `dbmsInfo`         | `string?` | ❌   | DBMS정보     |
+| `createdAt`        | `string`  | ✅   | 생성일시     |
+| `updatedAt`        | `string`  | ✅   | 수정일시     |
+
+### 예시 데이터
+
+```json
+{
+	"id": "db-uuid-1",
+	"organizationName": "기관A",
+	"departmentName": "개발부",
+	"appliedTask": "고객관리",
+	"relatedLaw": "개인정보보호법",
+	"buildDate": "2024-01-01",
+	"osInfo": "Linux",
+	"exclusionReason": "-",
+	"logicalDbName": "고객DB",
+	"physicalDbName": "CUST_DB",
+	"dbDescription": "고객 정보 관리",
+	"dbmsInfo": "Oracle 19c",
+	"createdAt": "2024-01-15T10:30:00.000Z",
+	"updatedAt": "2024-01-15T10:30:00.000Z"
+}
+```
+
+### 관련 API 엔드포인트
+
+- **GET, POST, PUT, DELETE** `/api/database`
+
+---
+
+## 10. EntityEntry (엔터티 정의서 엔트리)
+
+### 개요
+
+엔터티 정의서의 개별 엔트리를 나타냅니다.
+
+**파일 위치:** `src/lib/types/database-design.ts`
+
+### 필드 상세
+
+| 필드명                | 타입      | 필수 | 설명             |
+| --------------------- | --------- | ---- | ---------------- |
+| `id`                  | `string`  | ✅   | 고유 식별자      |
+| `logicalDbName`       | `string?` | ❌   | 논리DB명         |
+| `schemaName`          | `string?` | ❌   | 스키마명         |
+| `entityName`          | `string?` | ❌   | 엔터티명         |
+| `primaryIdentifier`   | `string?` | ❌   | 주식별자         |
+| `tableKoreanName`     | `string?` | ❌   | 테이블한글명     |
+| `superTypeEntityName` | `string?` | ❌   | 수퍼타입엔터티명 |
+| `entityDescription`   | `string?` | ❌   | 엔터티설명       |
+| `createdAt`           | `string`  | ✅   | 생성일시         |
+| `updatedAt`           | `string`  | ✅   | 수정일시         |
+
+### 예시 데이터
+
+```json
+{
+	"id": "entity-uuid-1",
+	"logicalDbName": "고객DB",
+	"schemaName": "CUST",
+	"entityName": "고객",
+	"primaryIdentifier": "고객ID",
+	"tableKoreanName": "고객정보",
+	"entityDescription": "고객 기본 정보",
+	"createdAt": "2024-01-15T10:30:00.000Z",
+	"updatedAt": "2024-01-15T10:30:00.000Z"
+}
+```
+
+### 관련 API 엔드포인트
+
+- **GET, POST, PUT, DELETE** `/api/entity`
+
+---
+
+## 11. AttributeEntry (속성 정의서 엔트리)
+
+### 개요
+
+속성 정의서의 개별 엔트리를 나타냅니다.
+
+**파일 위치:** `src/lib/types/database-design.ts`
+
+### 필드 상세
+
+| 필드명                 | 타입      | 필수 | 설명         |
+| ---------------------- | --------- | ---- | ------------ |
+| `id`                   | `string`  | ✅   | 고유 식별자  |
+| `requiredInput`        | `string`  | ✅   | 필수입력여부 |
+| `refEntityName`        | `string`  | ✅   | 참조엔터티명 |
+| `schemaName`           | `string?` | ❌   | 스키마명     |
+| `entityName`           | `string?` | ❌   | 엔터티명     |
+| `attributeName`        | `string?` | ❌   | 속성명       |
+| `attributeType`        | `string?` | ❌   | 속성유형     |
+| `identifierFlag`       | `string?` | ❌   | 식별자여부   |
+| `refAttributeName`     | `string?` | ❌   | 참조속성명   |
+| `attributeDescription` | `string?` | ❌   | 속성설명     |
+| `createdAt`            | `string`  | ✅   | 생성일시     |
+| `updatedAt`            | `string`  | ✅   | 수정일시     |
+
+### 예시 데이터
+
+```json
+{
+	"id": "attr-uuid-1",
+	"requiredInput": "Y",
+	"refEntityName": "-",
+	"schemaName": "CUST",
+	"entityName": "고객",
+	"attributeName": "고객ID",
+	"attributeType": "VARCHAR",
+	"identifierFlag": "Y",
+	"refAttributeName": "-",
+	"attributeDescription": "고객의 고유 식별자",
+	"createdAt": "2024-01-15T10:30:00.000Z",
+	"updatedAt": "2024-01-15T10:30:00.000Z"
+}
+```
+
+### 관련 API 엔드포인트
+
+- **GET, POST, PUT, DELETE** `/api/attribute`
+
+---
+
+## 12. TableEntry (테이블 정의서 엔트리)
+
+### 개요
+
+테이블 정의서의 개별 엔트리를 나타냅니다.
+
+**파일 위치:** `src/lib/types/database-design.ts`
+
+### 필드 상세
+
+| 필드명                   | 타입      | 필수 | 설명            |
+| ------------------------ | --------- | ---- | --------------- |
+| `id`                     | `string`  | ✅   | 고유 식별자     |
+| `businessClassification` | `string`  | ✅   | 업무분류체계    |
+| `tableVolume`            | `string`  | ✅   | 테이블볼륨      |
+| `nonPublicReason`        | `string`  | ✅   | 비공개사유      |
+| `openDataList`           | `string`  | ✅   | 개방데이터목록  |
+| `physicalDbName`         | `string?` | ❌   | 물리DB명        |
+| `tableOwner`             | `string?` | ❌   | 테이블소유자    |
+| `subjectArea`            | `string?` | ❌   | 주제영역        |
+| `schemaName`             | `string?` | ❌   | 스키마명        |
+| `tableEnglishName`       | `string?` | ❌   | 테이블영문명    |
+| `tableKoreanName`        | `string?` | ❌   | 테이블한글명    |
+| `tableType`              | `string?` | ❌   | 테이블유형      |
+| `relatedEntityName`      | `string?` | ❌   | 관련엔터티명    |
+| `tableDescription`       | `string?` | ❌   | 테이블설명      |
+| `retentionPeriod`        | `string?` | ❌   | 보존기간        |
+| `occurrenceCycle`        | `string?` | ❌   | 발생주기        |
+| `publicFlag`             | `string?` | ❌   | 공개/비공개여부 |
+| `createdAt`              | `string`  | ✅   | 생성일시        |
+| `updatedAt`              | `string`  | ✅   | 수정일시        |
+
+### 예시 데이터
+
+```json
+{
+	"id": "table-uuid-1",
+	"businessClassification": "고객관리",
+	"tableVolume": "100000",
+	"nonPublicReason": "-",
+	"openDataList": "고객 기본 정보",
+	"physicalDbName": "CUST_DB",
+	"tableOwner": "DBA",
+	"subjectArea": "고객",
+	"schemaName": "CUST",
+	"tableEnglishName": "TB_CUSTOMER",
+	"tableKoreanName": "고객테이블",
+	"tableType": "TABLE",
+	"relatedEntityName": "고객",
+	"tableDescription": "고객 정보를 저장하는 테이블",
+	"retentionPeriod": "5년",
+	"occurrenceCycle": "수시",
+	"publicFlag": "Y",
+	"createdAt": "2024-01-15T10:30:00.000Z",
+	"updatedAt": "2024-01-15T10:30:00.000Z"
+}
+```
+
+### 관련 API 엔드포인트
+
+- **GET, POST, PUT, DELETE** `/api/table`
+
+---
+
+## 13. ColumnEntry (컬럼 정의서 엔트리)
+
+### 개요
+
+컬럼 정의서의 개별 엔트리를 나타냅니다.
+
+**파일 위치:** `src/lib/types/database-design.ts`
+
+### 필드 상세
+
+| 필드명              | 타입      | 필수 | 설명            |
+| ------------------- | --------- | ---- | --------------- |
+| `id`                | `string`  | ✅   | 고유 식별자     |
+| `dataLength`        | `string`  | ✅   | 자료길이        |
+| `dataDecimalLength` | `string`  | ✅   | 자료소수점길이  |
+| `dataFormat`        | `string`  | ✅   | 자료형식        |
+| `pkInfo`            | `string`  | ✅   | PK정보          |
+| `indexName`         | `string`  | ✅   | 인덱스명        |
+| `indexOrder`        | `string`  | ✅   | 인덱스순번      |
+| `akInfo`            | `string`  | ✅   | AK정보          |
+| `constraint`        | `string`  | ✅   | 제약조건        |
+| `scopeFlag`         | `string?` | ❌   | 사업범위여부    |
+| `subjectArea`       | `string?` | ❌   | 주제영역        |
+| `schemaName`        | `string?` | ❌   | 스키마명        |
+| `tableEnglishName`  | `string?` | ❌   | 테이블영문명    |
+| `columnEnglishName` | `string?` | ❌   | 컬럼영문명      |
+| `columnKoreanName`  | `string?` | ❌   | 컬럼한글명      |
+| `columnDescription` | `string?` | ❌   | 컬럼설명        |
+| `relatedEntityName` | `string?` | ❌   | 연관엔터티명    |
+| `dataType`          | `string?` | ❌   | 자료타입        |
+| `notNullFlag`       | `string?` | ❌   | NOTNULL여부     |
+| `fkInfo`            | `string?` | ❌   | FK정보          |
+| `personalInfoFlag`  | `string?` | ❌   | 개인정보여부    |
+| `encryptionFlag`    | `string?` | ❌   | 암호화여부      |
+| `publicFlag`        | `string?` | ❌   | 공개/비공개여부 |
+| `createdAt`         | `string`  | ✅   | 생성일시        |
+| `updatedAt`         | `string`  | ✅   | 수정일시        |
+
+### 예시 데이터
+
+```json
+{
+	"id": "col-uuid-1",
+	"dataLength": "50",
+	"dataDecimalLength": "0",
+	"dataFormat": "-",
+	"pkInfo": "Y",
+	"indexName": "IDX_CUSTOMER_01",
+	"indexOrder": "1",
+	"akInfo": "-",
+	"constraint": "-",
+	"scopeFlag": "Y",
+	"subjectArea": "고객",
+	"schemaName": "CUST",
+	"tableEnglishName": "TB_CUSTOMER",
+	"columnEnglishName": "CUST_ID",
+	"columnKoreanName": "고객ID",
+	"columnDescription": "고객의 고유 ID",
+	"relatedEntityName": "고객",
+	"dataType": "VARCHAR",
+	"notNullFlag": "Y",
+	"fkInfo": "-",
+	"personalInfoFlag": "Y",
+	"encryptionFlag": "Y",
+	"publicFlag": "N",
+	"createdAt": "2024-01-15T10:30:00.000Z",
+	"updatedAt": "2024-01-15T10:30:00.000Z"
+}
+```
+
+### 관련 API 엔드포인트
+
+- **GET, POST, PUT, DELETE** `/api/column`
+
+---
+
 ## 공통 패턴
 
 ### Entry → Data 패턴
@@ -827,22 +1034,6 @@ interface Data {
 	lastUpdated: string;
 	totalCount: number;
 	// ... 엔티티별 메타데이터
-}
-```
-
-### 히스토리 로그 패턴
-
-모든 히스토리 로그는 유사한 구조를 가집니다:
-
-```typescript
-interface HistoryLogEntry {
-  id: string;
-  action: 'add' | 'update' | 'delete' | 'UPLOAD_MERGE';
-  targetId: string;
-  targetName: string;
-  timestamp: string;
-  filename?: string; // vocabulary만
-  details?: { ... };
 }
 ```
 

@@ -53,35 +53,6 @@ export interface DatabaseData {
 	totalCount: number;
 }
 
-/**
- * 데이터베이스 히스토리 로그 엔트리
- */
-export interface DatabaseHistoryLogEntry {
-	id: string;
-	action: DbDesignActionType;
-	targetId: string;
-	targetName: string;
-	timestamp: string;
-	filename?: string;
-	details?: {
-		before?: Partial<DatabaseEntry>;
-		after?: Partial<DatabaseEntry>;
-		fileName?: string;
-		fileSize?: number;
-		processedCount?: number;
-		replaceMode?: boolean;
-	};
-}
-
-/**
- * 데이터베이스 히스토리 데이터 구조
- */
-export interface DatabaseHistoryData {
-	logs: DatabaseHistoryLogEntry[];
-	lastUpdated: string;
-	totalCount: number;
-}
-
 // ============================================================================
 // 엔터티 정의서 (Entity)
 // ============================================================================
@@ -92,11 +63,11 @@ export interface DatabaseHistoryData {
 export interface EntityEntry {
 	id: string;
 	// 필수 필드 (F: NOT NULL)
-	logicalDbName: string; // 논리DB명
-	schemaName: string; // 스키마명
-	entityName: string; // 엔터티명
-	primaryIdentifier: string; // 주식별자
-	tableKoreanName: string; // 테이블한글명
+	logicalDbName?: string; // 논리DB명
+	schemaName?: string; // 스키마명
+	entityName?: string; // 엔터티명
+	primaryIdentifier?: string; // 주식별자
+	tableKoreanName?: string; // 테이블한글명
 	// 선택 필드 (T: Nullable)
 	superTypeEntityName?: string; // 수퍼타입엔터티명
 	entityDescription?: string; // 엔터티설명
@@ -114,35 +85,6 @@ export interface EntityData {
 	totalCount: number;
 }
 
-/**
- * 엔터티 히스토리 로그 엔트리
- */
-export interface EntityHistoryLogEntry {
-	id: string;
-	action: DbDesignActionType;
-	targetId: string;
-	targetName: string;
-	timestamp: string;
-	filename?: string;
-	details?: {
-		before?: Partial<EntityEntry>;
-		after?: Partial<EntityEntry>;
-		fileName?: string;
-		fileSize?: number;
-		processedCount?: number;
-		replaceMode?: boolean;
-	};
-}
-
-/**
- * 엔터티 히스토리 데이터 구조
- */
-export interface EntityHistoryData {
-	logs: EntityHistoryLogEntry[];
-	lastUpdated: string;
-	totalCount: number;
-}
-
 // ============================================================================
 // 속성 정의서 (Attribute)
 // ============================================================================
@@ -152,15 +94,15 @@ export interface EntityHistoryData {
  */
 export interface AttributeEntry {
 	id: string;
-	// 필수 필드 (F: NOT NULL)
-	schemaName: string; // 스키마명
-	entityName: string; // 엔터티명
-	attributeName: string; // 속성명
-	attributeType: string; // 속성유형
-	// 선택 필드 (T: Nullable)
-	requiredInput?: string; // 필수입력여부
+	// 필수 필드
+	requiredInput: string; // 필수입력여부
+	refEntityName: string; // 참조엔터티명
+	// 선택 필드
+	schemaName?: string; // 스키마명
+	entityName?: string; // 엔터티명
+	attributeName?: string; // 속성명
+	attributeType?: string; // 속성유형
 	identifierFlag?: string; // 식별자여부
-	refEntityName?: string; // 참조엔터티명
 	refAttributeName?: string; // 참조속성명
 	attributeDescription?: string; // 속성설명
 	// 시스템 필드
@@ -173,35 +115,6 @@ export interface AttributeEntry {
  */
 export interface AttributeData {
 	entries: AttributeEntry[];
-	lastUpdated: string;
-	totalCount: number;
-}
-
-/**
- * 속성 히스토리 로그 엔트리
- */
-export interface AttributeHistoryLogEntry {
-	id: string;
-	action: DbDesignActionType;
-	targetId: string;
-	targetName: string;
-	timestamp: string;
-	filename?: string;
-	details?: {
-		before?: Partial<AttributeEntry>;
-		after?: Partial<AttributeEntry>;
-		fileName?: string;
-		fileSize?: number;
-		processedCount?: number;
-		replaceMode?: boolean;
-	};
-}
-
-/**
- * 속성 히스토리 데이터 구조
- */
-export interface AttributeHistoryData {
-	logs: AttributeHistoryLogEntry[];
 	lastUpdated: string;
 	totalCount: number;
 }
@@ -243,35 +156,6 @@ export interface TableEntry {
  */
 export interface TableData {
 	entries: TableEntry[];
-	lastUpdated: string;
-	totalCount: number;
-}
-
-/**
- * 테이블 히스토리 로그 엔트리
- */
-export interface TableHistoryLogEntry {
-	id: string;
-	action: DbDesignActionType;
-	targetId: string;
-	targetName: string;
-	timestamp: string;
-	filename?: string;
-	details?: {
-		before?: Partial<TableEntry>;
-		after?: Partial<TableEntry>;
-		fileName?: string;
-		fileSize?: number;
-		processedCount?: number;
-		replaceMode?: boolean;
-	};
-}
-
-/**
- * 테이블 히스토리 데이터 구조
- */
-export interface TableHistoryData {
-	logs: TableHistoryLogEntry[];
 	lastUpdated: string;
 	totalCount: number;
 }
@@ -323,35 +207,6 @@ export interface ColumnData {
 	totalCount: number;
 }
 
-/**
- * 컬럼 히스토리 로그 엔트리
- */
-export interface ColumnHistoryLogEntry {
-	id: string;
-	action: DbDesignActionType;
-	targetId: string;
-	targetName: string;
-	timestamp: string;
-	filename?: string;
-	details?: {
-		before?: Partial<ColumnEntry>;
-		after?: Partial<ColumnEntry>;
-		fileName?: string;
-		fileSize?: number;
-		processedCount?: number;
-		replaceMode?: boolean;
-	};
-}
-
-/**
- * 컬럼 히스토리 데이터 구조
- */
-export interface ColumnHistoryData {
-	logs: ColumnHistoryLogEntry[];
-	lastUpdated: string;
-	totalCount: number;
-}
-
 // ============================================================================
 // API 응답 타입
 // ============================================================================
@@ -383,7 +238,7 @@ export interface DbDesignApiResponse<T = unknown> {
  */
 export interface DbDesignUploadResult {
 	success: boolean;
-	message: string;
+	message?: string;
 	fileName?: string;
 	uploadedAt?: string;
 	totalEntries?: number;

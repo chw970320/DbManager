@@ -218,9 +218,15 @@ function rowClick(entry: DomainEntry) {}
 
 ```typescript
 // ✅ 좋은 예
-interface VocabularyEntry {}
-type SortDirection = 'asc' | 'desc';
-type EntityType = 'vocabulary' | 'domain' | 'term';
+type EntityType =
+	| 'vocabulary'
+	| 'domain'
+	| 'term'
+	| 'database'
+	| 'entity'
+	| 'attribute'
+	| 'table'
+	| 'column';
 
 // ❌ 나쁜 예
 interface vocabularyEntry {}
@@ -253,7 +259,13 @@ vocabulary_editor.svelte;
 const API_BASE_URL = '/api';
 const FILE_API_ENDPOINTS: Record<EntityType, string> = {
 	vocabulary: '/api/vocabulary/files',
-	domain: '/api/domain/files'
+	domain: '/api/domain/files',
+	term: '/api/term/files',
+	database: '/api/database/files',
+	entity: '/api/entity/files',
+	attribute: '/api/attribute/files',
+	table: '/api/table/files',
+	column: '/api/column/files'
 };
 ```
 
@@ -267,39 +279,50 @@ Svelte 컴포넌트는 다음 순서로 구성합니다:
 
 ```svelte
 <script lang="ts">
-  // 1. Import 문
-  import type { ... } from '...';
-  import { ... } from '...';
+	// 1. Import 문
+	import type { z } from 'zod';
+	import { createEventDispatcher } from 'svelte';
 
-  // 2. 타입 정의
-  type EventType = { ... };
+	// 2. 타입 정의
+	type EventType = {
+		/* ... */
+	};
 
-  // 3. Props 정의
-  let { prop1, prop2 }: Props = $props();
+	// 3. Props 정의
+	let { prop1, prop2 }: { prop1: string; prop2: number } = $props();
 
-  // 4. Event dispatcher
-  const dispatch = createEventDispatcher<{ ... }>();
+	// 4. Event dispatcher
+	const dispatch = createEventDispatcher<{ someEvent: string }>();
 
-  // 5. 상태 변수 ($state)
-  let state1 = $state(...);
-  let state2 = $state(...);
+	// 5. 상태 변수 ($state)
+	let state1 = $state(0);
+	let state2 = $state('');
 
-  // 6. 파생 상태 ($derived)
-  let derived = $derived(...);
+	// 6. 파생 상태 ($derived)
+	let derived = $derived(state1 * 2);
 
-  // 7. 이펙트 ($effect)
-  $effect(() => { ... });
+	// 7. 이펙트 ($effect)
+	$effect(() => {
+		console.log('state1 changed:', state1);
+	});
 
-  // 8. 함수 정의
-  function handleClick() { ... }
+	// 8. 함수 정의
+	function handleClick() {
+		dispatch('someEvent', 'clicked');
+	}
 </script>
 
 <!-- 9. 마크업 -->
-<div>...</div>
+<div>
+	<button onclick={handleClick}>{prop1}</button>
+	<p>{derived}</p>
+</div>
 
 <!-- 10. 스타일 (필요시) -->
 <style>
-  ...
+	div {
+		padding: 1rem;
+	}
 </style>
 ```
 
@@ -758,11 +781,11 @@ if (missingFields.length > 0) {
 
 **각 엔터티별 필수 필드**:
 
-- **Database**: `organizationName`, `departmentName`, `appliedTask`, `logicalDbName`, `physicalDbName`, `dbmsInfo`
-- **Entity**: `logicalDbName`, `schemaName`, `entityName`, `primaryIdentifier`, `tableKoreanName`
-- **Attribute**: 없음 (모든 필드 선택)
-- **Table**: `physicalDbName`, `tableOwner`, `subjectArea`, `schemaName`, `tableEnglishName`, `tableKoreanName`, `tableType`, `relatedEntityName`, `publicFlag`
-- **Column**: `scopeFlag`, `subjectArea`, `schemaName`, `tableEnglishName`, `columnEnglishName`, `columnKoreanName`, `relatedEntityName`, `dataType`, `notNullFlag`, `personalInfoFlag`, `encryptionFlag`, `publicFlag`
+- **Database**: `organizationName`, `departmentName`, `appliedTask`, `relatedLaw`, `buildDate`, `osInfo`, `exclusionReason`
+- **Entity**: `superTypeEntityName`
+- **Attribute**: `requiredInput`, `refEntityName`
+- **Table**: `businessClassification`, `tableVolume`, `nonPublicReason`, `openDataList`
+- **Column**: `dataLength`, `dataDecimalLength`, `dataFormat`, `pkInfo`, `indexName`, `indexOrder`, `akInfo`, `constraint`
 
 ### 테이블 컬럼 추가 패턴 (v1.8.0)
 
@@ -1339,7 +1362,7 @@ export function safeMerge<T extends Record<string, unknown>>(target: T, source: 
 ```typescript
 type SortDirection = 'asc' | 'desc';
 type EntityType = 'vocabulary' | 'domain' | 'term';
-type ActionType = 'add' | 'update' | 'delete' | 'UPLOAD_MERGE';
+type ActionType = 'add' | 'update' | 'delete';
 ```
 
 ---

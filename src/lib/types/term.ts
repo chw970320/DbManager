@@ -27,29 +27,6 @@ export interface TermData {
 	};
 }
 
-export interface TermHistoryLogEntry {
-	id: string;
-	action: 'add' | 'update' | 'delete' | 'UPLOAD_MERGE';
-	targetId: string;
-	targetName: string;
-	timestamp: string;
-	filename?: string;
-	details?: {
-		before?: Partial<TermEntry>;
-		after?: Partial<TermEntry>;
-		fileName?: string;
-		fileSize?: number;
-		processedCount?: number;
-		replaceMode?: boolean;
-	};
-}
-
-export interface TermHistoryData {
-	logs: TermHistoryLogEntry[];
-	lastUpdated: string;
-	totalCount: number;
-}
-
 /**
  * Validation 오류 타입
  */

@@ -1,5 +1,5 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type { ApiResponse, DomainEntry } from '$lib/types/domain.js';
+import type { DomainApiResponse, DomainEntry } from '$lib/types/domain.js';
 import { loadDomainData, listDomainFiles } from '$lib/utils/file-handler.js';
 import { generateStandardDomainName, validateDomainNameUniqueness } from '$lib/utils/validation.js';
 
@@ -22,7 +22,7 @@ export async function POST({ request, url }: RequestEvent) {
 					success: false,
 					error: '도메인 분류명이 필요합니다.',
 					message: 'Missing domainCategory'
-				} as ApiResponse,
+				} as DomainApiResponse,
 				{ status: 400 }
 			);
 		}
@@ -33,7 +33,7 @@ export async function POST({ request, url }: RequestEvent) {
 					success: false,
 					error: '물리 데이터타입이 필요합니다.',
 					message: 'Missing physicalDataType'
-				} as ApiResponse,
+				} as DomainApiResponse,
 				{ status: 400 }
 			);
 		}
@@ -70,7 +70,7 @@ export async function POST({ request, url }: RequestEvent) {
 						success: false,
 						error: uniquenessError,
 						message: 'Duplicate domain name'
-					} as ApiResponse,
+					} as DomainApiResponse,
 					{ status: 409 }
 				);
 			}
@@ -84,7 +84,7 @@ export async function POST({ request, url }: RequestEvent) {
 			{
 				success: true,
 				message: 'Validation passed'
-			} as ApiResponse,
+			} as DomainApiResponse,
 			{ status: 200 }
 		);
 	} catch (error) {
@@ -94,7 +94,7 @@ export async function POST({ request, url }: RequestEvent) {
 				success: false,
 				error: 'Validation 중 오류가 발생했습니다.',
 				message: 'Internal server error'
-			} as ApiResponse,
+			} as DomainApiResponse,
 			{ status: 500 }
 		);
 	}

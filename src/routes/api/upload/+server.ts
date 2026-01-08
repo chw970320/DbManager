@@ -12,7 +12,6 @@ import {
 	loadVocabularyData,
 	listVocabularyFiles
 } from '$lib/utils/file-handler.js';
-import { addHistoryLog } from '$lib/utils/history-handler.js';
 import {
 	getRequiredFile,
 	getOptionalString,
@@ -142,33 +141,6 @@ export async function POST({ request }: RequestEvent) {
 				} as ApiResponse,
 				{ status: 500 }
 			);
-		}
-
-		// 단어집이 교체되는 경우 히스토리도 초기화 (해당 파일에 대해서만?)
-		// TODO: 파일별 히스토리 초기화 로직이 필요할 수 있음. 현재는 전체 초기화만 구현되어 있음.
-		// 일단 파일별 초기화는 보류하고, 병합 모드 로그만 남김.
-
-		// 업로드 성공 히스토리 로그 추가 (병합 모드일 때만, 교체 모드는 히스토리 초기화)
-		if (!replaceExisting) {
-			try {
-				await addHistoryLog({
-					id: `upload_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-					action: 'UPLOAD_MERGE',
-					targetId: 'vocabulary_file',
-					targetName: `${file.name} (${parsedEntries.length}개 단어)`,
-					timestamp: new Date().toISOString(),
-					filename: filename, // 대상 파일명 저장
-					details: {
-						fileName: file.name,
-						fileSize: file.size,
-						processedCount: parsedEntries.length,
-						replaceMode: replaceExisting
-					}
-				});
-			} catch (historyError) {
-				console.warn('업로드 히스토리 로그 추가 실패:', historyError);
-				// 히스토리 로그 실패는 전체 업로드를 실패시키지 않음
-			}
 		}
 
 		// 성공 응답

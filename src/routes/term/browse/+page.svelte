@@ -4,7 +4,6 @@
 	import TermTable from '$lib/components/TermTable.svelte';
 	import TermFileManager from '$lib/components/TermFileManager.svelte';
 	import TermEditor from '$lib/components/TermEditor.svelte';
-	import HistoryLog from '$lib/components/HistoryLog.svelte';
 	import TermGenerator from '$lib/components/TermGenerator.svelte';
 	import TermValidationPanel from '$lib/components/TermValidationPanel.svelte';
 	import VocabularyEditor from '$lib/components/VocabularyEditor.svelte';
@@ -821,51 +820,6 @@
 				if (showValidationPanel) {
 					await refreshValidation();
 				}
-
-				// 히스토리 로그 기록
-				try {
-					await fetch('/api/history?type=term', {
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json'
-						},
-						body: JSON.stringify({
-							action: isEditMode ? 'update' : 'add',
-							targetId: savedEntry.id,
-							targetName: savedEntry.termName,
-							details:
-								isEditMode && beforeEntry
-									? {
-											before: {
-												termName: beforeEntry.termName,
-												columnName: beforeEntry.columnName,
-												domainName: beforeEntry.domainName
-											},
-											after: {
-												termName: savedEntry.termName,
-												columnName: savedEntry.columnName,
-												domainName: savedEntry.domainName
-											}
-										}
-									: {
-											after: {
-												termName: savedEntry.termName,
-												columnName: savedEntry.columnName,
-												domainName: savedEntry.domainName
-											}
-										}
-						})
-					});
-
-					// 히스토리 UI 새로고침
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					if (typeof window !== 'undefined' && (window as any).refreshTermHistoryLog) {
-						// eslint-disable-next-line @typescript-eslint/no-explicit-any
-						(window as any).refreshTermHistoryLog();
-					}
-				} catch (historyError: unknown) {
-					console.warn('히스토리 로그 기록 실패:', historyError);
-				}
 			} else {
 				// 에러 발생 시 모달 내부에 표시
 				const errorMsg = result.error || '용어 저장에 실패했습니다.';
@@ -1373,9 +1327,6 @@
 						}}
 					/>
 				{/if}
-
-				<!-- 히스토리 로그 -->
-				<HistoryLog type="term" />
 
 				<!-- 용어 변환기 -->
 				<div class="mb-8">

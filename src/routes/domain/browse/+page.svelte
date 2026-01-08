@@ -4,7 +4,6 @@
 	import DomainTable from '$lib/components/DomainTable.svelte';
 	import DomainFileManager from '$lib/components/DomainFileManager.svelte';
 	import DomainEditor from '$lib/components/DomainEditor.svelte';
-	import HistoryLog from '$lib/components/HistoryLog.svelte';
 	import type { DomainEntry, DomainApiResponse } from '$lib/types/domain.js';
 	import { get } from 'svelte/store';
 	import { settingsStore } from '$lib/stores/settings-store';
@@ -483,55 +482,12 @@
 			const result: DomainApiResponse = await response.json();
 
 			if (result.success && result.data) {
-				// 히스토리 로그 기록 (모달 닫기 전에 originalEntry 사용)
-				const originalEntry = currentEditingEntry;
-
 				// 모달 닫기
 				showEditor = false;
 				editorServerError = '';
 				currentEditingEntry = null;
 				// 데이터 새로고침
 				await loadDomainData();
-
-				// 히스토리 로그 기록
-				try {
-					await fetch('/api/history?type=domain', {
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json'
-						},
-						body: JSON.stringify({
-							action: isEditMode ? 'update' : 'add',
-							targetId: editedEntry.id || result.data.id,
-							targetName: editedEntry.standardDomainName,
-							details: {
-								before: originalEntry
-									? {
-											domainGroup: originalEntry.domainGroup,
-											domainCategory: originalEntry.domainCategory,
-											standardDomainName: originalEntry.standardDomainName,
-											physicalDataType: originalEntry.physicalDataType
-										}
-									: undefined,
-								after: {
-									domainGroup: editedEntry.domainGroup,
-									domainCategory: editedEntry.domainCategory,
-									standardDomainName: editedEntry.standardDomainName,
-									physicalDataType: editedEntry.physicalDataType
-								}
-							}
-						})
-					});
-
-					// 히스토리 UI 새로고침
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					if (typeof window !== 'undefined' && (window as any).refreshDomainHistoryLog) {
-						// eslint-disable-next-line @typescript-eslint/no-explicit-any
-						(window as any).refreshDomainHistoryLog();
-					}
-				} catch (historyError: unknown) {
-					console.warn('히스토리 로그 기록 실패:', historyError);
-				}
 			} else {
 				// 에러 발생 시 모달 내부에 표시
 				const errorMsg =
@@ -563,49 +519,12 @@
 			const result: DomainApiResponse = await response.json();
 
 			if (result.success) {
-				// 히스토리 로그 기록 (모달 닫기 전에 originalEntry 사용)
-				const originalEntry = currentEditingEntry;
-
 				// 모달 닫기
 				showEditor = false;
 				editorServerError = '';
 				currentEditingEntry = null;
 				// 데이터 새로고침
 				await loadDomainData();
-
-				// 히스토리 로그 기록
-				try {
-					await fetch('/api/history?type=domain', {
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json'
-						},
-						body: JSON.stringify({
-							action: 'delete',
-							targetId: entryToDelete.id,
-							targetName: entryToDelete.standardDomainName,
-							details: {
-								before: originalEntry
-									? {
-											domainGroup: originalEntry.domainGroup,
-											domainCategory: originalEntry.domainCategory,
-											standardDomainName: originalEntry.standardDomainName,
-											physicalDataType: originalEntry.physicalDataType
-										}
-									: undefined
-							}
-						})
-					});
-
-					// 히스토리 UI 새로고침
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					if (typeof window !== 'undefined' && (window as any).refreshDomainHistoryLog) {
-						// eslint-disable-next-line @typescript-eslint/no-explicit-any
-						(window as any).refreshDomainHistoryLog();
-					}
-				} catch (historyError: unknown) {
-					console.warn('히스토리 로그 기록 실패:', historyError);
-				}
 			} else {
 				const errorMsg = result.error || '도메인 삭제에 실패했습니다.';
 				editorServerError = errorMsg;
@@ -902,9 +821,6 @@
 					on:close={() => (isFileManagerOpen = false)}
 					on:change={handleFileChange}
 				/>
-
-				<!-- 히스토리 로그 -->
-				<HistoryLog type="domain" />
 
 				<!-- 에러 메시지 -->
 				{#if errorMessage}

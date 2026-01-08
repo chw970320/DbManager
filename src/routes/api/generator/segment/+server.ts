@@ -234,16 +234,14 @@ async function checkForbiddenWordsAndSynonyms(
 		return {
 			isForbidden,
 			isSynonym,
-			recommendations: Array.from(uniqueRecommendations.values()),
-			recommendationMappings: recommendationsWithMapping
+			recommendations: Array.from(uniqueRecommendations.values())
 		};
 	} catch (error) {
 		console.warn('금칙어 및 이음동의어 확인 중 오류:', error);
 		return {
 			isForbidden: false,
 			isSynonym: false,
-			recommendations: [],
-			recommendationMappings: []
+			recommendations: []
 		};
 	}
 }

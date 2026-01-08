@@ -137,3 +137,5 @@ isDomainCategoryMapped, isMappedTerm, isMappedColumn, isMappedDomain, unmappedTe
 - Entity에서 수퍼타입엔터티명을 수정해도 값 변경이 안 되는데 확인해봐. 원인을 발견하면 Entity 뿐만 아니라 다른 곳에서도 동일한 문제 없는지 사전 점검해
 
 ---
+
+현재 프로젝트에 DB, 엔터티, 속성, 테이블, 컬럼 관리 기능이 추가됐어. 코드베이스를 확인해서 @docs 폴더 내의 문서들을 현행화 해

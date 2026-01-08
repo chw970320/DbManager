@@ -8,7 +8,11 @@
 - [Vocabulary API](#vocabulary-api)
 - [Domain API](#domain-api)
 - [Term API](#term-api)
-- [History API](#history-api)
+- [Database API](#database-api)
+- [Entity API](#entity-api)
+- [Attribute API](#attribute-api)
+- [Table API](#table-api)
+- [Column API](#column-api)
 - [Forbidden Words API](#forbidden-words-api)
 - [Search API](#search-api)
 - [Settings API](#settings-api)
@@ -1185,183 +1189,113 @@ const data = await response.json();
 
 ---
 
-## History API
+## Database API
 
-### GET /api/history
+데이터베이스 정의서 데이터를 관리합니다.
 
-히스토리 로그를 조회합니다.
+### GET /api/database
 
-#### 설명
+데이터베이스 목록을 조회합니다. 페이지네이션, 정렬, 검색을 지원합니다.
 
-히스토리 로그를 조회합니다. vocabulary, domain, term 타입별로 조회할 수 있습니다.
+### POST /api/database
 
-#### 요청 파라미터
+새로운 데이터베이스 정의를 추가합니다.
 
-| 파라미터   | 타입     | 필수 | 기본값       | 설명                                           |
-| ---------- | -------- | ---- | ------------ | ---------------------------------------------- |
-| `type`     | `string` | ❌   | `vocabulary` | 히스토리 타입 (`vocabulary`, `domain`, `term`) |
-| `filename` | `string` | ❌   | -            | 파일명 (vocabulary만 필요)                     |
-| `limit`    | `number` | ❌   | `50`         | 조회 개수 (1-200)                              |
-| `offset`   | `number` | ❌   | `0`          | 오프셋 (>= 0)                                  |
+### PUT /api/database
 
-#### 요청 예시
+기존 데이터베이스 정의를 수정합니다.
 
-**curl:**
+### DELETE /api/database
 
-```bash
-curl -X GET "http://localhost:5173/api/history?type=vocabulary&filename=vocabulary.json&limit=50&offset=0" \
-  -H "Content-Type: application/json"
-```
-
-**JavaScript (fetch):**
-
-```javascript
-const response = await fetch(
-	'http://localhost:5173/api/history?type=vocabulary&filename=vocabulary.json&limit=50&offset=0',
-	{
-		method: 'GET',
-		headers: {
-			'Content-Type': 'application/json'
-		}
-	}
-);
-const data = await response.json();
-```
-
-#### 응답 예시
-
-**성공 (200):**
-
-```json
-{
-	"success": true,
-	"data": {
-		"logs": [
-			{
-				"id": "550e8400-e29b-41d4-a716-446655440000",
-				"action": "add",
-				"targetId": "550e8400-e29b-41d4-a716-446655440001",
-				"targetName": "사용자",
-				"timestamp": "2024-01-01T00:00:00.000Z",
-				"filename": "vocabulary.json",
-				"details": {
-					"after": {
-						"standardName": "사용자",
-						"abbreviation": "USER"
-					}
-				}
-			}
-		],
-		"pagination": {
-			"offset": 0,
-			"limit": 50,
-			"totalCount": 200,
-			"hasMore": true
-		},
-		"lastUpdated": "2024-01-01T00:00:00.000Z"
-	},
-	"message": "History logs retrieved successfully"
-}
-```
+ID를 기반으로 데이터베이스 정의를 삭제합니다.
 
 ---
 
-### POST /api/history
+## Entity API
 
-새로운 히스토리 로그를 추가합니다.
+엔터티 정의서 데이터를 관리합니다.
 
-#### 설명
+### GET /api/entity
 
-새로운 히스토리 로그를 추가합니다.
+엔터티 목록을 조회합니다. 페이지네이션, 정렬, 검색을 지원합니다.
 
-#### 요청 파라미터
+### POST /api/entity
 
-| 파라미터 | 타입     | 필수 | 기본값       | 설명          |
-| -------- | -------- | ---- | ------------ | ------------- |
-| `type`   | `string` | ❌   | `vocabulary` | 히스토리 타입 |
+새로운 엔터티 정의를 추가합니다.
 
-#### 요청 바디
+### PUT /api/entity
 
-```typescript
-{
-  action: 'add' | 'update' | 'delete' | 'UPLOAD_MERGE';  // 필수
-  targetId: string;      // 필수
-  targetName: string;     // 필수
-  filename?: string;      // vocabulary만
-  details?: {
-    before?: Partial<Entry>;
-    after?: Partial<Entry>;
-    fileName?: string;
-    fileSize?: number;
-    processedCount?: number;
-    replaceMode?: boolean;
-  };
-}
-```
+기존 엔터티 정의를 수정합니다.
 
-#### 요청 예시
+### DELETE /api/entity
 
-**curl:**
+ID를 기반으로 엔터티 정의를 삭제합니다.
 
-```bash
-curl -X POST "http://localhost:5173/api/history?type=vocabulary" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "action": "add",
-    "targetId": "550e8400-e29b-41d4-a716-446655440001",
-    "targetName": "사용자",
-    "filename": "vocabulary.json",
-    "details": {
-      "after": {
-        "standardName": "사용자",
-        "abbreviation": "USER"
-      }
-    }
-  }'
-```
+---
 
-**JavaScript (fetch):**
+## Attribute API
 
-```javascript
-const response = await fetch('http://localhost:5173/api/history?type=vocabulary', {
-	method: 'POST',
-	headers: {
-		'Content-Type': 'application/json'
-	},
-	body: JSON.stringify({
-		action: 'add',
-		targetId: '550e8400-e29b-41d4-a716-446655440001',
-		targetName: '사용자',
-		filename: 'vocabulary.json',
-		details: {
-			after: {
-				standardName: '사용자',
-				abbreviation: 'USER'
-			}
-		}
-	})
-});
-const data = await response.json();
-```
+속성 정의서 데이터를 관리합니다.
 
-#### 응답 예시
+### GET /api/attribute
 
-**성공 (201):**
+속성 목록을 조회합니다. 페이지네이션, 정렬, 검색을 지원합니다.
 
-```json
-{
-	"success": true,
-	"data": {
-		"id": "550e8400-e29b-41d4-a716-446655440000",
-		"action": "add",
-		"targetId": "550e8400-e29b-41d4-a716-446655440001",
-		"targetName": "사용자",
-		"timestamp": "2024-01-01T00:00:00.000Z",
-		"filename": "vocabulary.json"
-	},
-	"message": "History log added successfully"
-}
-```
+### POST /api/attribute
+
+새로운 속성 정의를 추가합니다.
+
+### PUT /api/attribute
+
+기존 속성 정의를 수정합니다.
+
+### DELETE /api/attribute
+
+ID를 기반으로 속성 정의를 삭제합니다.
+
+---
+
+## Table API
+
+테이블 정의서 데이터를 관리합니다.
+
+### GET /api/table
+
+테이블 목록을 조회합니다. 페이지네이션, 정렬, 검색을 지원합니다.
+
+### POST /api/table
+
+새로운 테이블 정의를 추가합니다.
+
+### PUT /api/table
+
+기존 테이블 정의를 수정합니다.
+
+### DELETE /api/table
+
+ID를 기반으로 테이블 정의를 삭제합니다.
+
+---
+
+## Column API
+
+컬럼 정의서 데이터를 관리합니다.
+
+### GET /api/column
+
+컬럼 목록을 조회합니다. 페이지네이션, 정렬, 검색을 지원합니다.
+
+### POST /api/column
+
+새로운 컬럼 정의를 추가합니다.
+
+### PUT /api/column
+
+기존 컬럼 정의를 수정합니다.
+
+### DELETE /api/column
+
+ID를 기반으로 컬럼 정의를 삭제합니다.
 
 ---
 

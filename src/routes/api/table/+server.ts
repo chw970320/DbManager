@@ -76,6 +76,10 @@ export async function GET({ url }: RequestEvent) {
 		if (Object.keys(columnFilters).length > 0) {
 			filteredEntries = filteredEntries.filter((entry) => Object.entries(columnFilters).every(([k, v]) => {
 				const val = entry[k as keyof TableEntry];
+				// "(빈값)" 필터 처리
+				if (v === '(빈값)') {
+					return val === null || val === undefined || val === '';
+				}
 				return val != null && String(val).toLowerCase().includes(v.toLowerCase());
 			}));
 		}

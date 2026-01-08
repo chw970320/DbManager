@@ -430,6 +430,78 @@ const matchFn = (value: string | undefined | null) => {
 };
 ```
 
+### filter-options API 패턴
+
+각 메뉴에 대해 전체 데이터 기준으로 필터 옵션을 조회하는 API가 필요합니다:
+
+**API 엔드포인트 패턴**: `/api/{메뉴}/filter-options`
+
+```typescript
+// GET /api/{메뉴}/filter-options
+const filterableColumns = ['column1', 'column2', ...];
+const options: Record<string, string[]> = {};
+
+// Nullable 필드 목록 정의
+const nullableColumns = new Set(['column1', 'column2', ...]);
+
+filterableColumns.forEach((columnKey) => {
+	const values = new Set<string>();
+	let hasEmptyValue = false;
+	
+	data.entries.forEach((entry) => {
+		const value = entry[columnKey as keyof EntryType];
+		if (value !== null && value !== undefined && value !== '') {
+			values.add(String(value));
+		} else if (nullableColumns.has(columnKey)) {
+			hasEmptyValue = true;
+		}
+	});
+	
+	const sortedValues = Array.from(values).sort();
+	// Nullable 필드이고 빈값이 있으면 "(빈값)" 옵션 추가
+	if (nullableColumns.has(columnKey) && hasEmptyValue) {
+		sortedValues.unshift('(빈값)');
+	}
+	options[columnKey] = sortedValues;
+});
+```
+
+**API 필터링 로직에서 빈값 처리**:
+```typescript
+// 컬럼 필터 적용 시
+if (filterValue === '(빈값)') {
+	return entryValue === null || entryValue === undefined || entryValue === '';
+}
+```
+
+**Browse 페이지에서 호출 패턴**:
+```typescript
+async function loadFilterOptions() {
+	const params = new URLSearchParams({ filename: selectedFilename });
+	const response = await fetch(`/api/{메뉴}/filter-options?${params}`);
+	const result = await response.json();
+	if (result.success && result.data) {
+		filterOptions = result.data;
+	}
+}
+
+// 초기 로드 및 파일 선택 시 호출
+onMount(async () => {
+	await loadFilterOptions();
+	await loadData();
+});
+
+async function handleFileSelect(filename: string) {
+	await loadFilterOptions();
+	await loadData();
+}
+```
+
+**테이블 컴포넌트에서 사용**:
+```svelte
+options={filterOptions[column.key] || column.filterOptions || getUniqueValues(column.key)}
+```
+
 ### Editor 삭제 버튼 패턴
 
 Editor 컴포넌트에서 삭제 버튼은 **브라우저 confirm() 다이얼로그**를 사용합니다:

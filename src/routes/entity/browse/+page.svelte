@@ -55,7 +55,7 @@
 			}
 		});
 
-		(async () => { await loadFiles(); if (browser) await loadData(); })();
+		(async () => { await loadFiles(); if (browser) { await loadFilterOptions(); await loadData(); } })();
 		unsubscribe = entityStore.subscribe((value) => {
 			if (selectedFilename !== value.selectedFilename) {
 				selectedFilename = value.selectedFilename;
@@ -86,11 +86,23 @@
 		} catch (error) { console.error('파일 목록 로드 오류:', error); }
 	}
 
+	async function loadFilterOptions() {
+		try {
+			const params = new URLSearchParams({ filename: selectedFilename });
+			const response = await fetch(`/api/entity/filter-options?${params}`);
+			const result: DbDesignApiResponse = await response.json();
+			if (result.success && result.data && typeof result.data === 'object') {
+				filterOptions = result.data as Record<string, string[]>;
+			}
+		} catch (error) { console.error('필터 옵션 로드 오류:', error); }
+	}
+
 	async function handleFileSelect(filename: string) {
 		if (selectedFilename === filename) return;
 		selectedFilename = filename;
 		entityStore.update((store) => ({ ...store, selectedFilename: filename }));
 		currentPage = 1; searchQuery = '';
+		await loadFilterOptions();
 		await loadData();
 	}
 

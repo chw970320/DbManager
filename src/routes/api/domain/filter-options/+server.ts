@@ -38,15 +38,30 @@ export async function GET({ url }: RequestEvent) {
 			'revision'
 		];
 
+		// Nullable 필드 목록 (빈값도 옵션에 포함)
+		const nullableColumns = new Set([
+			'revision'
+		]);
+
 		filterableColumns.forEach((columnKey) => {
 			const values = new Set<string>();
+			let hasEmptyValue = false;
+			
 			domainData.entries.forEach((entry) => {
 				const value = entry[columnKey as keyof DomainEntry];
 				if (value !== null && value !== undefined && value !== '') {
 					values.add(String(value));
+				} else if (nullableColumns.has(columnKey)) {
+					hasEmptyValue = true;
 				}
 			});
-			options[columnKey] = Array.from(values).sort();
+			
+			const sortedValues = Array.from(values).sort();
+			// Nullable 필드이고 빈값이 있으면 "(빈값)" 옵션 추가
+			if (nullableColumns.has(columnKey) && hasEmptyValue) {
+				sortedValues.unshift('(빈값)');
+			}
+			options[columnKey] = sortedValues;
 		});
 
 		return json(

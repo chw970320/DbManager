@@ -36,13 +36,14 @@
 				}
 			}
 		});
-		(async () => { await loadFiles(); if (browser) await loadData(); })();
+		(async () => { await loadFiles(); if (browser) { await loadFilterOptions(); await loadData(); } })();
 		unsubscribe = columnStore.subscribe((value) => { if (selectedFilename !== value.selectedFilename) { selectedFilename = value.selectedFilename; if (browser) { currentPage = 1; searchQuery = ''; loadData(); } } });
 		return () => { if (unsubscribe) unsubscribe(); if (settingsUnsubscribe) settingsUnsubscribe(); };
 	});
 
 	async function loadFiles() { try { const response = await fetch('/api/column/files'); const result: DbDesignApiResponse = await response.json(); if (result.success && Array.isArray(result.data)) { const files = result.data as string[]; allColumnFiles = files; const filteredFiles = filterColumnFiles(files, showSystemFiles); columnFiles = filteredFiles; if (files.length === 0) { const createResponse = await fetch('/api/column/files', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: 'column.json' }) }); if (createResponse.ok) { allColumnFiles = ['column.json']; columnFiles = filterColumnFiles(['column.json'], showSystemFiles); if (selectedFilename !== 'column.json') handleFileSelect('column.json'); } } else if (filteredFiles.length > 0 && !filteredFiles.includes(selectedFilename)) { handleFileSelect(filteredFiles[0]); } else if (!files.includes(selectedFilename)) { handleFileSelect(filteredFiles.length > 0 ? filteredFiles[0] : files[0]); } } } catch (error) { console.error('파일 목록 로드 오류:', error); } }
-	async function handleFileSelect(filename: string) { if (selectedFilename === filename) return; selectedFilename = filename; columnStore.update((store) => ({ ...store, selectedFilename: filename })); currentPage = 1; searchQuery = ''; await loadData(); }
+	async function loadFilterOptions() { try { const params = new URLSearchParams({ filename: selectedFilename }); const response = await fetch(`/api/column/filter-options?${params}`); const result: DbDesignApiResponse = await response.json(); if (result.success && result.data && typeof result.data === 'object') { filterOptions = result.data as Record<string, string[]>; } } catch (error) { console.error('필터 옵션 로드 오류:', error); } }
+	async function handleFileSelect(filename: string) { if (selectedFilename === filename) return; selectedFilename = filename; columnStore.update((store) => ({ ...store, selectedFilename: filename })); currentPage = 1; searchQuery = ''; await loadFilterOptions(); await loadData(); }
 
 	async function loadData() {
 		loading = true;

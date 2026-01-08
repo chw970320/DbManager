@@ -65,6 +65,7 @@
 		(async () => {
 			await loadDatabaseFiles();
 			if (browser) {
+				await loadFilterOptions();
 				await loadDatabaseData();
 			}
 		})();
@@ -132,6 +133,26 @@
 	}
 
 	/**
+	 * 필터 옵션 로드 (전체 데이터 기준)
+	 */
+	async function loadFilterOptions() {
+		try {
+			const params = new URLSearchParams({
+				filename: selectedFilename
+			});
+
+			const response = await fetch(`/api/database/filter-options?${params}`);
+			const result: DbDesignApiResponse = await response.json();
+
+			if (result.success && result.data && typeof result.data === 'object') {
+				filterOptions = result.data as Record<string, string[]>;
+			}
+		} catch (error) {
+			console.error('필터 옵션 로드 오류:', error);
+		}
+	}
+
+	/**
 	 * 파일 선택 처리
 	 */
 	async function handleFileSelect(filename: string) {
@@ -140,6 +161,7 @@
 		databaseStore.update((store) => ({ ...store, selectedFilename: filename }));
 		currentPage = 1;
 		searchQuery = '';
+		await loadFilterOptions();
 		await loadDatabaseData();
 	}
 

@@ -283,6 +283,12 @@ export async function GET({ url }: RequestEvent) {
 			filteredEntries = filteredEntries.filter((entry) => {
 				return Object.entries(columnFilters).every(([columnKey, filterValue]) => {
 					const entryValue = entry[columnKey as keyof TermEntry];
+					
+					// "(빈값)" 필터 처리
+					if (filterValue === '(빈값)') {
+						return entryValue === null || entryValue === undefined || entryValue === '';
+					}
+					
 					if (entryValue === null || entryValue === undefined) {
 						return false;
 					}

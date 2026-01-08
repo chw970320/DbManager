@@ -8,8 +8,7 @@ export interface DomainEntry {
 	domainGroup: string; // C: 공통표준도메인그룹명
 	domainCategory: string; // D: 공통표준도메인분류명
 	standardDomainName: string; // E: 공통표준도메인명 (계산된 값)
-	// 논리/물리 데이터 타입 및 부가 정보
-	logicalDataType?: string; // 논리 데이터타입
+	// 물리 데이터 타입 및 부가 정보
 	physicalDataType: string; // G: 데이터타입 (물리 데이터타입)
 	dataLength?: string; // H: 데이터길이 (text 타입)
 	decimalPlaces?: string; // I: 데이터소수점길이 (text 타입)

@@ -97,10 +97,13 @@
 		{ key: 'organizationName', label: '기관명', sortable: true, filterable: true, filterType: 'text', width: 'min-w-[120px]', align: 'left' },
 		{ key: 'departmentName', label: '부서명', sortable: true, filterable: true, filterType: 'text', width: 'min-w-[120px]', align: 'left' },
 		{ key: 'appliedTask', label: '적용업무', sortable: true, filterable: true, filterType: 'text', width: 'min-w-[120px]', align: 'left' },
+		{ key: 'relatedLaw', label: '관련법령', sortable: true, filterable: true, filterType: 'text', width: 'min-w-[150px]', align: 'left' },
 		{ key: 'logicalDbName', label: '논리DB명', sortable: true, filterable: true, filterType: 'text', width: 'min-w-[150px]', align: 'left' },
 		{ key: 'physicalDbName', label: '물리DB명', sortable: true, filterable: true, filterType: 'text', width: 'min-w-[150px]', align: 'left' },
 		{ key: 'dbmsInfo', label: 'DBMS정보', sortable: false, filterable: true, filterType: 'select', width: 'min-w-[120px]', align: 'left' },
+		{ key: 'osInfo', label: '운영체제정보', sortable: false, filterable: true, filterType: 'select', width: 'min-w-[120px]', align: 'left' },
 		{ key: 'buildDate', label: '구축일자', sortable: true, filterable: false, width: 'min-w-[100px]', align: 'center' },
+		{ key: 'exclusionReason', label: '수집제외사유', sortable: false, filterable: false, width: 'min-w-[200px]', align: 'left' },
 		{ key: 'dbDescription', label: 'DB설명', sortable: false, filterable: false, width: 'min-w-[200px]', align: 'left' }
 	];
 

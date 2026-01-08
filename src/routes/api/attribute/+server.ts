@@ -107,6 +107,20 @@ export async function POST({ request, url }: RequestEvent) {
 		const filename = url.searchParams.get('filename') || 'attribute.json';
 		const body = await request.json();
 
+		const requiredFields = ['schemaName', 'entityName', 'attributeName', 'attributeType'];
+		const missingFields = requiredFields.filter((field) => !body[field] || (typeof body[field] === 'string' && body[field].trim() === ''));
+
+		if (missingFields.length > 0) {
+			return json(
+				{
+					success: false,
+					error: `필수 필드가 누락되었습니다: ${missingFields.join(', ')}`,
+					message: 'Missing required fields'
+				} as DbDesignApiResponse,
+				{ status: 400 }
+			);
+		}
+
 		let attrData: AttributeData;
 		try { attrData = await loadAttributeData(filename); }
 		catch { attrData = { entries: [], lastUpdated: new Date().toISOString(), totalCount: 0 }; }
@@ -114,13 +128,13 @@ export async function POST({ request, url }: RequestEvent) {
 		const now = new Date().toISOString();
 		const newEntry: AttributeEntry = {
 			id: uuidv4(),
-			schemaName: body.schemaName || undefined,
-			entityName: body.entityName || undefined,
-			attributeName: body.attributeName || undefined,
-			attributeType: body.attributeType || undefined,
+			schemaName: body.schemaName,
+			entityName: body.entityName,
+			attributeName: body.attributeName,
+			attributeType: body.attributeType,
 			requiredInput: body.requiredInput || '',
 			identifierFlag: body.identifierFlag || undefined,
-			refEntityName: body.refEntityName || '',
+			refEntityName: body.refEntityName || undefined,
 			refAttributeName: body.refAttributeName || undefined,
 			attributeDescription: body.attributeDescription || undefined,
 			createdAt: now,
@@ -144,6 +158,20 @@ export async function PUT({ request, url }: RequestEvent) {
 		const body = await request.json();
 		const { id, ...updateFields } = body;
 		if (!id) return json({ success: false, error: 'ID가 필요합니다.' }, { status: 400 });
+
+		const requiredFields = ['schemaName', 'entityName', 'attributeName', 'attributeType'];
+		const missingFields = requiredFields.filter((field) => !updateFields[field] || (typeof updateFields[field] === 'string' && updateFields[field].trim() === ''));
+
+		if (missingFields.length > 0) {
+			return json(
+				{
+					success: false,
+					error: `필수 필드가 누락되었습니다: ${missingFields.join(', ')}`,
+					message: 'Missing required fields'
+				} as DbDesignApiResponse,
+				{ status: 400 }
+			);
+		}
 
 		const attrData = await loadAttributeData(filename);
 		const idx = attrData.entries.findIndex((e) => e.id === id);

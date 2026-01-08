@@ -146,13 +146,6 @@ export function validateDomainEntryStrict(entry: unknown): void {
 			obj.standardDomainName
 		);
 	}
-	if (!isNonEmptyString(obj.logicalDataType)) {
-		throw new DataValidationError(
-			'논리데이터타입이 비어있습니다.',
-			'logicalDataType',
-			obj.logicalDataType
-		);
-	}
 	if (!isNonEmptyString(obj.physicalDataType)) {
 		throw new DataValidationError(
 			'물리데이터타입이 비어있습니다.',

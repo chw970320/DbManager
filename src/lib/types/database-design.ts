@@ -92,14 +92,14 @@ export interface DatabaseHistoryData {
 export interface EntityEntry {
 	id: string;
 	// 필수 필드 (F: NOT NULL)
-	superTypeEntityName: string; // 수퍼타입엔터티명
+	logicalDbName: string; // 논리DB명
+	schemaName: string; // 스키마명
+	entityName: string; // 엔터티명
+	primaryIdentifier: string; // 주식별자
+	tableKoreanName: string; // 테이블한글명
 	// 선택 필드 (T: Nullable)
-	logicalDbName?: string; // 논리DB명
-	schemaName?: string; // 스키마명
-	entityName?: string; // 엔터티명
+	superTypeEntityName?: string; // 수퍼타입엔터티명
 	entityDescription?: string; // 엔터티설명
-	primaryIdentifier?: string; // 주식별자
-	tableKoreanName?: string; // 테이블한글명
 	// 시스템 필드
 	createdAt: string;
 	updatedAt: string;
@@ -153,14 +153,14 @@ export interface EntityHistoryData {
 export interface AttributeEntry {
 	id: string;
 	// 필수 필드 (F: NOT NULL)
-	requiredInput: string; // 필수입력여부
-	refEntityName: string; // 참조엔터티명
+	schemaName: string; // 스키마명
+	entityName: string; // 엔터티명
+	attributeName: string; // 속성명
+	attributeType: string; // 속성유형
 	// 선택 필드 (T: Nullable)
-	schemaName?: string; // 스키마명
-	entityName?: string; // 엔터티명
-	attributeName?: string; // 속성명
-	attributeType?: string; // 속성유형
+	requiredInput?: string; // 필수입력여부
 	identifierFlag?: string; // 식별자여부
+	refEntityName?: string; // 참조엔터티명
 	refAttributeName?: string; // 참조속성명
 	attributeDescription?: string; // 속성설명
 	// 시스템 필드

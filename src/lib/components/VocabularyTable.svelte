@@ -146,6 +146,15 @@
 			align: 'center'
 		},
 		{
+			key: 'domainGroup',
+			label: '도메인그룹명',
+			sortable: true,
+			filterable: true,
+			filterType: 'text',
+			width: 'min-w-[150px]',
+			align: 'left'
+		},
+		{
 			key: 'domainCategory',
 			label: '도메인분류명',
 			sortable: false,

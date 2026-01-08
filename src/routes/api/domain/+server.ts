@@ -79,7 +79,6 @@ export async function GET({ url }: RequestEvent) {
 			'domainGroup',
 			'domainCategory',
 			'standardDomainName',
-			'logicalDataType',
 			'physicalDataType',
 			'createdAt',
 			'updatedAt'
@@ -98,14 +97,7 @@ export async function GET({ url }: RequestEvent) {
 		}
 
 		// 검색 필드 유효성 검증
-		const validSearchFields = [
-			'all',
-			'domainGroup',
-			'domainCategory',
-			'standardDomainName',
-			'logicalDataType',
-			'physicalDataType'
-		];
+		const validSearchFields = ['all', 'domainGroup', 'domainCategory', 'standardDomainName', 'physicalDataType'];
 		if (!validSearchFields.includes(searchField)) {
 			return json(
 				{
@@ -151,8 +143,6 @@ export async function GET({ url }: RequestEvent) {
 						return matchFn(entry.domainCategory);
 					case 'standardDomainName':
 						return matchFn(entry.standardDomainName);
-					case 'logicalDataType':
-						return matchFn(entry.logicalDataType);
 					case 'physicalDataType':
 						return matchFn(entry.physicalDataType);
 					case 'all':
@@ -161,7 +151,6 @@ export async function GET({ url }: RequestEvent) {
 							matchFn(entry.domainGroup) ||
 							matchFn(entry.domainCategory) ||
 							matchFn(entry.standardDomainName) ||
-							matchFn(entry.logicalDataType) ||
 							matchFn(entry.physicalDataType) ||
 							matchFn(entry.dataValue) ||
 							matchFn(entry.measurementUnit) ||
@@ -320,11 +309,9 @@ export async function OPTIONS({ url }: RequestEvent) {
 						totalEntries: 0,
 						lastUpdated: domainData.lastUpdated,
 						domainGroups: {},
-						logicalDataTypes: {},
 						physicalDataTypes: {},
 						summary: {
 							uniqueGroups: 0,
-							uniqueLogicalDataTypes: 0,
 							uniquePhysicalDataTypes: 0
 						}
 					},
@@ -336,16 +323,11 @@ export async function OPTIONS({ url }: RequestEvent) {
 
 		// 도메인 그룹별 통계
 		const groupStats = new Map<string, number>();
-		const logicalDataTypeStats = new Map<string, number>();
 		const physicalDataTypeStats = new Map<string, number>();
 
 		domainData.entries.forEach((entry) => {
 			// 도메인 그룹별 카운트
 			groupStats.set(entry.domainGroup, (groupStats.get(entry.domainGroup) || 0) + 1);
-
-			// 논리 데이터 타입별 카운트 (값이 있을 때만)
-			const logicalType = entry.logicalDataType ?? 'UNKNOWN';
-			logicalDataTypeStats.set(logicalType, (logicalDataTypeStats.get(logicalType) || 0) + 1);
 
 			// 물리 데이터 타입별 카운트
 			physicalDataTypeStats.set(
@@ -358,11 +340,9 @@ export async function OPTIONS({ url }: RequestEvent) {
 			totalEntries: domainData.totalCount,
 			lastUpdated: domainData.lastUpdated,
 			domainGroups: Object.fromEntries(groupStats),
-			logicalDataTypes: Object.fromEntries(logicalDataTypeStats),
 			physicalDataTypes: Object.fromEntries(physicalDataTypeStats),
 			summary: {
 				uniqueGroups: groupStats.size,
-				uniqueLogicalDataTypes: logicalDataTypeStats.size,
 				uniquePhysicalDataTypes: physicalDataTypeStats.size
 			}
 		};
@@ -474,7 +454,6 @@ export async function POST({ request, url }: RequestEvent) {
 			physicalDataType: entryData.physicalDataType,
 			dataLength: entryData.dataLength || undefined,
 			decimalPlaces: entryData.decimalPlaces || undefined,
-			logicalDataType: entryData.logicalDataType || undefined,
 			measurementUnit: entryData.measurementUnit || undefined,
 			revision: entryData.revision || undefined,
 			description: entryData.description || undefined,

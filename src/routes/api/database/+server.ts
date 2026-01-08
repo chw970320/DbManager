@@ -196,8 +196,8 @@ export async function POST({ request, url }: RequestEvent) {
 		const filename = url.searchParams.get('filename') || 'database.json';
 		const body = await request.json();
 
-		const requiredFields = ['organizationName', 'departmentName', 'appliedTask', 'buildDate'];
-		const missingFields = requiredFields.filter((field) => !body[field]);
+		const requiredFields = ['organizationName', 'departmentName', 'appliedTask', 'logicalDbName', 'physicalDbName', 'dbmsInfo'];
+		const missingFields = requiredFields.filter((field) => !body[field] || (typeof body[field] === 'string' && body[field].trim() === ''));
 
 		if (missingFields.length > 0) {
 			return json(
@@ -279,6 +279,20 @@ export async function PUT({ request, url }: RequestEvent) {
 		if (!id || typeof id !== 'string' || id.trim() === '') {
 			return json(
 				{ success: false, error: 'ID가 필요합니다.', message: 'ID required' },
+				{ status: 400 }
+			);
+		}
+
+		const requiredFields = ['organizationName', 'departmentName', 'appliedTask', 'logicalDbName', 'physicalDbName', 'dbmsInfo'];
+		const missingFields = requiredFields.filter((field) => !updateFields[field] || (typeof updateFields[field] === 'string' && updateFields[field].trim() === ''));
+
+		if (missingFields.length > 0) {
+			return json(
+				{
+					success: false,
+					error: `필수 필드가 누락되었습니다: ${missingFields.join(', ')}`,
+					message: 'Missing required fields'
+				} as DbDesignApiResponse,
 				{ status: 400 }
 			);
 		}

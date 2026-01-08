@@ -133,6 +133,20 @@ export async function POST({ request, url }: RequestEvent) {
 		const filename = url.searchParams.get('filename') || 'entity.json';
 		const body = await request.json();
 
+		const requiredFields = ['logicalDbName', 'schemaName', 'entityName', 'primaryIdentifier', 'tableKoreanName'];
+		const missingFields = requiredFields.filter((field) => !body[field] || (typeof body[field] === 'string' && body[field].trim() === ''));
+
+		if (missingFields.length > 0) {
+			return json(
+				{
+					success: false,
+					error: `필수 필드가 누락되었습니다: ${missingFields.join(', ')}`,
+					message: 'Missing required fields'
+				} as DbDesignApiResponse,
+				{ status: 400 }
+			);
+		}
+
 		let entityData: EntityData;
 		try { entityData = await loadEntityData(filename); }
 		catch { entityData = { entries: [], lastUpdated: new Date().toISOString(), totalCount: 0 }; }
@@ -140,13 +154,13 @@ export async function POST({ request, url }: RequestEvent) {
 		const now = new Date().toISOString();
 		const newEntry: EntityEntry = {
 			id: uuidv4(),
-			logicalDbName: body.logicalDbName || undefined,
-			schemaName: body.schemaName || undefined,
-			entityName: body.entityName || undefined,
+			logicalDbName: body.logicalDbName,
+			schemaName: body.schemaName,
+			entityName: body.entityName,
+			primaryIdentifier: body.primaryIdentifier,
+			tableKoreanName: body.tableKoreanName,
 			entityDescription: body.entityDescription || undefined,
-			primaryIdentifier: body.primaryIdentifier || undefined,
-			superTypeEntityName: body.superTypeEntityName || '',
-			tableKoreanName: body.tableKoreanName || undefined,
+			superTypeEntityName: body.superTypeEntityName || undefined,
 			createdAt: now,
 			updatedAt: now
 		};
@@ -170,6 +184,20 @@ export async function PUT({ request, url }: RequestEvent) {
 		const { id, ...updateFields } = body;
 
 		if (!id) return json({ success: false, error: 'ID가 필요합니다.' }, { status: 400 });
+
+		const requiredFields = ['logicalDbName', 'schemaName', 'entityName', 'primaryIdentifier', 'tableKoreanName'];
+		const missingFields = requiredFields.filter((field) => !updateFields[field] || (typeof updateFields[field] === 'string' && updateFields[field].trim() === ''));
+
+		if (missingFields.length > 0) {
+			return json(
+				{
+					success: false,
+					error: `필수 필드가 누락되었습니다: ${missingFields.join(', ')}`,
+					message: 'Missing required fields'
+				} as DbDesignApiResponse,
+				{ status: 400 }
+			);
+		}
 
 		const entityData = await loadEntityData(filename);
 		const entryIndex = entityData.entries.findIndex((e) => e.id === id);

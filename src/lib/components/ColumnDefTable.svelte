@@ -47,14 +47,27 @@
 
 	type ColumnAlignment = 'left' | 'center' | 'right';
 	const columns: Array<{ key: string; label: string; sortable: boolean; filterable: boolean; filterType?: 'text' | 'select'; width: string; align: ColumnAlignment }> = [
+		{ key: 'scopeFlag', label: '사업범위여부', sortable: false, filterable: true, filterType: 'select', width: 'min-w-[100px]', align: 'center' },
+		{ key: 'subjectArea', label: '주제영역', sortable: true, filterable: true, filterType: 'text', width: 'min-w-[120px]', align: 'left' },
 		{ key: 'schemaName', label: '스키마명', sortable: true, filterable: true, filterType: 'text', width: 'min-w-[120px]', align: 'left' },
 		{ key: 'tableEnglishName', label: '테이블영문명', sortable: true, filterable: true, filterType: 'text', width: 'min-w-[150px]', align: 'left' },
 		{ key: 'columnEnglishName', label: '컬럼영문명', sortable: true, filterable: true, filterType: 'text', width: 'min-w-[150px]', align: 'left' },
 		{ key: 'columnKoreanName', label: '컬럼한글명', sortable: true, filterable: true, filterType: 'text', width: 'min-w-[150px]', align: 'left' },
+		{ key: 'relatedEntityName', label: '연관엔터티명', sortable: true, filterable: true, filterType: 'text', width: 'min-w-[150px]', align: 'left' },
 		{ key: 'dataType', label: '자료타입', sortable: false, filterable: true, filterType: 'select', width: 'min-w-[100px]', align: 'center' },
 		{ key: 'dataLength', label: '자료길이', sortable: false, filterable: false, width: 'min-w-[80px]', align: 'center' },
+		{ key: 'dataDecimalLength', label: '자료소수점길이', sortable: false, filterable: false, width: 'min-w-[100px]', align: 'center' },
+		{ key: 'dataFormat', label: '자료형식', sortable: false, filterable: false, width: 'min-w-[100px]', align: 'left' },
 		{ key: 'notNullFlag', label: 'NOT NULL', sortable: false, filterable: true, filterType: 'select', width: 'min-w-[80px]', align: 'center' },
 		{ key: 'pkInfo', label: 'PK', sortable: false, filterable: true, filterType: 'select', width: 'min-w-[60px]', align: 'center' },
+		{ key: 'fkInfo', label: 'FK', sortable: false, filterable: true, filterType: 'select', width: 'min-w-[60px]', align: 'center' },
+		{ key: 'indexName', label: '인덱스명', sortable: false, filterable: false, width: 'min-w-[100px]', align: 'left' },
+		{ key: 'indexOrder', label: '인덱스순번', sortable: false, filterable: false, width: 'min-w-[100px]', align: 'center' },
+		{ key: 'akInfo', label: 'AK', sortable: false, filterable: true, filterType: 'select', width: 'min-w-[60px]', align: 'center' },
+		{ key: 'constraint', label: '제약조건', sortable: false, filterable: false, width: 'min-w-[150px]', align: 'left' },
+		{ key: 'personalInfoFlag', label: '개인정보여부', sortable: false, filterable: true, filterType: 'select', width: 'min-w-[100px]', align: 'center' },
+		{ key: 'encryptionFlag', label: '암호화여부', sortable: false, filterable: true, filterType: 'select', width: 'min-w-[100px]', align: 'center' },
+		{ key: 'publicFlag', label: '공개/비공개여부', sortable: false, filterable: true, filterType: 'select', width: 'min-w-[120px]', align: 'center' },
 		{ key: 'columnDescription', label: '컬럼설명', sortable: false, filterable: false, width: 'min-w-[200px]', align: 'left' }
 	];
 

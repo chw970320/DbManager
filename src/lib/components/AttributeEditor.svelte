@@ -24,24 +24,31 @@
 			refEntityName: entry.refEntityName || '', refAttributeName: entry.refAttributeName || '', attributeDescription: entry.attributeDescription || '' };
 	});
 
-	function validate(): boolean {
-		const newErrors: Record<string, string> = {};
-		if (!formData.requiredInput.trim()) newErrors.requiredInput = '필수입력여부는 필수입니다.';
-		if (!formData.refEntityName.trim()) newErrors.refEntityName = '참조엔터티명은 필수입니다.';
-		errors = newErrors;
-		return Object.keys(newErrors).length === 0;
-	}
+function validate(): boolean {
+	const newErrors: Record<string, string> = {};
+	if (!formData.schemaName.trim()) newErrors.schemaName = '스키마명은 필수입니다.';
+	if (!formData.entityName.trim()) newErrors.entityName = '엔터티명은 필수입니다.';
+	if (!formData.attributeName.trim()) newErrors.attributeName = '속성명은 필수입니다.';
+	if (!formData.attributeType.trim()) newErrors.attributeType = '속성유형은 필수입니다.';
+	errors = newErrors;
+	return Object.keys(newErrors).length === 0;
+}
 
 	function handleSave() {
 		if (!validate()) return;
 		const saveData: AttributeEntry = {
 			id: entry.id || crypto.randomUUID(),
-			requiredInput: formData.requiredInput.trim(), refEntityName: formData.refEntityName.trim(),
-			schemaName: formData.schemaName.trim() || undefined, entityName: formData.entityName.trim() || undefined,
-			attributeName: formData.attributeName.trim() || undefined, attributeType: formData.attributeType.trim() || undefined,
-			identifierFlag: formData.identifierFlag.trim() || undefined, refAttributeName: formData.refAttributeName.trim() || undefined,
+			schemaName: formData.schemaName.trim(),
+			entityName: formData.entityName.trim(),
+			attributeName: formData.attributeName.trim(),
+			attributeType: formData.attributeType.trim(),
+			requiredInput: formData.requiredInput.trim() || undefined,
+			refEntityName: formData.refEntityName.trim() || undefined,
+			identifierFlag: formData.identifierFlag.trim() || undefined,
+			refAttributeName: formData.refAttributeName.trim() || undefined,
 			attributeDescription: formData.attributeDescription.trim() || undefined,
-			createdAt: entry.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString()
+			createdAt: entry.createdAt || new Date().toISOString(),
+			updatedAt: new Date().toISOString()
 		};
 		dispatch('save', saveData);
 	}
@@ -86,13 +93,13 @@
 			{#if serverError}<div class="mb-4 rounded-lg bg-red-50 p-4 text-red-700"><p class="text-sm">{serverError}</p></div>{/if}
 
 			<div class="space-y-4">
-				<div><label for="schemaName" class="mb-1 block text-sm font-medium text-gray-700">스키마명</label><input id="schemaName" type="text" bind:value={formData.schemaName} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="스키마명 입력" /></div>
-				<div><label for="entityName" class="mb-1 block text-sm font-medium text-gray-700">엔터티명</label><input id="entityName" type="text" bind:value={formData.entityName} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="엔터티명 입력" /></div>
-				<div><label for="attributeName" class="mb-1 block text-sm font-medium text-gray-700">속성명</label><input id="attributeName" type="text" bind:value={formData.attributeName} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="속성명 입력" /></div>
-				<div><label for="attributeType" class="mb-1 block text-sm font-medium text-gray-700">속성유형</label><input id="attributeType" type="text" bind:value={formData.attributeType} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="속성유형 입력" /></div>
-				<div><label for="requiredInput" class="mb-1 block text-sm font-medium text-gray-700">필수입력여부 <span class="text-red-500">*</span></label><select id="requiredInput" bind:value={formData.requiredInput} class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.requiredInput ? 'border-red-500' : 'border-gray-300'}"><option value="">선택</option><option value="Y">Y</option><option value="N">N</option></select>{#if errors.requiredInput}<p class="mt-1 text-xs text-red-500">{errors.requiredInput}</p>{/if}</div>
+				<div><label for="schemaName" class="mb-1 block text-sm font-medium text-gray-700">스키마명 <span class="text-red-500">*</span></label><input id="schemaName" type="text" bind:value={formData.schemaName} class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.schemaName ? 'border-red-500' : 'border-gray-300'}" placeholder="스키마명 입력" />{#if errors.schemaName}<p class="mt-1 text-xs text-red-500">{errors.schemaName}</p>{/if}</div>
+				<div><label for="entityName" class="mb-1 block text-sm font-medium text-gray-700">엔터티명 <span class="text-red-500">*</span></label><input id="entityName" type="text" bind:value={formData.entityName} class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.entityName ? 'border-red-500' : 'border-gray-300'}" placeholder="엔터티명 입력" />{#if errors.entityName}<p class="mt-1 text-xs text-red-500">{errors.entityName}</p>{/if}</div>
+				<div><label for="attributeName" class="mb-1 block text-sm font-medium text-gray-700">속성명 <span class="text-red-500">*</span></label><input id="attributeName" type="text" bind:value={formData.attributeName} class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.attributeName ? 'border-red-500' : 'border-gray-300'}" placeholder="속성명 입력" />{#if errors.attributeName}<p class="mt-1 text-xs text-red-500">{errors.attributeName}</p>{/if}</div>
+				<div><label for="attributeType" class="mb-1 block text-sm font-medium text-gray-700">속성유형 <span class="text-red-500">*</span></label><input id="attributeType" type="text" bind:value={formData.attributeType} class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.attributeType ? 'border-red-500' : 'border-gray-300'}" placeholder="속성유형 입력" />{#if errors.attributeType}<p class="mt-1 text-xs text-red-500">{errors.attributeType}</p>{/if}</div>
+				<div><label for="requiredInput" class="mb-1 block text-sm font-medium text-gray-700">필수입력여부</label><select id="requiredInput" bind:value={formData.requiredInput} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"><option value="">선택</option><option value="Y">Y</option><option value="N">N</option></select></div>
 				<div><label for="identifierFlag" class="mb-1 block text-sm font-medium text-gray-700">식별자여부</label><select id="identifierFlag" bind:value={formData.identifierFlag} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"><option value="">선택</option><option value="Y">Y</option><option value="N">N</option></select></div>
-				<div><label for="refEntityName" class="mb-1 block text-sm font-medium text-gray-700">참조엔터티명 <span class="text-red-500">*</span></label><input id="refEntityName" type="text" bind:value={formData.refEntityName} class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.refEntityName ? 'border-red-500' : 'border-gray-300'}" placeholder="참조엔터티명 입력" />{#if errors.refEntityName}<p class="mt-1 text-xs text-red-500">{errors.refEntityName}</p>{/if}</div>
+				<div><label for="refEntityName" class="mb-1 block text-sm font-medium text-gray-700">참조엔터티명</label><input id="refEntityName" type="text" bind:value={formData.refEntityName} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="참조엔터티명 입력" /></div>
 				<div><label for="refAttributeName" class="mb-1 block text-sm font-medium text-gray-700">참조속성명</label><input id="refAttributeName" type="text" bind:value={formData.refAttributeName} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="참조속성명 입력" /></div>
 				<div><label for="attributeDescription" class="mb-1 block text-sm font-medium text-gray-700">속성설명</label><textarea id="attributeDescription" bind:value={formData.attributeDescription} rows="3" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="속성설명 입력"></textarea></div>
 			</div>

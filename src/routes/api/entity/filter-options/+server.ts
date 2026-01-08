@@ -39,13 +39,10 @@ export async function GET({ url }: RequestEvent) {
 		];
 
 		// Nullable 필드 목록 (빈값도 옵션에 포함)
+		// 필수 필드: logicalDbName, schemaName, entityName, primaryIdentifier, tableKoreanName
+		// nullable 필드: superTypeEntityName
 		const nullableColumns = new Set([
-			'logicalDbName',
-			'schemaName',
-			'entityName',
-			'primaryIdentifier',
-			'superTypeEntityName',
-			'tableKoreanName'
+			'superTypeEntityName'
 		]);
 
 		filterableColumns.forEach((columnKey) => {

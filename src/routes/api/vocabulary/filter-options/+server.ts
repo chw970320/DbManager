@@ -33,6 +33,7 @@ export async function GET({ url }: RequestEvent) {
 			'standardName',
 			'abbreviation',
 			'englishName',
+			'domainGroup',
 			'domainCategory',
 			'isFormalWord',
 			'source'

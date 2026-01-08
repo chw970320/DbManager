@@ -71,17 +71,14 @@
 		if (!formData.appliedTask.trim()) {
 			newErrors.appliedTask = '적용업무는 필수입니다.';
 		}
-		if (!formData.relatedLaw.trim()) {
-			newErrors.relatedLaw = '관련법령은 필수입니다.';
+		if (!formData.logicalDbName?.trim()) {
+			newErrors.logicalDbName = '논리DB명은 필수입니다.';
 		}
-		if (!formData.buildDate.trim()) {
-			newErrors.buildDate = '구축일자는 필수입니다.';
+		if (!formData.physicalDbName?.trim()) {
+			newErrors.physicalDbName = '물리DB명은 필수입니다.';
 		}
-		if (!formData.osInfo.trim()) {
-			newErrors.osInfo = '운영체제정보는 필수입니다.';
-		}
-		if (!formData.exclusionReason.trim()) {
-			newErrors.exclusionReason = '수집제외사유는 필수입니다.';
+		if (!formData.dbmsInfo?.trim()) {
+			newErrors.dbmsInfo = 'DBMS정보는 필수입니다.';
 		}
 
 		errors = newErrors;
@@ -265,76 +262,76 @@
 					{/if}
 				</div>
 
-				<!-- 관련법령 (필수) -->
+				<!-- 관련법령 (선택) -->
 				<div>
 					<label for="relatedLaw" class="mb-1 block text-sm font-medium text-gray-700">
-						관련법령 <span class="text-red-500">*</span>
+						관련법령
 					</label>
 					<input
 						id="relatedLaw"
 						type="text"
 						bind:value={formData.relatedLaw}
-						class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.relatedLaw ? 'border-red-500' : 'border-gray-300'}"
+						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
 						placeholder="관련법령 입력"
 					/>
-					{#if errors.relatedLaw}
-						<p class="mt-1 text-xs text-red-500">{errors.relatedLaw}</p>
-					{/if}
 				</div>
 
-				<!-- 논리DB명 (선택) -->
+				<!-- 논리DB명 (필수) -->
 				<div>
 					<label for="logicalDbName" class="mb-1 block text-sm font-medium text-gray-700">
-						논리DB명
+						논리DB명 <span class="text-red-500">*</span>
 					</label>
 					<input
 						id="logicalDbName"
 						type="text"
 						bind:value={formData.logicalDbName}
-						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+						class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.logicalDbName ? 'border-red-500' : 'border-gray-300'}"
 						placeholder="논리DB명 입력"
 					/>
+					{#if errors.logicalDbName}
+						<p class="mt-1 text-xs text-red-500">{errors.logicalDbName}</p>
+					{/if}
 				</div>
 
-				<!-- 물리DB명 (선택) -->
+				<!-- 물리DB명 (필수) -->
 				<div>
 					<label for="physicalDbName" class="mb-1 block text-sm font-medium text-gray-700">
-						물리DB명
+						물리DB명 <span class="text-red-500">*</span>
 					</label>
 					<input
 						id="physicalDbName"
 						type="text"
 						bind:value={formData.physicalDbName}
-						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+						class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.physicalDbName ? 'border-red-500' : 'border-gray-300'}"
 						placeholder="물리DB명 입력"
 					/>
+					{#if errors.physicalDbName}
+						<p class="mt-1 text-xs text-red-500">{errors.physicalDbName}</p>
+					{/if}
 				</div>
 
-				<!-- 구축일자 (필수) -->
+				<!-- 구축일자 (선택) -->
 				<div>
 					<label for="buildDate" class="mb-1 block text-sm font-medium text-gray-700">
-						구축일자 <span class="text-red-500">*</span>
+						구축일자
 					</label>
 					<input
 						id="buildDate"
 						type="date"
 						bind:value={formData.buildDate}
-						class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.buildDate ? 'border-red-500' : 'border-gray-300'}"
+						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
 					/>
-					{#if errors.buildDate}
-						<p class="mt-1 text-xs text-red-500">{errors.buildDate}</p>
-					{/if}
 				</div>
 
-				<!-- DBMS정보 (선택) -->
+				<!-- DBMS정보 (필수) -->
 				<div>
 					<label for="dbmsInfo" class="mb-1 block text-sm font-medium text-gray-700">
-						DBMS정보
+						DBMS정보 <span class="text-red-500">*</span>
 					</label>
 					<select
 						id="dbmsInfo"
 						bind:value={formData.dbmsInfo}
-						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+						class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.dbmsInfo ? 'border-red-500' : 'border-gray-300'}"
 					>
 						<option value="">선택</option>
 						<option value="Oracle">Oracle</option>
@@ -345,40 +342,37 @@
 						<option value="MongoDB">MongoDB</option>
 						<option value="기타">기타</option>
 					</select>
+					{#if errors.dbmsInfo}
+						<p class="mt-1 text-xs text-red-500">{errors.dbmsInfo}</p>
+					{/if}
 				</div>
 
-				<!-- 운영체제정보 (필수) -->
+				<!-- 운영체제정보 (선택) -->
 				<div>
 					<label for="osInfo" class="mb-1 block text-sm font-medium text-gray-700">
-						운영체제정보 <span class="text-red-500">*</span>
+						운영체제정보
 					</label>
 					<input
 						id="osInfo"
 						type="text"
 						bind:value={formData.osInfo}
-						class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.osInfo ? 'border-red-500' : 'border-gray-300'}"
+						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
 						placeholder="운영체제정보 입력"
 					/>
-					{#if errors.osInfo}
-						<p class="mt-1 text-xs text-red-500">{errors.osInfo}</p>
-					{/if}
 				</div>
 
-				<!-- 수집제외사유 (필수) -->
+				<!-- 수집제외사유 (선택) -->
 				<div>
 					<label for="exclusionReason" class="mb-1 block text-sm font-medium text-gray-700">
-						수집제외사유 <span class="text-red-500">*</span>
+						수집제외사유
 					</label>
 					<input
 						id="exclusionReason"
 						type="text"
 						bind:value={formData.exclusionReason}
-						class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.exclusionReason ? 'border-red-500' : 'border-gray-300'}"
+						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
 						placeholder="수집제외사유 입력"
 					/>
-					{#if errors.exclusionReason}
-						<p class="mt-1 text-xs text-red-500">{errors.exclusionReason}</p>
-					{/if}
 				</div>
 
 				<!-- DB설명 (선택) -->

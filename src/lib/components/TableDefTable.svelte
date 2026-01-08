@@ -48,13 +48,21 @@
 	type ColumnAlignment = 'left' | 'center' | 'right';
 	const columns: Array<{ key: string; label: string; sortable: boolean; filterable: boolean; filterType?: 'text' | 'select'; width: string; align: ColumnAlignment }> = [
 		{ key: 'physicalDbName', label: '물리DB명', sortable: true, filterable: true, filterType: 'text', width: 'min-w-[150px]', align: 'left' },
+		{ key: 'tableOwner', label: '테이블소유자', sortable: true, filterable: true, filterType: 'text', width: 'min-w-[120px]', align: 'left' },
 		{ key: 'schemaName', label: '스키마명', sortable: true, filterable: true, filterType: 'text', width: 'min-w-[120px]', align: 'left' },
 		{ key: 'tableEnglishName', label: '테이블영문명', sortable: true, filterable: true, filterType: 'text', width: 'min-w-[150px]', align: 'left' },
 		{ key: 'tableKoreanName', label: '테이블한글명', sortable: true, filterable: true, filterType: 'text', width: 'min-w-[150px]', align: 'left' },
 		{ key: 'tableType', label: '테이블유형', sortable: false, filterable: true, filterType: 'select', width: 'min-w-[100px]', align: 'center' },
+		{ key: 'relatedEntityName', label: '관련엔터티명', sortable: true, filterable: true, filterType: 'text', width: 'min-w-[150px]', align: 'left' },
 		{ key: 'subjectArea', label: '주제영역', sortable: true, filterable: true, filterType: 'text', width: 'min-w-[120px]', align: 'left' },
+		{ key: 'businessClassification', label: '업무분류체계', sortable: false, filterable: true, filterType: 'text', width: 'min-w-[150px]', align: 'left' },
 		{ key: 'publicFlag', label: '공개여부', sortable: false, filterable: true, filterType: 'select', width: 'min-w-[100px]', align: 'center' },
-		{ key: 'tableDescription', label: '테이블설명', sortable: false, filterable: false, width: 'min-w-[200px]', align: 'left' }
+		{ key: 'nonPublicReason', label: '비공개사유', sortable: false, filterable: false, width: 'min-w-[200px]', align: 'left' },
+		{ key: 'tableDescription', label: '테이블설명', sortable: false, filterable: false, width: 'min-w-[200px]', align: 'left' },
+		{ key: 'retentionPeriod', label: '보존기간', sortable: false, filterable: false, width: 'min-w-[100px]', align: 'left' },
+		{ key: 'tableVolume', label: '테이블볼륨', sortable: false, filterable: false, width: 'min-w-[100px]', align: 'center' },
+		{ key: 'occurrenceCycle', label: '발생주기', sortable: false, filterable: false, width: 'min-w-[100px]', align: 'left' },
+		{ key: 'openDataList', label: '개방데이터목록', sortable: false, filterable: false, width: 'min-w-[200px]', align: 'left' }
 	];
 
 	let displayedPages = $derived(getPageNumbers());

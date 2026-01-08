@@ -111,6 +111,20 @@ export async function POST({ request, url }: RequestEvent) {
 		const filename = url.searchParams.get('filename') || 'column.json';
 		const body = await request.json();
 
+		const requiredFields = ['scopeFlag', 'subjectArea', 'schemaName', 'tableEnglishName', 'columnEnglishName', 'columnKoreanName', 'relatedEntityName', 'dataType', 'notNullFlag', 'personalInfoFlag', 'encryptionFlag', 'publicFlag'];
+		const missingFields = requiredFields.filter((field) => !body[field] || (typeof body[field] === 'string' && body[field].trim() === ''));
+
+		if (missingFields.length > 0) {
+			return json(
+				{
+					success: false,
+					error: `필수 필드가 누락되었습니다: ${missingFields.join(', ')}`,
+					message: 'Missing required fields'
+				} as DbDesignApiResponse,
+				{ status: 400 }
+			);
+		}
+
 		let columnData: ColumnData;
 		try { columnData = await loadColumnData(filename); }
 		catch { columnData = { entries: [], lastUpdated: new Date().toISOString(), totalCount: 0 }; }
@@ -118,28 +132,28 @@ export async function POST({ request, url }: RequestEvent) {
 		const now = new Date().toISOString();
 		const newEntry: ColumnEntry = {
 			id: uuidv4(),
-			scopeFlag: body.scopeFlag || undefined,
-			subjectArea: body.subjectArea || undefined,
-			schemaName: body.schemaName || undefined,
-			tableEnglishName: body.tableEnglishName || undefined,
-			columnEnglishName: body.columnEnglishName || undefined,
-			columnKoreanName: body.columnKoreanName || undefined,
+			scopeFlag: body.scopeFlag,
+			subjectArea: body.subjectArea,
+			schemaName: body.schemaName,
+			tableEnglishName: body.tableEnglishName,
+			columnEnglishName: body.columnEnglishName,
+			columnKoreanName: body.columnKoreanName,
+			relatedEntityName: body.relatedEntityName,
+			dataType: body.dataType,
+			notNullFlag: body.notNullFlag,
+			personalInfoFlag: body.personalInfoFlag,
+			encryptionFlag: body.encryptionFlag,
+			publicFlag: body.publicFlag,
 			columnDescription: body.columnDescription || undefined,
-			relatedEntityName: body.relatedEntityName || undefined,
-			dataType: body.dataType || undefined,
-			dataLength: body.dataLength || '',
-			dataDecimalLength: body.dataDecimalLength || '',
-			dataFormat: body.dataFormat || '',
-			notNullFlag: body.notNullFlag || undefined,
-			pkInfo: body.pkInfo || '',
+			dataLength: body.dataLength || undefined,
+			dataDecimalLength: body.dataDecimalLength || undefined,
+			dataFormat: body.dataFormat || undefined,
+			pkInfo: body.pkInfo || undefined,
 			fkInfo: body.fkInfo || undefined,
-			indexName: body.indexName || '',
-			indexOrder: body.indexOrder || '',
-			akInfo: body.akInfo || '',
-			constraint: body.constraint || '',
-			personalInfoFlag: body.personalInfoFlag || undefined,
-			encryptionFlag: body.encryptionFlag || undefined,
-			publicFlag: body.publicFlag || undefined,
+			indexName: body.indexName || undefined,
+			indexOrder: body.indexOrder || undefined,
+			akInfo: body.akInfo || undefined,
+			constraint: body.constraint || undefined,
 			createdAt: now,
 			updatedAt: now
 		};
@@ -161,6 +175,20 @@ export async function PUT({ request, url }: RequestEvent) {
 		const body = await request.json();
 		const { id, ...updateFields } = body;
 		if (!id) return json({ success: false, error: 'ID가 필요합니다.' }, { status: 400 });
+
+		const requiredFields = ['scopeFlag', 'subjectArea', 'schemaName', 'tableEnglishName', 'columnEnglishName', 'columnKoreanName', 'relatedEntityName', 'dataType', 'notNullFlag', 'personalInfoFlag', 'encryptionFlag', 'publicFlag'];
+		const missingFields = requiredFields.filter((field) => !updateFields[field] || (typeof updateFields[field] === 'string' && updateFields[field].trim() === ''));
+
+		if (missingFields.length > 0) {
+			return json(
+				{
+					success: false,
+					error: `필수 필드가 누락되었습니다: ${missingFields.join(', ')}`,
+					message: 'Missing required fields'
+				} as DbDesignApiResponse,
+				{ status: 400 }
+			);
+		}
 
 		const columnData = await loadColumnData(filename);
 		const idx = columnData.entries.findIndex((e) => e.id === id);

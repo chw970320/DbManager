@@ -42,7 +42,11 @@
 
 	function validate(): boolean {
 		const newErrors: Record<string, string> = {};
-		if (!formData.superTypeEntityName.trim()) newErrors.superTypeEntityName = '수퍼타입엔터티명은 필수입니다.';
+		if (!formData.logicalDbName?.trim()) newErrors.logicalDbName = '논리DB명은 필수입니다.';
+		if (!formData.schemaName?.trim()) newErrors.schemaName = '스키마명은 필수입니다.';
+		if (!formData.entityName?.trim()) newErrors.entityName = '엔터티명은 필수입니다.';
+		if (!formData.primaryIdentifier?.trim()) newErrors.primaryIdentifier = '주식별자는 필수입니다.';
+		if (!formData.tableKoreanName?.trim()) newErrors.tableKoreanName = '테이블한글명은 필수입니다.';
 		errors = newErrors;
 		return Object.keys(newErrors).length === 0;
 	}
@@ -51,13 +55,13 @@
 		if (!validate()) return;
 		const saveData: EntityEntry = {
 			id: entry.id || crypto.randomUUID(),
-			superTypeEntityName: formData.superTypeEntityName.trim(),
-			logicalDbName: formData.logicalDbName.trim() || undefined,
-			schemaName: formData.schemaName.trim() || undefined,
-			entityName: formData.entityName.trim() || undefined,
+			logicalDbName: formData.logicalDbName.trim(),
+			schemaName: formData.schemaName.trim(),
+			entityName: formData.entityName.trim(),
+			primaryIdentifier: formData.primaryIdentifier.trim(),
+			tableKoreanName: formData.tableKoreanName.trim(),
 			entityDescription: formData.entityDescription.trim() || undefined,
-			primaryIdentifier: formData.primaryIdentifier.trim() || undefined,
-			tableKoreanName: formData.tableKoreanName.trim() || undefined,
+			superTypeEntityName: formData.superTypeEntityName.trim(),
 			createdAt: entry.createdAt || new Date().toISOString(),
 			updatedAt: new Date().toISOString()
 		};
@@ -105,29 +109,33 @@
 
 			<div class="space-y-4">
 				<div>
-					<label for="logicalDbName" class="mb-1 block text-sm font-medium text-gray-700">논리DB명</label>
-					<input id="logicalDbName" type="text" bind:value={formData.logicalDbName} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="논리DB명 입력" />
+					<label for="logicalDbName" class="mb-1 block text-sm font-medium text-gray-700">논리DB명 <span class="text-red-500">*</span></label>
+					<input id="logicalDbName" type="text" bind:value={formData.logicalDbName} class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.logicalDbName ? 'border-red-500' : 'border-gray-300'}" placeholder="논리DB명 입력" />
+					{#if errors.logicalDbName}<p class="mt-1 text-xs text-red-500">{errors.logicalDbName}</p>{/if}
 				</div>
 				<div>
-					<label for="schemaName" class="mb-1 block text-sm font-medium text-gray-700">스키마명</label>
-					<input id="schemaName" type="text" bind:value={formData.schemaName} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="스키마명 입력" />
+					<label for="schemaName" class="mb-1 block text-sm font-medium text-gray-700">스키마명 <span class="text-red-500">*</span></label>
+					<input id="schemaName" type="text" bind:value={formData.schemaName} class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.schemaName ? 'border-red-500' : 'border-gray-300'}" placeholder="스키마명 입력" />
+					{#if errors.schemaName}<p class="mt-1 text-xs text-red-500">{errors.schemaName}</p>{/if}
 				</div>
 				<div>
-					<label for="entityName" class="mb-1 block text-sm font-medium text-gray-700">엔터티명</label>
-					<input id="entityName" type="text" bind:value={formData.entityName} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="엔터티명 입력" />
+					<label for="entityName" class="mb-1 block text-sm font-medium text-gray-700">엔터티명 <span class="text-red-500">*</span></label>
+					<input id="entityName" type="text" bind:value={formData.entityName} class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.entityName ? 'border-red-500' : 'border-gray-300'}" placeholder="엔터티명 입력" />
+					{#if errors.entityName}<p class="mt-1 text-xs text-red-500">{errors.entityName}</p>{/if}
 				</div>
 				<div>
-					<label for="primaryIdentifier" class="mb-1 block text-sm font-medium text-gray-700">주식별자</label>
-					<input id="primaryIdentifier" type="text" bind:value={formData.primaryIdentifier} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="주식별자 입력" />
+					<label for="primaryIdentifier" class="mb-1 block text-sm font-medium text-gray-700">주식별자 <span class="text-red-500">*</span></label>
+					<input id="primaryIdentifier" type="text" bind:value={formData.primaryIdentifier} class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.primaryIdentifier ? 'border-red-500' : 'border-gray-300'}" placeholder="주식별자 입력" />
+					{#if errors.primaryIdentifier}<p class="mt-1 text-xs text-red-500">{errors.primaryIdentifier}</p>{/if}
 				</div>
 				<div>
-					<label for="superTypeEntityName" class="mb-1 block text-sm font-medium text-gray-700">수퍼타입엔터티명 <span class="text-red-500">*</span></label>
-					<input id="superTypeEntityName" type="text" bind:value={formData.superTypeEntityName} class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.superTypeEntityName ? 'border-red-500' : 'border-gray-300'}" placeholder="수퍼타입엔터티명 입력" />
-					{#if errors.superTypeEntityName}<p class="mt-1 text-xs text-red-500">{errors.superTypeEntityName}</p>{/if}
+					<label for="superTypeEntityName" class="mb-1 block text-sm font-medium text-gray-700">수퍼타입엔터티명</label>
+					<input id="superTypeEntityName" type="text" bind:value={formData.superTypeEntityName} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="수퍼타입엔터티명 입력" />
 				</div>
 				<div>
-					<label for="tableKoreanName" class="mb-1 block text-sm font-medium text-gray-700">테이블한글명</label>
-					<input id="tableKoreanName" type="text" bind:value={formData.tableKoreanName} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="테이블한글명 입력" />
+					<label for="tableKoreanName" class="mb-1 block text-sm font-medium text-gray-700">테이블한글명 <span class="text-red-500">*</span></label>
+					<input id="tableKoreanName" type="text" bind:value={formData.tableKoreanName} class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.tableKoreanName ? 'border-red-500' : 'border-gray-300'}" placeholder="테이블한글명 입력" />
+					{#if errors.tableKoreanName}<p class="mt-1 text-xs text-red-500">{errors.tableKoreanName}</p>{/if}
 				</div>
 				<div>
 					<label for="entityDescription" class="mb-1 block text-sm font-medium text-gray-700">엔터티설명</label>

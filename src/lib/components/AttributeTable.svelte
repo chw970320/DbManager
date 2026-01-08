@@ -54,6 +54,7 @@
 		{ key: 'requiredInput', label: '필수입력여부', sortable: false, filterable: true, filterType: 'select', width: 'min-w-[100px]', align: 'center' },
 		{ key: 'identifierFlag', label: '식별자여부', sortable: false, filterable: true, filterType: 'select', width: 'min-w-[100px]', align: 'center' },
 		{ key: 'refEntityName', label: '참조엔터티명', sortable: true, filterable: true, filterType: 'text', width: 'min-w-[150px]', align: 'left' },
+		{ key: 'refAttributeName', label: '참조속성명', sortable: true, filterable: true, filterType: 'text', width: 'min-w-[150px]', align: 'left' },
 		{ key: 'attributeDescription', label: '속성설명', sortable: false, filterable: false, width: 'min-w-[200px]', align: 'left' }
 	];
 

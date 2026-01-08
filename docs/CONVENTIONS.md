@@ -698,6 +698,97 @@ let showDeleteConfirm = $state(false);
 
 **버튼 스타일**: `btn btn-secondary` (취소), `btn btn-primary` (저장/수정) 사용
 
+### Editor 필수 필드 Validation 패턴 (v1.8.0)
+
+모든 Editor 컴포넌트와 API는 **동일한 필수 필드 목록**을 사용하여 validation을 수행합니다.
+
+**Editor 컴포넌트 (`validate()` 함수)**:
+```typescript
+function validate(): boolean {
+	const newErrors: Record<string, string> = {};
+	
+	// 필수 필드 정의 (API와 동일)
+	if (!formData.field1?.trim()) newErrors.field1 = '필드1은 필수입니다.';
+	if (!formData.field2?.trim()) newErrors.field2 = '필드2는 필수입니다.';
+	
+	errors = newErrors;
+	return Object.keys(newErrors).length === 0;
+}
+```
+
+**UI 표시**:
+- 필수 필드 라벨에 `<span class="text-red-500">*</span>` 표시
+- 에러 발생 시 빨간색 테두리 (`border-red-500`) 및 에러 메시지 표시
+- 저장 버튼 비활성화: `disabled={!isFormValid() || isSubmitting}`
+
+**API Validation (POST/PUT 핸들러)**:
+```typescript
+// POST/PUT 핸들러 모두 동일한 패턴
+const requiredFields = ['field1', 'field2', 'field3'];
+const missingFields = requiredFields.filter((field) => 
+	!body[field] || (typeof body[field] === 'string' && body[field].trim() === '')
+);
+
+if (missingFields.length > 0) {
+	return json(
+		{
+			success: false,
+			error: `필수 필드가 누락되었습니다: ${missingFields.join(', ')}`,
+			message: 'Missing required fields'
+		} as ApiResponse,
+		{ status: 400 }
+	);
+}
+```
+
+**각 엔터티별 필수 필드**:
+- **Database**: `organizationName`, `departmentName`, `appliedTask`, `logicalDbName`, `physicalDbName`, `dbmsInfo`
+- **Entity**: `logicalDbName`, `schemaName`, `entityName`, `primaryIdentifier`, `tableKoreanName`
+- **Attribute**: 없음 (모든 필드 선택)
+- **Table**: `physicalDbName`, `tableOwner`, `subjectArea`, `schemaName`, `tableEnglishName`, `tableKoreanName`, `tableType`, `relatedEntityName`, `publicFlag`
+- **Column**: `scopeFlag`, `subjectArea`, `schemaName`, `tableEnglishName`, `columnEnglishName`, `columnKoreanName`, `relatedEntityName`, `dataType`, `notNullFlag`, `personalInfoFlag`, `encryptionFlag`, `publicFlag`
+
+### 테이블 컬럼 추가 패턴 (v1.8.0)
+
+목록 테이블에 새로운 컬럼을 추가할 때는 다음 패턴을 따릅니다:
+
+**1. 컬럼 정의 추가** (`columns` 배열):
+```typescript
+const columns = [
+	// 기존 컬럼들...
+	{
+		key: 'newField',
+		label: '새 필드명',
+		sortable: true,  // 텍스트 필드는 true, 플래그/설명 필드는 false
+		filterable: true,  // 필터 가능 여부
+		filterType: 'text',  // 'text' 또는 'select'
+		width: 'min-w-[150px]',
+		align: 'left'  // 'left', 'center', 'right'
+	}
+];
+```
+
+**2. 필터 옵션 API 업데이트** (`filter-options/+server.ts`):
+```typescript
+const filterableColumns = [
+	// 기존 필터 가능한 컬럼들...
+	'newField'  // filterable: true인 경우 추가
+];
+
+// Nullable 필드인 경우 nullableColumns에도 추가
+const nullableColumns = new Set([
+	// 기존 nullable 필드들...
+	'newField'  // nullable 필드인 경우 추가
+]);
+```
+
+**3. 컬럼 설정 가이드라인**:
+- **sortable**: 텍스트/숫자 필드는 `true`, 설명/비고 필드는 `false`
+- **filterable**: 고유값이 많은 필드는 `true`, 설명 필드는 `false`
+- **filterType**: 고유값이 많은 필드는 `'text'`, 제한된 값 집합(Y/N, 코드값)은 `'select'`
+- **width**: 짧은 필드(플래그) `min-w-[60px]~[100px]`, 중간 필드 `min-w-[120px]~[150px]`, 긴 필드 `min-w-[200px]~[300px]`
+- **align**: 텍스트 `'left'`, 숫자 `'center'` 또는 `'right'`, 플래그 `'center'`
+
 ### Table 컴포넌트의 ColumnFilter 사용 패턴
 
 테이블 컴포넌트에서 컬럼 필터링을 구현할 때는 `ColumnFilter` 컴포넌트를 다음 패턴으로 사용합니다:
@@ -899,11 +990,21 @@ export async function GET({ url }: RequestEvent) {
 export async function POST({ request, url }: RequestEvent) {
 	try {
 		// 1. 요청 본문 파싱
-		const newEntry: Partial<Entry> = await request.json();
+		const body = await request.json();
 
-		// 2. 필수 필드 검증
-		if (!newEntry.requiredField) {
-			return json({ success: false, error: '...' } as ApiResponse, { status: 400 });
+		// 2. 필수 필드 검증 (v1.8.0 패턴)
+		const requiredFields = ['field1', 'field2', 'field3'];
+		const missingFields = requiredFields.filter((field) => !body[field] || (typeof body[field] === 'string' && body[field].trim() === ''));
+
+		if (missingFields.length > 0) {
+			return json(
+				{
+					success: false,
+					error: `필수 필드가 누락되었습니다: ${missingFields.join(', ')}`,
+					message: 'Missing required fields'
+				} as ApiResponse,
+				{ status: 400 }
+			);
 		}
 
 		// 3. 비즈니스 로직 검증 (중복 체크 등)
@@ -932,10 +1033,26 @@ export async function POST({ request, url }: RequestEvent) {
 ```typescript
 export async function PUT({ request, url }: RequestEvent) {
 	try {
-		const updatedEntry: Entry = await request.json();
+		const body = await request.json();
+		const { id, ...updateFields } = body;
 
-		if (!updatedEntry.id) {
+		if (!id || typeof id !== 'string' || id.trim() === '') {
 			return json({ success: false, error: 'ID 필요' } as ApiResponse, { status: 400 });
+		}
+
+		// 필수 필드 검증 (v1.8.0 패턴)
+		const requiredFields = ['field1', 'field2', 'field3'];
+		const missingFields = requiredFields.filter((field) => !updateFields[field] || (typeof updateFields[field] === 'string' && updateFields[field].trim() === ''));
+
+		if (missingFields.length > 0) {
+			return json(
+				{
+					success: false,
+					error: `필수 필드가 누락되었습니다: ${missingFields.join(', ')}`,
+					message: 'Missing required fields'
+				} as ApiResponse,
+				{ status: 400 }
+			);
 		}
 
 		const data = await loadData();
@@ -1336,6 +1453,7 @@ Closes #123
 | 1.5.0 | 2026-01 | 정확히 일치 검색(exact) 파라미터 지원 패턴 추가 | -      |
 | 1.6.0 | 2026-01 | filter-options API 패턴, 전체 데이터 기준 필터 옵션 로드 패턴 추가 | -      |
 | 1.7.0 | 2026-01 | nullable 필드 빈값 필터 옵션 추가 패턴 | -      |
+| 1.8.0 | 2026-01 | 필수 필드 validation 패턴, 테이블 컬럼 추가 패턴 | -      |
 
 ---
 

@@ -24,7 +24,6 @@ export async function GET({ url }: RequestEvent) {
 						(entry.domainGroup && entry.domainGroup.includes(searchQuery)) ||
 						(entry.domainCategory && entry.domainCategory.includes(searchQuery)) ||
 						(entry.standardDomainName && entry.standardDomainName.includes(searchQuery)) ||
-						(entry.logicalDataType && entry.logicalDataType.includes(searchQuery)) ||
 						(entry.physicalDataType && entry.physicalDataType.includes(searchQuery))
 					);
 				} else {

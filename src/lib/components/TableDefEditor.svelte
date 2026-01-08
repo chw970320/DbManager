@@ -32,10 +32,15 @@
 
 	function validate(): boolean {
 		const newErrors: Record<string, string> = {};
-		if (!formData.businessClassification.trim()) newErrors.businessClassification = '업무분류체계는 필수입니다.';
-		if (!formData.tableVolume.trim()) newErrors.tableVolume = '테이블볼륨은 필수입니다.';
-		if (!formData.nonPublicReason.trim()) newErrors.nonPublicReason = '비공개사유는 필수입니다.';
-		if (!formData.openDataList.trim()) newErrors.openDataList = '개방데이터목록은 필수입니다.';
+		if (!formData.physicalDbName?.trim()) newErrors.physicalDbName = '물리DB명은 필수입니다.';
+		if (!formData.tableOwner?.trim()) newErrors.tableOwner = '테이블소유자는 필수입니다.';
+		if (!formData.subjectArea?.trim()) newErrors.subjectArea = '주제영역은 필수입니다.';
+		if (!formData.schemaName?.trim()) newErrors.schemaName = '스키마명은 필수입니다.';
+		if (!formData.tableEnglishName?.trim()) newErrors.tableEnglishName = '테이블영문명은 필수입니다.';
+		if (!formData.tableKoreanName?.trim()) newErrors.tableKoreanName = '테이블한글명은 필수입니다.';
+		if (!formData.tableType?.trim()) newErrors.tableType = '테이블유형은 필수입니다.';
+		if (!formData.relatedEntityName?.trim()) newErrors.relatedEntityName = '관련엔터티명은 필수입니다.';
+		if (!formData.publicFlag?.trim()) newErrors.publicFlag = '공개/비공개여부는 필수입니다.';
 		errors = newErrors;
 		return Object.keys(newErrors).length === 0;
 	}
@@ -44,15 +49,24 @@
 		if (!validate()) return;
 		const saveData: TableEntry = {
 			id: entry.id || crypto.randomUUID(),
-			businessClassification: formData.businessClassification.trim(), tableVolume: formData.tableVolume.trim(),
-			nonPublicReason: formData.nonPublicReason.trim(), openDataList: formData.openDataList.trim(),
-			physicalDbName: formData.physicalDbName.trim() || undefined, tableOwner: formData.tableOwner.trim() || undefined,
-			subjectArea: formData.subjectArea.trim() || undefined, schemaName: formData.schemaName.trim() || undefined,
-			tableEnglishName: formData.tableEnglishName.trim() || undefined, tableKoreanName: formData.tableKoreanName.trim() || undefined,
-			tableType: formData.tableType.trim() || undefined, relatedEntityName: formData.relatedEntityName.trim() || undefined,
-			tableDescription: formData.tableDescription.trim() || undefined, retentionPeriod: formData.retentionPeriod.trim() || undefined,
-			occurrenceCycle: formData.occurrenceCycle.trim() || undefined, publicFlag: formData.publicFlag.trim() || undefined,
-			createdAt: entry.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString()
+			physicalDbName: formData.physicalDbName.trim(),
+			tableOwner: formData.tableOwner.trim(),
+			subjectArea: formData.subjectArea.trim(),
+			schemaName: formData.schemaName.trim(),
+			tableEnglishName: formData.tableEnglishName.trim(),
+			tableKoreanName: formData.tableKoreanName.trim(),
+			tableType: formData.tableType.trim(),
+			relatedEntityName: formData.relatedEntityName.trim(),
+			publicFlag: formData.publicFlag.trim(),
+			tableDescription: formData.tableDescription.trim() || undefined,
+			businessClassification: formData.businessClassification.trim() || undefined,
+			retentionPeriod: formData.retentionPeriod.trim() || undefined,
+			tableVolume: formData.tableVolume.trim() || undefined,
+			occurrenceCycle: formData.occurrenceCycle.trim() || undefined,
+			nonPublicReason: formData.nonPublicReason.trim() || undefined,
+			openDataList: formData.openDataList.trim() || undefined,
+			createdAt: entry.createdAt || new Date().toISOString(),
+			updatedAt: new Date().toISOString()
 		};
 		dispatch('save', saveData);
 	}
@@ -104,21 +118,23 @@
 			{#if serverError}<div class="mb-4 rounded-lg bg-red-50 p-4 text-red-700"><p class="text-sm">{serverError}</p></div>{/if}
 
 			<div class="space-y-4">
-				<div><label for="physicalDbName" class="mb-1 block text-sm font-medium text-gray-700">물리DB명</label><input id="physicalDbName" type="text" bind:value={formData.physicalDbName} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="물리DB명 입력" /></div>
-				<div><label for="schemaName" class="mb-1 block text-sm font-medium text-gray-700">스키마명</label><input id="schemaName" type="text" bind:value={formData.schemaName} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="스키마명 입력" /></div>
-				<div><label for="tableOwner" class="mb-1 block text-sm font-medium text-gray-700">테이블소유자</label><input id="tableOwner" type="text" bind:value={formData.tableOwner} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="테이블소유자 입력" /></div>
-				<div><label for="tableEnglishName" class="mb-1 block text-sm font-medium text-gray-700">테이블영문명</label><input id="tableEnglishName" type="text" bind:value={formData.tableEnglishName} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="테이블영문명 입력" /></div>
-				<div><label for="tableKoreanName" class="mb-1 block text-sm font-medium text-gray-700">테이블한글명</label><input id="tableKoreanName" type="text" bind:value={formData.tableKoreanName} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="테이블한글명 입력" /></div>
-				<div><label for="tableType" class="mb-1 block text-sm font-medium text-gray-700">테이블유형</label><select id="tableType" bind:value={formData.tableType} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"><option value="">선택</option><option value="M">마스터(M)</option><option value="T">트랜잭션(T)</option><option value="H">이력(H)</option><option value="R">참조(R)</option></select></div>
-				<div><label for="subjectArea" class="mb-1 block text-sm font-medium text-gray-700">주제영역</label><input id="subjectArea" type="text" bind:value={formData.subjectArea} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="주제영역 입력" /></div>
-				<div><label for="relatedEntityName" class="mb-1 block text-sm font-medium text-gray-700">관련엔터티명</label><input id="relatedEntityName" type="text" bind:value={formData.relatedEntityName} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="관련엔터티명 입력" /></div>
-				<div><label for="businessClassification" class="mb-1 block text-sm font-medium text-gray-700">업무분류체계 <span class="text-red-500">*</span></label><input id="businessClassification" type="text" bind:value={formData.businessClassification} class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.businessClassification ? 'border-red-500' : 'border-gray-300'}" placeholder="업무분류체계 입력" />{#if errors.businessClassification}<p class="mt-1 text-xs text-red-500">{errors.businessClassification}</p>{/if}</div>
+				<div><label for="physicalDbName" class="mb-1 block text-sm font-medium text-gray-700">물리DB명 <span class="text-red-500">*</span></label><input id="physicalDbName" type="text" bind:value={formData.physicalDbName} class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.physicalDbName ? 'border-red-500' : 'border-gray-300'}" placeholder="물리DB명 입력" />{#if errors.physicalDbName}<p class="mt-1 text-xs text-red-500">{errors.physicalDbName}</p>{/if}</div>
+				<div><label for="tableOwner" class="mb-1 block text-sm font-medium text-gray-700">테이블소유자 <span class="text-red-500">*</span></label><input id="tableOwner" type="text" bind:value={formData.tableOwner} class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.tableOwner ? 'border-red-500' : 'border-gray-300'}" placeholder="테이블소유자 입력" />{#if errors.tableOwner}<p class="mt-1 text-xs text-red-500">{errors.tableOwner}</p>{/if}</div>
+				<div><label for="subjectArea" class="mb-1 block text-sm font-medium text-gray-700">주제영역 <span class="text-red-500">*</span></label><input id="subjectArea" type="text" bind:value={formData.subjectArea} class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.subjectArea ? 'border-red-500' : 'border-gray-300'}" placeholder="주제영역 입력" />{#if errors.subjectArea}<p class="mt-1 text-xs text-red-500">{errors.subjectArea}</p>{/if}</div>
+				<div><label for="schemaName" class="mb-1 block text-sm font-medium text-gray-700">스키마명 <span class="text-red-500">*</span></label><input id="schemaName" type="text" bind:value={formData.schemaName} class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.schemaName ? 'border-red-500' : 'border-gray-300'}" placeholder="스키마명 입력" />{#if errors.schemaName}<p class="mt-1 text-xs text-red-500">{errors.schemaName}</p>{/if}</div>
+				<div><label for="tableEnglishName" class="mb-1 block text-sm font-medium text-gray-700">테이블영문명 <span class="text-red-500">*</span></label><input id="tableEnglishName" type="text" bind:value={formData.tableEnglishName} class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.tableEnglishName ? 'border-red-500' : 'border-gray-300'}" placeholder="테이블영문명 입력" />{#if errors.tableEnglishName}<p class="mt-1 text-xs text-red-500">{errors.tableEnglishName}</p>{/if}</div>
+				<div><label for="tableKoreanName" class="mb-1 block text-sm font-medium text-gray-700">테이블한글명 <span class="text-red-500">*</span></label><input id="tableKoreanName" type="text" bind:value={formData.tableKoreanName} class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.tableKoreanName ? 'border-red-500' : 'border-gray-300'}" placeholder="테이블한글명 입력" />{#if errors.tableKoreanName}<p class="mt-1 text-xs text-red-500">{errors.tableKoreanName}</p>{/if}</div>
+				<div><label for="tableType" class="mb-1 block text-sm font-medium text-gray-700">테이블유형 <span class="text-red-500">*</span></label><select id="tableType" bind:value={formData.tableType} class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.tableType ? 'border-red-500' : 'border-gray-300'}"><option value="">선택</option><option value="M">마스터(M)</option><option value="T">트랜잭션(T)</option><option value="H">이력(H)</option><option value="R">참조(R)</option></select>{#if errors.tableType}<p class="mt-1 text-xs text-red-500">{errors.tableType}</p>{/if}</div>
+				<div><label for="relatedEntityName" class="mb-1 block text-sm font-medium text-gray-700">관련엔터티명 <span class="text-red-500">*</span></label><input id="relatedEntityName" type="text" bind:value={formData.relatedEntityName} class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.relatedEntityName ? 'border-red-500' : 'border-gray-300'}" placeholder="관련엔터티명 입력" />{#if errors.relatedEntityName}<p class="mt-1 text-xs text-red-500">{errors.relatedEntityName}</p>{/if}</div>
+				<div><label for="publicFlag" class="mb-1 block text-sm font-medium text-gray-700">공개/비공개여부 <span class="text-red-500">*</span></label><select id="publicFlag" bind:value={formData.publicFlag} class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.publicFlag ? 'border-red-500' : 'border-gray-300'}"><option value="">선택</option><option value="Y">공개(Y)</option><option value="N">비공개(N)</option></select>{#if errors.publicFlag}<p class="mt-1 text-xs text-red-500">{errors.publicFlag}</p>{/if}</div>
+				<div><label for="businessClassification" class="mb-1 block text-sm font-medium text-gray-700">업무분류체계</label><input id="businessClassification" type="text" bind:value={formData.businessClassification} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="업무분류체계 입력" /></div>
 				<div><label for="retentionPeriod" class="mb-1 block text-sm font-medium text-gray-700">보존기간</label><input id="retentionPeriod" type="text" bind:value={formData.retentionPeriod} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="보존기간 입력" /></div>
-				<div><label for="tableVolume" class="mb-1 block text-sm font-medium text-gray-700">테이블볼륨 <span class="text-red-500">*</span></label><input id="tableVolume" type="text" bind:value={formData.tableVolume} class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.tableVolume ? 'border-red-500' : 'border-gray-300'}" placeholder="테이블볼륨 입력" />{#if errors.tableVolume}<p class="mt-1 text-xs text-red-500">{errors.tableVolume}</p>{/if}</div>
+				<div><label for="tableDescription" class="mb-1 block text-sm font-medium text-gray-700">테이블설명</label><textarea id="tableDescription" bind:value={formData.tableDescription} rows="3" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="테이블설명 입력"></textarea></div>
+				<div><label for="retentionPeriod" class="mb-1 block text-sm font-medium text-gray-700">보존기간</label><input id="retentionPeriod" type="text" bind:value={formData.retentionPeriod} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="보존기간 입력" /></div>
+				<div><label for="tableVolume" class="mb-1 block text-sm font-medium text-gray-700">테이블볼륨</label><input id="tableVolume" type="text" bind:value={formData.tableVolume} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="테이블볼륨 입력" /></div>
 				<div><label for="occurrenceCycle" class="mb-1 block text-sm font-medium text-gray-700">발생주기</label><input id="occurrenceCycle" type="text" bind:value={formData.occurrenceCycle} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="발생주기 입력" /></div>
-				<div><label for="publicFlag" class="mb-1 block text-sm font-medium text-gray-700">공개/비공개여부</label><select id="publicFlag" bind:value={formData.publicFlag} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"><option value="">선택</option><option value="공개">공개</option><option value="비공개">비공개</option></select></div>
-				<div><label for="nonPublicReason" class="mb-1 block text-sm font-medium text-gray-700">비공개사유 <span class="text-red-500">*</span></label><input id="nonPublicReason" type="text" bind:value={formData.nonPublicReason} class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.nonPublicReason ? 'border-red-500' : 'border-gray-300'}" placeholder="비공개사유 입력" />{#if errors.nonPublicReason}<p class="mt-1 text-xs text-red-500">{errors.nonPublicReason}</p>{/if}</div>
-				<div><label for="openDataList" class="mb-1 block text-sm font-medium text-gray-700">개방데이터목록 <span class="text-red-500">*</span></label><input id="openDataList" type="text" bind:value={formData.openDataList} class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.openDataList ? 'border-red-500' : 'border-gray-300'}" placeholder="개방데이터목록 입력" />{#if errors.openDataList}<p class="mt-1 text-xs text-red-500">{errors.openDataList}</p>{/if}</div>
+				<div><label for="nonPublicReason" class="mb-1 block text-sm font-medium text-gray-700">비공개사유</label><input id="nonPublicReason" type="text" bind:value={formData.nonPublicReason} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="비공개사유 입력" /></div>
+				<div><label for="openDataList" class="mb-1 block text-sm font-medium text-gray-700">개방데이터목록</label><input id="openDataList" type="text" bind:value={formData.openDataList} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="개방데이터목록 입력" /></div>
 				<div><label for="tableDescription" class="mb-1 block text-sm font-medium text-gray-700">테이블설명</label><textarea id="tableDescription" bind:value={formData.tableDescription} rows="3" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="테이블설명 입력"></textarea></div>
 			</div>
 

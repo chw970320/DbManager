@@ -356,6 +356,64 @@ interface ApiResponse {
 
 1. **1행 1열 레이아웃**: 모든 폼 필드는 `md:grid-cols-1`로 한 행에 하나씩 배치
 2. **일관된 스타일**: Tailwind CSS 클래스 사용
+3. **스크롤 위치**: 모달 전체가 아닌 내부 콘텐츠만 스크롤
+
+**올바른 Editor 스크롤 구조**:
+```svelte
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+	<div class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl">
+		<!-- 헤더 (고정) -->
+		<div class="flex flex-shrink-0 items-center justify-between border-b p-6">
+			<h2>제목</h2>
+			<button>닫기</button>
+		</div>
+		<!-- 스크롤 가능한 콘텐츠 -->
+		<div class="flex-1 overflow-y-auto p-6">
+			<form>...</form>
+		</div>
+	</div>
+</div>
+```
+
+**❌ 잘못된 구조** (전체 모달 스크롤):
+```svelte
+<div class="max-h-[90vh] overflow-y-auto">
+	<div class="sticky top-0">헤더</div>
+	<form>...</form>
+</div>
+```
+
+### 검색 필드 정의 (SearchBar searchFields)
+
+각 메뉴별 통합검색 대상 항목:
+
+| 메뉴 | 검색 필드 |
+|------|-----------|
+| **DB** | 기관명, 논리DB명, 물리DB명 |
+| **엔터티** | 스키마명, 엔터티명, 주식별자, 수퍼타입엔터티명, 테이블한글명 |
+| **속성** | 스키마명, 엔터티명, 속성명 |
+| **테이블** | 물리DB명, 스키마명, 테이블영문명, 테이블한글명, 테이블유형, 주제영역 |
+| **컬럼** | 스키마명, 테이블영문명, 컬럼영문명, 컬럼한글명, 자료타입 |
+
+**Browse 페이지에서 SearchBar 사용 예시**:
+```svelte
+<SearchBar
+	bind:query={searchQuery}
+	bind:field={searchField}
+	searchFields={[
+		{ value: 'all', label: '전체' },
+		{ value: 'organizationName', label: '기관명' },
+		{ value: 'logicalDbName', label: '논리DB명' },
+		{ value: 'physicalDbName', label: '물리DB명' }
+	]}
+	onsearch={handleSearch}
+	onclear={handleSearchClear}
+/>
+```
+
+**API 엔드포인트 검색 필터 처리**:
+- 각 API의 `switch (searchField)` 블록에 해당 필드들을 모두 포함해야 함
+- `case 'all'` 또는 `default`에서는 해당 메뉴의 모든 검색 필드를 OR 조건으로 검색
 
 ### FileUpload 컴포넌트 패턴
 

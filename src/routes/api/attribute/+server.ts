@@ -49,13 +49,14 @@ export async function GET({ url }: RequestEvent) {
 			const query = searchQuery.toLowerCase();
 			filteredEntries = attrData.entries.filter((entry) => {
 				switch (searchField) {
-					case 'attributeName': return entry.attributeName?.toLowerCase().includes(query);
+					case 'schemaName': return entry.schemaName?.toLowerCase().includes(query);
 					case 'entityName': return entry.entityName?.toLowerCase().includes(query);
+					case 'attributeName': return entry.attributeName?.toLowerCase().includes(query);
+					case 'all':
 					default:
-						return entry.attributeName?.toLowerCase().includes(query) ||
+						return entry.schemaName?.toLowerCase().includes(query) ||
 							entry.entityName?.toLowerCase().includes(query) ||
-							entry.schemaName?.toLowerCase().includes(query) ||
-							entry.attributeDescription?.toLowerCase().includes(query);
+							entry.attributeName?.toLowerCase().includes(query);
 				}
 			});
 		}

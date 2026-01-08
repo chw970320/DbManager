@@ -593,6 +593,67 @@ FileUpload 컴포넌트는 **검증 교체 모드**와 **단순 교체 모드**�
 </div>
 ```
 
+### Editor 컴포넌트 스크롤 패턴
+
+Editor 모달의 스크롤은 **내부 콘텐츠만** 스크롤되어야 합니다 (전체 모달 스크롤 금지):
+
+**✅ 올바른 패턴** (내부 콘텐츠만 스크롤):
+```svelte
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+	<div class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl">
+		<!-- 헤더 (고정) -->
+		<div class="flex flex-shrink-0 items-center justify-between border-b p-6">
+			<h2>제목</h2>
+			<button>닫기</button>
+		</div>
+		<!-- 스크롤 가능한 콘텐츠 -->
+		<div class="flex-1 overflow-y-auto p-6">
+			<form>...</form>
+		</div>
+	</div>
+</div>
+```
+
+**❌ 잘못된 패턴** (전체 모달 스크롤):
+```svelte
+<div class="max-h-[90vh] w-full overflow-y-auto rounded-2xl bg-white">
+	<div class="sticky top-0 z-10 border-b bg-white">헤더</div>
+	<form class="p-6">...</form>
+</div>
+```
+
+### SearchBar 검색 필드 정의 패턴
+
+각 Browse 페이지에서 SearchBar의 `searchFields` props를 통해 검색 대상 필드를 정의합니다:
+
+| 메뉴 | 검색 필드 키 | 레이블 |
+|------|------------|--------|
+| **DB** | `organizationName`, `logicalDbName`, `physicalDbName` | 기관명, 논리DB명, 물리DB명 |
+| **엔터티** | `schemaName`, `entityName`, `primaryIdentifier`, `superTypeEntityName`, `tableKoreanName` | 스키마명, 엔터티명, 주식별자, 수퍼타입엔터티명, 테이블한글명 |
+| **속성** | `schemaName`, `entityName`, `attributeName` | 스키마명, 엔터티명, 속성명 |
+| **테이블** | `physicalDbName`, `schemaName`, `tableEnglishName`, `tableKoreanName`, `tableType`, `subjectArea` | 물리DB명, 스키마명, 테이블영문명, 테이블한글명, 테이블유형, 주제영역 |
+| **컬럼** | `schemaName`, `tableEnglishName`, `columnEnglishName`, `columnKoreanName`, `dataType` | 스키마명, 테이블영문명, 컬럼영문명, 컬럼한글명, 자료타입 |
+
+**사용 예시**:
+```svelte
+<SearchBar
+	bind:query={searchQuery}
+	bind:field={searchField}
+	searchFields={[
+		{ value: 'all', label: '전체' },
+		{ value: 'organizationName', label: '기관명' },
+		{ value: 'logicalDbName', label: '논리DB명' },
+		{ value: 'physicalDbName', label: '물리DB명' }
+	]}
+	onsearch={handleSearch}
+	onclear={handleSearchClear}
+/>
+```
+
+**API 엔드포인트 검색 필터 구현**:
+- 해당 필드들을 모두 API의 `switch (searchField)` 블록에 포함
+- `case 'all'` 또는 `default`에서는 모든 검색 필드를 OR 조건으로 검색
+
 ### Table 컴포넌트의 ColumnFilter 사용 패턴
 
 테이블 컴포넌트에서 컬럼 필터링을 구현할 때는 `ColumnFilter` 컴포넌트를 다음 패턴으로 사용합니다:
@@ -1226,6 +1287,7 @@ Closes #123
 | 1.0.0 | 2024-12 | 초기 문서 작성 | -      |
 | 1.1.0 | 2026-01 | FileManager/Editor 컴포넌트 패턴 추가 | -      |
 | 1.2.0 | 2026-01 | ColumnFilter, Browse 페이지, XLSX 파서 패턴 추가 | -      |
+| 1.3.0 | 2026-01 | Editor 스크롤 패턴, SearchBar 검색 필드 정의 패턴 추가 | -      |
 
 ---
 

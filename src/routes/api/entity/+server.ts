@@ -62,13 +62,17 @@ export async function GET({ url }: RequestEvent) {
 				switch (searchField) {
 					case 'entityName': return entry.entityName?.toLowerCase().includes(query);
 					case 'schemaName': return entry.schemaName?.toLowerCase().includes(query);
+					case 'primaryIdentifier': return entry.primaryIdentifier?.toLowerCase().includes(query);
+					case 'superTypeEntityName': return entry.superTypeEntityName?.toLowerCase().includes(query);
+					case 'tableKoreanName': return entry.tableKoreanName?.toLowerCase().includes(query);
 					case 'all':
 					default:
 						return (
-							entry.entityName?.toLowerCase().includes(query) ||
 							entry.schemaName?.toLowerCase().includes(query) ||
-							entry.logicalDbName?.toLowerCase().includes(query) ||
-							entry.entityDescription?.toLowerCase().includes(query)
+							entry.entityName?.toLowerCase().includes(query) ||
+							entry.primaryIdentifier?.toLowerCase().includes(query) ||
+							entry.superTypeEntityName?.toLowerCase().includes(query) ||
+							entry.tableKoreanName?.toLowerCase().includes(query)
 						);
 				}
 			});

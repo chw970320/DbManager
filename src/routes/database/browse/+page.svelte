@@ -629,6 +629,12 @@
 							bind:query={searchQuery}
 							bind:field={searchField}
 							bind:exact={searchExact}
+							searchFields={[
+								{ value: 'all', label: '전체' },
+								{ value: 'organizationName', label: '기관명' },
+								{ value: 'logicalDbName', label: '논리DB명' },
+								{ value: 'physicalDbName', label: '물리DB명' }
+							]}
 							onsearch={handleSearch}
 							onclear={handleSearchClear}
 						/>

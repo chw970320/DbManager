@@ -153,42 +153,41 @@
 
 <!-- 모달 백드롭 -->
 <div
-	class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm"
+	class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
 	onclick={handleBackdropClick}
 	role="dialog"
 	aria-modal="true"
 	aria-labelledby="modal-title"
 >
-	<!-- 모달 컨텐츠 -->
+	<!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
 	<div
-		class="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl"
+		class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl"
 		onclick={(e) => e.stopPropagation()}
 	>
 		<!-- 헤더 -->
-		<div class="sticky top-0 z-10 border-b border-gray-200 bg-white px-6 py-4">
-			<div class="flex items-center justify-between">
-				<h2 id="modal-title" class="text-xl font-bold text-gray-900">
-					{isEditMode ? '데이터베이스 정의서 수정' : '새 데이터베이스 정의서'}
-				</h2>
-				<button
-					onclick={handleCancel}
-					class="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-					aria-label="닫기"
-				>
-					<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M6 18L18 6M6 6l12 12"
-						/>
-					</svg>
-				</button>
-			</div>
+		<div class="flex flex-shrink-0 items-center justify-between border-b p-6">
+			<h2 id="modal-title" class="text-xl font-bold text-gray-900">
+				{isEditMode ? '데이터베이스 정의서 수정' : '새 데이터베이스 정의서'}
+			</h2>
+			<button
+				onclick={handleCancel}
+				class="text-gray-400 hover:text-gray-600"
+				aria-label="닫기"
+			>
+				<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M6 18L18 6M6 6l12 12"
+					/>
+				</svg>
+			</button>
 		</div>
 
-		<!-- 폼 -->
-		<form onsubmit={(e) => { e.preventDefault(); handleSave(); }} class="p-6">
+		<!-- 스크롤 가능한 내부 컨텐츠 -->
+		<div class="flex-1 overflow-y-auto p-6">
+			<form onsubmit={(e) => { e.preventDefault(); handleSave(); }}>
 			<!-- 서버 에러 표시 -->
 			{#if serverError}
 				<div class="mb-4 rounded-lg bg-red-50 p-4 text-red-700">
@@ -429,7 +428,8 @@
 					</button>
 				</div>
 			</div>
-		</form>
+			</form>
+		</div>
 	</div>
 </div>
 

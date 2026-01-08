@@ -49,15 +49,18 @@ export async function GET({ url }: RequestEvent) {
 			const query = searchQuery.toLowerCase();
 			filteredEntries = columnData.entries.filter((entry) => {
 				switch (searchField) {
+					case 'schemaName': return entry.schemaName?.toLowerCase().includes(query);
+					case 'tableEnglishName': return entry.tableEnglishName?.toLowerCase().includes(query);
 					case 'columnEnglishName': return entry.columnEnglishName?.toLowerCase().includes(query);
 					case 'columnKoreanName': return entry.columnKoreanName?.toLowerCase().includes(query);
-					case 'tableEnglishName': return entry.tableEnglishName?.toLowerCase().includes(query);
+					case 'dataType': return entry.dataType?.toLowerCase().includes(query);
+					case 'all':
 					default:
-						return entry.columnEnglishName?.toLowerCase().includes(query) ||
-							entry.columnKoreanName?.toLowerCase().includes(query) ||
+						return entry.schemaName?.toLowerCase().includes(query) ||
 							entry.tableEnglishName?.toLowerCase().includes(query) ||
-							entry.schemaName?.toLowerCase().includes(query) ||
-							entry.columnDescription?.toLowerCase().includes(query);
+							entry.columnEnglishName?.toLowerCase().includes(query) ||
+							entry.columnKoreanName?.toLowerCase().includes(query) ||
+							entry.dataType?.toLowerCase().includes(query);
 				}
 			});
 		}

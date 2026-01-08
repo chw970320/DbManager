@@ -246,7 +246,7 @@
 						<h2 class="text-2xl font-bold text-gray-900">통합검색</h2>
 						<p class="mt-2 text-gray-600">엔터티명, 스키마명 등으로 검색하세요</p>
 					</div>
-					<div class="mb-6"><SearchBar bind:query={searchQuery} bind:field={searchField} bind:exact={searchExact} onsearch={handleSearch} onclear={handleSearchClear} /></div>
+					<div class="mb-6"><SearchBar bind:query={searchQuery} bind:field={searchField} bind:exact={searchExact} searchFields={[{ value: 'all', label: '전체' }, { value: 'schemaName', label: '스키마명' }, { value: 'entityName', label: '엔터티명' }, { value: 'primaryIdentifier', label: '주식별자' }, { value: 'superTypeEntityName', label: '수퍼타입엔터티명' }, { value: 'tableKoreanName', label: '테이블한글명' }]} onsearch={handleSearch} onclear={handleSearchClear} /></div>
 				</div>
 
 				<div class="min-w-0 rounded-2xl border border-gray-200/50 bg-white/80 p-8 shadow-sm backdrop-blur-sm">

@@ -73,16 +73,16 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onclick={handleBackdropClick} role="dialog" aria-modal="true" aria-labelledby="modal-title">
-	<div class="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white shadow-2xl" onclick={(e) => e.stopPropagation()}>
-		<div class="sticky top-0 z-10 border-b border-gray-200 bg-white px-6 py-4">
-			<div class="flex items-center justify-between">
-				<h2 id="modal-title" class="text-xl font-bold text-gray-900">{isEditMode ? '컬럼 정의서 수정' : '새 컬럼 정의서'}</h2>
-				<button onclick={handleCancel} class="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600" aria-label="닫기"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
-			</div>
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50" onclick={handleBackdropClick} role="dialog" aria-modal="true" aria-labelledby="modal-title">
+	<!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+	<div class="flex max-h-[90vh] w-full max-w-4xl flex-col rounded-lg bg-white shadow-xl" onclick={(e) => e.stopPropagation()}>
+		<div class="flex flex-shrink-0 items-center justify-between border-b p-6">
+			<h2 id="modal-title" class="text-xl font-bold text-gray-900">{isEditMode ? '컬럼 정의서 수정' : '새 컬럼 정의서'}</h2>
+			<button onclick={handleCancel} class="text-gray-400 hover:text-gray-600" aria-label="닫기"><svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg></button>
 		</div>
 
-		<form onsubmit={(e) => { e.preventDefault(); handleSave(); }} class="p-6">
+		<div class="flex-1 overflow-y-auto p-6">
+			<form onsubmit={(e) => { e.preventDefault(); handleSave(); }}>
 			{#if serverError}<div class="mb-4 rounded-lg bg-red-50 p-4 text-red-700"><p class="text-sm">{serverError}</p></div>{/if}
 
 			<div class="space-y-4">
@@ -114,7 +114,8 @@
 				<div>{#if isEditMode}{#if showDeleteConfirm}<div class="flex items-center gap-2"><span class="text-sm text-red-600">정말 삭제하시겠습니까?</span><button type="button" onclick={handleDelete} class="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700">확인</button><button type="button" onclick={() => (showDeleteConfirm = false)} class="rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200">취소</button></div>{:else}<button type="button" onclick={() => (showDeleteConfirm = true)} class="rounded-lg px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50">삭제</button>{/if}{/if}</div>
 				<div class="flex items-center gap-3"><button type="button" onclick={handleCancel} class="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200">취소</button><button type="submit" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">{isEditMode ? '수정' : '추가'}</button></div>
 			</div>
-		</form>
+			</form>
+		</div>
 	</div>
 </div>
 

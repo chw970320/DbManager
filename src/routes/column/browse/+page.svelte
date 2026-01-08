@@ -19,7 +19,7 @@
 	let loading = $state(false); let searchQuery = $state(''); let searchField = $state('all'); let searchExact = $state(false);
 	let totalCount = $state(0); let currentPage = $state(1); let totalPages = $state(1); let pageSize = $state(20);
 	let sortConfig = $state<Record<string, 'asc' | 'desc' | null>>({}); let columnFilters = $state<Record<string, string | null>>({}); let filterOptions = $state<Record<string, string[]>>({});
-	let allColumnFiles = $state<string[]>([]); let columnFiles = $state<string[]>([]); let selectedFilename = $state('column.json'); let showSystemFiles = $state(true);
+	let allColumnFiles = $state<string[]>([]); let columnFiles = $state<string[]>([]); let selectedFilename = $state('column.json'); let showSystemFiles = $state(false);
 	let showEditor = $state(false); let editorServerError = $state(''); let isFileManagerOpen = $state(false); let sidebarOpen = $state(false);
 	let currentEditingEntry = $state<ColumnEntry | null>(null);
 	let unsubscribe: () => void;
@@ -27,7 +27,7 @@
 
 	onMount(() => {
 		settingsUnsubscribe = settingsStore.subscribe((settings) => {
-			showSystemFiles = settings.showColumnSystemFiles ?? true;
+			showSystemFiles = settings.showColumnSystemFiles ?? false;
 			if (allColumnFiles.length > 0) {
 				const newFilteredFiles = filterColumnFiles(allColumnFiles, showSystemFiles);
 				columnFiles = newFilteredFiles;
@@ -53,7 +53,7 @@
 			if (searchQuery) { params.set('q', searchQuery); params.set('field', searchField); params.set('exact', searchExact.toString()); }
 			const response = await fetch(`/api/column?${params}`);
 			const result: DbDesignApiResponse = await response.json();
-			if (result.success && result.data) { const data = result.data as { entries: ColumnEntry[] }; entries = data.entries || []; if (result.pagination) { totalCount = result.pagination.totalCount || 0; totalPages = result.pagination.totalPages || 1; } } else { entries = []; totalCount = 0; }
+			if (result.success && result.data) { const data = result.data as { entries: ColumnEntry[]; pagination?: { totalCount: number; totalPages: number } }; entries = data.entries || []; if (data.pagination) { totalCount = data.pagination.totalCount || 0; totalPages = data.pagination.totalPages || 1; } } else { entries = []; totalCount = 0; }
 		} catch (error) { console.error('데이터 로드 오류:', error); entries = []; }
 		finally { loading = false; }
 	}

@@ -27,7 +27,7 @@
 	let editingFile = $state<string | null>(null);
 	let renameValue = $state('');
 	let isSubmitting = $state(false);
-	let showSystemFiles = $state(true);
+	let showSystemFiles = $state(false);
 	let activeTab = $state<'files' | 'upload'>('files');
 
 	// 업로드 관련 상태
@@ -38,7 +38,7 @@
 	// Settings store 구독
 	$effect(() => {
 		const unsubscribe = settingsStore.subscribe((settings) => {
-			showSystemFiles = settings.showAttributeSystemFiles ?? true;
+			showSystemFiles = settings.showAttributeSystemFiles ?? false;
 			if (allFiles.length > 0) {
 				filterFiles();
 			}
@@ -294,7 +294,7 @@
 		if (isOpen) {
 			let settingsLoaded = false;
 			const unsubscribe = settingsStore.subscribe((settings) => {
-				showSystemFiles = settings.showAttributeSystemFiles ?? true;
+				showSystemFiles = settings.showAttributeSystemFiles ?? false;
 				if (!settingsLoaded) {
 					settingsLoaded = true;
 					loadFiles();

@@ -16,11 +16,11 @@ export const settingsStore = writable<Settings>({
 	showVocabularySystemFiles: false,
 	showDomainSystemFiles: false,
 	showTermSystemFiles: false,
-	showDatabaseSystemFiles: true,
-	showEntitySystemFiles: true,
-	showAttributeSystemFiles: true,
-	showTableSystemFiles: true,
-	showColumnSystemFiles: true
+	showDatabaseSystemFiles: false,
+	showEntitySystemFiles: false,
+	showAttributeSystemFiles: false,
+	showTableSystemFiles: false,
+	showColumnSystemFiles: false
 });
 
 // 초기값 로드 (클라이언트 사이드에서만)
@@ -30,16 +30,16 @@ if (browser) {
 		.then((res) => res.json())
 		.then((result) => {
 			if (result.success && result.data) {
-				settingsStore.set({
-					showVocabularySystemFiles: result.data.showVocabularySystemFiles ?? false,
-					showDomainSystemFiles: result.data.showDomainSystemFiles ?? false,
-					showTermSystemFiles: result.data.showTermSystemFiles ?? false,
-					showDatabaseSystemFiles: result.data.showDatabaseSystemFiles ?? true,
-					showEntitySystemFiles: result.data.showEntitySystemFiles ?? true,
-					showAttributeSystemFiles: result.data.showAttributeSystemFiles ?? true,
-					showTableSystemFiles: result.data.showTableSystemFiles ?? true,
-					showColumnSystemFiles: result.data.showColumnSystemFiles ?? true
-				});
+			settingsStore.set({
+				showVocabularySystemFiles: result.data.showVocabularySystemFiles ?? false,
+				showDomainSystemFiles: result.data.showDomainSystemFiles ?? false,
+				showTermSystemFiles: result.data.showTermSystemFiles ?? false,
+				showDatabaseSystemFiles: result.data.showDatabaseSystemFiles ?? false,
+				showEntitySystemFiles: result.data.showEntitySystemFiles ?? false,
+				showAttributeSystemFiles: result.data.showAttributeSystemFiles ?? false,
+				showTableSystemFiles: result.data.showTableSystemFiles ?? false,
+				showColumnSystemFiles: result.data.showColumnSystemFiles ?? false
+			});
 			}
 		})
 		.catch((error) => {

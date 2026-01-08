@@ -6,16 +6,26 @@ const SETTINGS_DIR = 'static/global';
 const SETTINGS_FILE = 'settings.json';
 const SETTINGS_PATH = join(SETTINGS_DIR, SETTINGS_FILE);
 
-interface Settings {
+export interface Settings {
 	showVocabularySystemFiles: boolean;
 	showDomainSystemFiles: boolean;
 	showTermSystemFiles: boolean;
+	showDatabaseSystemFiles: boolean;
+	showEntitySystemFiles: boolean;
+	showAttributeSystemFiles: boolean;
+	showTableSystemFiles: boolean;
+	showColumnSystemFiles: boolean;
 }
 
 const DEFAULT_SETTINGS: Settings = {
 	showVocabularySystemFiles: false,
 	showDomainSystemFiles: false,
-	showTermSystemFiles: false
+	showTermSystemFiles: false,
+	showDatabaseSystemFiles: false,
+	showEntitySystemFiles: false,
+	showAttributeSystemFiles: false,
+	showTableSystemFiles: false,
+	showColumnSystemFiles: false
 };
 
 /**
@@ -52,7 +62,7 @@ async function loadSettings(): Promise<Settings> {
 			return DEFAULT_SETTINGS;
 		}
 
-		const settings = JSON.parse(content) as Settings;
+		const settings = JSON.parse(content) as Partial<Settings>;
 		return {
 			...DEFAULT_SETTINGS,
 			...settings
@@ -83,7 +93,7 @@ async function saveSettings(settings: Settings): Promise<void> {
  */
 export async function getShowVocabularySystemFiles(): Promise<boolean> {
 	const settings = await loadSettings();
-	return settings.showVocabularySystemFiles ?? true;
+	return settings.showVocabularySystemFiles ?? false;
 }
 
 /**
@@ -100,7 +110,7 @@ export async function setShowVocabularySystemFiles(value: boolean): Promise<void
  */
 export async function getShowDomainSystemFiles(): Promise<boolean> {
 	const settings = await loadSettings();
-	return settings.showDomainSystemFiles ?? true;
+	return settings.showDomainSystemFiles ?? false;
 }
 
 /**
@@ -117,7 +127,7 @@ export async function setShowDomainSystemFiles(value: boolean): Promise<void> {
  */
 export async function getShowTermSystemFiles(): Promise<boolean> {
 	const settings = await loadSettings();
-	return settings.showTermSystemFiles ?? true;
+	return settings.showTermSystemFiles ?? false;
 }
 
 /**
@@ -130,11 +140,96 @@ export async function setShowTermSystemFiles(value: boolean): Promise<void> {
 }
 
 /**
+ * 데이터베이스 시스템 파일 표시 설정 가져오기
+ */
+export async function getShowDatabaseSystemFiles(): Promise<boolean> {
+	const settings = await loadSettings();
+	return settings.showDatabaseSystemFiles ?? false;
+}
+
+/**
+ * 데이터베이스 시스템 파일 표시 설정 저장
+ */
+export async function setShowDatabaseSystemFiles(value: boolean): Promise<void> {
+	const settings = await loadSettings();
+	settings.showDatabaseSystemFiles = value;
+	await saveSettings(settings);
+}
+
+/**
+ * 엔터티 시스템 파일 표시 설정 가져오기
+ */
+export async function getShowEntitySystemFiles(): Promise<boolean> {
+	const settings = await loadSettings();
+	return settings.showEntitySystemFiles ?? false;
+}
+
+/**
+ * 엔터티 시스템 파일 표시 설정 저장
+ */
+export async function setShowEntitySystemFiles(value: boolean): Promise<void> {
+	const settings = await loadSettings();
+	settings.showEntitySystemFiles = value;
+	await saveSettings(settings);
+}
+
+/**
+ * 속성 시스템 파일 표시 설정 가져오기
+ */
+export async function getShowAttributeSystemFiles(): Promise<boolean> {
+	const settings = await loadSettings();
+	return settings.showAttributeSystemFiles ?? false;
+}
+
+/**
+ * 속성 시스템 파일 표시 설정 저장
+ */
+export async function setShowAttributeSystemFiles(value: boolean): Promise<void> {
+	const settings = await loadSettings();
+	settings.showAttributeSystemFiles = value;
+	await saveSettings(settings);
+}
+
+/**
+ * 테이블 시스템 파일 표시 설정 가져오기
+ */
+export async function getShowTableSystemFiles(): Promise<boolean> {
+	const settings = await loadSettings();
+	return settings.showTableSystemFiles ?? false;
+}
+
+/**
+ * 테이블 시스템 파일 표시 설정 저장
+ */
+export async function setShowTableSystemFiles(value: boolean): Promise<void> {
+	const settings = await loadSettings();
+	settings.showTableSystemFiles = value;
+	await saveSettings(settings);
+}
+
+/**
+ * 컬럼 시스템 파일 표시 설정 가져오기
+ */
+export async function getShowColumnSystemFiles(): Promise<boolean> {
+	const settings = await loadSettings();
+	return settings.showColumnSystemFiles ?? false;
+}
+
+/**
+ * 컬럼 시스템 파일 표시 설정 저장
+ */
+export async function setShowColumnSystemFiles(value: boolean): Promise<void> {
+	const settings = await loadSettings();
+	settings.showColumnSystemFiles = value;
+	await saveSettings(settings);
+}
+
+/**
  * @deprecated 단어집과 도메인 설정이 분리되었습니다. getShowVocabularySystemFiles 또는 getShowDomainSystemFiles를 사용하세요.
  */
 export async function getShowSystemFiles(): Promise<boolean> {
 	const settings = await loadSettings();
-	return settings.showVocabularySystemFiles ?? true;
+	return settings.showVocabularySystemFiles ?? false;
 }
 
 /**
@@ -157,6 +252,11 @@ export async function getAllSettings(): Promise<Settings> {
 /**
  * 모든 설정 저장
  */
-export async function setAllSettings(settings: Settings): Promise<void> {
-	await saveSettings(settings);
+export async function setAllSettings(settings: Partial<Settings>): Promise<void> {
+	const currentSettings = await loadSettings();
+	const updatedSettings: Settings = {
+		...currentSettings,
+		...settings
+	};
+	await saveSettings(updatedSettings);
 }

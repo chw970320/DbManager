@@ -31,7 +31,7 @@
 	let allEntityFiles = $state<string[]>([]);
 	let entityFiles = $state<string[]>([]);
 	let selectedFilename = $state('entity.json');
-	let showSystemFiles = $state(true);
+	let showSystemFiles = $state(false);
 
 	let showEditor = $state(false);
 	let editorServerError = $state('');
@@ -44,7 +44,7 @@
 
 	onMount(() => {
 		settingsUnsubscribe = settingsStore.subscribe((settings) => {
-			showSystemFiles = settings.showEntitySystemFiles ?? true;
+			showSystemFiles = settings.showEntitySystemFiles ?? false;
 			if (allEntityFiles.length > 0) {
 				const newFilteredFiles = filterEntityFiles(allEntityFiles, showSystemFiles);
 				entityFiles = newFilteredFiles;
@@ -105,9 +105,9 @@
 			const response = await fetch(`/api/entity?${params}`);
 			const result: DbDesignApiResponse = await response.json();
 			if (result.success && result.data) {
-				const data = result.data as { entries: EntityEntry[] };
+				const data = result.data as { entries: EntityEntry[]; pagination?: { totalCount: number; totalPages: number } };
 				entries = data.entries || [];
-				if (result.pagination) { totalCount = result.pagination.totalCount || 0; totalPages = result.pagination.totalPages || 1; }
+				if (data.pagination) { totalCount = data.pagination.totalCount || 0; totalPages = data.pagination.totalPages || 1; }
 			} else { entries = []; totalCount = 0; }
 		} catch (error) { console.error('데이터 로드 오류:', error); entries = []; }
 		finally { loading = false; }

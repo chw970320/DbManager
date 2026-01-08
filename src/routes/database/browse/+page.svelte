@@ -34,7 +34,7 @@
 	let allDatabaseFiles = $state<string[]>([]);
 	let databaseFiles = $state<string[]>([]);
 	let selectedFilename = $state('database.json');
-	let showSystemFiles = $state(true);
+	let showSystemFiles = $state(false);
 
 	// UI 상태
 	let showEditor = $state(false);
@@ -50,7 +50,7 @@
 	onMount(() => {
 		// settingsStore 구독
 		settingsUnsubscribe = settingsStore.subscribe((settings) => {
-			showSystemFiles = settings.showDatabaseSystemFiles ?? true;
+			showSystemFiles = settings.showDatabaseSystemFiles ?? false;
 			if (allDatabaseFiles.length > 0) {
 				const newFilteredFiles = filterDatabaseFiles(allDatabaseFiles, showSystemFiles);
 				databaseFiles = newFilteredFiles;
@@ -182,11 +182,11 @@
 			const result: DbDesignApiResponse = await response.json();
 
 			if (result.success && result.data) {
-				const data = result.data as { entries: DatabaseEntry[] };
+				const data = result.data as { entries: DatabaseEntry[]; pagination?: { totalCount: number; totalPages: number } };
 				entries = data.entries || [];
-				if (result.pagination) {
-					totalCount = result.pagination.totalCount || 0;
-					totalPages = result.pagination.totalPages || 1;
+				if (data.pagination) {
+					totalCount = data.pagination.totalCount || 0;
+					totalPages = data.pagination.totalPages || 1;
 				}
 			} else {
 				entries = [];

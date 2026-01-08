@@ -464,12 +464,12 @@ function handleSort(column: string) {
 // 필수 상태 변수
 let files = $state<string[]>([]);
 let allFiles = $state<string[]>([]);
-let showSystemFiles = $state(true);
+let showSystemFiles = $state(false); // 기본값은 false (시스템 파일 숨김)
 
 // settingsStore와 연동 필수
 $effect(() => {
 	const unsubscribe = settingsStore.subscribe((settings) => {
-		showSystemFiles = settings.showXxxSystemFiles ?? true;
+		showSystemFiles = settings.showXxxSystemFiles ?? false; // 기본값 false
 		if (allFiles.length > 0) {
 			filterFiles();
 		}
@@ -659,7 +659,7 @@ Browse 페이지에서는 파일 삭제나 시스템 파일 표시 변경 시 �
 // settingsStore 구독하여 시스템 파일 표시 설정 반영
 $effect(() => {
 	const unsubscribe = settingsStore.subscribe((settings) => {
-		showSystemFiles = settings.showXxxSystemFiles ?? true;
+		showSystemFiles = settings.showXxxSystemFiles ?? false; // 기본값 false
 		if (allFiles.length > 0) {
 			files = filterXxxFiles(allFiles, showSystemFiles);
 			// 현재 선택된 파일이 필터링된 목록에 없으면 첫 번째 파일 선택
@@ -916,6 +916,29 @@ interface ApiResponse {
   message: '성공 메시지'
 }
 ```
+
+**페이지네이션이 포함된 응답** (GET 목록 조회):
+
+```typescript
+{
+  success: true,
+  data: {
+    entries: [...],
+    pagination: {
+      currentPage: 1,
+      totalPages: 10,
+      totalCount: 200,
+      limit: 20,
+      hasNextPage: true,
+      hasPrevPage: false
+    },
+    lastUpdated: '2024-01-01T00:00:00.000Z'
+  },
+  message: '조회 성공'
+}
+```
+
+**⚠️ 중요**: pagination 정보는 `result.data.pagination`에 위치합니다. `result.pagination`이 아님에 주의하세요.
 
 **에러 응답**:
 

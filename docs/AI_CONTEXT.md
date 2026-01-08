@@ -334,15 +334,21 @@ interface ApiResponse {
 5. **Enter 키 이벤트**: 새 파일 생성 입력 필드에서 Enter 키로 생성 가능
 6. **아이콘 버튼**: 이름변경/삭제 버튼은 텍스트가 아닌 아이콘으로 표시
 
-**필수 설정 키** (settings-store.ts):
-- `showVocabularySystemFiles`
-- `showDomainSystemFiles`
-- `showTermSystemFiles`
-- `showDatabaseSystemFiles`
-- `showEntitySystemFiles`
-- `showAttributeSystemFiles`
-- `showTableSystemFiles`
-- `showColumnSystemFiles`
+**필수 설정 키** (settings-store.ts와 settings.ts):
+- `showVocabularySystemFiles` (기본값: false)
+- `showDomainSystemFiles` (기본값: false)
+- `showTermSystemFiles` (기본값: false)
+- `showDatabaseSystemFiles` (기본값: false)
+- `showEntitySystemFiles` (기본값: false)
+- `showAttributeSystemFiles` (기본값: false)
+- `showTableSystemFiles` (기본값: false)
+- `showColumnSystemFiles` (기본값: false)
+
+**⚠️ 중요**: 
+- 설정은 `static/global/settings.json`에 저장되며 새로고침/서비스 재시작 후에도 유지됩니다.
+- `src/lib/utils/settings.ts`에서 서버 사이드 설정을 처리합니다.
+- `src/lib/stores/settings-store.ts`에서 클라이언트 사이드 상태를 관리합니다.
+- API `/api/settings`를 통해 설정을 읽고 저장합니다.
 
 ### Editor 컴포넌트 패턴
 
@@ -404,7 +410,7 @@ interface ApiResponse {
 // settingsStore 구독하여 파일 자동 선택
 $effect(() => {
 	const unsubscribe = settingsStore.subscribe((settings) => {
-		showSystemFiles = settings.showXxxSystemFiles ?? true;
+		showSystemFiles = settings.showXxxSystemFiles ?? false; // 기본값 false
 		files = filterXxxFiles(allFiles, showSystemFiles);
 		// 현재 파일이 목록에 없으면 첫 번째 파일 선택
 		if (!files.includes(selectedFilename) && files.length > 0) {
@@ -414,6 +420,29 @@ $effect(() => {
 	return unsubscribe;
 });
 ```
+
+### API 응답 pagination 접근 패턴
+
+API 응답에서 pagination 정보는 `result.data.pagination`에 위치합니다:
+
+```typescript
+const result: ApiResponse = await response.json();
+if (result.success && result.data) {
+	const data = result.data as { 
+		entries: Entry[]; 
+		pagination?: { totalCount: number; totalPages: number } 
+	};
+	entries = data.entries || [];
+	// ⚠️ result.pagination이 아닌 data.pagination 사용
+	if (data.pagination) {
+		totalCount = data.pagination.totalCount || 0;
+		totalPages = data.pagination.totalPages || 1;
+	}
+}
+```
+
+**⚠️ 잘못된 접근**: `result.pagination` (undefined가 됨)
+**✅ 올바른 접근**: `data.pagination` (result.data 내부)
 
 ### XLSX 파서 컬럼 매핑 패턴
 

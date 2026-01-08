@@ -3,6 +3,11 @@ import {
 	setShowVocabularySystemFiles,
 	setShowDomainSystemFiles,
 	setShowTermSystemFiles,
+	setShowDatabaseSystemFiles,
+	setShowEntitySystemFiles,
+	setShowAttributeSystemFiles,
+	setShowTableSystemFiles,
+	setShowColumnSystemFiles,
 	getAllSettings,
 	setAllSettings
 } from '$lib/utils/settings.js';
@@ -53,13 +58,43 @@ export async function POST({ request }: RequestEvent) {
 			await setShowTermSystemFiles(body.showTermSystemFiles);
 		}
 
-		// 전체 설정 객체인 경우
-		if (
-			body.showVocabularySystemFiles === undefined &&
-			body.showDomainSystemFiles === undefined &&
-			body.showTermSystemFiles === undefined &&
-			Object.keys(body).length > 0
-		) {
+		// 데이터베이스 설정 업데이트
+		if (typeof body.showDatabaseSystemFiles === 'boolean') {
+			await setShowDatabaseSystemFiles(body.showDatabaseSystemFiles);
+		}
+
+		// 엔터티 설정 업데이트
+		if (typeof body.showEntitySystemFiles === 'boolean') {
+			await setShowEntitySystemFiles(body.showEntitySystemFiles);
+		}
+
+		// 속성 설정 업데이트
+		if (typeof body.showAttributeSystemFiles === 'boolean') {
+			await setShowAttributeSystemFiles(body.showAttributeSystemFiles);
+		}
+
+		// 테이블 설정 업데이트
+		if (typeof body.showTableSystemFiles === 'boolean') {
+			await setShowTableSystemFiles(body.showTableSystemFiles);
+		}
+
+		// 컬럼 설정 업데이트
+		if (typeof body.showColumnSystemFiles === 'boolean') {
+			await setShowColumnSystemFiles(body.showColumnSystemFiles);
+		}
+
+		// 전체 설정 객체인 경우 (모든 개별 필드가 undefined일 때)
+		const hasIndividualSettings =
+			typeof body.showVocabularySystemFiles === 'boolean' ||
+			typeof body.showDomainSystemFiles === 'boolean' ||
+			typeof body.showTermSystemFiles === 'boolean' ||
+			typeof body.showDatabaseSystemFiles === 'boolean' ||
+			typeof body.showEntitySystemFiles === 'boolean' ||
+			typeof body.showAttributeSystemFiles === 'boolean' ||
+			typeof body.showTableSystemFiles === 'boolean' ||
+			typeof body.showColumnSystemFiles === 'boolean';
+
+		if (!hasIndividualSettings && Object.keys(body).length > 0) {
 			await setAllSettings(body);
 		}
 

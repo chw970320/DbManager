@@ -54,7 +54,13 @@ export async function POST({ request }: RequestEvent) {
 
 		return json({
 			success: true,
-			data: { uploadedCount: parsedEntries.length, totalCount: finalData.totalCount, lastUpdated: finalData.lastUpdated, replaceMode: replaceExisting }
+			data: { 
+				uploadedCount: parsedEntries.length, 
+				totalCount: finalData.totalCount, 
+				lastUpdated: finalData.lastUpdated, 
+				replaceMode: replaceExisting,
+				message: `엔터티 정의서 업로드 완료: ${parsedEntries.length}개 항목`
+			}
 		} as DbDesignApiResponse, { status: 200 });
 	} catch (error) {
 		if (error instanceof FormDataValidationError) return json({ success: false, error: error.message } as DbDesignApiResponse, { status: 400 });

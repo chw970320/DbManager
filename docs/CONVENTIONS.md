@@ -456,6 +456,91 @@ function handleSort(column: string) {
 }
 ```
 
+### FileManager 컴포넌트 패턴
+
+모든 FileManager 컴포넌트는 다음 패턴을 따라야 합니다:
+
+```typescript
+// 필수 상태 변수
+let files = $state<string[]>([]);
+let allFiles = $state<string[]>([]);
+let showSystemFiles = $state(true);
+
+// settingsStore와 연동 필수
+$effect(() => {
+	const unsubscribe = settingsStore.subscribe((settings) => {
+		showSystemFiles = settings.showXxxSystemFiles ?? true;
+		if (allFiles.length > 0) {
+			filterFiles();
+		}
+	});
+	return unsubscribe;
+});
+
+// 시스템 파일 토글 함수 필수
+async function toggleSystemFiles(event: Event) {
+	const target = event.target as HTMLInputElement;
+	showSystemFiles = target.checked;
+	await saveSettings(showSystemFiles);
+	filterFiles();
+}
+```
+
+**시스템 파일 표시 체크박스 필수**:
+```svelte
+<label class="flex cursor-pointer items-center gap-2 text-xs text-gray-600">
+	<input
+		type="checkbox"
+		checked={showSystemFiles}
+		onchange={toggleSystemFiles}
+		class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+	/>
+	<span>시스템 파일 표시</span>
+</label>
+```
+
+### FileUpload 컴포넌트 사용 패턴
+
+FileUpload 컴포넌트는 **검증 교체 모드**와 **단순 교체 모드**만 지원합니다.
+(병합 모드와 덮어쓰기 모드는 삭제되었습니다)
+
+**올바른 사용법**:
+```svelte
+<FileUpload
+	disabled={isSubmitting || files.length === 0}
+	apiEndpoint="/api/xxx/upload"
+	contentType="데이터 타입명"
+	filename={selectedUploadFile}
+	replaceExisting={true}
+	onuploadstart={handleUploadStart}
+	onuploadsuccess={handleUploadSuccess}
+	onuploaderror={handleUploadError}
+	onuploadcomplete={handleUploadComplete}
+/>
+```
+
+**Props 설명**:
+- `apiEndpoint`: 업로드 API 엔드포인트
+- `contentType`: 사용자에게 표시할 데이터 타입명
+- `filename`: 대상 파일명
+- `replaceExisting`: 교체 모드 (항상 true)
+- `onuploadstart`: 업로드 시작 콜백
+- `onuploadsuccess`: 업로드 성공 콜백 `(detail: { result: UploadResult }) => void`
+- `onuploaderror`: 업로드 에러 콜백 `(detail: { error: string }) => void`
+- `onuploadcomplete`: 업로드 완료 콜백
+
+**❌ 잘못된 사용법** (사용하지 말 것):
+```svelte
+<!-- 이러한 props는 존재하지 않습니다 -->
+<FileUpload
+	uploadUrl="/api/xxx/upload"
+	mode="merge"
+	acceptedFormats={['.xlsx']}
+	on:success={handler}
+	on:error={handler}
+/>
+```
+
 ### 조건부 렌더링
 
 ```svelte

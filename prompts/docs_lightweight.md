@@ -3,5 +3,3 @@
 ---
 
 @docs/DOCUMENTATION_LIGHTWEIGHT_PLAN.md 를 기반으로 프로젝트 문서 경량화를 진행하고 모두 마무리 되면 해당 문서도 삭제해
-
----

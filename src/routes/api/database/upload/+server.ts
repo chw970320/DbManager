@@ -139,7 +139,7 @@ export async function POST({ request }: RequestEvent) {
 					totalCount: finalData.totalCount,
 					lastUpdated: finalData.lastUpdated,
 					replaceMode: replaceExisting,
-					message: `데이터 업로드 완료: ${parsedEntries.length}개 항목`
+					message: `데이터베이스 정의서 업로드 완료: ${parsedEntries.length}개 항목`
 				},
 				message: 'Data uploaded successfully'
 			} as DbDesignApiResponse,

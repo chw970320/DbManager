@@ -323,6 +323,44 @@ interface ApiResponse {
 
 **에러 처리 위치**: `src/routes/api/**/+server.ts`
 
+### FileManager 컴포넌트 패턴
+
+모든 FileManager 컴포넌트는 다음 기능을 포함해야 합니다:
+
+1. **시스템 파일 표시 토글**: `showSystemFiles` 상태와 `toggleSystemFiles` 함수
+2. **settingsStore 연동**: 설정 저장 및 로드
+3. **파일 필터링**: 시스템 파일 표시 여부에 따른 필터링
+
+**필수 설정 키** (settings-store.ts):
+- `showVocabularySystemFiles`
+- `showDomainSystemFiles`
+- `showTermSystemFiles`
+- `showDatabaseSystemFiles`
+- `showEntitySystemFiles`
+- `showAttributeSystemFiles`
+- `showTableSystemFiles`
+- `showColumnSystemFiles`
+
+### FileUpload 컴포넌트 패턴
+
+**지원 모드**:
+- `validated-replace`: 검증 교체 모드 (데이터 검증 후 교체)
+- `simple-replace`: 단순 교체 모드 (검증 없이 바로 교체)
+
+**⚠️ 주의**: 병합(merge) 모드와 덮어쓰기(replace) 모드는 더 이상 지원되지 않습니다.
+
+**올바른 Props 사용**:
+- `apiEndpoint`: 업로드 API 엔드포인트
+- `contentType`: 데이터 타입명
+- `filename`: 대상 파일명
+- `replaceExisting`: 교체 모드 (항상 true)
+- `onuploadstart`, `onuploadsuccess`, `onuploaderror`, `onuploadcomplete`: 콜백 함수
+
+**잘못된 Props** (사용하지 말 것):
+- `uploadUrl` → `apiEndpoint` 사용
+- `mode` → FileUpload 내부에서 처리
+- `on:success` → `onuploadsuccess` 사용 (Svelte 5 방식)
+
 ---
 
 ## 변경 시 주의사항

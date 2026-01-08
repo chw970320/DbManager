@@ -85,7 +85,7 @@
 							</div>
 						</div>
 						<span
-							class="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-xl font-bold text-transparent"
+							class="hidden bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-xl font-bold text-transparent xl:block"
 							>데이터 관리</span
 						>
 					</a>

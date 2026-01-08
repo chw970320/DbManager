@@ -86,7 +86,7 @@
 		<form onsubmit={(e) => { e.preventDefault(); handleSave(); }} class="p-6">
 			{#if serverError}<div class="mb-4 rounded-lg bg-red-50 p-4 text-red-700"><p class="text-sm">{serverError}</p></div>{/if}
 
-			<div class="grid gap-4 md:grid-cols-2">
+			<div class="space-y-4">
 				<div>
 					<label for="logicalDbName" class="mb-1 block text-sm font-medium text-gray-700">논리DB명</label>
 					<input id="logicalDbName" type="text" bind:value={formData.logicalDbName} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="논리DB명 입력" />
@@ -112,7 +112,7 @@
 					<label for="tableKoreanName" class="mb-1 block text-sm font-medium text-gray-700">테이블한글명</label>
 					<input id="tableKoreanName" type="text" bind:value={formData.tableKoreanName} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="테이블한글명 입력" />
 				</div>
-				<div class="md:col-span-2">
+				<div>
 					<label for="entityDescription" class="mb-1 block text-sm font-medium text-gray-700">엔터티설명</label>
 					<textarea id="entityDescription" bind:value={formData.entityDescription} rows="3" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="엔터티설명 입력"></textarea>
 				</div>

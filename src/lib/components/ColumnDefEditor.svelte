@@ -85,7 +85,7 @@
 		<form onsubmit={(e) => { e.preventDefault(); handleSave(); }} class="p-6">
 			{#if serverError}<div class="mb-4 rounded-lg bg-red-50 p-4 text-red-700"><p class="text-sm">{serverError}</p></div>{/if}
 
-			<div class="grid gap-4 md:grid-cols-4">
+			<div class="space-y-4">
 				<div><label for="schemaName" class="mb-1 block text-sm font-medium text-gray-700">스키마명</label><input id="schemaName" type="text" bind:value={formData.schemaName} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="스키마명" /></div>
 				<div><label for="tableEnglishName" class="mb-1 block text-sm font-medium text-gray-700">테이블영문명</label><input id="tableEnglishName" type="text" bind:value={formData.tableEnglishName} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="테이블영문명" /></div>
 				<div><label for="columnEnglishName" class="mb-1 block text-sm font-medium text-gray-700">컬럼영문명</label><input id="columnEnglishName" type="text" bind:value={formData.columnEnglishName} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="컬럼영문명" /></div>
@@ -107,7 +107,7 @@
 				<div><label for="personalInfoFlag" class="mb-1 block text-sm font-medium text-gray-700">개인정보여부</label><select id="personalInfoFlag" bind:value={formData.personalInfoFlag} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"><option value="">선택</option><option value="Y">Y</option><option value="N">N</option></select></div>
 				<div><label for="encryptionFlag" class="mb-1 block text-sm font-medium text-gray-700">암호화여부</label><select id="encryptionFlag" bind:value={formData.encryptionFlag} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"><option value="">선택</option><option value="Y">Y</option><option value="N">N</option></select></div>
 				<div><label for="publicFlag" class="mb-1 block text-sm font-medium text-gray-700">공개여부</label><select id="publicFlag" bind:value={formData.publicFlag} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"><option value="">선택</option><option value="공개">공개</option><option value="비공개">비공개</option></select></div>
-				<div class="md:col-span-4"><label for="columnDescription" class="mb-1 block text-sm font-medium text-gray-700">컬럼설명</label><textarea id="columnDescription" bind:value={formData.columnDescription} rows="2" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="컬럼설명 입력"></textarea></div>
+				<div><label for="columnDescription" class="mb-1 block text-sm font-medium text-gray-700">컬럼설명</label><textarea id="columnDescription" bind:value={formData.columnDescription} rows="2" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="컬럼설명 입력"></textarea></div>
 			</div>
 
 			<div class="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">

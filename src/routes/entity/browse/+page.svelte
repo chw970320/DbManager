@@ -7,6 +7,8 @@
 	import EntityFileManager from '$lib/components/EntityFileManager.svelte';
 	import type { EntityEntry, DbDesignApiResponse } from '$lib/types/database-design.js';
 	import { entityStore } from '$lib/stores/database-design-store';
+	import { settingsStore } from '$lib/stores/settings-store';
+	import { filterEntityFiles } from '$lib/utils/file-filter';
 
 	type SearchDetail = { query: string; field: string; exact: boolean };
 	type SortDetail = { column: string; direction: 'asc' | 'desc' | null };
@@ -26,8 +28,10 @@
 	let columnFilters = $state<Record<string, string | null>>({});
 	let filterOptions = $state<Record<string, string[]>>({});
 
+	let allEntityFiles = $state<string[]>([]);
 	let entityFiles = $state<string[]>([]);
 	let selectedFilename = $state('entity.json');
+	let showSystemFiles = $state(true);
 
 	let showEditor = $state(false);
 	let editorServerError = $state('');
@@ -36,8 +40,21 @@
 	let currentEditingEntry = $state<EntityEntry | null>(null);
 
 	let unsubscribe: () => void;
+	let settingsUnsubscribe: () => void;
 
 	onMount(() => {
+		settingsUnsubscribe = settingsStore.subscribe((settings) => {
+			showSystemFiles = settings.showEntitySystemFiles ?? true;
+			if (allEntityFiles.length > 0) {
+				const newFilteredFiles = filterEntityFiles(allEntityFiles, showSystemFiles);
+				entityFiles = newFilteredFiles;
+				// 현재 선택된 파일이 필터링된 목록에 없으면 첫 번째 파일로 전환
+				if (newFilteredFiles.length > 0 && !newFilteredFiles.includes(selectedFilename)) {
+					handleFileSelect(newFilteredFiles[0]);
+				}
+			}
+		});
+
 		(async () => { await loadFiles(); if (browser) await loadData(); })();
 		unsubscribe = entityStore.subscribe((value) => {
 			if (selectedFilename !== value.selectedFilename) {
@@ -45,7 +62,7 @@
 				if (browser) { currentPage = 1; searchQuery = ''; loadData(); }
 			}
 		});
-		return () => { if (unsubscribe) unsubscribe(); };
+		return () => { if (unsubscribe) unsubscribe(); if (settingsUnsubscribe) settingsUnsubscribe(); };
 	});
 
 	async function loadFiles() {
@@ -53,11 +70,18 @@
 			const response = await fetch('/api/entity/files');
 			const result: DbDesignApiResponse = await response.json();
 			if (result.success && Array.isArray(result.data)) {
-				entityFiles = result.data as string[];
-				if (entityFiles.length === 0) {
+				const files = result.data as string[];
+				allEntityFiles = files;
+				const filteredFiles = filterEntityFiles(files, showSystemFiles);
+				entityFiles = filteredFiles;
+				if (files.length === 0) {
 					const createResponse = await fetch('/api/entity/files', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: 'entity.json' }) });
-					if (createResponse.ok) { entityFiles = ['entity.json']; if (selectedFilename !== 'entity.json') handleFileSelect('entity.json'); }
-				} else if (!entityFiles.includes(selectedFilename)) handleFileSelect(entityFiles[0]);
+					if (createResponse.ok) { allEntityFiles = ['entity.json']; entityFiles = filterEntityFiles(['entity.json'], showSystemFiles); if (selectedFilename !== 'entity.json') handleFileSelect('entity.json'); }
+				} else if (filteredFiles.length > 0 && !filteredFiles.includes(selectedFilename)) {
+					handleFileSelect(filteredFiles[0]);
+				} else if (!files.includes(selectedFilename)) {
+					handleFileSelect(filteredFiles.length > 0 ? filteredFiles[0] : files[0]);
+				}
 			}
 		} catch (error) { console.error('파일 목록 로드 오류:', error); }
 	}

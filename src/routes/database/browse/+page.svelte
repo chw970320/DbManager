@@ -6,8 +6,9 @@
 	import DatabaseEditor from '$lib/components/DatabaseEditor.svelte';
 	import DatabaseFileManager from '$lib/components/DatabaseFileManager.svelte';
 	import type { DatabaseEntry, DbDesignApiResponse } from '$lib/types/database-design.js';
-	import { get } from 'svelte/store';
 	import { databaseStore } from '$lib/stores/database-design-store';
+	import { settingsStore } from '$lib/stores/settings-store';
+	import { filterDatabaseFiles } from '$lib/utils/file-filter';
 
 	// 이벤트 상세 타입 정의
 	type SearchDetail = { query: string; field: string; exact: boolean };
@@ -30,8 +31,10 @@
 	let filterOptions = $state<Record<string, string[]>>({});
 
 	// 파일 관리 상태
+	let allDatabaseFiles = $state<string[]>([]);
 	let databaseFiles = $state<string[]>([]);
 	let selectedFilename = $state('database.json');
+	let showSystemFiles = $state(true);
 
 	// UI 상태
 	let showEditor = $state(false);
@@ -41,9 +44,24 @@
 	let currentEditingEntry = $state<DatabaseEntry | null>(null);
 
 	let unsubscribe: () => void;
+	let settingsUnsubscribe: () => void;
 
 	// 스토어 구독 및 초기 데이터 로드
 	onMount(() => {
+		// settingsStore 구독
+		settingsUnsubscribe = settingsStore.subscribe((settings) => {
+			showSystemFiles = settings.showDatabaseSystemFiles ?? true;
+			if (allDatabaseFiles.length > 0) {
+				const newFilteredFiles = filterDatabaseFiles(allDatabaseFiles, showSystemFiles);
+				databaseFiles = newFilteredFiles;
+				
+				// 현재 선택된 파일이 필터링된 목록에 없으면 첫 번째 파일로 전환
+				if (newFilteredFiles.length > 0 && !newFilteredFiles.includes(selectedFilename)) {
+					handleFileSelect(newFilteredFiles[0]);
+				}
+			}
+		});
+
 		(async () => {
 			await loadDatabaseFiles();
 			if (browser) {
@@ -64,6 +82,7 @@
 
 		return () => {
 			if (unsubscribe) unsubscribe();
+			if (settingsUnsubscribe) settingsUnsubscribe();
 		};
 	});
 
@@ -76,7 +95,9 @@
 			const result: DbDesignApiResponse = await response.json();
 			if (result.success && Array.isArray(result.data)) {
 				const files = result.data as string[];
-				databaseFiles = files;
+				allDatabaseFiles = files;
+				const filteredFiles = filterDatabaseFiles(files, showSystemFiles);
+				databaseFiles = filteredFiles;
 
 				if (files.length === 0) {
 					try {
@@ -86,7 +107,8 @@
 							body: JSON.stringify({ filename: 'database.json' })
 						});
 						if (createResponse.ok) {
-							databaseFiles = ['database.json'];
+							allDatabaseFiles = ['database.json'];
+							databaseFiles = filterDatabaseFiles(['database.json'], showSystemFiles);
 							if (selectedFilename !== 'database.json') {
 								handleFileSelect('database.json');
 							}
@@ -95,8 +117,12 @@
 						console.error('기본 파일 생성 실패:', e);
 					}
 				} else {
-					if (!files.includes(selectedFilename)) {
-						handleFileSelect(files[0]);
+					// 현재 선택된 파일이 필터된 목록에 없으면 첫 번째 파일로 전환
+					if (filteredFiles.length > 0 && !filteredFiles.includes(selectedFilename)) {
+						handleFileSelect(filteredFiles[0]);
+					} else if (!files.includes(selectedFilename)) {
+						// 파일이 삭제된 경우 (전체 목록에도 없음)
+						handleFileSelect(filteredFiles.length > 0 ? filteredFiles[0] : files[0]);
 					}
 				}
 			}

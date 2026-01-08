@@ -330,6 +330,9 @@ interface ApiResponse {
 1. **시스템 파일 표시 토글**: `showSystemFiles` 상태와 `toggleSystemFiles` 함수
 2. **settingsStore 연동**: 설정 저장 및 로드
 3. **파일 필터링**: 시스템 파일 표시 여부에 따른 필터링
+4. **목록 페이지 연동**: 시스템 파일 표시 설정이 해당 browse 페이지에도 영향을 줌
+5. **Enter 키 이벤트**: 새 파일 생성 입력 필드에서 Enter 키로 생성 가능
+6. **아이콘 버튼**: 이름변경/삭제 버튼은 텍스트가 아닌 아이콘으로 표시
 
 **필수 설정 키** (settings-store.ts):
 - `showVocabularySystemFiles`
@@ -340,6 +343,13 @@ interface ApiResponse {
 - `showAttributeSystemFiles`
 - `showTableSystemFiles`
 - `showColumnSystemFiles`
+
+### Editor 컴포넌트 패턴
+
+정의서 추가/수정 팝업(Editor 컴포넌트)은 다음 패턴을 따릅니다:
+
+1. **1행 1열 레이아웃**: 모든 폼 필드는 `md:grid-cols-1`로 한 행에 하나씩 배치
+2. **일관된 스타일**: Tailwind CSS 클래스 사용
 
 ### FileUpload 컴포넌트 패턴
 
@@ -360,6 +370,62 @@ interface ApiResponse {
 - `uploadUrl` → `apiEndpoint` 사용
 - `mode` → FileUpload 내부에서 처리
 - `on:success` → `onuploadsuccess` 사용 (Svelte 5 방식)
+
+### Table 컴포넌트 ColumnFilter 패턴
+
+테이블 컴포넌트에서 컬럼 필터링 시 `ColumnFilter` 컴포넌트를 올바른 props로 사용:
+
+```svelte
+<ColumnFilter
+	columnKey={column.key}
+	columnLabel={column.label}
+	filterType="select"
+	currentValue={activeFilters[column.key] || null}
+	options={filterOptions[column.key] || getUniqueValues(column.key)}
+	isOpen={openFilterColumn === column.key}
+	onOpen={(key) => { openFilterColumn = key; }}
+	onClose={() => { openFilterColumn = null; }}
+	onApply={(value) => handleFilter(column.key, value)}
+	onClear={() => handleFilter(column.key, null)}
+/>
+```
+
+**❌ 잘못된 Props** (사용하지 말 것):
+- `value` → `currentValue` 사용
+- `type` → `filterType` 사용
+- `onselect` → `onApply` 사용
+- `onclose` → `onClose` 사용
+
+### Browse 페이지 파일 선택 패턴
+
+파일 삭제나 시스템 파일 표시 변경 시, 현재 선택된 파일이 더 이상 목록에 없으면 자동으로 첫 번째 파일을 선택합니다:
+
+```typescript
+// settingsStore 구독하여 파일 자동 선택
+$effect(() => {
+	const unsubscribe = settingsStore.subscribe((settings) => {
+		showSystemFiles = settings.showXxxSystemFiles ?? true;
+		files = filterXxxFiles(allFiles, showSystemFiles);
+		// 현재 파일이 목록에 없으면 첫 번째 파일 선택
+		if (!files.includes(selectedFilename) && files.length > 0) {
+			handleFileSelect(files[0]);
+		}
+	});
+	return unsubscribe;
+});
+```
+
+### XLSX 파서 컬럼 매핑 패턴
+
+Excel 파일 파싱 시 **번호 열 없음** 전제:
+
+```typescript
+// A열(index 0)부터 데이터 시작
+const field1 = parseRequiredText(row[0]); // A열
+const field2 = parseRequiredText(row[1]); // B열
+```
+
+**⚠️ 주의**: `row[1]`부터 시작하면 한 칸 밀림 발생
 
 ---
 
@@ -451,5 +517,5 @@ interface ApiResponse {
 
 ---
 
-**마지막 업데이트**: 2024-12-12
+**마지막 업데이트**: 2026-01-08
 

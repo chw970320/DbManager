@@ -76,7 +76,6 @@
 
 	function handleSort(column: string) { const currentDirection = sortConfig[column] ?? null; let newDirection: 'asc' | 'desc' | null; if (currentDirection === null) newDirection = 'asc'; else if (currentDirection === 'asc') newDirection = 'desc'; else newDirection = null; onsort({ column, direction: newDirection }); }
 	function handleFilter(column: string, value: string | null) { if (onfilter) onfilter({ column, value }); dispatch('filter', { column, value }); openFilterColumn = null; }
-	function toggleFilter(column: string) { openFilterColumn = openFilterColumn === column ? null : column; }
 	function handlePageChange(page: number) { if (page >= 1 && page <= totalPages) onpagechange({ page }); }
 	function getSortIcon(column: string): string { const direction = sortConfig[column]; if (direction === 'asc') return '↑'; if (direction === 'desc') return '↓'; return ''; }
 	function getSortOrder(column: string): number | null { const sortedColumns = Object.entries(sortConfig).filter(([, dir]) => dir !== null); const index = sortedColumns.findIndex(([key]) => key === column); return index >= 0 ? index + 1 : null; }
@@ -99,7 +98,7 @@
 						<th class="group px-4 py-3 text-xs font-medium uppercase tracking-wider text-gray-500 {column.align === 'center' ? 'text-center' : column.align === 'right' ? 'text-right' : 'text-left'} {column.width}">
 							<div class="flex items-center gap-2">
 								{#if column.sortable}<button onclick={() => handleSort(column.key)} class="flex items-center gap-1 hover:text-gray-900">{column.label}<span class="text-blue-600">{getSortIcon(column.key)}</span>{#if getSortOrder(column.key)}<span class="text-xs text-gray-400">({getSortOrder(column.key)})</span>{/if}</button>{:else}<span>{column.label}</span>{/if}
-								{#if column.filterable}<div class="relative"><button onclick={() => toggleFilter(column.key)} class="rounded p-1 opacity-0 transition-opacity hover:bg-gray-200 group-hover:opacity-100 {activeFilters[column.key] ? 'opacity-100 text-blue-600' : ''}" aria-label="필터"><svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" /></svg></button>{#if openFilterColumn === column.key}<ColumnFilter options={column.filterType === 'select' ? filterOptions[column.key] || getUniqueValues(column.key) : filterOptions[column.key] || getUniqueValues(column.key)} value={activeFilters[column.key] || null} type={column.filterType || 'text'} onselect={(value) => handleFilter(column.key, value)} onclose={() => (openFilterColumn = null)} />{/if}</div>{/if}
+								{#if column.filterable}<ColumnFilter columnKey={column.key} columnLabel={column.label} filterType="select" currentValue={activeFilters[column.key] || null} options={filterOptions[column.key] || getUniqueValues(column.key)} isOpen={openFilterColumn === column.key} onOpen={(key) => { openFilterColumn = key; }} onClose={() => { openFilterColumn = null; }} onApply={(value) => handleFilter(column.key, value)} onClear={() => handleFilter(column.key, null)} />{/if}
 							</div>
 						</th>
 					{/each}

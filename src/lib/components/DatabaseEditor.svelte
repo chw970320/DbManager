@@ -196,7 +196,7 @@
 				</div>
 			{/if}
 
-			<div class="grid gap-4 md:grid-cols-2">
+			<div class="space-y-4">
 				<!-- 기관명 (필수) -->
 				<div>
 					<label for="organizationName" class="mb-1 block text-sm font-medium text-gray-700">
@@ -364,8 +364,8 @@
 					{/if}
 				</div>
 
-				<!-- DB설명 (선택) - 전체 너비 -->
-				<div class="md:col-span-2">
+				<!-- DB설명 (선택) -->
+				<div>
 					<label for="dbDescription" class="mb-1 block text-sm font-medium text-gray-700">
 						DB설명
 					</label>

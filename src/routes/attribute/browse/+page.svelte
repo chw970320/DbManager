@@ -7,6 +7,8 @@
 	import AttributeFileManager from '$lib/components/AttributeFileManager.svelte';
 	import type { AttributeEntry, DbDesignApiResponse } from '$lib/types/database-design.js';
 	import { attributeStore } from '$lib/stores/database-design-store';
+	import { settingsStore } from '$lib/stores/settings-store';
+	import { filterAttributeFiles } from '$lib/utils/file-filter';
 
 	type SearchDetail = { query: string; field: string; exact: boolean };
 	type SortDetail = { column: string; direction: 'asc' | 'desc' | null };
@@ -17,18 +19,29 @@
 	let loading = $state(false); let searchQuery = $state(''); let searchField = $state('all'); let searchExact = $state(false);
 	let totalCount = $state(0); let currentPage = $state(1); let totalPages = $state(1); let pageSize = $state(20);
 	let sortConfig = $state<Record<string, 'asc' | 'desc' | null>>({}); let columnFilters = $state<Record<string, string | null>>({}); let filterOptions = $state<Record<string, string[]>>({});
-	let attributeFiles = $state<string[]>([]); let selectedFilename = $state('attribute.json');
+	let allAttributeFiles = $state<string[]>([]); let attributeFiles = $state<string[]>([]); let selectedFilename = $state('attribute.json'); let showSystemFiles = $state(true);
 	let showEditor = $state(false); let editorServerError = $state(''); let isFileManagerOpen = $state(false); let sidebarOpen = $state(false);
 	let currentEditingEntry = $state<AttributeEntry | null>(null);
 	let unsubscribe: () => void;
+	let settingsUnsubscribe: () => void;
 
 	onMount(() => {
+		settingsUnsubscribe = settingsStore.subscribe((settings) => {
+			showSystemFiles = settings.showAttributeSystemFiles ?? true;
+			if (allAttributeFiles.length > 0) {
+				const newFilteredFiles = filterAttributeFiles(allAttributeFiles, showSystemFiles);
+				attributeFiles = newFilteredFiles;
+				if (newFilteredFiles.length > 0 && !newFilteredFiles.includes(selectedFilename)) {
+					handleFileSelect(newFilteredFiles[0]);
+				}
+			}
+		});
 		(async () => { await loadFiles(); if (browser) await loadData(); })();
 		unsubscribe = attributeStore.subscribe((value) => { if (selectedFilename !== value.selectedFilename) { selectedFilename = value.selectedFilename; if (browser) { currentPage = 1; searchQuery = ''; loadData(); } } });
-		return () => { if (unsubscribe) unsubscribe(); };
+		return () => { if (unsubscribe) unsubscribe(); if (settingsUnsubscribe) settingsUnsubscribe(); };
 	});
 
-	async function loadFiles() { try { const response = await fetch('/api/attribute/files'); const result: DbDesignApiResponse = await response.json(); if (result.success && Array.isArray(result.data)) { attributeFiles = result.data as string[]; if (attributeFiles.length === 0) { const createResponse = await fetch('/api/attribute/files', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: 'attribute.json' }) }); if (createResponse.ok) { attributeFiles = ['attribute.json']; if (selectedFilename !== 'attribute.json') handleFileSelect('attribute.json'); } } else if (!attributeFiles.includes(selectedFilename)) handleFileSelect(attributeFiles[0]); } } catch (error) { console.error('파일 목록 로드 오류:', error); } }
+	async function loadFiles() { try { const response = await fetch('/api/attribute/files'); const result: DbDesignApiResponse = await response.json(); if (result.success && Array.isArray(result.data)) { const files = result.data as string[]; allAttributeFiles = files; const filteredFiles = filterAttributeFiles(files, showSystemFiles); attributeFiles = filteredFiles; if (files.length === 0) { const createResponse = await fetch('/api/attribute/files', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: 'attribute.json' }) }); if (createResponse.ok) { allAttributeFiles = ['attribute.json']; attributeFiles = filterAttributeFiles(['attribute.json'], showSystemFiles); if (selectedFilename !== 'attribute.json') handleFileSelect('attribute.json'); } } else if (filteredFiles.length > 0 && !filteredFiles.includes(selectedFilename)) { handleFileSelect(filteredFiles[0]); } else if (!files.includes(selectedFilename)) { handleFileSelect(filteredFiles.length > 0 ? filteredFiles[0] : files[0]); } } } catch (error) { console.error('파일 목록 로드 오류:', error); } }
 	async function handleFileSelect(filename: string) { if (selectedFilename === filename) return; selectedFilename = filename; attributeStore.update((store) => ({ ...store, selectedFilename: filename })); currentPage = 1; searchQuery = ''; await loadData(); }
 
 	async function loadData() {

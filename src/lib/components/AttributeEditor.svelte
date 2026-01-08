@@ -66,7 +66,7 @@
 		<form onsubmit={(e) => { e.preventDefault(); handleSave(); }} class="p-6">
 			{#if serverError}<div class="mb-4 rounded-lg bg-red-50 p-4 text-red-700"><p class="text-sm">{serverError}</p></div>{/if}
 
-			<div class="grid gap-4 md:grid-cols-2">
+			<div class="space-y-4">
 				<div><label for="schemaName" class="mb-1 block text-sm font-medium text-gray-700">스키마명</label><input id="schemaName" type="text" bind:value={formData.schemaName} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="스키마명 입력" /></div>
 				<div><label for="entityName" class="mb-1 block text-sm font-medium text-gray-700">엔터티명</label><input id="entityName" type="text" bind:value={formData.entityName} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="엔터티명 입력" /></div>
 				<div><label for="attributeName" class="mb-1 block text-sm font-medium text-gray-700">속성명</label><input id="attributeName" type="text" bind:value={formData.attributeName} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="속성명 입력" /></div>
@@ -75,7 +75,7 @@
 				<div><label for="identifierFlag" class="mb-1 block text-sm font-medium text-gray-700">식별자여부</label><select id="identifierFlag" bind:value={formData.identifierFlag} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"><option value="">선택</option><option value="Y">Y</option><option value="N">N</option></select></div>
 				<div><label for="refEntityName" class="mb-1 block text-sm font-medium text-gray-700">참조엔터티명 <span class="text-red-500">*</span></label><input id="refEntityName" type="text" bind:value={formData.refEntityName} class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.refEntityName ? 'border-red-500' : 'border-gray-300'}" placeholder="참조엔터티명 입력" />{#if errors.refEntityName}<p class="mt-1 text-xs text-red-500">{errors.refEntityName}</p>{/if}</div>
 				<div><label for="refAttributeName" class="mb-1 block text-sm font-medium text-gray-700">참조속성명</label><input id="refAttributeName" type="text" bind:value={formData.refAttributeName} class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="참조속성명 입력" /></div>
-				<div class="md:col-span-2"><label for="attributeDescription" class="mb-1 block text-sm font-medium text-gray-700">속성설명</label><textarea id="attributeDescription" bind:value={formData.attributeDescription} rows="3" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="속성설명 입력"></textarea></div>
+				<div><label for="attributeDescription" class="mb-1 block text-sm font-medium text-gray-700">속성설명</label><textarea id="attributeDescription" bind:value={formData.attributeDescription} rows="3" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" placeholder="속성설명 입력"></textarea></div>
 			</div>
 
 			<div class="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">

@@ -499,6 +499,32 @@ async function toggleSystemFiles(event: Event) {
 </label>
 ```
 
+**⚠️ 중요**: 시스템 파일 표시 설정은 해당 목록 페이지(browse 페이지)에도 영향을 주어야 합니다. `settingsStore`를 구독하여 파일 필터링을 수행하세요.
+
+**새 파일 생성 입력 필드에 Enter 키 이벤트 필수**:
+```svelte
+<input
+	type="text"
+	bind:value={newFilename}
+	onkeydown={(e) => e.key === 'Enter' && handleCreateFile()}
+	placeholder="새 파일 이름"
+	class="..."
+/>
+```
+
+**이름변경/삭제 버튼은 아이콘으로 표시**:
+```svelte
+<!-- 이름변경 아이콘 버튼 -->
+<button onclick={startRename} title="이름 변경">
+	<svg class="h-4 w-4">...</svg>
+</button>
+
+<!-- 삭제 아이콘 버튼 -->
+<button onclick={handleDelete} title="삭제">
+	<svg class="h-4 w-4">...</svg>
+</button>
+```
+
 ### FileUpload 컴포넌트 사용 패턴
 
 FileUpload 컴포넌트는 **검증 교체 모드**와 **단순 교체 모드**만 지원합니다.
@@ -541,6 +567,128 @@ FileUpload 컴포넌트는 **검증 교체 모드**와 **단순 교체 모드**�
 />
 ```
 
+### Editor 컴포넌트 레이아웃 패턴
+
+모든 정의서 추가/수정 팝업(Editor 컴포넌트)은 **1행 1열 레이아웃**을 사용합니다:
+
+```svelte
+<div class="grid gap-4 md:grid-cols-1">
+	<!-- 모든 폼 필드는 한 행에 하나씩 배치 -->
+	<div>
+		<label>필드 1</label>
+		<input ... />
+	</div>
+	<div>
+		<label>필드 2</label>
+		<input ... />
+	</div>
+	<!-- ... -->
+</div>
+```
+
+**❌ 잘못된 예** (복수 컬럼 레이아웃 사용하지 말 것):
+```svelte
+<div class="grid gap-4 md:grid-cols-2">
+	<!-- 2열 레이아웃 사용 금지 -->
+</div>
+```
+
+### Table 컴포넌트의 ColumnFilter 사용 패턴
+
+테이블 컴포넌트에서 컬럼 필터링을 구현할 때는 `ColumnFilter` 컴포넌트를 다음 패턴으로 사용합니다:
+
+```typescript
+// 상태 변수
+let openFilterColumn = $state<string | null>(null);
+
+// 필터 핸들러
+function handleFilter(column: string, value: string | null) {
+	if (onfilter) onfilter({ column, value });
+	dispatch('filter', { column, value });
+	openFilterColumn = null;
+}
+```
+
+```svelte
+<!-- ColumnFilter 사용 - 올바른 패턴 -->
+{#if column.filterable}
+	<ColumnFilter
+		columnKey={column.key}
+		columnLabel={column.label}
+		filterType="select"
+		currentValue={activeFilters[column.key] || null}
+		options={filterOptions[column.key] || getUniqueValues(column.key)}
+		isOpen={openFilterColumn === column.key}
+		onOpen={(key) => { openFilterColumn = key; }}
+		onClose={() => { openFilterColumn = null; }}
+		onApply={(value) => handleFilter(column.key, value)}
+		onClear={() => handleFilter(column.key, null)}
+	/>
+{/if}
+```
+
+**⚠️ 잘못된 패턴** (사용하지 말 것):
+```svelte
+<!-- 이전 방식 - 사용하지 말 것 -->
+<ColumnFilter
+	options={...}
+	value={activeFilters[column.key] || null}
+	type={column.filterType || 'text'}
+	onselect={(value) => handleFilter(column.key, value)}
+	onclose={() => (openFilterColumn = null)}
+/>
+```
+
+**Props 설명**:
+- `columnKey`: 컬럼 식별자
+- `columnLabel`: 사용자에게 표시할 컬럼 라벨
+- `filterType`: 필터 유형 (`'text'` | `'select'`)
+- `currentValue`: 현재 적용된 필터 값
+- `options`: 선택 가능한 필터 옵션 목록
+- `isOpen`: 필터 팝업 열림 상태
+- `onOpen`: 필터 열기 콜백
+- `onClose`: 필터 닫기 콜백
+- `onApply`: 필터 적용 콜백
+- `onClear`: 필터 초기화 콜백
+
+### Browse 페이지 파일 선택 패턴
+
+Browse 페이지에서는 파일 삭제나 시스템 파일 표시 변경 시 현재 선택 파일을 자동으로 업데이트해야 합니다:
+
+```typescript
+// settingsStore 구독하여 시스템 파일 표시 설정 반영
+$effect(() => {
+	const unsubscribe = settingsStore.subscribe((settings) => {
+		showSystemFiles = settings.showXxxSystemFiles ?? true;
+		if (allFiles.length > 0) {
+			files = filterXxxFiles(allFiles, showSystemFiles);
+			// 현재 선택된 파일이 필터링된 목록에 없으면 첫 번째 파일 선택
+			if (!files.includes(selectedFilename) && files.length > 0) {
+				handleFileSelect(files[0]);
+			}
+		}
+	});
+	return unsubscribe;
+});
+
+// 파일 목록 로드 시에도 동일한 패턴 적용
+async function loadFiles() {
+	const response = await fetch('/api/xxx/files');
+	const result = await response.json();
+	if (result.success && Array.isArray(result.data)) {
+		allFiles = result.data;
+		files = filterXxxFiles(allFiles, showSystemFiles);
+		
+		// 현재 선택된 파일이 목록에 없으면 첫 번째 파일 선택
+		if (!files.includes(selectedFilename) && files.length > 0) {
+			handleFileSelect(files[0]);
+		}
+	}
+}
+```
+
+**⚠️ 중요**: 파일 삭제, 이름 변경, 시스템 파일 표시 토글 후에는 항상 현재 선택된 파일이 유효한지 확인해야 합니다.
+
 ### 조건부 렌더링
 
 ```svelte
@@ -569,6 +717,39 @@ FileUpload 컴포넌트는 **검증 교체 모드**와 **단순 교체 모드**�
 	<div>{entry.name}</div>
 {/each}
 ```
+
+### XLSX 파서 컬럼 매핑 패턴
+
+Excel 파일을 파싱할 때는 **번호 열이 없음**을 전제로 합니다. A열부터 바로 데이터가 시작됩니다.
+
+```typescript
+// 파싱 함수 예시 (database-design-xlsx-parser.ts)
+for (let i = 0; i < dataRows.length; i++) {
+	const row = dataRows[i];
+	if (isEmptyRow(row)) continue;
+
+	// ✅ 올바른 컬럼 매핑: A열(index 0)부터 시작
+	const field1 = parseRequiredText(row[0]); // A열
+	const field2 = parseRequiredText(row[1]); // B열
+	const field3 = parseOptionalText(row[2]); // C열
+	// ...
+}
+```
+
+**⚠️ 주의사항**:
+- 엑셀 파일에 번호(순번) 열이 **없다고 가정**
+- A열 = `row[0]`, B열 = `row[1]`, ...
+- **절대로** `row[1]`부터 시작하지 말 것 (한 칸 밀림 발생)
+
+**각 정의서별 컬럼 매핑**:
+
+| 정의서 | A열 | B열 | C열 | ... |
+|--------|-----|-----|-----|-----|
+| 데이터베이스 | 기관명 | 부서명 | 적용업무 | ... |
+| 엔터티 | 논리DB명 | 스키마명 | 엔터티명 | ... |
+| 속성 | 스키마명 | 엔터티명 | 속성명 | ... |
+| 테이블 | 물리DB명 | 테이블소유자 | 주제영역 | ... |
+| 컬럼 | 사업범위여부 | 주제영역 | 스키마명 | ... |
 
 ---
 
@@ -1020,7 +1201,9 @@ Closes #123
 | 버전  | 날짜    | 변경 내용      | 작성자 |
 | ----- | ------- | -------------- | ------ |
 | 1.0.0 | 2024-12 | 초기 문서 작성 | -      |
+| 1.1.0 | 2026-01 | FileManager/Editor 컴포넌트 패턴 추가 | -      |
+| 1.2.0 | 2026-01 | ColumnFilter, Browse 페이지, XLSX 파서 패턴 추가 | -      |
 
 ---
 
-**마지막 업데이트**: 2024-12
+**마지막 업데이트**: 2026-01-08

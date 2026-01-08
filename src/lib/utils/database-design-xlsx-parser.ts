@@ -127,18 +127,18 @@ export function parseDatabaseXlsxToJson(
 			const row = dataRows[i];
 			if (isEmptyRow(row)) continue;
 
-			// 컬럼 매핑: A=번호(무시), B=기관명, C=부서명, D=적용업무, E=관련법령, F=논리DB명, G=물리DB명, H=구축일자, I=DB설명, J=DBMS정보, K=운영체제정보, L=수집제외사유
-			const organizationName = parseRequiredText(row[1]);
-			const departmentName = parseRequiredText(row[2]);
-			const appliedTask = parseRequiredText(row[3]);
-			const relatedLaw = parseRequiredText(row[4]);
-			const logicalDbName = parseOptionalText(row[5]);
-			const physicalDbName = parseOptionalText(row[6]);
-			const buildDate = parseRequiredText(row[7]);
-			const dbDescription = parseOptionalText(row[8]);
-			const dbmsInfo = parseOptionalText(row[9]);
-			const osInfo = parseRequiredText(row[10]);
-			const exclusionReason = parseRequiredText(row[11]);
+			// 컬럼 매핑 (번호 열 없음): A=기관명, B=부서명, C=적용업무, D=관련법령, E=논리DB명, F=물리DB명, G=구축일자, H=DB설명, I=DBMS정보, J=운영체제정보, K=수집제외사유
+			const organizationName = parseRequiredText(row[0]);
+			const departmentName = parseRequiredText(row[1]);
+			const appliedTask = parseRequiredText(row[2]);
+			const relatedLaw = parseRequiredText(row[3]);
+			const logicalDbName = parseOptionalText(row[4]);
+			const physicalDbName = parseOptionalText(row[5]);
+			const buildDate = parseRequiredText(row[6]);
+			const dbDescription = parseOptionalText(row[7]);
+			const dbmsInfo = parseOptionalText(row[8]);
+			const osInfo = parseRequiredText(row[9]);
+			const exclusionReason = parseRequiredText(row[10]);
 
 			// 중복 체크
 			if (skipDuplicates && seenKeys) {
@@ -268,14 +268,14 @@ export function parseEntityXlsxToJson(
 			const row = dataRows[i];
 			if (isEmptyRow(row)) continue;
 
-			// 컬럼 매핑: A=번호(무시), B=논리DB명, C=스키마명, D=엔터티명, E=엔터티설명, F=주식별자, G=수퍼타입엔터티명, H=테이블한글명
-			const logicalDbName = parseOptionalText(row[1]);
-			const schemaName = parseOptionalText(row[2]);
-			const entityName = parseOptionalText(row[3]);
-			const entityDescription = parseOptionalText(row[4]);
-			const primaryIdentifier = parseOptionalText(row[5]);
-			const superTypeEntityName = parseRequiredText(row[6]);
-			const tableKoreanName = parseOptionalText(row[7]);
+			// 컬럼 매핑 (번호 열 없음): A=논리DB명, B=스키마명, C=엔터티명, D=엔터티설명, E=주식별자, F=수퍼타입엔터티명, G=테이블한글명
+			const logicalDbName = parseOptionalText(row[0]);
+			const schemaName = parseOptionalText(row[1]);
+			const entityName = parseOptionalText(row[2]);
+			const entityDescription = parseOptionalText(row[3]);
+			const primaryIdentifier = parseOptionalText(row[4]);
+			const superTypeEntityName = parseRequiredText(row[5]);
+			const tableKoreanName = parseOptionalText(row[6]);
 
 			// 중복 체크
 			if (skipDuplicates && seenKeys) {
@@ -393,16 +393,16 @@ export function parseAttributeXlsxToJson(
 			const row = dataRows[i];
 			if (isEmptyRow(row)) continue;
 
-			// 컬럼 매핑: A=번호(무시), B=스키마명, C=엔터티명, D=속성명, E=속성유형, F=필수입력여부, G=식별자여부, H=참조엔터티명, I=참조속성명, J=속성설명
-			const schemaName = parseOptionalText(row[1]);
-			const entityName = parseOptionalText(row[2]);
-			const attributeName = parseOptionalText(row[3]);
-			const attributeType = parseOptionalText(row[4]);
-			const requiredInput = parseRequiredText(row[5]);
-			const identifierFlag = parseOptionalText(row[6]);
-			const refEntityName = parseRequiredText(row[7]);
-			const refAttributeName = parseOptionalText(row[8]);
-			const attributeDescription = parseOptionalText(row[9]);
+			// 컬럼 매핑 (번호 열 없음): A=스키마명, B=엔터티명, C=속성명, D=속성유형, E=필수입력여부, F=식별자여부, G=참조엔터티명, H=참조속성명, I=속성설명
+			const schemaName = parseOptionalText(row[0]);
+			const entityName = parseOptionalText(row[1]);
+			const attributeName = parseOptionalText(row[2]);
+			const attributeType = parseOptionalText(row[3]);
+			const requiredInput = parseRequiredText(row[4]);
+			const identifierFlag = parseOptionalText(row[5]);
+			const refEntityName = parseRequiredText(row[6]);
+			const refAttributeName = parseOptionalText(row[7]);
+			const attributeDescription = parseOptionalText(row[8]);
 
 			// 중복 체크
 			if (skipDuplicates && seenKeys) {
@@ -526,25 +526,25 @@ export function parseTableXlsxToJson(
 			const row = dataRows[i];
 			if (isEmptyRow(row)) continue;
 
-			// 컬럼 매핑: A=번호(무시), B=물리DB명, C=테이블소유자, D=주제영역, E=스키마명, F=테이블영문명, G=테이블한글명,
-			// H=테이블유형, I=관련엔터티명, J=테이블설명, K=업무분류체계, L=보존기간, M=테이블볼륨,
-			// N=발생주기, O=공개/비공개여부, P=비공개사유, Q=개방데이터목록
-			const physicalDbName = parseOptionalText(row[1]);
-			const tableOwner = parseOptionalText(row[2]);
-			const subjectArea = parseOptionalText(row[3]);
-			const schemaName = parseOptionalText(row[4]);
-			const tableEnglishName = parseOptionalText(row[5]);
-			const tableKoreanName = parseOptionalText(row[6]);
-			const tableType = parseOptionalText(row[7]);
-			const relatedEntityName = parseOptionalText(row[8]);
-			const tableDescription = parseOptionalText(row[9]);
-			const businessClassification = parseRequiredText(row[10]);
-			const retentionPeriod = parseOptionalText(row[11]);
-			const tableVolume = parseRequiredText(row[12]);
-			const occurrenceCycle = parseOptionalText(row[13]);
-			const publicFlag = parseOptionalText(row[14]);
-			const nonPublicReason = parseRequiredText(row[15]);
-			const openDataList = parseRequiredText(row[16]);
+			// 컬럼 매핑 (번호 열 없음): A=물리DB명, B=테이블소유자, C=주제영역, D=스키마명, E=테이블영문명, F=테이블한글명,
+			// G=테이블유형, H=관련엔터티명, I=테이블설명, J=업무분류체계, K=보존기간, L=테이블볼륨,
+			// M=발생주기, N=공개/비공개여부, O=비공개사유, P=개방데이터목록
+			const physicalDbName = parseOptionalText(row[0]);
+			const tableOwner = parseOptionalText(row[1]);
+			const subjectArea = parseOptionalText(row[2]);
+			const schemaName = parseOptionalText(row[3]);
+			const tableEnglishName = parseOptionalText(row[4]);
+			const tableKoreanName = parseOptionalText(row[5]);
+			const tableType = parseOptionalText(row[6]);
+			const relatedEntityName = parseOptionalText(row[7]);
+			const tableDescription = parseOptionalText(row[8]);
+			const businessClassification = parseRequiredText(row[9]);
+			const retentionPeriod = parseOptionalText(row[10]);
+			const tableVolume = parseRequiredText(row[11]);
+			const occurrenceCycle = parseOptionalText(row[12]);
+			const publicFlag = parseOptionalText(row[13]);
+			const nonPublicReason = parseRequiredText(row[14]);
+			const openDataList = parseRequiredText(row[15]);
 
 			// 중복 체크
 			if (skipDuplicates && seenKeys) {
@@ -689,33 +689,33 @@ export function parseColumnXlsxToJson(
 			const row = dataRows[i];
 			if (isEmptyRow(row)) continue;
 
-			// 컬럼 매핑 (23개 컬럼)
-			// A=번호, B=사업범위여부, C=주제영역, D=스키마명, E=테이블영문명, F=컬럼영문명, G=컬럼한글명,
-			// H=컬럼설명, I=연관엔터티명, J=자료타입, K=자료길이, L=자료소수점길이, M=자료형식,
-			// N=NOTNULL여부, O=PK정보, P=FK정보, Q=인덱스명, R=인덱스순번, S=AK정보, T=제약조건,
-			// U=개인정보여부, V=암호화여부, W=공개/비공개여부
-			const scopeFlag = parseOptionalText(row[1]);
-			const subjectArea = parseOptionalText(row[2]);
-			const schemaName = parseOptionalText(row[3]);
-			const tableEnglishName = parseOptionalText(row[4]);
-			const columnEnglishName = parseOptionalText(row[5]);
-			const columnKoreanName = parseOptionalText(row[6]);
-			const columnDescription = parseOptionalText(row[7]);
-			const relatedEntityName = parseOptionalText(row[8]);
-			const dataType = parseOptionalText(row[9]);
-			const dataLength = parseRequiredText(row[10]);
-			const dataDecimalLength = parseRequiredText(row[11]);
-			const dataFormat = parseRequiredText(row[12]);
-			const notNullFlag = parseOptionalText(row[13]);
-			const pkInfo = parseRequiredText(row[14]);
-			const fkInfo = parseOptionalText(row[15]);
-			const indexName = parseRequiredText(row[16]);
-			const indexOrder = parseRequiredText(row[17]);
-			const akInfo = parseRequiredText(row[18]);
-			const constraint = parseRequiredText(row[19]);
-			const personalInfoFlag = parseOptionalText(row[20]);
-			const encryptionFlag = parseOptionalText(row[21]);
-			const publicFlag = parseOptionalText(row[22]);
+			// 컬럼 매핑 (번호 열 없음, 22개 컬럼)
+			// A=사업범위여부, B=주제영역, C=스키마명, D=테이블영문명, E=컬럼영문명, F=컬럼한글명,
+			// G=컬럼설명, H=연관엔터티명, I=자료타입, J=자료길이, K=자료소수점길이, L=자료형식,
+			// M=NOTNULL여부, N=PK정보, O=FK정보, P=인덱스명, Q=인덱스순번, R=AK정보, S=제약조건,
+			// T=개인정보여부, U=암호화여부, V=공개/비공개여부
+			const scopeFlag = parseOptionalText(row[0]);
+			const subjectArea = parseOptionalText(row[1]);
+			const schemaName = parseOptionalText(row[2]);
+			const tableEnglishName = parseOptionalText(row[3]);
+			const columnEnglishName = parseOptionalText(row[4]);
+			const columnKoreanName = parseOptionalText(row[5]);
+			const columnDescription = parseOptionalText(row[6]);
+			const relatedEntityName = parseOptionalText(row[7]);
+			const dataType = parseOptionalText(row[8]);
+			const dataLength = parseRequiredText(row[9]);
+			const dataDecimalLength = parseRequiredText(row[10]);
+			const dataFormat = parseRequiredText(row[11]);
+			const notNullFlag = parseOptionalText(row[12]);
+			const pkInfo = parseRequiredText(row[13]);
+			const fkInfo = parseOptionalText(row[14]);
+			const indexName = parseRequiredText(row[15]);
+			const indexOrder = parseRequiredText(row[16]);
+			const akInfo = parseRequiredText(row[17]);
+			const constraint = parseRequiredText(row[18]);
+			const personalInfoFlag = parseOptionalText(row[19]);
+			const encryptionFlag = parseOptionalText(row[20]);
+			const publicFlag = parseOptionalText(row[21]);
 
 			// 중복 체크
 			if (skipDuplicates && seenKeys) {

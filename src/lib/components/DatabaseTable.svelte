@@ -240,13 +240,6 @@
 	}
 
 	/**
-	 * 필터 토글 핸들러
-	 */
-	function toggleFilter(column: string) {
-		openFilterColumn = openFilterColumn === column ? null : column;
-	}
-
-	/**
 	 * 페이지 변경 핸들러
 	 */
 	function handlePageChange(page: number) {
@@ -348,39 +341,24 @@
 								{/if}
 
 								{#if column.filterable}
-									<div class="relative">
-										<button
-											onclick={() => toggleFilter(column.key)}
-											class="rounded p-1 opacity-0 transition-opacity hover:bg-gray-200 group-hover:opacity-100 {activeFilters[
-												column.key
-											]
-												? 'text-blue-600 opacity-100'
-												: ''}"
-											aria-label="필터"
-										>
-											<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-												<path
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													stroke-width="2"
-													d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-												/>
-											</svg>
-										</button>
-										{#if openFilterColumn === column.key}
-											<ColumnFilter
-												options={column.filterType === 'select'
-													? column.filterOptions ||
-														filterOptions[column.key] ||
-														getUniqueValues(column.key)
-													: filterOptions[column.key] || getUniqueValues(column.key)}
-												value={activeFilters[column.key] || null}
-												type={column.filterType || 'text'}
-												onselect={(value) => handleFilter(column.key, value)}
-												onclose={() => (openFilterColumn = null)}
-											/>
-										{/if}
-									</div>
+									<ColumnFilter
+										columnKey={column.key}
+										columnLabel={column.label}
+										filterType="select"
+										currentValue={activeFilters[column.key] || null}
+										options={filterOptions[column.key] ||
+											column.filterOptions ||
+											getUniqueValues(column.key)}
+										isOpen={openFilterColumn === column.key}
+										onOpen={(key) => {
+											openFilterColumn = key;
+										}}
+										onClose={() => {
+											openFilterColumn = null;
+										}}
+										onApply={(value) => handleFilter(column.key, value)}
+										onClear={() => handleFilter(column.key, null)}
+									/>
 								{/if}
 							</div>
 						</th>

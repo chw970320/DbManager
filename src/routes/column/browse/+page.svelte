@@ -7,6 +7,8 @@
 	import ColumnDefFileManager from '$lib/components/ColumnDefFileManager.svelte';
 	import type { ColumnEntry, DbDesignApiResponse } from '$lib/types/database-design.js';
 	import { columnStore } from '$lib/stores/database-design-store';
+	import { settingsStore } from '$lib/stores/settings-store';
+	import { filterColumnFiles } from '$lib/utils/file-filter';
 
 	type SearchDetail = { query: string; field: string; exact: boolean };
 	type SortDetail = { column: string; direction: 'asc' | 'desc' | null };
@@ -17,18 +19,29 @@
 	let loading = $state(false); let searchQuery = $state(''); let searchField = $state('all'); let searchExact = $state(false);
 	let totalCount = $state(0); let currentPage = $state(1); let totalPages = $state(1); let pageSize = $state(20);
 	let sortConfig = $state<Record<string, 'asc' | 'desc' | null>>({}); let columnFilters = $state<Record<string, string | null>>({}); let filterOptions = $state<Record<string, string[]>>({});
-	let columnFiles = $state<string[]>([]); let selectedFilename = $state('column.json');
+	let allColumnFiles = $state<string[]>([]); let columnFiles = $state<string[]>([]); let selectedFilename = $state('column.json'); let showSystemFiles = $state(true);
 	let showEditor = $state(false); let editorServerError = $state(''); let isFileManagerOpen = $state(false); let sidebarOpen = $state(false);
 	let currentEditingEntry = $state<ColumnEntry | null>(null);
 	let unsubscribe: () => void;
+	let settingsUnsubscribe: () => void;
 
 	onMount(() => {
+		settingsUnsubscribe = settingsStore.subscribe((settings) => {
+			showSystemFiles = settings.showColumnSystemFiles ?? true;
+			if (allColumnFiles.length > 0) {
+				const newFilteredFiles = filterColumnFiles(allColumnFiles, showSystemFiles);
+				columnFiles = newFilteredFiles;
+				if (newFilteredFiles.length > 0 && !newFilteredFiles.includes(selectedFilename)) {
+					handleFileSelect(newFilteredFiles[0]);
+				}
+			}
+		});
 		(async () => { await loadFiles(); if (browser) await loadData(); })();
 		unsubscribe = columnStore.subscribe((value) => { if (selectedFilename !== value.selectedFilename) { selectedFilename = value.selectedFilename; if (browser) { currentPage = 1; searchQuery = ''; loadData(); } } });
-		return () => { if (unsubscribe) unsubscribe(); };
+		return () => { if (unsubscribe) unsubscribe(); if (settingsUnsubscribe) settingsUnsubscribe(); };
 	});
 
-	async function loadFiles() { try { const response = await fetch('/api/column/files'); const result: DbDesignApiResponse = await response.json(); if (result.success && Array.isArray(result.data)) { columnFiles = result.data as string[]; if (columnFiles.length === 0) { const createResponse = await fetch('/api/column/files', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: 'column.json' }) }); if (createResponse.ok) { columnFiles = ['column.json']; if (selectedFilename !== 'column.json') handleFileSelect('column.json'); } } else if (!columnFiles.includes(selectedFilename)) handleFileSelect(columnFiles[0]); } } catch (error) { console.error('파일 목록 로드 오류:', error); } }
+	async function loadFiles() { try { const response = await fetch('/api/column/files'); const result: DbDesignApiResponse = await response.json(); if (result.success && Array.isArray(result.data)) { const files = result.data as string[]; allColumnFiles = files; const filteredFiles = filterColumnFiles(files, showSystemFiles); columnFiles = filteredFiles; if (files.length === 0) { const createResponse = await fetch('/api/column/files', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ filename: 'column.json' }) }); if (createResponse.ok) { allColumnFiles = ['column.json']; columnFiles = filterColumnFiles(['column.json'], showSystemFiles); if (selectedFilename !== 'column.json') handleFileSelect('column.json'); } } else if (filteredFiles.length > 0 && !filteredFiles.includes(selectedFilename)) { handleFileSelect(filteredFiles[0]); } else if (!files.includes(selectedFilename)) { handleFileSelect(filteredFiles.length > 0 ? filteredFiles[0] : files[0]); } } } catch (error) { console.error('파일 목록 로드 오류:', error); } }
 	async function handleFileSelect(filename: string) { if (selectedFilename === filename) return; selectedFilename = filename; columnStore.update((store) => ({ ...store, selectedFilename: filename })); currentPage = 1; searchQuery = ''; await loadData(); }
 
 	async function loadData() {

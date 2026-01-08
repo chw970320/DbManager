@@ -97,8 +97,9 @@ export async function GET({ url }: RequestEvent) {
 		// 쿼리 파라미터 추출
 		const page = parseInt(url.searchParams.get('page') || '1');
 		const limit = parseInt(url.searchParams.get('limit') || '20');
-		const searchQuery = url.searchParams.get('query') || '';
+		const searchQuery = url.searchParams.get('q') || url.searchParams.get('query') || '';
 		const searchField = url.searchParams.get('field') || 'all';
+		const searchExact = url.searchParams.get('exact') === 'true';
 		const filename = url.searchParams.get('filename') || 'term.json';
 
 		// 다중 정렬 파라미터 처리 (sortBy[]와 sortOrder[] 배열)
@@ -252,20 +253,26 @@ export async function GET({ url }: RequestEvent) {
 		// 검색 필터링
 		if (searchQuery.trim()) {
 			const query = searchQuery.toLowerCase();
+			// 정확히 일치 또는 부분 일치 검색 함수
+			const matchFn = (value: string | undefined | null) => {
+				if (!value) return false;
+				const target = value.toLowerCase();
+				return searchExact ? target === query : target.includes(query);
+			};
 			filteredEntries = filteredEntries.filter((entry) => {
 				switch (searchField) {
 					case 'termName':
-						return entry.termName.toLowerCase().includes(query);
+						return matchFn(entry.termName);
 					case 'columnName':
-						return entry.columnName.toLowerCase().includes(query);
+						return matchFn(entry.columnName);
 					case 'domainName':
-						return entry.domainName.toLowerCase().includes(query);
+						return matchFn(entry.domainName);
 					case 'all':
 					default:
 						return (
-							entry.termName.toLowerCase().includes(query) ||
-							entry.columnName.toLowerCase().includes(query) ||
-							entry.domainName.toLowerCase().includes(query)
+							matchFn(entry.termName) ||
+							matchFn(entry.columnName) ||
+							matchFn(entry.domainName)
 						);
 				}
 			});

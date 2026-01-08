@@ -231,8 +231,9 @@
 
 		try {
 			const params = new URLSearchParams({
-				query: searchQuery, // 'q' → 'query'로 변경
+				q: searchQuery,
 				field: searchField,
+				exact: searchExact.toString(),
 				page: currentPage.toString(),
 				limit: pageSize.toString(),
 				filename: selectedFilename
@@ -945,8 +946,8 @@
 							searchFields={[
 								{ value: 'all', label: '전체' },
 								{ value: 'domainGroup', label: '도메인그룹' },
-								{ value: 'domainCategory', label: '도메인 분류명' },
-								{ value: 'standardDomainName', label: '표준 도메인명' },
+								{ value: 'domainCategory', label: '도메인분류명' },
+								{ value: 'standardDomainName', label: '도메인명' },
 								{ value: 'physicalDataType', label: '데이터타입' }
 							]}
 							bind:query={searchQuery}

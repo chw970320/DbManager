@@ -8,8 +8,9 @@ export async function GET({ url }: RequestEvent) {
 	try {
 		const page = parseInt(url.searchParams.get('page') || '1');
 		const limit = parseInt(url.searchParams.get('limit') || '20');
-		const searchQuery = url.searchParams.get('query') || '';
+		const searchQuery = url.searchParams.get('q') || url.searchParams.get('query') || '';
 		const searchField = url.searchParams.get('field') || 'all';
+		const searchExact = url.searchParams.get('exact') === 'true';
 		const filename = url.searchParams.get('filename') || 'column.json';
 
 		const sortByArray = url.searchParams.getAll('sortBy[]');
@@ -47,20 +48,25 @@ export async function GET({ url }: RequestEvent) {
 
 		if (searchQuery.trim()) {
 			const query = searchQuery.toLowerCase();
+			const matchFn = (value: string | undefined | null) => {
+				if (!value) return false;
+				const target = value.toLowerCase();
+				return searchExact ? target === query : target.includes(query);
+			};
 			filteredEntries = columnData.entries.filter((entry) => {
 				switch (searchField) {
-					case 'schemaName': return entry.schemaName?.toLowerCase().includes(query);
-					case 'tableEnglishName': return entry.tableEnglishName?.toLowerCase().includes(query);
-					case 'columnEnglishName': return entry.columnEnglishName?.toLowerCase().includes(query);
-					case 'columnKoreanName': return entry.columnKoreanName?.toLowerCase().includes(query);
-					case 'dataType': return entry.dataType?.toLowerCase().includes(query);
+					case 'schemaName': return matchFn(entry.schemaName);
+					case 'tableEnglishName': return matchFn(entry.tableEnglishName);
+					case 'columnEnglishName': return matchFn(entry.columnEnglishName);
+					case 'columnKoreanName': return matchFn(entry.columnKoreanName);
+					case 'dataType': return matchFn(entry.dataType);
 					case 'all':
 					default:
-						return entry.schemaName?.toLowerCase().includes(query) ||
-							entry.tableEnglishName?.toLowerCase().includes(query) ||
-							entry.columnEnglishName?.toLowerCase().includes(query) ||
-							entry.columnKoreanName?.toLowerCase().includes(query) ||
-							entry.dataType?.toLowerCase().includes(query);
+						return matchFn(entry.schemaName) ||
+							matchFn(entry.tableEnglishName) ||
+							matchFn(entry.columnEnglishName) ||
+							matchFn(entry.columnKoreanName) ||
+							matchFn(entry.dataType);
 				}
 			});
 		}

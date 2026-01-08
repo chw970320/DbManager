@@ -264,8 +264,9 @@
 
 		try {
 			const params = new URLSearchParams({
-				query: searchQuery,
+				q: searchQuery,
 				field: searchField,
+				exact: searchExact.toString(),
 				page: currentPage.toString(),
 				limit: pageSize.toString(),
 				filename: selectedFilename

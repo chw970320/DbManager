@@ -653,6 +653,50 @@ Editor 모달의 스크롤은 **내부 콘텐츠만** 스크롤되어야 합니�
 **API 엔드포인트 검색 필터 구현**:
 - 해당 필드들을 모두 API의 `switch (searchField)` 블록에 포함
 - `case 'all'` 또는 `default`에서는 모든 검색 필드를 OR 조건으로 검색
+- 검색 파라미터: `q` 또는 `query` 모두 지원
+- **정확히 일치 검색**: `exact=true` 파라미터 필수 지원
+
+```typescript
+// API 검색 파라미터 처리
+const searchQuery = url.searchParams.get('q') || url.searchParams.get('query') || '';
+const searchExact = url.searchParams.get('exact') === 'true';
+
+// 검색 시 정확히 일치/부분 일치 구분
+const matchFn = (value: string | undefined | null) => {
+	if (!value) return false;
+	const target = value.toLowerCase();
+	return searchExact ? target === query : target.includes(query);
+};
+```
+
+### Editor 삭제 버튼 패턴
+
+모든 Editor 컴포넌트에서 삭제 확인은 **브라우저 `confirm()` 다이얼로그**를 사용합니다:
+
+```typescript
+function handleDelete() {
+	if (!entry.id) return;
+	
+	if (confirm('정말로 이 항목을 삭제하시겠습니까?')) {
+		const entryToDelete = { id: entry.id, ... };
+		dispatch('delete', entryToDelete);
+	}
+}
+```
+
+**❌ 잘못된 패턴** (인라인 확인 UI 사용 금지):
+```svelte
+let showDeleteConfirm = $state(false);
+<!-- ... -->
+{#if showDeleteConfirm}
+	<span>정말 삭제하시겠습니까?</span>
+	<button>확인</button><button>취소</button>
+{:else}
+	<button onclick={() => showDeleteConfirm = true}>삭제</button>
+{/if}
+```
+
+**버튼 스타일**: `btn btn-secondary` (취소), `btn btn-primary` (저장/수정) 사용
 
 ### Table 컴포넌트의 ColumnFilter 사용 패턴
 
@@ -1288,6 +1332,8 @@ Closes #123
 | 1.1.0 | 2026-01 | FileManager/Editor 컴포넌트 패턴 추가 | -      |
 | 1.2.0 | 2026-01 | ColumnFilter, Browse 페이지, XLSX 파서 패턴 추가 | -      |
 | 1.3.0 | 2026-01 | Editor 스크롤 패턴, SearchBar 검색 필드 정의 패턴 추가 | -      |
+| 1.4.0 | 2026-01 | API 검색 파라미터 통일, Editor 삭제 버튼 패턴 추가 | -      |
+| 1.5.0 | 2026-01 | 정확히 일치 검색(exact) 파라미터 지원 패턴 추가 | -      |
 
 ---
 

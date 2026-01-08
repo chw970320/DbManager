@@ -8,8 +8,9 @@ export async function GET({ url }: RequestEvent) {
 	try {
 		const page = parseInt(url.searchParams.get('page') || '1');
 		const limit = parseInt(url.searchParams.get('limit') || '20');
-		const searchQuery = url.searchParams.get('query') || '';
+		const searchQuery = url.searchParams.get('q') || url.searchParams.get('query') || '';
 		const searchField = url.searchParams.get('field') || 'all';
+		const searchExact = url.searchParams.get('exact') === 'true';
 		const filename = url.searchParams.get('filename') || 'table.json';
 
 		const sortByArray = url.searchParams.getAll('sortBy[]');
@@ -47,22 +48,27 @@ export async function GET({ url }: RequestEvent) {
 
 		if (searchQuery.trim()) {
 			const query = searchQuery.toLowerCase();
+			const matchFn = (value: string | undefined | null) => {
+				if (!value) return false;
+				const target = value.toLowerCase();
+				return searchExact ? target === query : target.includes(query);
+			};
 			filteredEntries = tableData.entries.filter((entry) => {
 				switch (searchField) {
-					case 'physicalDbName': return entry.physicalDbName?.toLowerCase().includes(query);
-					case 'schemaName': return entry.schemaName?.toLowerCase().includes(query);
-					case 'tableEnglishName': return entry.tableEnglishName?.toLowerCase().includes(query);
-					case 'tableKoreanName': return entry.tableKoreanName?.toLowerCase().includes(query);
-					case 'tableType': return entry.tableType?.toLowerCase().includes(query);
-					case 'subjectArea': return entry.subjectArea?.toLowerCase().includes(query);
+					case 'physicalDbName': return matchFn(entry.physicalDbName);
+					case 'schemaName': return matchFn(entry.schemaName);
+					case 'tableEnglishName': return matchFn(entry.tableEnglishName);
+					case 'tableKoreanName': return matchFn(entry.tableKoreanName);
+					case 'tableType': return matchFn(entry.tableType);
+					case 'subjectArea': return matchFn(entry.subjectArea);
 					case 'all':
 					default:
-						return entry.physicalDbName?.toLowerCase().includes(query) ||
-							entry.schemaName?.toLowerCase().includes(query) ||
-							entry.tableEnglishName?.toLowerCase().includes(query) ||
-							entry.tableKoreanName?.toLowerCase().includes(query) ||
-							entry.tableType?.toLowerCase().includes(query) ||
-							entry.subjectArea?.toLowerCase().includes(query);
+						return matchFn(entry.physicalDbName) ||
+							matchFn(entry.schemaName) ||
+							matchFn(entry.tableEnglishName) ||
+							matchFn(entry.tableKoreanName) ||
+							matchFn(entry.tableType) ||
+							matchFn(entry.subjectArea);
 				}
 			});
 		}

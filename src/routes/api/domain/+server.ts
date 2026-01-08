@@ -21,8 +21,9 @@ export async function GET({ url }: RequestEvent) {
 		// 쿼리 파라미터 추출
 		const page = parseInt(url.searchParams.get('page') || '1');
 		const limit = parseInt(url.searchParams.get('limit') || '20');
-		const searchQuery = url.searchParams.get('query') || '';
+		const searchQuery = url.searchParams.get('q') || url.searchParams.get('query') || '';
 		const searchField = url.searchParams.get('field') || 'all';
+		const searchExact = url.searchParams.get('exact') === 'true';
 		const filename = url.searchParams.get('filename') || 'domain.json';
 
 		// 다중 정렬 파라미터 처리 (sortBy[]와 sortOrder[] 배열)
@@ -136,29 +137,35 @@ export async function GET({ url }: RequestEvent) {
 		// 검색 필터링
 		if (searchQuery.trim()) {
 			const query = searchQuery.toLowerCase();
+			// 정확히 일치 또는 부분 일치 검색 함수
+			const matchFn = (value: string | undefined | null) => {
+				if (!value) return false;
+				const target = value.toLowerCase();
+				return searchExact ? target === query : target.includes(query);
+			};
 			filteredEntries = domainData.entries.filter((entry) => {
 				switch (searchField) {
 					case 'domainGroup':
-						return entry.domainGroup?.toLowerCase().includes(query);
+						return matchFn(entry.domainGroup);
 					case 'domainCategory':
-						return entry.domainCategory?.toLowerCase().includes(query);
+						return matchFn(entry.domainCategory);
 					case 'standardDomainName':
-						return entry.standardDomainName?.toLowerCase().includes(query);
+						return matchFn(entry.standardDomainName);
 					case 'logicalDataType':
-						return entry.logicalDataType?.toLowerCase().includes(query);
+						return matchFn(entry.logicalDataType);
 					case 'physicalDataType':
-						return entry.physicalDataType?.toLowerCase().includes(query);
+						return matchFn(entry.physicalDataType);
 					case 'all':
 					default:
 						return (
-							entry.domainGroup?.toLowerCase().includes(query) ||
-							entry.domainCategory?.toLowerCase().includes(query) ||
-							entry.standardDomainName?.toLowerCase().includes(query) ||
-							entry.logicalDataType?.toLowerCase().includes(query) ||
-							entry.physicalDataType?.toLowerCase().includes(query) ||
-							entry.dataValue?.toLowerCase().includes(query) ||
-							entry.measurementUnit?.toLowerCase().includes(query) ||
-							entry.remarks?.toLowerCase().includes(query)
+							matchFn(entry.domainGroup) ||
+							matchFn(entry.domainCategory) ||
+							matchFn(entry.standardDomainName) ||
+							matchFn(entry.logicalDataType) ||
+							matchFn(entry.physicalDataType) ||
+							matchFn(entry.dataValue) ||
+							matchFn(entry.measurementUnit) ||
+							matchFn(entry.remarks)
 						);
 				}
 			});

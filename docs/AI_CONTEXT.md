@@ -414,6 +414,67 @@ interface ApiResponse {
 **API 엔드포인트 검색 필터 처리**:
 - 각 API의 `switch (searchField)` 블록에 해당 필드들을 모두 포함해야 함
 - `case 'all'` 또는 `default`에서는 해당 메뉴의 모든 검색 필드를 OR 조건으로 검색
+- 검색 파라미터: `q` 또는 `query` 모두 지원 (호환성을 위해)
+- **정확히 일치 검색**: `exact=true` 파라미터 지원 필수
+
+```typescript
+// API 검색 파라미터 처리 패턴
+const searchQuery = url.searchParams.get('q') || url.searchParams.get('query') || '';
+const searchExact = url.searchParams.get('exact') === 'true';
+
+// 검색 필터링 시 정확히 일치/부분 일치 구분
+const matchFn = (value: string | undefined | null) => {
+	if (!value) return false;
+	const target = value.toLowerCase();
+	return searchExact ? target === query : target.includes(query);
+};
+```
+
+### Editor 삭제 버튼 패턴
+
+Editor 컴포넌트에서 삭제 버튼은 **브라우저 confirm() 다이얼로그**를 사용합니다:
+
+**✅ 올바른 패턴** (confirm 다이얼로그 사용):
+```typescript
+function handleDelete() {
+	if (!entry.id) return;
+	
+	if (confirm('정말로 이 항목을 삭제하시겠습니까?')) {
+		const entryToDelete = { ... };
+		dispatch('delete', entryToDelete);
+	}
+}
+```
+
+**❌ 잘못된 패턴** (인라인 확인 UI 사용):
+```svelte
+{#if showDeleteConfirm}
+	<span>정말 삭제하시겠습니까?</span>
+	<button onclick={handleDelete}>확인</button>
+	<button onclick={() => showDeleteConfirm = false}>취소</button>
+{:else}
+	<button onclick={() => showDeleteConfirm = true}>삭제</button>
+{/if}
+```
+
+**삭제 버튼 스타일 (DomainEditor 참고)**:
+```svelte
+<button
+	type="button"
+	onclick={handleDelete}
+	class="group inline-flex items-center space-x-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 ..."
+	disabled={isSubmitting}
+>
+	<svg>...</svg>
+	<span>삭제</span>
+</button>
+```
+
+**저장/취소 버튼**:
+```svelte
+<button type="button" onclick={handleCancel} class="btn btn-secondary">취소</button>
+<button type="submit" class="btn btn-primary">{isEditMode ? '수정' : '저장'}</button>
+```
 
 ### FileUpload 컴포넌트 패턴
 

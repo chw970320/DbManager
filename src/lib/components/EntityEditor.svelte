@@ -26,7 +26,7 @@
 	});
 
 	let errors = $state<Record<string, string>>({});
-	let showDeleteConfirm = $state(false);
+	let isSubmitting = $state(false);
 
 	$effect(() => {
 		formData = {
@@ -64,7 +64,24 @@
 		dispatch('save', saveData);
 	}
 
-	function handleDelete() { if (entry.id) dispatch('delete', entry as EntityEntry); }
+	function handleDelete() {
+		if (!entry.id) return;
+		if (confirm('정말로 이 항목을 삭제하시겠습니까?')) {
+			const entryToDelete: EntityEntry = {
+				id: entry.id,
+				superTypeEntityName: formData.superTypeEntityName.trim() || entry.superTypeEntityName || '',
+				logicalDbName: formData.logicalDbName.trim() || entry.logicalDbName || undefined,
+				schemaName: formData.schemaName.trim() || entry.schemaName || undefined,
+				entityName: formData.entityName.trim() || entry.entityName || undefined,
+				entityDescription: formData.entityDescription.trim() || entry.entityDescription || undefined,
+				primaryIdentifier: formData.primaryIdentifier.trim() || entry.primaryIdentifier || undefined,
+				tableKoreanName: formData.tableKoreanName.trim() || entry.tableKoreanName || undefined,
+				createdAt: entry.createdAt || '',
+				updatedAt: entry.updatedAt || ''
+			};
+			dispatch('delete', entryToDelete);
+		}
+	}
 	function handleCancel() { dispatch('cancel'); }
 	function handleBackdropClick(event: MouseEvent) { if (event.target === event.currentTarget) handleCancel(); }
 	function handleKeydown(event: KeyboardEvent) { if (event.key === 'Escape') handleCancel(); }
@@ -118,23 +135,18 @@
 				</div>
 			</div>
 
-			<div class="mt-6 flex items-center justify-between border-t border-gray-200 pt-4">
-				<div>
-					{#if isEditMode}
-						{#if showDeleteConfirm}
-							<div class="flex items-center gap-2">
-								<span class="text-sm text-red-600">정말 삭제하시겠습니까?</span>
-								<button type="button" onclick={handleDelete} class="rounded-lg bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700">확인</button>
-								<button type="button" onclick={() => (showDeleteConfirm = false)} class="rounded-lg bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200">취소</button>
-							</div>
-						{:else}
-							<button type="button" onclick={() => (showDeleteConfirm = true)} class="rounded-lg px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50">삭제</button>
-						{/if}
-					{/if}
-				</div>
-				<div class="flex items-center gap-3">
-					<button type="button" onclick={handleCancel} class="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200">취소</button>
-					<button type="submit" class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">{isEditMode ? '수정' : '추가'}</button>
+			<div class="flex justify-between border-t border-gray-200 pt-4">
+				{#if isEditMode && entry.id}
+					<button type="button" onclick={handleDelete} class="group inline-flex items-center space-x-2 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-medium text-red-700 shadow-sm transition-all duration-200 hover:border-red-400 hover:bg-red-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" disabled={isSubmitting}>
+						<svg class="h-4 w-4 transition-transform duration-200 group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+						<span>삭제</span>
+					</button>
+				{:else}
+					<div></div>
+				{/if}
+				<div class="flex space-x-3">
+					<button type="button" onclick={handleCancel} class="btn btn-secondary" disabled={isSubmitting}>취소</button>
+					<button type="submit" class="btn btn-primary disabled:cursor-not-allowed disabled:opacity-50" disabled={isSubmitting}>{#if isSubmitting}저장 중...{:else}{isEditMode ? '수정' : '저장'}{/if}</button>
 				</div>
 			</div>
 			</form>

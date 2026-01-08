@@ -8,8 +8,9 @@ export async function GET({ url }: RequestEvent) {
 	try {
 		const page = parseInt(url.searchParams.get('page') || '1');
 		const limit = parseInt(url.searchParams.get('limit') || '20');
-		const searchQuery = url.searchParams.get('query') || '';
+		const searchQuery = url.searchParams.get('q') || url.searchParams.get('query') || '';
 		const searchField = url.searchParams.get('field') || 'all';
+		const searchExact = url.searchParams.get('exact') === 'true';
 		const filename = url.searchParams.get('filename') || 'attribute.json';
 
 		const sortByArray = url.searchParams.getAll('sortBy[]');
@@ -47,16 +48,21 @@ export async function GET({ url }: RequestEvent) {
 
 		if (searchQuery.trim()) {
 			const query = searchQuery.toLowerCase();
+			const matchFn = (value: string | undefined | null) => {
+				if (!value) return false;
+				const target = value.toLowerCase();
+				return searchExact ? target === query : target.includes(query);
+			};
 			filteredEntries = attrData.entries.filter((entry) => {
 				switch (searchField) {
-					case 'schemaName': return entry.schemaName?.toLowerCase().includes(query);
-					case 'entityName': return entry.entityName?.toLowerCase().includes(query);
-					case 'attributeName': return entry.attributeName?.toLowerCase().includes(query);
+					case 'schemaName': return matchFn(entry.schemaName);
+					case 'entityName': return matchFn(entry.entityName);
+					case 'attributeName': return matchFn(entry.attributeName);
 					case 'all':
 					default:
-						return entry.schemaName?.toLowerCase().includes(query) ||
-							entry.entityName?.toLowerCase().includes(query) ||
-							entry.attributeName?.toLowerCase().includes(query);
+						return matchFn(entry.schemaName) ||
+							matchFn(entry.entityName) ||
+							matchFn(entry.attributeName);
 				}
 			});
 		}

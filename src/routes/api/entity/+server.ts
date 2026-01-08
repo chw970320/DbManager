@@ -12,8 +12,9 @@ export async function GET({ url }: RequestEvent) {
 	try {
 		const page = parseInt(url.searchParams.get('page') || '1');
 		const limit = parseInt(url.searchParams.get('limit') || '20');
-		const searchQuery = url.searchParams.get('query') || '';
+		const searchQuery = url.searchParams.get('q') || url.searchParams.get('query') || '';
 		const searchField = url.searchParams.get('field') || 'all';
+		const searchExact = url.searchParams.get('exact') === 'true';
 		const filename = url.searchParams.get('filename') || 'entity.json';
 
 		const sortByArray = url.searchParams.getAll('sortBy[]');
@@ -58,21 +59,26 @@ export async function GET({ url }: RequestEvent) {
 
 		if (searchQuery.trim()) {
 			const query = searchQuery.toLowerCase();
+			const matchFn = (value: string | undefined | null) => {
+				if (!value) return false;
+				const target = value.toLowerCase();
+				return searchExact ? target === query : target.includes(query);
+			};
 			filteredEntries = entityData.entries.filter((entry) => {
 				switch (searchField) {
-					case 'entityName': return entry.entityName?.toLowerCase().includes(query);
-					case 'schemaName': return entry.schemaName?.toLowerCase().includes(query);
-					case 'primaryIdentifier': return entry.primaryIdentifier?.toLowerCase().includes(query);
-					case 'superTypeEntityName': return entry.superTypeEntityName?.toLowerCase().includes(query);
-					case 'tableKoreanName': return entry.tableKoreanName?.toLowerCase().includes(query);
+					case 'entityName': return matchFn(entry.entityName);
+					case 'schemaName': return matchFn(entry.schemaName);
+					case 'primaryIdentifier': return matchFn(entry.primaryIdentifier);
+					case 'superTypeEntityName': return matchFn(entry.superTypeEntityName);
+					case 'tableKoreanName': return matchFn(entry.tableKoreanName);
 					case 'all':
 					default:
 						return (
-							entry.schemaName?.toLowerCase().includes(query) ||
-							entry.entityName?.toLowerCase().includes(query) ||
-							entry.primaryIdentifier?.toLowerCase().includes(query) ||
-							entry.superTypeEntityName?.toLowerCase().includes(query) ||
-							entry.tableKoreanName?.toLowerCase().includes(query)
+							matchFn(entry.schemaName) ||
+							matchFn(entry.entityName) ||
+							matchFn(entry.primaryIdentifier) ||
+							matchFn(entry.superTypeEntityName) ||
+							matchFn(entry.tableKoreanName)
 						);
 				}
 			});

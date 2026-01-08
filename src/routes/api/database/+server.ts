@@ -12,8 +12,9 @@ export async function GET({ url }: RequestEvent) {
 	try {
 		const page = parseInt(url.searchParams.get('page') || '1');
 		const limit = parseInt(url.searchParams.get('limit') || '20');
-		const searchQuery = url.searchParams.get('query') || '';
+		const searchQuery = url.searchParams.get('q') || url.searchParams.get('query') || '';
 		const searchField = url.searchParams.get('field') || 'all';
+		const searchExact = url.searchParams.get('exact') === 'true';
 		const filename = url.searchParams.get('filename') || 'database.json';
 
 		// 다중 정렬 파라미터 처리
@@ -77,23 +78,29 @@ export async function GET({ url }: RequestEvent) {
 		// 검색 필터링
 		if (searchQuery.trim()) {
 			const query = searchQuery.toLowerCase();
+			// 정확히 일치 또는 부분 일치 검색 함수
+			const matchFn = (value: string | undefined | null) => {
+				if (!value) return false;
+				const target = value.toLowerCase();
+				return searchExact ? target === query : target.includes(query);
+			};
 			filteredEntries = dbData.entries.filter((entry) => {
 				switch (searchField) {
 					case 'organizationName':
-						return entry.organizationName?.toLowerCase().includes(query);
+						return matchFn(entry.organizationName);
 					case 'logicalDbName':
-						return entry.logicalDbName?.toLowerCase().includes(query);
+						return matchFn(entry.logicalDbName);
 					case 'physicalDbName':
-						return entry.physicalDbName?.toLowerCase().includes(query);
+						return matchFn(entry.physicalDbName);
 					case 'all':
 					default:
 						return (
-							entry.organizationName?.toLowerCase().includes(query) ||
-							entry.departmentName?.toLowerCase().includes(query) ||
-							entry.logicalDbName?.toLowerCase().includes(query) ||
-							entry.physicalDbName?.toLowerCase().includes(query) ||
-							entry.dbDescription?.toLowerCase().includes(query) ||
-							entry.dbmsInfo?.toLowerCase().includes(query)
+							matchFn(entry.organizationName) ||
+							matchFn(entry.departmentName) ||
+							matchFn(entry.logicalDbName) ||
+							matchFn(entry.physicalDbName) ||
+							matchFn(entry.dbDescription) ||
+							matchFn(entry.dbmsInfo)
 						);
 				}
 			});

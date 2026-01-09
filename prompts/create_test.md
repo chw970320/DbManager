@@ -130,3 +130,17 @@ TDD 개발을 진행할거야. 현재 @docs/tests/VOCABULARY_TEST_DESCRIPTION.md
 용어도 동일하게 selected 된 파일을 기준으로 모든 기능이 동작해야 해. 테스트 코드 구현과 실제 구현을 확인해서 수정해
 
 ---
+
+@docs/plan/DATABASE_TEST_PLAN.md 도 동일하게 작업하며 현재 파일 기준으로 기능이 적용되어야 한다는 점도 명심해
+
+---
+
+@docs/tests/ 폴더에 DATABASE_TEST_DESCRIPTION.md 파일에 정리하면서 진행 시작해.
+
+---
+
+확인해보니까 $app/environment가 추가 되어 있는데 @docs/tests/VOCABULARY_TEST_DESCRIPTION.md 나 @docs/tests/DOMAIN_TEST_DESCRIPTION.md 에는 없는 것 같은데 왜 필요한거야?
+
+---
+
+FileManager는 단어, 도메인, 용어에도 존재하는 부분인데 그렇다면 이들에게도 적용하기 위한 준비를 해. 각각은 @docs/tests/ 와 @docs/plan/ 을 참고하면 좋을거야.

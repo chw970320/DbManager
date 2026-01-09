@@ -16,7 +16,8 @@
 | `vocabulary/filter-options/+server.test.ts` | 9개       | 완료 |
 | `search/+server.test.ts`                    | 19개      | 완료 |
 | `VocabularyEditor.test.ts`                  | 18개      | 완료 |
-| **합계**                                    | **113개** |      |
+| `VocabularyFileManager.test.ts`             | 9개       | 완료 |
+| **합계**                                    | **122개** |      |
 
 ---
 
@@ -314,6 +315,50 @@
 
 ---
 
+## 11. VocabularyFileManager.test.ts (9개)
+
+**파일 경로**: `src/lib/components/VocabularyFileManager.test.ts`
+
+파일 관리 모달 컴포넌트를 테스트합니다.
+
+### Rendering (2개)
+
+| 테스트명                    | 설명                        | 검증 내용                    |
+| --------------------------- | --------------------------- | ---------------------------- |
+| 모달이 열릴 때 파일 목록 렌더링 | 모달 열기 시 UI 표시        | "파일 관리" 텍스트 표시       |
+| 파일 목록 표시              | 파일 목록 API 호출          | `/api/vocabulary/files` 호출 |
+
+### File Operations (3개)
+
+| 테스트명           | 설명             | 검증 내용                    |
+| ------------------ | ---------------- | ---------------------------- |
+| 새 파일 생성 버튼 표시 | 생성 버튼 존재   | 새 파일 생성 버튼 표시       |
+| 파일 이름 변경 기능 | 파일 이름 변경   | PUT 요청 처리                |
+| 파일 삭제 기능     | 파일 삭제        | DELETE 요청 처리             |
+
+### Selected File (2개)
+
+| 테스트명                    | 설명                    | 검증 내용                    |
+| --------------------------- | ----------------------- | ---------------------------- |
+| 선택된 파일 강조 표시        | 선택된 파일 UI 강조      | 선택된 파일 강조 표시        |
+| 파일 선택 시 change 이벤트 발생 | 파일 선택 이벤트        | 파일 목록 로드 확인          |
+
+### Upload Tab (1개)
+
+| 테스트명      | 설명           | 검증 내용                    |
+| ------------- | -------------- | ---------------------------- |
+| 업로드 탭 표시 | 업로드 탭 UI   | 업로드 탭 표시               |
+
+### Domain Mapping (1개)
+
+| 테스트명           | 설명                    | 검증 내용                    |
+| ------------------ | ----------------------- | ---------------------------- |
+| 도메인 파일 매핑 기능 | 도메인 파일 목록 로드   | `/api/domain/files` 호출 확인 |
+
+> **참고**: Svelte 5에서는 `component.$on()`이 더 이상 사용되지 않으므로, 이벤트 직접 테스트 대신 컴포넌트의 동작(API 호출, UI 표시 등)을 확인하는 방식으로 테스트를 작성했습니다.
+
+---
+
 ## 실행 명령어
 
 ```bash
@@ -325,6 +370,7 @@ pnpm test src/routes/api/vocabulary/+server.test.ts
 
 # 컴포넌트 테스트
 pnpm test src/lib/components/VocabularyEditor.test.ts
+pnpm test src/lib/components/VocabularyFileManager.test.ts
 
 # 감시 모드
 pnpm test vocabulary --watch
@@ -339,3 +385,4 @@ pnpm test vocabulary --watch
 | 2025-01-09 | 초기 문서 작성 (64개 테스트)                                                 |
 | 2025-01-09 | sync-domain, download, filter-options, search API 테스트 추가 (105개 테스트) |
 | 2025-01-09 | filename 파라미터 테스트 추가 및 validate API 수정 (113개 테스트)            |
+| 2025-01-09 | VocabularyFileManager 컴포넌트 테스트 추가 (122개 테스트)                    |

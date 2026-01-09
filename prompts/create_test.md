@@ -108,3 +108,7 @@ $lib/utils/ 디렉토리의 유틸리티 함수들이 개별 주제영역에 포
 @esbuild (2-156) 오류 있네 확인해서 수정해
 
 ---
+
+TDD 개발을 진행할거야. 현재 @docs/tests/VOCABULARY_TEST_DESCRIPTION.md을 기반으로 test code는 작성 됐으며 이를 기반으로 실제 코드베이스가 test와 동일하게 구현되어 있는지 확인하고 수정해
+
+---

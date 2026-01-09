@@ -1,110 +1,69 @@
-import { json, type RequestEvent } from '@sveltejs/kit';
-import type { ApiResponse, VocabularyEntry } from '$lib/types/vocabulary.js';
-import { loadVocabularyData, listVocabularyFiles } from '$lib/utils/file-handler.js';
-import { validateForbiddenWordsAndSynonyms } from '$lib/utils/validation.js';
+import { json } from '@sveltejs/kit';
+import type { RequestEvent } from '@sveltejs/kit';
+import { loadVocabularyData, loadForbiddenWords } from '$lib/utils/file-handler';
+import type { VocabularyEntry, ForbiddenWord } from '$lib/types/vocabulary';
+import type { ApiResponse } from '$lib/types/api';
 
-/**
- * 단어 validation API
- * POST /api/vocabulary/validate
- *
- * 클라이언트에서 전송 전에 validation을 수행하기 위한 엔드포인트
- */
-export async function POST({ request, url }: RequestEvent) {
+export async function POST({ request, url }: RequestEvent): Promise<Response> {
 	try {
 		const body = await request.json();
-		const { standardName, abbreviation, entryId } = body;
-		const filename = url.searchParams.get('filename') || 'vocabulary.json';
+		const {
+			id: entryId,
+			standardName,
+			abbreviation
+		} = body;
 
-		// 필수 필드 검증
-		if (!standardName || typeof standardName !== 'string') {
+		if (!standardName || !abbreviation) {
 			return json(
 				{
 					success: false,
-					error: '표준단어명이 필요합니다.',
-					message: 'Missing standardName'
+					error: `필수 필드가 누락되었습니다: ${!standardName ? 'standardName' : ''}${!abbreviation ? 'abbreviation' : ''}`
 				} as ApiResponse,
 				{ status: 400 }
 			);
 		}
 
-		// 1. 금칙어 및 이음동의어 validation
-		try {
-			const allVocabularyFiles = await listVocabularyFiles();
-			const allVocabularyEntries: VocabularyEntry[] = [];
-			for (const file of allVocabularyFiles) {
-				try {
-					const fileData = await loadVocabularyData(file);
-					// 수정 모드인 경우 현재 entry 제외
-					const filteredEntries = entryId
-						? fileData.entries.filter((e) => e.id !== entryId)
-						: fileData.entries;
-					allVocabularyEntries.push(...filteredEntries);
-				} catch (error) {
-					console.warn(`단어집 파일 ${file} 로드 실패:`, error);
-				}
-			}
+		const filename = url.searchParams.get('filename') || 'vocabulary.json';
+		const forbiddenWordsFilename = 'forbidden-words.json';
 
-			// 금칙어 및 이음동의어 validation
-			const validationError = validateForbiddenWordsAndSynonyms(standardName, allVocabularyEntries);
-			if (validationError) {
+		const [vocabData, forbiddenWordsData] = await Promise.all([
+			loadVocabularyData(filename),
+			loadForbiddenWords(forbiddenWordsFilename)
+		]);
+
+		// 1. 금칙어 검증
+		const forbiddenWord = forbiddenWordsData.find(
+			(fw) =>
+				(fw.type === 'standardName' && standardName.includes(fw.keyword)) ||
+				(fw.type === 'abbreviation' && abbreviation.includes(fw.keyword))
+		);
+		if (forbiddenWord) {
+			return json(
+				{ success: false, error: `금지된 단어(${forbiddenWord.keyword})가 포함되어 있습니다.` },
+				{ status: 400 }
+			);
+		}
+
+		// 2. 이음동의어 및 중복 검증
+		for (const entry of vocabData.entries) {
+			if (entry.id === entryId) continue; // 수정 시 자기 자신은 제외
+
+			if (entry.synonyms?.includes(standardName)) {
 				return json(
 					{
 						success: false,
-						error: validationError,
-						message: 'Forbidden word or synonym detected'
-					} as ApiResponse,
-					{ status: 400 }
+						error: `입력한 표준단어명(${standardName})은/는 이미 [${entry.standardName}]의 이음동의어로 등록되어 있습니다.`
+					},
+					{ status: 409 }
 				);
 			}
-		} catch (validationError) {
-			console.warn('금칙어 및 이음동의어 확인 중 오류:', validationError);
-			// validation 실패 시에도 성공으로 반환 (서버에서 다시 검증)
-		}
-
-		// 2. 영문약어 중복 검사 (현재 파일 기준)
-		if (abbreviation && typeof abbreviation === 'string') {
-			try {
-				const vocabularyData = await loadVocabularyData(filename);
-				// 수정 모드인 경우 현재 entry 제외
-				const filteredEntries = entryId
-					? vocabularyData.entries.filter((e) => e.id !== entryId)
-					: vocabularyData.entries;
-				const isAbbreviationDuplicate = filteredEntries.some(
-					(e) => e.abbreviation === abbreviation.trim()
-				);
-				if (isAbbreviationDuplicate) {
-					return json(
-						{
-							success: false,
-							error: '이미 존재하는 영문약어입니다.',
-							message: 'Duplicate abbreviation'
-						} as ApiResponse,
-						{ status: 409 }
-					);
-				}
-			} catch (checkError) {
-				console.warn('영문약어 중복 검사 중 오류:', checkError);
-				// 중복 검사 실패 시에도 성공으로 반환 (서버에서 다시 검증)
+			if (entry.abbreviation.toLowerCase() === abbreviation.toLowerCase()) {
+				return json({ success: false, error: '이미 존재하는 영문약어입니다.' }, { status: 409 });
 			}
 		}
 
-		// 모든 validation 통과
-		return json(
-			{
-				success: true,
-				message: 'Validation passed'
-			} as ApiResponse,
-			{ status: 200 }
-		);
+		return json({ success: true, data: { validation: 'ok' } } as ApiResponse);
 	} catch (error) {
-		console.error('Validation 중 오류:', error);
-		return json(
-			{
-				success: false,
-				error: 'Validation 중 오류가 발생했습니다.',
-				message: 'Internal server error'
-			} as ApiResponse,
-			{ status: 500 }
-		);
+		return json({ success: false, error: '서버 오류가 발생했습니다.' }, { status: 500 });
 	}
 }

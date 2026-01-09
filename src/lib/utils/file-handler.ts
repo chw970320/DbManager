@@ -448,6 +448,34 @@ export async function listVocabularyFiles(): Promise<string[]> {
 }
 
 /**
+ * 금지어 데이터를 JSON 파일에서 로드
+ * @param filename - 로드할 파일명 (기본값: forbidden-words.json)
+ */
+export async function loadForbiddenWords(
+	filename = 'forbidden-words.json'
+): Promise<import('../types/vocabulary').ForbiddenWord[]> {
+	try {
+		await ensureDataDirectory();
+		const dataPath = getDataPath(filename, 'vocabulary');
+
+		if (!existsSync(dataPath)) {
+			return [];
+		}
+
+		const jsonString = await safeReadFile(dataPath);
+		if (!jsonString) {
+			return [];
+		}
+
+		const data = JSON.parse(jsonString);
+		return (data.entries || []) as import('../types/vocabulary').ForbiddenWord[];
+	} catch (error) {
+		console.error('금지어 데이터 로드 실패:', error);
+		return [];
+	}
+}
+
+/**
  * 새로운 단어집 파일 생성
  */
 export async function createVocabularyFile(filename: string): Promise<void> {

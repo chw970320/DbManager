@@ -24,3 +24,87 @@ sveltekit 프로젝트의 테스트를 생성하려고 해. frontend와 backend�
 검토해봐. 적절하게 구현된 것 같아?
 
 ---
+
+다음 step 설명하고, 진행
+
+---
+
+단어, 도메인, 용어, 데이터베이스 등을 주제영역으로 명명하여 해당 주제영역별로 @docs/PROJECT_TEST_DESIGN.md 을 수행하면 좋을 것 같아.  
+ 현재는 단어가 진행 중인데 아직 단어의 모든 기능을 포괄하지 못해. VocabularyEditor와 +server.test.ts는 단어 주제영역의 일부이고, @src/routes/api/vocabulary\와 @src/routes/browse\ 가 대표적인 단어 주제영역 파트이며  
+ 이 외에도 검색 api나 @src/lib/components\ 에도 다양하게 존재해. 수행 계획을 세워봐
+
+---
+
+단어, 도메인, 용어, 데이터베이스, 엔터티, 속성, 테이블, 컬럼을 주제영역으로 명명하여 해당 주제영역별로 @docs/plan/PROJECT_TEST_DESIGN.md 를 수행하기 위해 우선적으로 @docs/plan/VOCABULARY_TEST_PLAN.md 를 생성했어.
+해당 파일을 분석해서 다른 영역들에 대해서도 동일하게 파일 생성하고, 프로젝트 관련 문서는 @docs/ 내의 markdown 문서들을 참고해.
+
+---
+
+@docs/plan/VOCABULARY_TEST_PLAN.md 를 토대로 @docs/plan/\*\_TEST_PLAN.md 파일들을 생성했는데 검토해봐
+
+---
+
+<발견된 문제점>
+<문제점1>
+TERM_TEST_PLAN.md - API 누락
+실제 존재하지만 계획에 없는 API: - /api/term/validate - 용어 유효성 검증 - /api/term/validate-all - 전체 용어 일괄 검증
+</문제점1>
+<수정제안1>수정 제안: Phase 1에 validate API 테스트 케이스 추가</수정제안1>
+<문제점2>
+VOCABULARY_TEST_PLAN.md - 중복 확인 필요 - /api/generator API가 Term 계획에도 있음 - 실제로는 용어 생성에 사용되므로 Term 주제영역에서 관리하는 것이 적절
+</문제점2>
+<수정제안2>Vocabulary 계획에서 generator 제거, Term에서 관리</수정제안2>
+<문제점3>
+공통 유틸리티 테스트 누락
+$lib/utils/ 디렉토리의 유틸리티 함수들이 개별 주제영역에 포함되지 않음: - file-handler.ts - database-design-handler.ts - validation.ts - cache.ts
+</문제점3>
+<수정제안3>공통 유틸리티 테스트 계획 별도 작성 또는 기존 계획에 통합</수정제안3>
+<수정제안4> ## TERM_TEST_PLAN.md 수정 필요
+
+      ### 1.2 테스트 대상 전체 범위 - API 엔드포인트에 추가:
+      | 9 | `/api/term/validate` | POST | 용어 유효성 검증 | 높음 | 미완료 |
+      | 10 | `/api/term/validate-all` | POST | 전체 용어 일괄 검증 | 중간 | 미완료 |
+
+      ### 2.1 Phase 1에 추가:
+      #### 2.1.3 validate API 테스트
+      **파일**: `src/routes/api/term/validate/+server.test.ts`
+
+      | 테스트 케이스 | 설명 |
+      |---|---|
+      | 용어 유효성 검증 성공 | 유효한 용어 입력 시 success |
+      | 필수 필드 누락 | koreanName/englishName 누락 시 400 에러 |
+
+</수정제안4>
+</발견된 문제점>
+
+---
+
+@docs/plan/VOCABULARY_TEST_PLAN.md 를 수행해.
+
+---
+
+@docs/plan/vocabulary_test_plan.md 의 `/api/vocabulary/duplicates` api에 대한 테스트를 구현하는 중에 됐어. 이어서 진행해.
+
+---
+
+앞으로 단어 주제영역에 해당 test가 작성되면 @docs/tests/VOCABULARY_TEST_DESCRIPTION.md 에 테스트 설명을 정리하면서 작업 진행해. 다른 주제영역들에 대해서도 추후 동일하게 진행할거야. 기존에 작업했던 테스트 설명도 없다면 추가해.
+
+---
+
+@docs/plan/VOCABULARY_TEST_PLAN.md 을 구현하며 @docs/tests/VOCABULARY_TEST_DESCRIPTION.md 에 작업들을 정리하면서 진행하다가 중료됐어. 이어서 진행해.
+
+---
+
+<확인사항>
+단어집의 모든 기능은 현재 selected 된 파일을 기준으로 동작되어야 하는데 이 점이 고려되어 있어?
+</확인사항>
+
+---
+
+@docs/plan/ATTRIBUTE_TEST_PLAN.md @docs/plan/COLUMN_TEST_PLAN.md @docs/plan/DATABASE_TEST_PLAN.md @docs/plan/DOMAIN_TEST_PLAN.md @docs/plan/ENTITY_TEST_PLAN.md @docs/plan/TABLE_TEST_PLAN.md @docs/plan/TERM_TEST_PLAN.md 에도 동일하게 selected 된 파일에 기능이 적용될 수 있게 수정해
+
+---
+
+@esbuild (2-156) 오류 있네 확인해서 수정해
+
+---

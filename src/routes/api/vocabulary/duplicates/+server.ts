@@ -1,42 +1,52 @@
 import { json } from '@sveltejs/kit';
-import type { ApiResponse } from '$lib/types/vocabulary.js';
-import { loadVocabularyData } from '$lib/utils/file-handler.js';
-import { getDuplicateGroups } from '$lib/utils/duplicate-handler.js';
+import type { RequestEvent } from '@sveltejs/kit';
+import { loadVocabularyData } from '$lib/utils/file-handler';
+import type { VocabularyEntry } from '$lib/types/vocabulary';
+import type { ApiResponse } from '$lib/types/api';
 
-/**
- * 중복된 단어 조회 API
- * GET /api/vocabulary/duplicates
- */
-export async function GET() {
+interface DuplicateGroup {
+	abbreviation: string;
+	entries: VocabularyEntry[];
+	count: number;
+}
+
+export async function GET({ url }: RequestEvent): Promise<Response> {
 	try {
-		const vocabularyData = await loadVocabularyData();
-		const entries = vocabularyData.entries;
+		const filename = url.searchParams.get('filename') || 'vocabulary.json';
+		const data = await loadVocabularyData(filename);
 
-		// 새로운 유틸리티 함수를 사용하여 중복된 그룹 조회
-		const duplicateGroups = getDuplicateGroups(entries);
+		const abbreviationGroups = new Map<string, VocabularyEntry[]>();
 
-		const responseData = {
-			duplicates: duplicateGroups,
-			entries: entries,
-			totalCount: entries.length,
-			lastUpdated: new Date().toISOString()
-		};
+		data.entries.forEach((entry) => {
+			const group = abbreviationGroups.get(entry.abbreviation) || [];
+			group.push(entry);
+			abbreviationGroups.set(entry.abbreviation, group);
+		});
+
+		const duplicates: DuplicateGroup[] = [];
+		for (const [abbreviation, entries] of abbreviationGroups.entries()) {
+			if (entries.length > 1) {
+				duplicates.push({
+					abbreviation,
+					entries,
+					count: entries.length
+				});
+			}
+		}
 
 		return json(
 			{
 				success: true,
-				data: responseData,
-				message: '중복 단어 조회가 완료되었습니다.'
+				message: '중복 단어 조회가 완료되었습니다.',
+				data: duplicates
 			} as ApiResponse,
 			{ status: 200 }
 		);
 	} catch (error) {
-		console.error('중복 단어 조회 중 오류:', error);
 		return json(
 			{
 				success: false,
-				error: '서버에서 중복 단어 조회 중 오류가 발생했습니다.',
-				message: 'Internal server error'
+				error: `데이터 처리 중 오류가 발생했습니다: ${error instanceof Error ? error.message : 'Unknown error'}`
 			} as ApiResponse,
 			{ status: 500 }
 		);

@@ -1,12 +1,7 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse } from '$lib/types/vocabulary';
 import type { DomainData, DomainEntry, DomainApiResponse } from '$lib/types/domain';
-import {
-	saveDomainData,
-	loadDomainData,
-	checkDomainReferences,
-	listDomainFiles
-} from '$lib/utils/file-handler.js';
+import { saveDomainData, loadDomainData, checkDomainReferences } from '$lib/utils/file-handler.js';
 import { safeMerge } from '$lib/utils/type-guards.js';
 import { invalidateCache } from '$lib/utils/cache.js';
 import { generateStandardDomainName, validateDomainNameUniqueness } from '$lib/utils/validation.js';
@@ -408,7 +403,7 @@ export async function POST({ request, url }: RequestEvent) {
 			entryData.decimalPlaces
 		);
 
-		// 기존 데이터 로드
+		// 기존 데이터 로드 (선택된 파일 기준)
 		let domainData: DomainData;
 		try {
 			domainData = await loadDomainData(filename);
@@ -421,21 +416,12 @@ export async function POST({ request, url }: RequestEvent) {
 			};
 		}
 
-		// 모든 도메인 파일 로드하여 도메인명 유일성 검사
+		// 선택된 파일 내에서만 도메인명 유일성 검사
 		try {
-			const allDomainFiles = await listDomainFiles();
-			const allDomainEntries: DomainEntry[] = [];
-			for (const file of allDomainFiles) {
-				try {
-					const fileData = await loadDomainData(file);
-					allDomainEntries.push(...fileData.entries);
-				} catch (error) {
-					console.warn(`도메인 파일 ${file} 로드 실패:`, error);
-				}
-			}
-
-			// 도메인명 유일성 validation
-			const validationError = validateDomainNameUniqueness(generatedDomainName, allDomainEntries);
+			const validationError = validateDomainNameUniqueness(
+				generatedDomainName,
+				domainData.entries
+			);
 			if (validationError) {
 				return json(
 					{
@@ -552,25 +538,18 @@ export async function PUT({ request, url }: RequestEvent) {
 			finalDecimalPlaces
 		);
 
-		// 도메인명이 변경되는 경우 유일성 validation
+		// 도메인명이 변경되는 경우 유일성 validation (선택된 파일 기준)
 		if (generatedDomainName !== existingEntry.standardDomainName) {
 			try {
-				const allDomainFiles = await listDomainFiles();
-				const allDomainEntries: DomainEntry[] = [];
-				for (const file of allDomainFiles) {
-					try {
-						const fileData = await loadDomainData(file);
-						allDomainEntries.push(...fileData.entries);
-					} catch (error) {
-						console.warn(`도메인 파일 ${file} 로드 실패:`, error);
-					}
-				}
+				// 현재 선택된 파일 내 엔트리만 사용 (자기 자신은 제외)
+				const allDomainEntries: DomainEntry[] = domainData.entries.filter(
+					(e) => e.id !== id
+				);
 
-				// 도메인명 유일성 validation
+				// 도메인명 유일성 validation (선택된 파일 기준)
 				const validationError = validateDomainNameUniqueness(
 					generatedDomainName,
-					allDomainEntries,
-					id // 현재 수정 중인 엔트리는 제외
+					allDomainEntries
 				);
 				if (validationError) {
 					return json(

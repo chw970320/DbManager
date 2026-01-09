@@ -1,7 +1,7 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse } from '$lib/types/vocabulary.js';
 import type { DomainData, DomainEntry } from '$lib/types/domain.js';
-import { loadDomainData, mergeDomainData, listDomainFiles } from '$lib/utils/file-handler.js';
+import { loadDomainData, mergeDomainData } from '$lib/utils/file-handler.js';
 import {
 	validateXlsxFile,
 	generateStandardDomainName,
@@ -130,22 +130,11 @@ export async function POST({ request }: RequestEvent) {
 
 		// 검증 교체 모드일 때만 validation 수행
 		if (performValidation) {
-			// 도메인명 자동 생성 및 validation
+			// 도메인명 자동 생성 및 validation (선택된 파일 기준)
 			try {
-				const allDomainFiles = await listDomainFiles();
-				const allDomainEntries: DomainEntry[] = [];
-				for (const file of allDomainFiles) {
-					try {
-						const fileData = await loadDomainData(file);
-						// 교체 모드가 아닌 경우 현재 파일의 기존 엔트리는 제외
-						if (!replaceExisting && file === filename) {
-							continue;
-						}
-						allDomainEntries.push(...fileData.entries);
-					} catch (error) {
-						console.warn(`도메인 파일 ${file} 로드 실패:`, error);
-					}
-				}
+				// 현재 선택된 파일의 기존 엔트리만 사용
+				const currentData: DomainData = await loadDomainData(filename);
+				const baseEntries: DomainEntry[] = replaceExisting ? [] : currentData.entries;
 
 				// 각 엔트리에 대해 도메인명 자동 생성 및 validation
 				const validationErrors: string[] = [];
@@ -159,11 +148,8 @@ export async function POST({ request }: RequestEvent) {
 					);
 					entry.standardDomainName = generatedDomainName;
 
-					// 도메인명 유일성 validation
-					const validationError = validateDomainNameUniqueness(
-						generatedDomainName,
-						allDomainEntries
-					);
+					// 도메인명 유일성 validation (선택된 파일 기준)
+					const validationError = validateDomainNameUniqueness(generatedDomainName, baseEntries);
 					if (validationError) {
 						validationErrors.push(`${entry.domainCategory}: ${validationError}`);
 					}

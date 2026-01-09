@@ -1,6 +1,6 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { DomainApiResponse, DomainEntry } from '$lib/types/domain.js';
-import { loadDomainData, listDomainFiles } from '$lib/utils/file-handler.js';
+import { loadDomainData } from '$lib/utils/file-handler.js';
 import { generateStandardDomainName, validateDomainNameUniqueness } from '$lib/utils/validation.js';
 
 /**
@@ -46,22 +46,12 @@ export async function POST({ request, url }: RequestEvent) {
 			decimalPlaces
 		);
 
-		// 도메인명 유일성 검사
+		// 도메인명 유일성 검사 (선택된 파일 기준)
 		try {
-			const allDomainFiles = await listDomainFiles();
-			const allDomainEntries: DomainEntry[] = [];
-			for (const file of allDomainFiles) {
-				try {
-					const fileData = await loadDomainData(file);
-					// 수정 모드인 경우 현재 entry 제외
-					const filteredEntries = entryId
-						? fileData.entries.filter((e) => e.id !== entryId)
-						: fileData.entries;
-					allDomainEntries.push(...filteredEntries);
-				} catch (error) {
-					console.warn(`도메인 파일 ${file} 로드 실패:`, error);
-				}
-			}
+			const fileData = await loadDomainData(filename);
+			const allDomainEntries: DomainEntry[] = entryId
+				? fileData.entries.filter((e) => e.id !== entryId)
+				: fileData.entries;
 
 			const uniquenessError = validateDomainNameUniqueness(generatedDomainName, allDomainEntries);
 			if (uniquenessError) {

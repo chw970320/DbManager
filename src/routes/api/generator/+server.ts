@@ -7,6 +7,13 @@ const vocabularyCache: Map<string, VocabularyData> = new Map();
 const koToEnMapCache: Map<string, Map<string, string[]>> = new Map();
 const enToKoMapCache: Map<string, Map<string, string[]>> = new Map();
 
+// 테스트용 캐시 초기화 함수 (런타임 동작에는 영향 없음)
+export function __clearGeneratorCacheForTest() {
+	vocabularyCache.clear();
+	koToEnMapCache.clear();
+	enToKoMapCache.clear();
+}
+
 async function initializeCache(filename: string = 'term.json') {
 	// 캐시 확인
 	if (vocabularyCache.has(filename)) {

@@ -190,7 +190,7 @@ describe('Domain Validate API: /api/domain/validate', () => {
 
 		await POST(request);
 
-		expect(listDomainFiles).toHaveBeenCalled();
+		expect(loadDomainData).toHaveBeenCalledWith('custom-domain.json');
 	});
 
 	it('should use default filename when not specified', async () => {
@@ -203,6 +203,6 @@ describe('Domain Validate API: /api/domain/validate', () => {
 
 		await POST(request);
 
-		expect(listDomainFiles).toHaveBeenCalled();
+		expect(loadDomainData).toHaveBeenCalledWith('domain.json');
 	});
 });

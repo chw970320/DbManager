@@ -112,3 +112,21 @@ $lib/utils/ 디렉토리의 유틸리티 함수들이 개별 주제영역에 포
 TDD 개발을 진행할거야. 현재 @docs/tests/VOCABULARY_TEST_DESCRIPTION.md을 기반으로 test code는 작성 됐으며 이를 기반으로 실제 코드베이스가 test와 동일하게 구현되어 있는지 확인하고 수정해
 
 ---
+
+@docs/plan/DOMAIN_TEST_PLAN.md 을 기반으로 테스트 코드를 작성하고, @docs/tests/VOCABULARY_TEST_DESCRIPTION.md 을 참고해서 DOMAIN_TEST_DESCRIPTION을 작성해. 완료 이후에는 테스트 코드와 실제 코드베이스 코드가 일치하는지 검사하고 수정할거야.
+
+---
+
+@docs/plan/TERM_TEST_PLAN.md 을 기반으로 동일한 작업 진행해.
+
+---
+
+실사용자 테스트로 파일을 변경하고, 새 도메인 추가를 진행했는데 이미 사용 중인 도메인이라는 에러가 발생해 해당 파일에는 아무런 데이터가 존재하지 않는데 에러가 발생하는 것으로 보아 selected 된 파일을 제대로 검증하는 로직이 없는 것 같아.
+
+모든 도메인 기능은 selected 된 파일을 기준으로 적용되어야 하며 이를 테스트 코드와 실제 코드베이스에 적용해
+
+---
+
+용어도 동일하게 selected 된 파일을 기준으로 모든 기능이 동작해야 해. 테스트 코드 구현과 실제 구현을 확인해서 수정해
+
+---

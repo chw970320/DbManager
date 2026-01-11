@@ -144,3 +144,13 @@ TDD 개발을 진행할거야. 현재 @docs/tests/VOCABULARY_TEST_DESCRIPTION.md
 ---
 
 FileManager는 단어, 도메인, 용어에도 존재하는 부분인데 그렇다면 이들에게도 적용하기 위한 준비를 해. 각각은 @docs/tests/ 와 @docs/plan/ 을 참고하면 좋을거야.
+
+---
+
+코드베이스 전체이 있는 테스트들이 각각의 실제 코드들과 일치하는지 구체적인 검증 시작해
+
+---
+
+@docs/plan/ 폴더의 _\_TEST_PLAN.md 기반으로 test를 생성하고, @docs/tests/ 폴더에 _\_TEST_DESCRIPTION.md 파일을 생성하고 있어. 이버에는 ENTITY에 대해 테스트를 생성해줘.
+
+---

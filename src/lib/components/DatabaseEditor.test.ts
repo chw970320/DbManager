@@ -38,11 +38,11 @@ describe('DatabaseEditor', () => {
 	});
 
 	describe('Rendering', () => {
-		it('생성 모드에서 "새 데이터베이스 추가" 제목 표시', async () => {
+		it('생성 모드에서 "새 데이터베이스 정의서" 제목 표시', async () => {
 			render(DatabaseEditor, { props: {} });
 
 			await waitFor(() => {
-				expect(screen.getByText(/새 데이터베이스/)).toBeInTheDocument();
+				expect(screen.getByText(/새 데이터베이스 정의서/)).toBeInTheDocument();
 			});
 		});
 
@@ -141,7 +141,6 @@ describe('DatabaseEditor', () => {
 				expect(saveButton).not.toBeDisabled();
 			});
 		});
-
 	});
 
 	describe('Edit Mode', () => {

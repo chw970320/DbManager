@@ -8,3 +8,12 @@ dist
 Dockerfile
 docker-compose.yml
 README.md
+# Test files - SvelteKit doesn't allow + prefixed test files in routes
+**/*.test.ts
+**/*.test.js
+**/*.test.svelte
+**/*.spec.ts
+**/*.spec.js
+**/*.spec.svelte
+vitest.config.ts
+vitest-setup.ts

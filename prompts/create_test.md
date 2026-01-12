@@ -168,3 +168,13 @@ FileManager는 단어, 도메인, 용어에도 존재하는 부분인데 그렇�
 ---
 
 다음은 @docs/plan/COLUMN_TEST_PLAN.md 를 기반으로 COLUMN에 대해 테스트 생성해.
+
+---
+
+다음은 @docs/plan/COMMON_UTILS_TEST_PLAN.md 를 기반으로 공통 테스트 생성해.
+
+---
+
+@docs/plan/PROJECT_TEST_DESIGN.md 를 참고해서 테스트가 전반적으로 잘 구현됐는지 파악하고 모든 작업이 완료됐다고 판단하면 @docs/plan/ 폴더를 삭제해.
+
+---

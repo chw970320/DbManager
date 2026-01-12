@@ -154,3 +154,5 @@ FileManager는 단어, 도메인, 용어에도 존재하는 부분인데 그렇�
 @docs/plan/ 폴더의 _\_TEST_PLAN.md 기반으로 test를 생성하고, @docs/tests/ 폴더에 _\_TEST_DESCRIPTION.md 파일을 생성하고 있어. 이버에는 ENTITY에 대해 테스트를 생성해줘.
 
 ---
+
+다음으로 @docs/plan/TERM_TEST_PLAN.md 를 기반으로 TERM에 대해 테스트 생성 진행해.

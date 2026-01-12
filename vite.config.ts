@@ -7,7 +7,7 @@ export default defineConfig({
 		postcss: './postcss.config.js'
 	},
 	optimizeDeps: {
-		include: ['tailwindcss']
+		include: ['tailwindcss', 'mermaid']
 	},
 	// 테스트 파일을 파일 감시에서 제외하여 성능 향상
 	server: {

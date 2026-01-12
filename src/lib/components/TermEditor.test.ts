@@ -122,7 +122,9 @@ describe('TermEditor', () => {
 			});
 
 			await waitFor(() => {
-				const termNameInput = screen.getByPlaceholderText(/데이터베이스_관리자/) as HTMLInputElement;
+				const termNameInput = screen.getByPlaceholderText(
+					/데이터베이스_관리자/
+				) as HTMLInputElement;
 				expect(termNameInput.value).toBe(mockEntry.termName);
 			});
 		});
@@ -151,46 +153,59 @@ describe('TermEditor', () => {
 			render(TermEditor, { props: {} });
 
 			await waitFor(() => {
-				const termNameInput = screen.getByPlaceholderText(/데이터베이스_관리자/) as HTMLInputElement;
+				const termNameInput = screen.getByPlaceholderText(
+					/데이터베이스_관리자/
+				) as HTMLInputElement;
 				const columnNameInput = screen.getByPlaceholderText(/DB_ADMIN/) as HTMLInputElement;
-				
+
 				fireEvent.input(termNameInput, { target: { value: '사용자_이름' } });
 				fireEvent.input(columnNameInput, { target: { value: 'USER_NAME' } });
-				
+
 				// 도메인명은 버튼으로 선택하므로 직접 입력 불가
 				// 추천 목록이 나타나면 버튼 클릭으로 선택
 			});
 
 			// 도메인 추천이 로드될 때까지 대기
-			await waitFor(() => {
-				const domainButtons = screen.queryAllByRole('button');
-				const domainButton = domainButtons.find(btn => btn.textContent?.includes('사용자분류'));
-				if (domainButton) {
-					fireEvent.click(domainButton);
-				}
-			}, { timeout: 2000 }).catch(() => {
+			await waitFor(
+				() => {
+					const domainButtons = screen.queryAllByRole('button');
+					const domainButton = domainButtons.find((btn) => btn.textContent?.includes('사용자분류'));
+					if (domainButton) {
+						fireEvent.click(domainButton);
+					}
+				},
+				{ timeout: 2000 }
+			).catch(() => {
 				// 도메인 추천이 없어도 테스트 계속 진행
 			});
 
-			await waitFor(() => {
-				const saveButton = screen.getByRole('button', { name: /저장/ });
-				// 도메인명이 없으면 비활성화될 수 있음
-				expect(saveButton).toBeInTheDocument();
-			}, { timeout: 3000 });
+			await waitFor(
+				() => {
+					const saveButton = screen.getByRole('button', { name: /저장/ });
+					// 도메인명이 없으면 비활성화될 수 있음
+					expect(saveButton).toBeInTheDocument();
+				},
+				{ timeout: 3000 }
+			);
 		});
 
 		it('should show error message for empty required field after input and clear', async () => {
 			render(TermEditor, { props: {} });
 
 			await waitFor(() => {
-				const termNameInput = screen.getByPlaceholderText(/데이터베이스_관리자/) as HTMLInputElement;
+				const termNameInput = screen.getByPlaceholderText(
+					/데이터베이스_관리자/
+				) as HTMLInputElement;
 				fireEvent.input(termNameInput, { target: { value: '사용자_이름' } });
 				fireEvent.input(termNameInput, { target: { value: '' } });
 			});
 
-			await waitFor(() => {
-				expect(screen.getByText(/용어명은 필수 입력 항목입니다/)).toBeInTheDocument();
-			}, { timeout: 3000 });
+			await waitFor(
+				() => {
+					expect(screen.getByText(/용어명은 필수 입력 항목입니다/)).toBeInTheDocument();
+				},
+				{ timeout: 3000 }
+			);
 		});
 	});
 

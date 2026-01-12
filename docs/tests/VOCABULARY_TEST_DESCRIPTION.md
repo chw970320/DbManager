@@ -4,26 +4,26 @@
 
 ## 테스트 현황 요약
 
-| 테스트 파일                                 | 테스트 수 | 상태 |
-| ------------------------------------------- | --------- | ---- |
-| `vocabulary/+server.test.ts`                | 18개      | 완료 |
-| `vocabulary/validate/+server.test.ts`       | 8개       | 완료 |
-| `vocabulary/duplicates/+server.test.ts`     | 4개       | 완료 |
-| `vocabulary/files/+server.test.ts`          | 12개      | 완료 |
-| `vocabulary/files/mapping/+server.test.ts`  | 10개      | 완료 |
-| `vocabulary/sync-domain/+server.test.ts`    | 9개       | 완료 |
-| `vocabulary/download/+server.test.ts`       | 8개       | 완료 |
-| `vocabulary/filter-options/+server.test.ts` | 9개       | 완료 |
-| `search/+server.test.ts`                    | 19개      | 완료 |
-| `VocabularyEditor.test.ts`                  | 18개      | 완료 |
-| `VocabularyFileManager.test.ts`             | 9개       | 완료 |
-| **합계**                                    | **122개** |      |
+| 테스트 파일                                | 테스트 수 | 상태 |
+| ------------------------------------------ | --------- | ---- |
+| `vocabulary/server.test.ts`                | 18개      | 완료 |
+| `vocabulary/validate/server.test.ts`       | 8개       | 완료 |
+| `vocabulary/duplicates/server.test.ts`     | 4개       | 완료 |
+| `vocabulary/files/server.test.ts`          | 12개      | 완료 |
+| `vocabulary/files/mapping/server.test.ts`  | 10개      | 완료 |
+| `vocabulary/sync-domain/server.test.ts`    | 9개       | 완료 |
+| `vocabulary/download/server.test.ts`       | 8개       | 완료 |
+| `vocabulary/filter-options/server.test.ts` | 9개       | 완료 |
+| `search/server.test.ts`                    | 19개      | 완료 |
+| `VocabularyEditor.test.ts`                 | 18개      | 완료 |
+| `VocabularyFileManager.test.ts`            | 9개       | 완료 |
+| **합계**                                   | **122개** |      |
 
 ---
 
-## 1. vocabulary/+server.test.ts (18개)
+## 1. vocabulary/server.test.ts (18개)
 
-**파일 경로**: `src/routes/api/vocabulary/+server.test.ts`
+**파일 경로**: `src/routes/api/vocabulary/server.test.ts`
 
 단어집 CRUD API의 핵심 기능을 검증합니다.
 
@@ -68,9 +68,9 @@
 
 ---
 
-## 2. vocabulary/validate/+server.test.ts (8개)
+## 2. vocabulary/validate/server.test.ts (8개)
 
-**파일 경로**: `src/routes/api/vocabulary/validate/+server.test.ts`
+**파일 경로**: `src/routes/api/vocabulary/validate/server.test.ts`
 
 단어 유효성 검증 API를 테스트합니다. 금칙어, 이음동의어, 영문약어 중복을 검사합니다.
 
@@ -87,9 +87,9 @@
 
 ---
 
-## 3. vocabulary/duplicates/+server.test.ts (4개)
+## 3. vocabulary/duplicates/server.test.ts (4개)
 
-**파일 경로**: `src/routes/api/vocabulary/duplicates/+server.test.ts`
+**파일 경로**: `src/routes/api/vocabulary/duplicates/server.test.ts`
 
 중복된 영문약어를 가진 단어 그룹을 조회하는 API를 테스트합니다.
 
@@ -102,9 +102,9 @@
 
 ---
 
-## 4. vocabulary/files/+server.test.ts (12개)
+## 4. vocabulary/files/server.test.ts (12개)
 
-**파일 경로**: `src/routes/api/vocabulary/files/+server.test.ts`
+**파일 경로**: `src/routes/api/vocabulary/files/server.test.ts`
 
 단어집 파일 관리 API를 테스트합니다. 파일 목록 조회, 생성, 이름 변경, 삭제 기능을 검증합니다.
 
@@ -142,9 +142,9 @@
 
 ---
 
-## 5. vocabulary/files/mapping/+server.test.ts (10개)
+## 5. vocabulary/files/mapping/server.test.ts (10개)
 
-**파일 경로**: `src/routes/api/vocabulary/files/mapping/+server.test.ts`
+**파일 경로**: `src/routes/api/vocabulary/files/mapping/server.test.ts`
 
 단어집과 도메인 파일 간의 매핑 정보를 관리하는 API를 테스트합니다.
 
@@ -170,9 +170,9 @@
 
 ---
 
-## 6. vocabulary/sync-domain/+server.test.ts (9개)
+## 6. vocabulary/sync-domain/server.test.ts (9개)
 
-**파일 경로**: `src/routes/api/vocabulary/sync-domain/+server.test.ts`
+**파일 경로**: `src/routes/api/vocabulary/sync-domain/server.test.ts`
 
 도메인 데이터와 단어 데이터를 동기화하는 API를 테스트합니다.
 
@@ -189,9 +189,9 @@
 
 ---
 
-## 7. vocabulary/download/+server.test.ts (8개)
+## 7. vocabulary/download/server.test.ts (8개)
 
-**파일 경로**: `src/routes/api/vocabulary/download/+server.test.ts`
+**파일 경로**: `src/routes/api/vocabulary/download/server.test.ts`
 
 단어집 데이터를 XLSX 파일로 다운로드하는 API를 테스트합니다.
 
@@ -207,9 +207,9 @@
 
 ---
 
-## 8. vocabulary/filter-options/+server.test.ts (9개)
+## 8. vocabulary/filter-options/server.test.ts (9개)
 
-**파일 경로**: `src/routes/api/vocabulary/filter-options/+server.test.ts`
+**파일 경로**: `src/routes/api/vocabulary/filter-options/server.test.ts`
 
 필터 옵션 조회 API를 테스트합니다. 각 필터 가능한 컬럼의 고유값을 반환합니다.
 
@@ -227,9 +227,9 @@
 
 ---
 
-## 9. search/+server.test.ts (19개)
+## 9. search/server.test.ts (19개)
 
-**파일 경로**: `src/routes/api/search/+server.test.ts`
+**파일 경로**: `src/routes/api/search/server.test.ts`
 
 통합 검색 및 자동완성 API를 테스트합니다.
 
@@ -323,37 +323,37 @@
 
 ### Rendering (2개)
 
-| 테스트명                    | 설명                        | 검증 내용                    |
-| --------------------------- | --------------------------- | ---------------------------- |
-| 모달이 열릴 때 파일 목록 렌더링 | 모달 열기 시 UI 표시        | "파일 관리" 텍스트 표시       |
-| 파일 목록 표시              | 파일 목록 API 호출          | `/api/vocabulary/files` 호출 |
+| 테스트명                        | 설명                 | 검증 내용                    |
+| ------------------------------- | -------------------- | ---------------------------- |
+| 모달이 열릴 때 파일 목록 렌더링 | 모달 열기 시 UI 표시 | "파일 관리" 텍스트 표시      |
+| 파일 목록 표시                  | 파일 목록 API 호출   | `/api/vocabulary/files` 호출 |
 
 ### File Operations (3개)
 
-| 테스트명           | 설명             | 검증 내용                    |
-| ------------------ | ---------------- | ---------------------------- |
-| 새 파일 생성 버튼 표시 | 생성 버튼 존재   | 새 파일 생성 버튼 표시       |
-| 파일 이름 변경 기능 | 파일 이름 변경   | PUT 요청 처리                |
-| 파일 삭제 기능     | 파일 삭제        | DELETE 요청 처리             |
+| 테스트명               | 설명           | 검증 내용              |
+| ---------------------- | -------------- | ---------------------- |
+| 새 파일 생성 버튼 표시 | 생성 버튼 존재 | 새 파일 생성 버튼 표시 |
+| 파일 이름 변경 기능    | 파일 이름 변경 | PUT 요청 처리          |
+| 파일 삭제 기능         | 파일 삭제      | DELETE 요청 처리       |
 
 ### Selected File (2개)
 
-| 테스트명                    | 설명                    | 검증 내용                    |
-| --------------------------- | ----------------------- | ---------------------------- |
-| 선택된 파일 강조 표시        | 선택된 파일 UI 강조      | 선택된 파일 강조 표시        |
-| 파일 선택 시 change 이벤트 발생 | 파일 선택 이벤트        | 파일 목록 로드 확인          |
+| 테스트명                        | 설명                | 검증 내용             |
+| ------------------------------- | ------------------- | --------------------- |
+| 선택된 파일 강조 표시           | 선택된 파일 UI 강조 | 선택된 파일 강조 표시 |
+| 파일 선택 시 change 이벤트 발생 | 파일 선택 이벤트    | 파일 목록 로드 확인   |
 
 ### Upload Tab (1개)
 
-| 테스트명      | 설명           | 검증 내용                    |
-| ------------- | -------------- | ---------------------------- |
-| 업로드 탭 표시 | 업로드 탭 UI   | 업로드 탭 표시               |
+| 테스트명       | 설명         | 검증 내용      |
+| -------------- | ------------ | -------------- |
+| 업로드 탭 표시 | 업로드 탭 UI | 업로드 탭 표시 |
 
 ### Domain Mapping (1개)
 
-| 테스트명           | 설명                    | 검증 내용                    |
-| ------------------ | ----------------------- | ---------------------------- |
-| 도메인 파일 매핑 기능 | 도메인 파일 목록 로드   | `/api/domain/files` 호출 확인 |
+| 테스트명              | 설명                  | 검증 내용                     |
+| --------------------- | --------------------- | ----------------------------- |
+| 도메인 파일 매핑 기능 | 도메인 파일 목록 로드 | `/api/domain/files` 호출 확인 |
 
 > **참고**: Svelte 5에서는 `component.$on()`이 더 이상 사용되지 않으므로, 이벤트 직접 테스트 대신 컴포넌트의 동작(API 호출, UI 표시 등)을 확인하는 방식으로 테스트를 작성했습니다.
 
@@ -366,7 +366,7 @@
 pnpm test vocabulary
 
 # 특정 API 테스트
-pnpm test src/routes/api/vocabulary/+server.test.ts
+pnpm test src/routes/api/vocabulary/server.test.ts
 
 # 컴포넌트 테스트
 pnpm test src/lib/components/VocabularyEditor.test.ts

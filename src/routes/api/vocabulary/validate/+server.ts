@@ -7,11 +7,7 @@ import type { ApiResponse } from '$lib/types/api';
 export async function POST({ request, url }: RequestEvent): Promise<Response> {
 	try {
 		const body = await request.json();
-		const {
-			id: entryId,
-			standardName,
-			abbreviation
-		} = body;
+		const { id: entryId, standardName, abbreviation } = body;
 
 		if (!standardName || !abbreviation) {
 			return json(

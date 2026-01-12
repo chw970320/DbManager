@@ -194,7 +194,7 @@ describe('Vocabulary Sync-Domain API: /api/vocabulary/sync-domain', () => {
 		it('should handle entries without domainCategory as unmatched', async () => {
 			const vocabData = createMockVocabularyData();
 			// 모든 항목에서 domainCategory 제거
-			vocabData.entries.forEach(entry => {
+			vocabData.entries.forEach((entry) => {
 				delete entry.domainCategory;
 			});
 			vi.mocked(loadVocabularyData).mockResolvedValue(vocabData);

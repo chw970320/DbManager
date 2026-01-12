@@ -17,7 +17,8 @@
 		{ href: '/entity/browse', label: '엔터티', icon: 'cube' },
 		{ href: '/attribute/browse', label: '속성', icon: 'key' },
 		{ href: '/table/browse', label: '테이블', icon: 'table' },
-		{ href: '/column/browse', label: '컬럼', icon: 'columns' }
+		{ href: '/column/browse', label: '컬럼', icon: 'columns' },
+		{ href: '/erd', label: 'ERD', icon: 'diagram' }
 	];
 
 	// 모바일 메뉴 토글
@@ -48,7 +49,9 @@
 			table:
 				'M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z',
 			columns:
-				'M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2'
+				'M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2',
+			diagram:
+				'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'
 		};
 		return icons[iconName as keyof typeof icons];
 	}

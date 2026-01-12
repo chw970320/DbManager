@@ -42,8 +42,8 @@ describe('xlsx-parser', () => {
 				['테스트단어', 'TEST', 'Test Word']
 			];
 
-			vi.mocked(XLSX.read).mockReturnValue(mockWorkbook as any);
-			vi.mocked(XLSX.utils.sheet_to_json).mockReturnValue(mockData as any);
+			vi.mocked(XLSX.read).mockReturnValue(mockWorkbook as ReturnType<typeof XLSX.read>);
+			vi.mocked(XLSX.utils.sheet_to_json).mockReturnValue(mockData as string[][]);
 
 			const result = parseWorkbookToArray(Buffer.from('mock-xlsx'));
 
@@ -56,9 +56,11 @@ describe('xlsx-parser', () => {
 				Sheets: {}
 			};
 
-			vi.mocked(XLSX.read).mockReturnValue(mockWorkbook as any);
+			vi.mocked(XLSX.read).mockReturnValue(mockWorkbook as ReturnType<typeof XLSX.read>);
 
-			expect(() => parseWorkbookToArray(Buffer.from('mock-xlsx'))).toThrow('Excel 파일에 시트가 없습니다.');
+			expect(() => parseWorkbookToArray(Buffer.from('mock-xlsx'))).toThrow(
+				'Excel 파일에 시트가 없습니다.'
+			);
 		});
 
 		it('should throw error when data is insufficient', () => {
@@ -70,10 +72,12 @@ describe('xlsx-parser', () => {
 			};
 			const mockData = [['표준단어명', '영문약어', '영문명']]; // 헤더만 있음
 
-			vi.mocked(XLSX.read).mockReturnValue(mockWorkbook as any);
-			vi.mocked(XLSX.utils.sheet_to_json).mockReturnValue(mockData as any);
+			vi.mocked(XLSX.read).mockReturnValue(mockWorkbook as ReturnType<typeof XLSX.read>);
+			vi.mocked(XLSX.utils.sheet_to_json).mockReturnValue(mockData as string[][]);
 
-			expect(() => parseWorkbookToArray(Buffer.from('mock-xlsx'))).toThrow('Excel 파일에 데이터가 충분하지 않습니다');
+			expect(() => parseWorkbookToArray(Buffer.from('mock-xlsx'))).toThrow(
+				'Excel 파일에 데이터가 충분하지 않습니다'
+			);
 		});
 	});
 
@@ -120,8 +124,8 @@ describe('xlsx-parser', () => {
 				['1', '테스트단어', 'TEST', 'Test Word', '테스트 설명']
 			];
 
-			vi.mocked(XLSX.read).mockReturnValue(mockWorkbook as any);
-			vi.mocked(XLSX.utils.sheet_to_json).mockReturnValue(mockData as any);
+			vi.mocked(XLSX.read).mockReturnValue(mockWorkbook as ReturnType<typeof XLSX.read>);
+			vi.mocked(XLSX.utils.sheet_to_json).mockReturnValue(mockData as string[][]);
 
 			const result = parseXlsxToJson(Buffer.from('mock-xlsx'));
 
@@ -143,8 +147,8 @@ describe('xlsx-parser', () => {
 				['2', '테스트단어2', 'TEST2', 'Test Word 2']
 			];
 
-			vi.mocked(XLSX.read).mockReturnValue(mockWorkbook as any);
-			vi.mocked(XLSX.utils.sheet_to_json).mockReturnValue(mockData as any);
+			vi.mocked(XLSX.read).mockReturnValue(mockWorkbook as ReturnType<typeof XLSX.read>);
+			vi.mocked(XLSX.utils.sheet_to_json).mockReturnValue(mockData as string[][]);
 
 			const result = parseXlsxToJson(Buffer.from('mock-xlsx'));
 

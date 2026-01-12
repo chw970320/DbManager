@@ -14,7 +14,12 @@ vi.mock('$lib/utils/file-handler.js', () => ({
 }));
 
 // Mock import
-import { loadTermData, saveTermData, loadVocabularyData, loadDomainData } from '$lib/utils/file-handler.js';
+import {
+	loadTermData,
+	saveTermData,
+	loadVocabularyData,
+	loadDomainData
+} from '$lib/utils/file-handler.js';
 
 // 테스트용 Mock 데이터
 const createMockTermData = (): TermData => ({
@@ -91,9 +96,7 @@ const createMockDomainData = (): DomainData => ({
 });
 
 // RequestEvent Mock 생성 헬퍼
-function createMockRequestEvent(options: {
-	body?: unknown;
-}): RequestEvent {
+function createMockRequestEvent(options: { body?: unknown }): RequestEvent {
 	const request = {
 		json: vi.fn().mockResolvedValue(options.body || {}),
 		method: 'POST'

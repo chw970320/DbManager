@@ -152,18 +152,15 @@
 		}
 
 		try {
-			const response = await fetch(
-				`/api/term/validate?filename=${encodeURIComponent(filename)}`,
-				{
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						termName: segment,
-						columnName: columnName,
-						domainName: ''
-					})
-				}
-			);
+			const response = await fetch(`/api/term/validate?filename=${encodeURIComponent(filename)}`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					termName: segment,
+					columnName: columnName,
+					domainName: ''
+				})
+			});
 
 			if (response.ok) {
 				const result = await response.json();
@@ -506,39 +503,38 @@
 											class="rounded p-1 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
 											aria-label="결과 복사"
 										>
-												{#if copiedResults.has(result)}
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														width="20"
-														height="20"
-														viewBox="0 0 24 24"
-														fill="none"
-														stroke="currentColor"
-														stroke-width="2"
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														class="text-green-600"
-													>
-														<polyline points="20,6 9,17 4,12"></polyline>
-													</svg>
-												{:else}
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														width="20"
-														height="20"
-														viewBox="0 0 24 24"
-														fill="none"
-														stroke="currentColor"
-														stroke-width="2"
-														stroke-linecap="round"
-														stroke-linejoin="round"
-													>
-														<rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
-														<path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
-														></path>
-													</svg>
-												{/if}
-											</button>
+											{#if copiedResults.has(result)}
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													width="20"
+													height="20"
+													viewBox="0 0 24 24"
+													fill="none"
+													stroke="currentColor"
+													stroke-width="2"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+													class="text-green-600"
+												>
+													<polyline points="20,6 9,17 4,12"></polyline>
+												</svg>
+											{:else}
+												<svg
+													xmlns="http://www.w3.org/2000/svg"
+													width="20"
+													height="20"
+													viewBox="0 0 24 24"
+													fill="none"
+													stroke="currentColor"
+													stroke-width="2"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+												>
+													<rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+													<path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
+												</svg>
+											{/if}
+										</button>
 										{#if selectedSegment}
 											{@const validation = validationResults.get(selectedSegment)}
 											{#if validation?.isValid === true}

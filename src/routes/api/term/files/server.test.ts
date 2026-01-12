@@ -18,10 +18,7 @@ import {
 } from '$lib/utils/file-handler.js';
 
 // RequestEvent Mock 생성 헬퍼
-function createMockRequestEvent(options: {
-	method?: string;
-	body?: unknown;
-}): RequestEvent {
+function createMockRequestEvent(options: { method?: string; body?: unknown }): RequestEvent {
 	const request = {
 		json: vi.fn().mockResolvedValue(options.body || {}),
 		method: options.method || 'GET'

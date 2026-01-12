@@ -60,9 +60,7 @@ const createMockDomainData = (): DomainData => ({
 });
 
 // RequestEvent Mock 생성 헬퍼
-function createMockRequestEvent(options: {
-	body?: unknown;
-}): RequestEvent {
+function createMockRequestEvent(options: { body?: unknown }): RequestEvent {
 	const request = {
 		json: vi.fn().mockResolvedValue(options.body || {}),
 		method: 'POST'

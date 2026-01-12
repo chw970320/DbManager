@@ -43,9 +43,7 @@ const createMockDomainData = (): DomainData => ({
 });
 
 // RequestEvent Mock 생성 헬퍼
-function createMockRequestEvent(options: {
-	searchParams?: Record<string, string>;
-}): RequestEvent {
+function createMockRequestEvent(options: { searchParams?: Record<string, string> }): RequestEvent {
 	const url = new URL('http://localhost/api/domain/download');
 
 	if (options.searchParams) {

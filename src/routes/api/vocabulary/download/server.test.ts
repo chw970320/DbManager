@@ -47,9 +47,7 @@ const createMockVocabularyData = (): VocabularyData => ({
 });
 
 // RequestEvent Mock 생성 헬퍼
-function createMockRequestEvent(options: {
-	searchParams?: Record<string, string>;
-}): RequestEvent {
+function createMockRequestEvent(options: { searchParams?: Record<string, string> }): RequestEvent {
 	const url = new URL('http://localhost/api/vocabulary/download');
 
 	if (options.searchParams) {
@@ -109,10 +107,10 @@ describe('Vocabulary Download API: /api/vocabulary/download', () => {
 		await GET(event);
 
 		expect(exportJsonToXlsxBuffer).toHaveBeenCalled();
-		const callArgs = vi.mocked(exportJsonToXlsxBuffer).mock.calls[0][0];
+		const callArgs = vi.mocked(exportJsonToXlsxBuffer).mock.calls[0][0] as VocabularyEntry[];
 		expect(callArgs).toBeInstanceOf(Array);
 		// 정렬 확인: desc 정렬이므로 USER('user')가 ADMIN('admin')보다 앞에 와야 함 (알파벳 순서: u > a)
-		const abbreviations = callArgs.map((entry: any) => entry.abbreviation);
+		const abbreviations = callArgs.map((entry) => entry.abbreviation);
 		expect(abbreviations[0]).toBe('USER');
 		expect(abbreviations[1]).toBe('ADMIN');
 	});

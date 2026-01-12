@@ -8,7 +8,10 @@ import type { VocabularyEntry, ForbiddenWord } from '$lib/types/vocabulary';
 vi.mock('$lib/utils/file-handler');
 vi.mock('@sveltejs/kit');
 
-const createMockRequest = async (body: any, searchParams?: Record<string, string>): Promise<RequestEvent> => {
+const createMockRequest = async (
+	body: { termName?: string; abbreviation?: string; entryId?: string },
+	searchParams?: Record<string, string>
+): Promise<RequestEvent> => {
 	const url = new URL('http://localhost/api/vocabulary/validate');
 	if (searchParams) {
 		Object.entries(searchParams).forEach(([key, value]) => {

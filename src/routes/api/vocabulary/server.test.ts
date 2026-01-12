@@ -280,10 +280,7 @@ describe('Vocabulary API: /api/vocabulary', () => {
 			await POST(event);
 
 			expect(loadVocabularyData).toHaveBeenCalledWith('custom-vocabulary.json');
-			expect(saveVocabularyData).toHaveBeenCalledWith(
-				expect.any(Object),
-				'custom-vocabulary.json'
-			);
+			expect(saveVocabularyData).toHaveBeenCalledWith(expect.any(Object), 'custom-vocabulary.json');
 		});
 	});
 
@@ -370,10 +367,7 @@ describe('Vocabulary API: /api/vocabulary', () => {
 			await PUT(event);
 
 			expect(loadVocabularyData).toHaveBeenCalledWith('custom-vocabulary.json');
-			expect(saveVocabularyData).toHaveBeenCalledWith(
-				expect.any(Object),
-				'custom-vocabulary.json'
-			);
+			expect(saveVocabularyData).toHaveBeenCalledWith(expect.any(Object), 'custom-vocabulary.json');
 		});
 	});
 
@@ -426,10 +420,7 @@ describe('Vocabulary API: /api/vocabulary', () => {
 			await DELETE(event);
 
 			expect(loadVocabularyData).toHaveBeenCalledWith('custom-vocabulary.json');
-			expect(saveVocabularyData).toHaveBeenCalledWith(
-				expect.any(Object),
-				'custom-vocabulary.json'
-			);
+			expect(saveVocabularyData).toHaveBeenCalledWith(expect.any(Object), 'custom-vocabulary.json');
 		});
 	});
 });

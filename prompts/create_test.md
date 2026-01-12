@@ -30,7 +30,7 @@ sveltekit 프로젝트의 테스트를 생성하려고 해. frontend와 backend�
 ---
 
 단어, 도메인, 용어, 데이터베이스 등을 주제영역으로 명명하여 해당 주제영역별로 @docs/PROJECT_TEST_DESIGN.md 을 수행하면 좋을 것 같아.  
- 현재는 단어가 진행 중인데 아직 단어의 모든 기능을 포괄하지 못해. VocabularyEditor와 +server.test.ts는 단어 주제영역의 일부이고, @src/routes/api/vocabulary\와 @src/routes/browse\ 가 대표적인 단어 주제영역 파트이며  
+ 현재는 단어가 진행 중인데 아직 단어의 모든 기능을 포괄하지 못해. VocabularyEditor와 server.test.ts는 단어 주제영역의 일부이고, @src/routes/api/vocabulary\와 @src/routes/browse\ 가 대표적인 단어 주제영역 파트이며  
  이 외에도 검색 api나 @src/lib/components\ 에도 다양하게 존재해. 수행 계획을 세워봐
 
 ---
@@ -67,7 +67,7 @@ $lib/utils/ 디렉토리의 유틸리티 함수들이 개별 주제영역에 포
 
       ### 2.1 Phase 1에 추가:
       #### 2.1.3 validate API 테스트
-      **파일**: `src/routes/api/term/validate/+server.test.ts`
+      **파일**: `src/routes/api/term/validate/server.test.ts`
 
       | 테스트 케이스 | 설명 |
       |---|---|

@@ -1,0 +1,424 @@
+<script lang="ts">
+	import { onMount } from 'svelte';
+	import ERDViewer from '$lib/components/ERDViewer.svelte';
+	import type { ERDData } from '$lib/types/erd-mapping.js';
+	import type { DbDesignApiResponse } from '$lib/types/database-design.js';
+
+	interface ERDTableInfo {
+		id: string;
+		tableEnglishName: string;
+		tableKoreanName?: string;
+		schemaName?: string;
+		physicalDbName?: string;
+	}
+
+	let erdData = $state<ERDData | null>(null);
+	let loading = $state(true);
+	let error = $state<string | null>(null);
+
+	// 테이블 선택 관련 상태
+	let tables = $state<ERDTableInfo[]>([]);
+	let selectedTableIds = $state<Set<string>>(new Set());
+	let selectionMode: 'single' | 'multi' = $state('multi');
+	let tableSearchQuery = $state('');
+	let showTableSelector = $state(false);
+	let includeRelated = $state(true);
+	let loadingTables = $state(false);
+
+	// 필터링된 테이블 목록
+	let filteredTables = $derived(() => {
+		if (!tableSearchQuery.trim()) return tables;
+		const query = tableSearchQuery.toLowerCase();
+		return tables.filter(
+			(table) =>
+				table.tableEnglishName?.toLowerCase().includes(query) ||
+				table.tableKoreanName?.toLowerCase().includes(query) ||
+				table.schemaName?.toLowerCase().includes(query)
+		);
+	});
+
+	async function loadTables() {
+		loadingTables = true;
+		try {
+			const response = await fetch('/api/erd/tables');
+			const result: DbDesignApiResponse<ERDTableInfo[]> = await response.json();
+
+			if (result.success && result.data) {
+				tables = result.data;
+			}
+		} catch (err) {
+			console.error('테이블 목록 로드 오류:', err);
+		} finally {
+			loadingTables = false;
+		}
+	}
+
+	async function loadERDData(tableIds?: string[]) {
+		loading = true;
+		error = null;
+
+		try {
+			const params = new URLSearchParams();
+			if (tableIds && tableIds.length > 0) {
+				params.set('tableIds', tableIds.join(','));
+				params.set('includeRelated', includeRelated.toString());
+			}
+
+			const url = `/api/erd/generate${params.toString() ? `?${params.toString()}` : ''}`;
+			const response = await fetch(url);
+			const result: DbDesignApiResponse<ERDData> = await response.json();
+
+			if (result.success && result.data) {
+				erdData = result.data;
+			} else {
+				error = result.error || 'ERD 데이터를 불러올 수 없습니다.';
+			}
+		} catch (err) {
+			console.error('ERD 로드 오류:', err);
+			error = err instanceof Error ? err.message : 'ERD 데이터를 불러오는 중 오류가 발생했습니다.';
+		} finally {
+			loading = false;
+		}
+	}
+
+	function handleTableToggle(tableId: string) {
+		if (selectionMode === 'single') {
+			selectedTableIds.clear();
+			selectedTableIds.add(tableId);
+		} else {
+			if (selectedTableIds.has(tableId)) {
+				selectedTableIds.delete(tableId);
+			} else {
+				selectedTableIds.add(tableId);
+			}
+		}
+		// 반응성을 위해 새 Set 생성
+		selectedTableIds = new Set(selectedTableIds);
+	}
+
+	function handleSelectAll() {
+		if (selectionMode === 'single') return;
+		selectedTableIds = new Set(filteredTables().map((t) => t.id));
+	}
+
+	function handleDeselectAll() {
+		selectedTableIds = new Set();
+	}
+
+	function handleGenerateERD() {
+		if (selectedTableIds.size === 0) {
+			// 전체 보기
+			loadERDData();
+		} else {
+			loadERDData(Array.from(selectedTableIds));
+		}
+		showTableSelector = false;
+	}
+
+	function handleViewAll() {
+		selectedTableIds = new Set();
+		loadERDData();
+		showTableSelector = false;
+	}
+
+	function handleRefresh() {
+		if (selectedTableIds.size === 0) {
+			loadERDData();
+		} else {
+			loadERDData(Array.from(selectedTableIds));
+		}
+	}
+
+	onMount(() => {
+		loadTables();
+		loadERDData();
+	});
+</script>
+
+<svelte:head>
+	<title>ERD 다이어그램 - DbManager</title>
+	<meta name="description" content="데이터베이스 ERD 다이어그램을 생성하고 시각화합니다." />
+</svelte:head>
+
+<div class="flex h-screen flex-col">
+	<!-- 페이지 헤더 -->
+	<header class="border-b border-gray-200 bg-white px-4 py-4 sm:px-6 lg:px-8">
+		<div class="flex items-center justify-between">
+			<div>
+				<h1 class="text-2xl font-bold text-gray-900">ERD 다이어그램</h1>
+				<p class="mt-1 text-sm text-gray-600">
+					등록된 DB, 엔터티, 속성, 테이블, 컬럼 데이터를 기반으로 ERD를 생성합니다.
+				</p>
+			</div>
+			<div class="flex gap-2">
+				<button
+					onclick={() => {
+						showTableSelector = !showTableSelector;
+					}}
+					class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+				>
+					테이블 선택
+				</button>
+				<button
+					onclick={handleRefresh}
+					disabled={loading}
+					class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+				>
+					{#if loading}
+						<span class="flex items-center gap-2">
+							<svg
+								class="h-4 w-4 animate-spin"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+								/>
+							</svg>
+							생성 중...
+						</span>
+					{:else}
+						<span class="flex items-center gap-2">
+							<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+								/>
+							</svg>
+							새로고침
+						</span>
+					{/if}
+				</button>
+			</div>
+		</div>
+	</header>
+
+	<!-- 테이블 선택 패널 -->
+	{#if showTableSelector}
+		<div class="border-b border-gray-200 bg-gray-50 px-4 py-4 sm:px-6 lg:px-8">
+			<div class="space-y-4">
+				<!-- 선택 모드 및 옵션 -->
+				<div class="flex flex-wrap items-center gap-4">
+					<div class="flex items-center gap-2">
+						<span class="text-sm font-medium text-gray-700">선택 모드:</span>
+						<label class="flex cursor-pointer items-center gap-2">
+							<input
+								type="radio"
+								name="selectionMode"
+								value="single"
+								bind:group={selectionMode}
+								class="h-4 w-4 text-blue-600 focus:ring-blue-500"
+							/>
+							<span class="text-sm text-gray-700">단일 선택</span>
+						</label>
+						<label class="flex cursor-pointer items-center gap-2">
+							<input
+								type="radio"
+								name="selectionMode"
+								value="multi"
+								bind:group={selectionMode}
+								class="h-4 w-4 text-blue-600 focus:ring-blue-500"
+							/>
+							<span class="text-sm text-gray-700">다중 선택</span>
+						</label>
+					</div>
+					<div class="flex items-center gap-2">
+						<input
+							type="checkbox"
+							id="includeRelated"
+							bind:checked={includeRelated}
+							class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+						/>
+						<label for="includeRelated" class="cursor-pointer text-sm text-gray-700">
+							관련 엔터티/속성 포함
+						</label>
+					</div>
+				</div>
+
+				<!-- 검색 및 선택 버튼 -->
+				<div class="flex flex-wrap items-center gap-2">
+					<input
+						type="text"
+						placeholder="테이블명으로 검색..."
+						bind:value={tableSearchQuery}
+						class="min-w-[200px] flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+					/>
+					{#if selectionMode === 'multi'}
+						<button
+							onclick={handleSelectAll}
+							class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+						>
+							전체 선택
+						</button>
+						<button
+							onclick={handleDeselectAll}
+							class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+						>
+							전체 해제
+						</button>
+					{/if}
+					<button
+						onclick={handleGenerateERD}
+						disabled={loading || (selectionMode === 'single' && selectedTableIds.size === 0)}
+						class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+					>
+						ERD 생성
+					</button>
+					<button
+						onclick={handleViewAll}
+						class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+					>
+						전체 보기
+					</button>
+				</div>
+
+				<!-- 선택된 테이블 표시 -->
+				{#if selectedTableIds.size > 0}
+					<div class="flex flex-wrap items-center gap-2">
+						<span class="text-sm font-medium text-gray-700"
+							>선택됨 ({selectedTableIds.size}개):</span
+						>
+						{#each Array.from(selectedTableIds) as tableId (tableId)}
+							{@const table = tables.find((t) => t.id === tableId)}
+							{#if table}
+								<span
+									class="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800"
+								>
+									{table.tableEnglishName || table.tableKoreanName || tableId}
+									<button
+										onclick={() => handleTableToggle(tableId)}
+										class="text-blue-600 hover:text-blue-800"
+									>
+										×
+									</button>
+								</span>
+							{/if}
+						{/each}
+					</div>
+				{/if}
+
+				<!-- 테이블 목록 -->
+				<div class="max-h-64 overflow-y-auto rounded-lg border border-gray-200 bg-white">
+					{#if loadingTables}
+						<div class="flex items-center justify-center p-4">
+							<div
+								class="h-6 w-6 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"
+							></div>
+						</div>
+					{:else if filteredTables().length === 0}
+						<div class="p-4 text-center text-sm text-gray-500">테이블이 없습니다.</div>
+					{:else}
+						<div class="divide-y divide-gray-200">
+							{#each filteredTables() as table (table.id)}
+								<label class="flex cursor-pointer items-center gap-3 px-4 py-2 hover:bg-gray-50">
+									<input
+										type={selectionMode === 'single' ? 'radio' : 'checkbox'}
+										name={selectionMode === 'single' ? 'tableSelect' : undefined}
+										checked={selectedTableIds.has(table.id)}
+										onchange={() => handleTableToggle(table.id)}
+										class="h-4 w-4 text-blue-600 focus:ring-blue-500"
+									/>
+									<div class="flex-1">
+										<div class="text-sm font-medium text-gray-900">
+											{table.tableEnglishName || '이름 없음'}
+										</div>
+										{#if table.tableKoreanName || table.schemaName}
+											<div class="text-xs text-gray-500">
+												{#if table.tableKoreanName}
+													{table.tableKoreanName}
+												{/if}
+												{#if table.schemaName}
+													{#if table.tableKoreanName}
+														·
+													{/if}
+													스키마: {table.schemaName}
+												{/if}
+											</div>
+										{/if}
+									</div>
+								</label>
+							{/each}
+						</div>
+					{/if}
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<!-- ERD 뷰어 -->
+	<div class="flex-1 overflow-hidden">
+		{#if loading}
+			<div class="flex h-full items-center justify-center">
+				<div class="text-center">
+					<div
+						class="mb-4 inline-block h-12 w-12 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"
+					></div>
+					<p class="text-sm font-medium text-gray-900">ERD 데이터를 생성하는 중...</p>
+					<p class="mt-1 text-xs text-gray-500">잠시만 기다려주세요.</p>
+				</div>
+			</div>
+		{:else if error}
+			<div class="flex h-full items-center justify-center">
+				<div class="max-w-md rounded-lg border border-red-200 bg-red-50 p-6 text-center">
+					<svg
+						class="mx-auto h-12 w-12 text-red-600"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+						/>
+					</svg>
+					<h3 class="mt-4 text-lg font-semibold text-red-800">오류 발생</h3>
+					<p class="mt-2 text-sm text-red-600">{error}</p>
+					<button
+						onclick={handleRefresh}
+						class="mt-4 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
+					>
+						다시 시도
+					</button>
+				</div>
+			</div>
+		{:else if erdData}
+			<ERDViewer {erdData} />
+		{:else}
+			<div class="flex h-full items-center justify-center">
+				<div class="text-center">
+					<svg
+						class="mx-auto h-12 w-12 text-gray-400"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+					>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+						/>
+					</svg>
+					<h3 class="mt-4 text-lg font-semibold text-gray-900">ERD 데이터 없음</h3>
+					<p class="mt-2 text-sm text-gray-600">
+						ERD를 생성하려면 DB, 엔터티, 속성, 테이블, 컬럼 데이터가 필요합니다.
+					</p>
+					<button
+						onclick={handleRefresh}
+						class="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+					>
+						다시 시도
+					</button>
+				</div>
+			</div>
+		{/if}
+	</div>
+</div>

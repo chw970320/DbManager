@@ -67,13 +67,16 @@ describe('TermGenerator', () => {
 			const input = screen.getByPlaceholderText(/한글 약어 입력/) as HTMLInputElement;
 			await fireEvent.input(input, { target: { value: '사용자_이름' } });
 
-			await waitFor(() => {
-				// API 호출 확인
-				expect(mockFetch).toHaveBeenCalledWith(
-					expect.stringContaining('/api/generator/segment'),
-					expect.any(Object)
-				);
-			}, { timeout: 3000 });
+			await waitFor(
+				() => {
+					// API 호출 확인
+					expect(mockFetch).toHaveBeenCalledWith(
+						expect.stringContaining('/api/generator/segment'),
+						expect.any(Object)
+					);
+				},
+				{ timeout: 3000 }
+			);
 		});
 
 		it('should display results list when API returns results', async () => {
@@ -82,10 +85,13 @@ describe('TermGenerator', () => {
 			const input = screen.getByPlaceholderText(/한글 약어 입력/) as HTMLInputElement;
 			await fireEvent.input(input, { target: { value: '사용자_이름' } });
 
-			await waitFor(() => {
-				// 결과 목록이 표시되는지 확인
-				expect(mockFetch).toHaveBeenCalled();
-			}, { timeout: 3000 });
+			await waitFor(
+				() => {
+					// 결과 목록이 표시되는지 확인
+					expect(mockFetch).toHaveBeenCalled();
+				},
+				{ timeout: 3000 }
+			);
 		});
 	});
 
@@ -142,9 +148,12 @@ describe('TermGenerator', () => {
 			await fireEvent.input(input, { target: { value: '특허_연계_URL' } });
 
 			// Then: 중복 키 에러 없이 컴포넌트가 정상적으로 렌더링되어야 함
-			await waitFor(() => {
-				expect(mockFetch).toHaveBeenCalled();
-			}, { timeout: 3000 });
+			await waitFor(
+				() => {
+					expect(mockFetch).toHaveBeenCalled();
+				},
+				{ timeout: 3000 }
+			);
 
 			// 컴포넌트가 정상적으로 렌더링되는지 확인 (에러 없이)
 			expect(screen.getByPlaceholderText(/한글 약어 입력/)).toBeInTheDocument();
@@ -162,23 +171,29 @@ describe('TermGenerator', () => {
 			await fireEvent.input(input, { target: { value: '사용자_이름' } });
 
 			// 변환 결과가 생성될 때까지 대기
-			await waitFor(() => {
-				expect(mockFetch).toHaveBeenCalledWith(
-					expect.stringContaining('/api/generator'),
-					expect.any(Object)
-				);
-			}, { timeout: 3000 });
+			await waitFor(
+				() => {
+					expect(mockFetch).toHaveBeenCalledWith(
+						expect.stringContaining('/api/generator'),
+						expect.any(Object)
+					);
+				},
+				{ timeout: 3000 }
+			);
 
 			// Then: validate API가 filename 파라미터와 함께 호출되어야 함
-			await waitFor(() => {
-				const validateCalls = mockFetch.mock.calls.filter((call) =>
-					call[0]?.toString().includes('/api/term/validate')
-				);
-				expect(validateCalls.length).toBeGreaterThan(0);
-				const validateUrl = validateCalls[0][0]?.toString();
-				expect(validateUrl).toContain('filename=');
-				expect(validateUrl).toContain(encodeURIComponent(filename));
-			}, { timeout: 3000 });
+			await waitFor(
+				() => {
+					const validateCalls = mockFetch.mock.calls.filter((call) =>
+						call[0]?.toString().includes('/api/term/validate')
+					);
+					expect(validateCalls.length).toBeGreaterThan(0);
+					const validateUrl = validateCalls[0][0]?.toString();
+					expect(validateUrl).toContain('filename=');
+					expect(validateUrl).toContain(encodeURIComponent(filename));
+				},
+				{ timeout: 3000 }
+			);
 		});
 
 		it('should handle validation API error gracefully', async () => {
@@ -228,9 +243,12 @@ describe('TermGenerator', () => {
 			await fireEvent.input(input, { target: { value: '사용자_이름' } });
 
 			// Then: 에러가 발생해도 컴포넌트가 정상적으로 동작해야 함
-			await waitFor(() => {
-				expect(mockFetch).toHaveBeenCalled();
-			}, { timeout: 3000 });
+			await waitFor(
+				() => {
+					expect(mockFetch).toHaveBeenCalled();
+				},
+				{ timeout: 3000 }
+			);
 		});
 	});
 
@@ -255,9 +273,12 @@ describe('TermGenerator', () => {
 			await fireEvent.input(input, { target: { value: '사용자_이름' } });
 
 			// When: 결과가 표시되고 복사 버튼을 클릭
-			await waitFor(() => {
-				expect(mockFetch).toHaveBeenCalled();
-			}, { timeout: 3000 });
+			await waitFor(
+				() => {
+					expect(mockFetch).toHaveBeenCalled();
+				},
+				{ timeout: 3000 }
+			);
 
 			// 복사 버튼이 있는지 확인 (실제로는 결과가 표시된 후에만 나타남)
 			// 이 테스트는 컴포넌트가 정상적으로 렌더링되는지 확인

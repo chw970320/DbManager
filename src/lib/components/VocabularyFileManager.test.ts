@@ -252,8 +252,8 @@ describe('VocabularyFileManager', () => {
 			await waitFor(() => {
 				// 도메인 파일 목록이 로드되었는지 확인
 				const calls = mockFetch.mock.calls;
-				const hasDomainFilesCall = calls.some((call) =>
-					typeof call[0] === 'string' && call[0].includes('/api/domain/files')
+				const hasDomainFilesCall = calls.some(
+					(call) => typeof call[0] === 'string' && call[0].includes('/api/domain/files')
 				);
 				expect(hasDomainFilesCall).toBe(true);
 			});

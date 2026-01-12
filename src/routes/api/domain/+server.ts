@@ -418,10 +418,7 @@ export async function POST({ request, url }: RequestEvent) {
 
 		// 선택된 파일 내에서만 도메인명 유일성 검사
 		try {
-			const validationError = validateDomainNameUniqueness(
-				generatedDomainName,
-				domainData.entries
-			);
+			const validationError = validateDomainNameUniqueness(generatedDomainName, domainData.entries);
 			if (validationError) {
 				return json(
 					{
@@ -542,15 +539,10 @@ export async function PUT({ request, url }: RequestEvent) {
 		if (generatedDomainName !== existingEntry.standardDomainName) {
 			try {
 				// 현재 선택된 파일 내 엔트리만 사용 (자기 자신은 제외)
-				const allDomainEntries: DomainEntry[] = domainData.entries.filter(
-					(e) => e.id !== id
-				);
+				const allDomainEntries: DomainEntry[] = domainData.entries.filter((e) => e.id !== id);
 
 				// 도메인명 유일성 validation (선택된 파일 기준)
-				const validationError = validateDomainNameUniqueness(
-					generatedDomainName,
-					allDomainEntries
-				);
+				const validationError = validateDomainNameUniqueness(generatedDomainName, allDomainEntries);
 				if (validationError) {
 					return json(
 						{

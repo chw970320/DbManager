@@ -4,30 +4,30 @@
 
 ## 테스트 현황 요약
 
-| 테스트 파일                           | 테스트 수 | 상태 |
-| ------------------------------------- | --------- | ---- |
-| `term/+server.test.ts`                | 18개      | 완료 |
-| `term/sync/+server.test.ts`           | 7개       | 완료 |
-| `term/validate/+server.test.ts`       | 9개       | 완료 |
-| `term/validate-all/+server.test.ts`   | 5개       | 완료 |
-| `term/files/+server.test.ts`          | 12개      | 완료 |
-| `term/upload/+server.test.ts`         | 5개       | 완료 |
-| `term/download/+server.test.ts`       | 5개       | 완료 |
-| `term/filter-options/+server.test.ts` | 7개       | 완료 |
-| `term/recommend/+server.test.ts`      | 6개       | 완료 |
-| `generator/+server.test.ts`           | 8개       | 완료 |
-| `TermEditor.test.ts`                  | 12개      | 완료 |
-| `TermFileManager.test.ts`             | 9개       | 완료 |
-| `TermTable.test.ts`                   | 6개       | 완료 |
-| `TermGenerator.test.ts`               | 4개       | 완료 |
-| `TermValidationPanel.test.ts`         | 6개       | 완료 |
-| **합계**                              | **112개** |      |
+| 테스트 파일                          | 테스트 수 | 상태 |
+| ------------------------------------ | --------- | ---- |
+| `term/server.test.ts`                | 18개      | 완료 |
+| `term/sync/server.test.ts`           | 7개       | 완료 |
+| `term/validate/server.test.ts`       | 9개       | 완료 |
+| `term/validate-all/server.test.ts`   | 5개       | 완료 |
+| `term/files/server.test.ts`          | 12개      | 완료 |
+| `term/upload/server.test.ts`         | 5개       | 완료 |
+| `term/download/server.test.ts`       | 5개       | 완료 |
+| `term/filter-options/server.test.ts` | 7개       | 완료 |
+| `term/recommend/server.test.ts`      | 6개       | 완료 |
+| `generator/server.test.ts`           | 8개       | 완료 |
+| `TermEditor.test.ts`                 | 12개      | 완료 |
+| `TermFileManager.test.ts`            | 9개       | 완료 |
+| `TermTable.test.ts`                  | 6개       | 완료 |
+| `TermGenerator.test.ts`              | 4개       | 완료 |
+| `TermValidationPanel.test.ts`        | 6개       | 완료 |
+| **합계**                             | **112개** |      |
 
 ---
 
-## 1. term/+server.test.ts (18개)
+## 1. term/server.test.ts (18개)
 
-**파일 경로**: `src/routes/api/term/+server.test.ts`
+**파일 경로**: `src/routes/api/term/server.test.ts`
 
 용어 CRUD API의 핵심 기능을 검증합니다. 매핑 상태 확인이 포함됩니다.
 
@@ -71,9 +71,9 @@
 
 ---
 
-## 2. term/sync/+server.test.ts (7개)
+## 2. term/sync/server.test.ts (7개)
 
-**파일 경로**: `src/routes/api/term/sync/+server.test.ts`
+**파일 경로**: `src/routes/api/term/sync/server.test.ts`
 
 용어 매핑 동기화 API를 테스트합니다.
 
@@ -89,9 +89,9 @@
 
 ---
 
-## 3. term/validate/+server.test.ts (9개)
+## 3. term/validate/server.test.ts (9개)
 
-**파일 경로**: `src/routes/api/term/validate/+server.test.ts`
+**파일 경로**: `src/routes/api/term/validate/server.test.ts`
 
 용어 유효성 검증 API를 테스트합니다.
 
@@ -109,9 +109,9 @@
 
 ---
 
-## 4. term/validate-all/+server.test.ts (5개)
+## 4. term/validate-all/server.test.ts (5개)
 
-**파일 경로**: `src/routes/api/term/validate-all/+server.test.ts`
+**파일 경로**: `src/routes/api/term/validate-all/server.test.ts`
 
 전체 용어 일괄 검증 API를 테스트합니다.
 
@@ -125,9 +125,9 @@
 
 ---
 
-## 5. term/files/+server.test.ts (12개)
+## 5. term/files/server.test.ts (12개)
 
-**파일 경로**: `src/routes/api/term/files/+server.test.ts`
+**파일 경로**: `src/routes/api/term/files/server.test.ts`
 
 용어 파일 관리 API를 테스트합니다. 파일 목록 조회, 생성, 이름 변경, 삭제 기능을 검증합니다.
 
@@ -165,9 +165,9 @@
 
 ---
 
-## 6. term/upload/+server.test.ts (5개)
+## 6. term/upload/server.test.ts (5개)
 
-**파일 경로**: `src/routes/api/term/upload/+server.test.ts`
+**파일 경로**: `src/routes/api/term/upload/server.test.ts`
 
 용어 데이터를 XLSX 파일로 업로드하는 API를 테스트합니다.
 
@@ -188,9 +188,9 @@
 
 ---
 
-## 7. term/download/+server.test.ts (5개)
+## 7. term/download/server.test.ts (5개)
 
-**파일 경로**: `src/routes/api/term/download/+server.test.ts`
+**파일 경로**: `src/routes/api/term/download/server.test.ts`
 
 용어 데이터를 XLSX 파일로 다운로드하는 API를 테스트합니다.
 
@@ -204,9 +204,9 @@
 
 ---
 
-## 8. term/filter-options/+server.test.ts (7개)
+## 8. term/filter-options/server.test.ts (7개)
 
-**파일 경로**: `src/routes/api/term/filter-options/+server.test.ts`
+**파일 경로**: `src/routes/api/term/filter-options/server.test.ts`
 
 필터 옵션 조회 API를 테스트합니다. 각 필터 가능한 컬럼의 고유값을 반환합니다.
 
@@ -222,9 +222,9 @@
 
 ---
 
-## 9. term/recommend/+server.test.ts (6개)
+## 9. term/recommend/server.test.ts (6개)
 
-**파일 경로**: `src/routes/api/term/recommend/+server.test.ts`
+**파일 경로**: `src/routes/api/term/recommend/server.test.ts`
 
 도메인 추천 API를 테스트합니다.
 
@@ -239,9 +239,9 @@
 
 ---
 
-## 10. generator/+server.test.ts (8개)
+## 10. generator/server.test.ts (8개)
 
-**파일 경로**: `src/routes/api/generator/+server.test.ts`
+**파일 경로**: `src/routes/api/generator/server.test.ts`
 
 용어 자동 생성 API를 테스트합니다.
 
@@ -438,7 +438,7 @@
 pnpm test term
 
 # 특정 API 테스트
-pnpm test src/routes/api/term/+server.test.ts
+pnpm test src/routes/api/term/server.test.ts
 
 # 컴포넌트 테스트
 pnpm test src/lib/components/TermEditor.test.ts

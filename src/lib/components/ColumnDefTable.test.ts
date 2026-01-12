@@ -76,13 +76,16 @@ describe('ColumnDefTable', () => {
 			});
 
 			// 테이블이 렌더링되는지 확인 (실제 컴포넌트 구조에 따라 조정)
-			await waitFor(() => {
-				// 테이블 컨테이너가 존재하는지 확인
-				const table = screen.queryByRole('table');
-				if (table) {
-					expect(table).toBeInTheDocument();
-				}
-			}, { timeout: 2000 }).catch(() => {
+			await waitFor(
+				() => {
+					// 테이블 컨테이너가 존재하는지 확인
+					const table = screen.queryByRole('table');
+					if (table) {
+						expect(table).toBeInTheDocument();
+					}
+				},
+				{ timeout: 2000 }
+			).catch(() => {
 				// 테이블이 없어도 테스트 계속 진행
 			});
 		});

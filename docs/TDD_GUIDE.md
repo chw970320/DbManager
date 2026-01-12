@@ -78,10 +78,10 @@ export async function POST({ request }: RequestEvent) {
 export async function POST({ request }: RequestEvent) {
 	try {
 		const body = await request.json();
-		
+
 		// 유효성 검증 로직
 		const isValid = await validateTerm(body);
-		
+
 		return json({ success: true, data: { isValid } }, { status: 200 });
 	} catch (error) {
 		return json({ success: false, error: 'Validation failed' }, { status: 400 });
@@ -95,7 +95,8 @@ export async function POST({ request }: RequestEvent) {
 
 ### 네이밍 컨벤션
 
-- **테스트 파일**: `{원본파일명}.test.ts` 또는 `+server.test.ts` (API의 경우)
+- **테스트 파일**: `{원본파일명}.test.ts` 또는 `server.test.ts` (API의 경우)
+  - ⚠️ **중요**: SvelteKit에서는 `+` 접두어가 있는 파일은 라우트 파일로 인식되므로, 테스트 파일에는 `+` 접두어를 사용할 수 없습니다. API 테스트 파일은 반드시 `server.test.ts` 형식을 사용해야 합니다.
 - **테스트 그룹**: `describe('기능명', () => {})`
 - **테스트 케이스**: `it('should {기대하는 동작}', () => {})`
 
@@ -151,13 +152,13 @@ it('should return data successfully', async () => {
 src/routes/api/
 ├── vocabulary/
 │   ├── +server.ts
-│   ├── +server.test.ts          # CRUD API 테스트
+│   ├── server.test.ts           # CRUD API 테스트
 │   ├── files/
 │   │   ├── +server.ts
-│   │   └── +server.test.ts      # 파일 관리 API 테스트
+│   │   └── server.test.ts       # 파일 관리 API 테스트
 │   └── upload/
 │       ├── +server.ts
-│       └── +server.test.ts      # 업로드 API 테스트
+│       └── server.test.ts       # 업로드 API 테스트
 ```
 
 ### 컴포넌트 테스트 파일 위치
@@ -207,7 +208,7 @@ function createMockRequestEvent(options: {
 	searchParams?: Record<string, string>;
 }): RequestEvent {
 	const url = new URL('http://localhost/api/endpoint');
-	
+
 	if (options.searchParams) {
 		Object.entries(options.searchParams).forEach(([key, value]) => {
 			url.searchParams.set(key, value);
@@ -350,7 +351,7 @@ Object.defineProperty(global, 'crypto', {
 describe('Component', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		
+
 		// Default fetch mock
 		mockFetch.mockResolvedValue({
 			ok: true,
@@ -360,7 +361,9 @@ describe('Component', () => {
 
 	it('should render correctly', () => {
 		// Given
-		const props = { /* ... */ };
+		const props = {
+			/* ... */
+		};
 
 		// When
 		render(Component, { props });
@@ -392,7 +395,7 @@ describe('Component', () => {
 ```typescript
 it('should render all required elements', () => {
 	render(Component, { props });
-	
+
 	expect(screen.getByLabelText('Input Label')).toBeInTheDocument();
 	expect(screen.getByRole('button', { name: 'Submit' })).toBeInTheDocument();
 });
@@ -403,10 +406,10 @@ it('should render all required elements', () => {
 ```typescript
 it('should update state on input change', async () => {
 	render(Component, { props });
-	
+
 	const input = screen.getByLabelText('Input Label');
 	await fireEvent.input(input, { target: { value: 'New Value' } });
-	
+
 	expect(input).toHaveValue('New Value');
 });
 ```
@@ -418,10 +421,10 @@ it('should dispatch event on submit', async () => {
 	const { component } = render(Component, { props });
 	const handleEvent = vi.fn();
 	component.$on('submit', handleEvent);
-	
+
 	const submitButton = screen.getByRole('button', { name: 'Submit' });
 	await fireEvent.click(submitButton);
-	
+
 	expect(handleEvent).toHaveBeenCalled();
 });
 ```
@@ -502,18 +505,18 @@ it('should throw error for invalid input', () => {
 
 ## 테스트 현황 요약
 
-| 테스트 파일 | 테스트 수 | 상태 |
-|------------|----------|------|
-| `+server.test.ts` | 18개 | 완료 |
-| `Component.test.ts` | 12개 | 완료 |
-| **합계** | **30개** | |
+| 테스트 파일         | 테스트 수 | 상태 |
+| ------------------- | --------- | ---- |
+| `server.test.ts`    | 18개      | 완료 |
+| `Component.test.ts` | 12개      | 완료 |
+| **합계**            | **30개**  |      |
 
 ## 1. API 테스트 설명
 
 ### 1.1 GET 엔드포인트
 
-| 테스트명 | 설명 | 검증 내용 |
-|---------|------|----------|
+| 테스트명                        | 설명             | 검증 내용              |
+| ------------------------------- | ---------------- | ---------------------- |
 | should return data successfully | 데이터 조회 성공 | 200 응답, success=true |
 ```
 

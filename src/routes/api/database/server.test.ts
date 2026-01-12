@@ -368,10 +368,7 @@ describe('Database API: /api/database', () => {
 			expect(response.status).toBe(200);
 			expect(result.success).toBe(true);
 			expect(loadDatabaseData).toHaveBeenCalledWith('custom-database.json');
-			expect(saveDatabaseData).toHaveBeenCalledWith(
-				expect.any(Object),
-				'custom-database.json'
-			);
+			expect(saveDatabaseData).toHaveBeenCalledWith(expect.any(Object), 'custom-database.json');
 		});
 
 		it('ID 누락 시 에러', async () => {
@@ -470,9 +467,7 @@ describe('Database API: /api/database', () => {
 			expect(loadDatabaseData).toHaveBeenCalledWith('custom-database.json');
 			expect(saveDatabaseData).toHaveBeenCalledWith(
 				expect.objectContaining({
-					entries: expect.not.arrayContaining([
-						expect.objectContaining({ id: 'entry-1' })
-					])
+					entries: expect.not.arrayContaining([expect.objectContaining({ id: 'entry-1' })])
 				}),
 				'custom-database.json'
 			);

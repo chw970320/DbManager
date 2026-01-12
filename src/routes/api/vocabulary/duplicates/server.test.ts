@@ -27,9 +27,33 @@ describe('GET /api/vocabulary/duplicates', () => {
 	it('중복 단어 조회 성공: 중복된 abbreviation 그룹을 반환한다', async () => {
 		const mockData: VocabularyData = {
 			entries: [
-				{ id: '1', standardName: '사용자', abbreviation: 'USER', englishName: 'User', createdAt: '', updatedAt: '', description: '' },
-				{ id: '2', standardName: '유저', abbreviation: 'USER', englishName: 'User', createdAt: '', updatedAt: '', description: '' },
-				{ id: '3', standardName: '관리자', abbreviation: 'ADMIN', englishName: 'Admin', createdAt: '', updatedAt: '', description: '' }
+				{
+					id: '1',
+					standardName: '사용자',
+					abbreviation: 'USER',
+					englishName: 'User',
+					createdAt: '',
+					updatedAt: '',
+					description: ''
+				},
+				{
+					id: '2',
+					standardName: '유저',
+					abbreviation: 'USER',
+					englishName: 'User',
+					createdAt: '',
+					updatedAt: '',
+					description: ''
+				},
+				{
+					id: '3',
+					standardName: '관리자',
+					abbreviation: 'ADMIN',
+					englishName: 'Admin',
+					createdAt: '',
+					updatedAt: '',
+					description: ''
+				}
 			],
 			lastUpdated: '',
 			totalCount: 3
@@ -61,8 +85,24 @@ describe('GET /api/vocabulary/duplicates', () => {
 	it('중복 없음: 중복이 없을 때 빈 배열을 반환한다', async () => {
 		const mockData: VocabularyData = {
 			entries: [
-				{ id: '1', standardName: '사용자', abbreviation: 'USER', englishName: 'User', createdAt: '', updatedAt: '', description: '' },
-				{ id: '3', standardName: '관리자', abbreviation: 'ADMIN', englishName: 'Admin', createdAt: '', updatedAt: '', description: '' }
+				{
+					id: '1',
+					standardName: '사용자',
+					abbreviation: 'USER',
+					englishName: 'User',
+					createdAt: '',
+					updatedAt: '',
+					description: ''
+				},
+				{
+					id: '3',
+					standardName: '관리자',
+					abbreviation: 'ADMIN',
+					englishName: 'Admin',
+					createdAt: '',
+					updatedAt: '',
+					description: ''
+				}
 			],
 			lastUpdated: '',
 			totalCount: 2
@@ -85,7 +125,15 @@ describe('GET /api/vocabulary/duplicates', () => {
 	it('파일명 지정: 특정 파일에서만 중복을 조회한다', async () => {
 		const mockData: VocabularyData = {
 			entries: [
-				{ id: '1', standardName: '사용자', abbreviation: 'USER', englishName: 'User', createdAt: '', updatedAt: '', description: '' },
+				{
+					id: '1',
+					standardName: '사용자',
+					abbreviation: 'USER',
+					englishName: 'User',
+					createdAt: '',
+					updatedAt: '',
+					description: ''
+				}
 			],
 			lastUpdated: '',
 			totalCount: 1
@@ -107,7 +155,9 @@ describe('GET /api/vocabulary/duplicates', () => {
 	});
 
 	it('에러 처리: 데이터 로드 실패 시 500 에러를 반환한다', async () => {
-		vi.mocked(fileHandler.loadVocabularyData).mockRejectedValue(new Error('파일을 찾을 수 없습니다'));
+		vi.mocked(fileHandler.loadVocabularyData).mockRejectedValue(
+			new Error('파일을 찾을 수 없습니다')
+		);
 
 		const request = createMockRequest();
 		await GET(request);

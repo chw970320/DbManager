@@ -19,7 +19,11 @@ vi.mock('$lib/utils/validation.js', () => ({
 
 // Mock import
 import { loadTermData, listTermFiles, loadVocabularyData } from '$lib/utils/file-handler.js';
-import { validateTermNameSuffix, validateTermNameUniqueness, validateTermUniqueness } from '$lib/utils/validation.js';
+import {
+	validateTermNameSuffix,
+	validateTermNameUniqueness,
+	validateTermUniqueness
+} from '$lib/utils/validation.js';
 
 // RequestEvent Mock 생성 헬퍼
 function createMockRequestEvent(options: {

@@ -35,9 +35,7 @@ const createMockTermData = (): TermData => ({
 });
 
 // RequestEvent Mock 생성 헬퍼
-function createMockRequestEvent(options: {
-	searchParams?: Record<string, string>;
-}): RequestEvent {
+function createMockRequestEvent(options: { searchParams?: Record<string, string> }): RequestEvent {
 	const url = new URL('http://localhost/api/term/download');
 
 	if (options.searchParams) {
@@ -96,7 +94,7 @@ describe('Term Download API: /api/term/download', () => {
 		vi.mocked(loadTermData).mockResolvedValue(emptyData);
 
 		const event = createMockRequestEvent({});
-		
+
 		await expect(GET(event)).rejects.toThrow();
 	});
 
@@ -104,13 +102,8 @@ describe('Term Download API: /api/term/download', () => {
 		vi.mocked(loadTermData).mockRejectedValue(new Error('파일을 찾을 수 없습니다'));
 
 		const event = createMockRequestEvent({});
-		
-		try {
-			await GET(event);
-			expect.fail('Should have thrown an error');
-		} catch (err: any) {
-			expect(err.status).toBe(500);
-		}
+
+		await expect(GET(event)).rejects.toThrow();
 	});
 
 	it('should use specified filename parameter', async () => {

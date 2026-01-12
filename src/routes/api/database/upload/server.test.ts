@@ -357,11 +357,7 @@ describe('Database Upload API: /api/database/upload', () => {
 			expect(response.status).toBe(200);
 			expect(result.success).toBe(true);
 			expect(result.data.replaceMode).toBe(true);
-			expect(mergeDatabaseData).toHaveBeenCalledWith(
-				expect.any(Array),
-				true,
-				'database.json'
-			);
+			expect(mergeDatabaseData).toHaveBeenCalledWith(expect.any(Array), true, 'database.json');
 		});
 	});
 });

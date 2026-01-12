@@ -44,9 +44,7 @@ const createMockAttributeData = (): AttributeData => ({
 });
 
 // RequestEvent Mock 생성 헬퍼
-function createMockRequestEvent(options: {
-	searchParams?: Record<string, string>;
-}): RequestEvent {
+function createMockRequestEvent(options: { searchParams?: Record<string, string> }): RequestEvent {
 	const url = new URL('http://localhost/api/attribute/download');
 
 	if (options.searchParams) {

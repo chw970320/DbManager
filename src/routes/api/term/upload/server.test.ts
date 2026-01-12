@@ -51,7 +51,11 @@ vi.mock('$lib/utils/type-guards.js', () => ({
 }));
 
 import { loadTermData, mergeTermData, listTermFiles } from '$lib/utils/file-handler.js';
-import { validateXlsxFile, validateTermNameSuffix, validateTermNameUniqueness } from '$lib/utils/validation.js';
+import {
+	validateXlsxFile,
+	validateTermNameSuffix,
+	validateTermNameUniqueness
+} from '$lib/utils/validation.js';
 import { parseTermXlsxToJson } from '$lib/utils/xlsx-parser.js';
 import { getRequiredFile } from '$lib/utils/type-guards.js';
 import { getCachedVocabularyData, getCachedDomainData } from '$lib/utils/cache.js';

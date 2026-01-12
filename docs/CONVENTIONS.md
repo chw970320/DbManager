@@ -1430,7 +1430,8 @@ async function loadData() {
 
 ### 테스트 파일 위치 규칙
 
-- **API 테스트**: `src/routes/api/{주제영역}/{엔드포인트}/+server.test.ts`
+- **API 테스트**: `src/routes/api/{주제영역}/{엔드포인트}/server.test.ts`
+  - ⚠️ **중요**: SvelteKit에서는 `+` 접두어가 있는 파일은 라우트 파일로 인식되므로, 테스트 파일에는 `+` 접두어를 사용할 수 없습니다. API 테스트 파일은 반드시 `server.test.ts` 형식을 사용해야 합니다.
 - **컴포넌트 테스트**: `src/lib/components/{ComponentName}.test.ts`
 - **유틸리티 테스트**: `src/lib/utils/{utility-name}.test.ts`
 

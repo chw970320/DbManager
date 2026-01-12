@@ -160,3 +160,9 @@ FileManager는 단어, 도메인, 용어에도 존재하는 부분인데 그렇�
 ---
 
 다음은 @docs/plan/ATTRIBUTE_TEST_PLAN.md 를 기반으로 ATTRIBUTE에 대해 테스트 생성해.
+
+---
+
+다음은 @docs/plan/TABLE_TEST_PLAN.md 를 기반으로 TABLE에 대해 테스트 생성해.
+
+---

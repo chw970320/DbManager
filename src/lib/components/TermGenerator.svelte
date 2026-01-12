@@ -1,5 +1,4 @@
 <script lang="ts">
-	import CopyToClipboard from 'svelte-copy-to-clipboard';
 	import { debounce } from '$lib/utils/debounce';
 	import { createEventDispatcher } from 'svelte';
 
@@ -153,15 +152,18 @@
 		}
 
 		try {
-			const response = await fetch('/api/term/validate', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					termName: segment,
-					columnName: columnName,
-					domainName: ''
-				})
-			});
+			const response = await fetch(
+				`/api/term/validate?filename=${encodeURIComponent(filename)}`,
+				{
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						termName: segment,
+						columnName: columnName,
+						domainName: ''
+					})
+				}
+			);
 
 			if (response.ok) {
 				const result = await response.json();
@@ -197,13 +199,58 @@
 		validationResults = new Map(validationResults); // 반응성 트리거
 	}
 
+	/**
+	 * 클립보드에 텍스트 복사 (fallback 포함)
+	 */
+	async function copyToClipboard(text: string): Promise<boolean> {
+		try {
+			// Modern Clipboard API 사용 (HTTPS 환경)
+			if (navigator.clipboard && navigator.clipboard.writeText) {
+				await navigator.clipboard.writeText(text);
+				return true;
+			}
+		} catch (err) {
+			console.warn('Clipboard API 실패, fallback 사용:', err);
+		}
+
+		// Fallback: execCommand 사용 (구형 브라우저 지원)
+		try {
+			const textArea = document.createElement('textarea');
+			textArea.value = text;
+			textArea.style.position = 'fixed';
+			textArea.style.left = '-999999px';
+			textArea.style.top = '-999999px';
+			document.body.appendChild(textArea);
+			textArea.focus();
+			textArea.select();
+
+			const successful = document.execCommand('copy');
+			document.body.removeChild(textArea);
+
+			if (successful) {
+				return true;
+			}
+		} catch (err) {
+			console.warn('execCommand fallback 실패:', err);
+		}
+
+		// 모든 방법 실패 시 사용자에게 알림
+		alert(`복사 실패: ${text}\n\n수동으로 복사해주세요.`);
+		return false;
+	}
+
 	function handleCopy(text: string) {
-		copiedResults.add(text);
-		copiedResults = new Set(copiedResults); // 즉시 반응성 트리거
-		setTimeout(() => {
-			copiedResults.delete(text);
-			copiedResults = new Set(copiedResults); // 2초 후 제거
-		}, 2000);
+		// 복사 시도
+		copyToClipboard(text).then((success) => {
+			if (success) {
+				copiedResults.add(text);
+				copiedResults = new Set(copiedResults); // 즉시 반응성 트리거
+				setTimeout(() => {
+					copiedResults.delete(text);
+					copiedResults = new Set(copiedResults); // 2초 후 제거
+				}, 2000);
+			}
+		});
 	}
 
 	/**
@@ -453,16 +500,12 @@
 								>
 									<span class="font-mono text-lg">{result}</span>
 									<div class="flex items-center space-x-1">
-										<CopyToClipboard text={result} let:copy>
-											<button
-												type="button"
-												onclick={() => {
-													copy();
-													handleCopy(result);
-												}}
-												class="rounded p-1 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-												aria-label="결과 복사"
-											>
+										<button
+											type="button"
+											onclick={() => handleCopy(result)}
+											class="rounded p-1 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+											aria-label="결과 복사"
+										>
 												{#if copiedResults.has(result)}
 													<svg
 														xmlns="http://www.w3.org/2000/svg"
@@ -496,7 +539,6 @@
 													</svg>
 												{/if}
 											</button>
-										</CopyToClipboard>
 										{#if selectedSegment}
 											{@const validation = validationResults.get(selectedSegment)}
 											{#if validation?.isValid === true}

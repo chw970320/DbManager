@@ -98,4 +98,132 @@ describe('TermGenerator', () => {
 			// 컴포넌트의 동작(API 호출, UI 표시 등)을 확인하는 것으로 대체
 		});
 	});
+
+	describe('Validation', () => {
+		it('should call validate API with filename parameter', async () => {
+			// Given: filename prop이 있는 컴포넌트
+			const filename = 'test-term.json';
+			render(TermGenerator, { props: { filename } });
+
+			// When: 용어 입력 및 변환 결과 생성
+			const input = screen.getByPlaceholderText(/한글 약어 입력/) as HTMLInputElement;
+			await fireEvent.input(input, { target: { value: '사용자_이름' } });
+
+			// 변환 결과가 생성될 때까지 대기
+			await waitFor(() => {
+				expect(mockFetch).toHaveBeenCalledWith(
+					expect.stringContaining('/api/generator'),
+					expect.any(Object)
+				);
+			}, { timeout: 3000 });
+
+			// Then: validate API가 filename 파라미터와 함께 호출되어야 함
+			await waitFor(() => {
+				const validateCalls = mockFetch.mock.calls.filter((call) =>
+					call[0]?.toString().includes('/api/term/validate')
+				);
+				expect(validateCalls.length).toBeGreaterThan(0);
+				const validateUrl = validateCalls[0][0]?.toString();
+				expect(validateUrl).toContain('filename=');
+				expect(validateUrl).toContain(encodeURIComponent(filename));
+			}, { timeout: 3000 });
+		});
+
+		it('should handle validation API error gracefully', async () => {
+			// Given: validation API가 400 에러를 반환하는 경우
+			mockFetch.mockImplementation((url: string) => {
+				if (url.includes('/api/term/validate')) {
+					return Promise.resolve({
+						ok: false,
+						status: 400,
+						json: () =>
+							Promise.resolve({
+								success: false,
+								error: '용어명이 필요합니다.'
+							})
+					});
+				}
+				if (url.includes('/api/generator/segment')) {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({
+								success: true,
+								segments: ['사용자_이름'],
+								forbiddenWordInfo: null
+							})
+					});
+				}
+				if (url.includes('/api/generator')) {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({
+								success: true,
+								results: ['USER_NAME']
+							})
+					});
+				}
+				return Promise.resolve({
+					ok: false,
+					json: () => Promise.resolve({ success: false })
+				});
+			});
+
+			// When: 용어 입력 및 변환
+			render(TermGenerator, { props: { filename: 'test-term.json' } });
+			const input = screen.getByPlaceholderText(/한글 약어 입력/) as HTMLInputElement;
+			await fireEvent.input(input, { target: { value: '사용자_이름' } });
+
+			// Then: 에러가 발생해도 컴포넌트가 정상적으로 동작해야 함
+			await waitFor(() => {
+				expect(mockFetch).toHaveBeenCalled();
+			}, { timeout: 3000 });
+		});
+	});
+
+	describe('Copy to Clipboard', () => {
+		beforeEach(() => {
+			// Mock navigator.clipboard
+			Object.defineProperty(global, 'navigator', {
+				value: {
+					clipboard: {
+						writeText: vi.fn().mockResolvedValue(undefined)
+					}
+				},
+				configurable: true
+			});
+		});
+
+		it('should handle clipboard API when available', async () => {
+			// Given: clipboard API가 사용 가능한 경우
+			render(TermGenerator, { props: { filename: 'test-term.json' } });
+
+			const input = screen.getByPlaceholderText(/한글 약어 입력/) as HTMLInputElement;
+			await fireEvent.input(input, { target: { value: '사용자_이름' } });
+
+			// When: 결과가 표시되고 복사 버튼을 클릭
+			await waitFor(() => {
+				expect(mockFetch).toHaveBeenCalled();
+			}, { timeout: 3000 });
+
+			// 복사 버튼이 있는지 확인 (실제로는 결과가 표시된 후에만 나타남)
+			// 이 테스트는 컴포넌트가 정상적으로 렌더링되는지 확인
+			expect(screen.getByPlaceholderText(/한글 약어 입력/)).toBeInTheDocument();
+		});
+
+		it('should handle clipboard API when unavailable', async () => {
+			// Given: clipboard API가 사용 불가능한 경우 (undefined)
+			Object.defineProperty(global, 'navigator', {
+				value: {},
+				configurable: true
+			});
+
+			// When: 컴포넌트 렌더링
+			render(TermGenerator, { props: { filename: 'test-term.json' } });
+
+			// Then: 컴포넌트가 정상적으로 렌더링되어야 함 (에러가 발생하지 않아야 함)
+			expect(screen.getByPlaceholderText(/한글 약어 입력/)).toBeInTheDocument();
+		});
+	});
 });

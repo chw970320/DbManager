@@ -481,20 +481,24 @@ export function validateTermNameSuffix(
 		return '용어명이 비어있습니다.';
 	}
 
-	// 마지막 단어(접미사) 추출
-	const suffix = parts[parts.length - 1].toLowerCase();
+	// 마지막 단어(접미사) 추출 (trim만 수행, toLowerCase는 한글에 의미 없음)
+	const suffix = parts[parts.length - 1].trim();
 
-	// 단어집에서 접미사에 해당하는 단어 찾기
-	const vocabularyWord = vocabularyEntries.find(
-		(entry) => entry.standardName.trim().toLowerCase() === suffix
-	);
+	// 단어집에서 접미사에 해당하는 단어 찾기 (대소문자 구분 없이 비교)
+	const vocabularyWord = vocabularyEntries.find((entry) => {
+		const entryStandardName = entry.standardName.trim();
+		// 한글과 영문 모두 처리: 영문은 대소문자 무시, 한글은 정확히 일치
+		return entryStandardName.toLowerCase() === suffix.toLowerCase();
+	});
 
 	if (!vocabularyWord) {
+		// 원본 접미사 표시 (toLowerCase 하지 않은 원본)
 		return `'${suffix}'은(는) 단어집에 등록되지 않은 단어입니다.`;
 	}
 
 	// 형식단어여부 확인
 	if (vocabularyWord.isFormalWord !== true) {
+		// 원본 접미사 표시 (toLowerCase 하지 않은 원본)
 		return `'${suffix}'은(는) 형식단어가 아니므로 용어명의 접미사로 사용할 수 없습니다. (형식단어여부: N)`;
 	}
 

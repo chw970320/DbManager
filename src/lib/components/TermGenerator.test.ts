@@ -99,6 +99,58 @@ describe('TermGenerator', () => {
 		});
 	});
 
+	describe('Duplicate Results Handling', () => {
+		it('should handle duplicate results without key errors', async () => {
+			// Given: API가 중복된 결과를 반환하는 경우
+			mockFetch.mockImplementation((url: string) => {
+				if (url.includes('/api/generator/segment')) {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({
+								success: true,
+								segments: ['특허_연계_URL'],
+								forbiddenWordInfo: null
+							})
+					});
+				}
+				if (url.includes('/api/generator')) {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({
+								success: true,
+								results: ['PTNT', 'PTNT', 'PTNT_LINK', 'PTNT_LINK'] // 중복된 결과
+							})
+					});
+				}
+				if (url.includes('/api/term/validate')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ success: true })
+					});
+				}
+				return Promise.resolve({
+					ok: false,
+					json: () => Promise.resolve({ success: false })
+				});
+			});
+
+			// When: 용어 입력 및 변환
+			render(TermGenerator, { props: { filename: 'bksp.json' } });
+			const input = screen.getByPlaceholderText(/한글 약어 입력/) as HTMLInputElement;
+			await fireEvent.input(input, { target: { value: '특허_연계_URL' } });
+
+			// Then: 중복 키 에러 없이 컴포넌트가 정상적으로 렌더링되어야 함
+			await waitFor(() => {
+				expect(mockFetch).toHaveBeenCalled();
+			}, { timeout: 3000 });
+
+			// 컴포넌트가 정상적으로 렌더링되는지 확인 (에러 없이)
+			expect(screen.getByPlaceholderText(/한글 약어 입력/)).toBeInTheDocument();
+		});
+	});
+
 	describe('Validation', () => {
 		it('should call validate API with filename parameter', async () => {
 			// Given: filename prop이 있는 컴포넌트

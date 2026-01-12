@@ -494,7 +494,7 @@
 					{:else if finalResults.length > 0}
 						<!-- 통일된 목록 형태 -->
 						<div class="space-y-1">
-							{#each finalResults as result (result)}
+							{#each finalResults as result, index (`${index}-${result}`)}
 								<div
 									class="flex items-center justify-between rounded-md border border-gray-200 p-2 hover:bg-gray-50"
 								>

@@ -820,12 +820,115 @@ const field2 = parseRequiredText(row[1]); // B열
 
 ---
 
+## 개발 방법론: TDD (Test-Driven Development)
+
+이 프로젝트는 **TDD(Test-Driven Development)** 기반으로 개발됩니다. 모든 기능은 테스트를 먼저 작성하고, 테스트를 통과하는 최소한의 코드를 작성한 후, 리팩토링하는 순서로 진행됩니다.
+
+### TDD 원칙
+
+1. **Red-Green-Refactor 사이클**:
+   - **Red**: 실패하는 테스트를 먼저 작성
+   - **Green**: 테스트를 통과하는 최소한의 코드 작성
+   - **Refactor**: 코드를 개선하면서 테스트가 계속 통과하는지 확인
+
+2. **테스트 우선 작성**: 새로운 기능을 추가하거나 버그를 수정할 때, 먼저 테스트를 작성합니다.
+
+3. **테스트 커버리지**: 모든 API 엔드포인트와 주요 컴포넌트는 테스트로 커버되어야 합니다.
+
+### 테스트 파일 위치 규칙
+
+- **API 테스트**: `src/routes/api/{주제영역}/{엔드포인트}/+server.test.ts`
+- **컴포넌트 테스트**: `src/lib/components/{ComponentName}.test.ts`
+- **유틸리티 테스트**: `src/lib/utils/{utility-name}.test.ts`
+
+### 테스트 작성 패턴
+
+#### API 테스트 패턴
+
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { GET, POST } from './+server';
+import type { RequestEvent } from '@sveltejs/kit';
+
+// Mock 모듈들
+vi.mock('$lib/utils/file-handler.js', () => ({
+	loadData: vi.fn(),
+	saveData: vi.fn()
+}));
+
+describe('API: /api/endpoint', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	describe('GET', () => {
+		it('should return data successfully', async () => {
+			// 테스트 구현
+		});
+	});
+});
+```
+
+#### 컴포넌트 테스트 패턴
+
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/svelte';
+import Component from './Component.svelte';
+
+describe('Component', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it('should render correctly', () => {
+		// 테스트 구현
+	});
+});
+```
+
+### 테스트 작성 순서
+
+새로운 기능을 개발할 때:
+
+1. **테스트 계획 수정**: `docs/tests/{주제영역}_TEST_DESCRIPTION.md`에 테스트 케이스 추가
+2. **테스트 작성**: 실패하는 테스트 코드 작성
+3. **구현**: 테스트를 통과하는 최소한의 코드 작성
+4. **리팩토링**: 코드 개선 및 테스트 유지
+5. **문서 업데이트**: `docs/tests/{주제영역}_TEST_DESCRIPTION.md`에 완료 표시
+
+### 주제영역별 테스트 관리
+
+프로젝트는 다음 주제영역별로 테스트를 관리합니다:
+
+- **Vocabulary** (단어집): `docs/tests/VOCABULARY_TEST_DESCRIPTION.md`
+- **Domain** (도메인): `docs/tests/DOMAIN_TEST_DESCRIPTION.md`
+- **Term** (용어): `docs/tests/TERM_TEST_DESCRIPTION.md`
+- **Database** (데이터베이스): `docs/tests/DATABASE_TEST_DESCRIPTION.md`
+- **Entity** (엔터티): `docs/tests/ENTITY_TEST_DESCRIPTION.md`
+- **Attribute** (속성): `docs/tests/ATTRIBUTE_TEST_DESCRIPTION.md`
+- **Table** (테이블): `docs/tests/TABLE_TEST_DESCRIPTION.md`
+- **Column** (컬럼): `docs/tests/COLUMN_TEST_DESCRIPTION.md`
+- **Common Utils** (공통 유틸리티): `docs/tests/COMMON_UTILS_TEST_DESCRIPTION.md`
+
+각 주제영역의 테스트는 해당 `_TEST_DESCRIPTION.md` 파일에 정리되며, 테스트 작성 시 이 문서를 업데이트합니다.
+
+### AI가 코드 작성 시 준수사항
+
+1. **새 기능 추가 시**: 먼저 테스트를 작성하고, 테스트를 통과하는 코드를 작성합니다.
+2. **버그 수정 시**: 버그를 재현하는 테스트를 먼저 작성하고, 테스트를 통과하도록 수정합니다.
+3. **리팩토링 시**: 기존 테스트가 모두 통과하는지 확인하면서 진행합니다.
+4. **테스트 문서 업데이트**: 테스트 작성/수정 시 해당 주제영역의 `_TEST_DESCRIPTION.md` 파일을 업데이트합니다.
+
+---
+
 ## 프로젝트의 독특한 점
 
 1. **한국어 중심**: 한국어 표준 용어를 중심으로 설계
 2. **매핑 기반 검증**: 용어 간 매핑 관계를 추적하고 검증
 3. **파일 기반 단순함**: JSON 파일만으로 모든 데이터 관리
 4. **실용적 자동화**: 실제 개발 과정에서 바로 사용 가능한 자동화
+5. **TDD 기반 개발**: 모든 기능은 테스트 주도 개발 방식으로 구현
 
 ---
 

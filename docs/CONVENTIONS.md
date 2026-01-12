@@ -1414,22 +1414,123 @@ async function loadData() {
 
 ## 테스트 전략
 
-### 현재 상태
+### TDD (Test-Driven Development) 원칙
 
-프로젝트에는 아직 테스트 설정이 없습니다.
+이 프로젝트는 **TDD 기반으로 개발**됩니다. 모든 기능은 다음 순서로 개발됩니다:
 
-### 권장 테스트 전략
+1. **Red**: 실패하는 테스트를 먼저 작성
+2. **Green**: 테스트를 통과하는 최소한의 코드 작성
+3. **Refactor**: 코드를 개선하면서 테스트가 계속 통과하는지 확인
 
-1. **단위 테스트**: 유틸리티 함수
-2. **컴포넌트 테스트**: Svelte 컴포넌트
-3. **API 테스트**: API 엔드포인트
-4. **E2E 테스트**: 주요 사용자 플로우
+### 테스트 도구
 
-### 권장 도구
+- **Vitest**: 단위 테스트 및 통합 테스트
+- **@testing-library/svelte**: Svelte 컴포넌트 테스트
+- **Playwright**: E2E 테스트 (선택적)
 
-- **Vitest**: 단위 테스트
-- **@testing-library/svelte**: 컴포넌트 테스트
-- **Playwright**: E2E 테스트
+### 테스트 파일 위치 규칙
+
+- **API 테스트**: `src/routes/api/{주제영역}/{엔드포인트}/+server.test.ts`
+- **컴포넌트 테스트**: `src/lib/components/{ComponentName}.test.ts`
+- **유틸리티 테스트**: `src/lib/utils/{utility-name}.test.ts`
+
+### 테스트 작성 패턴
+
+#### API 테스트 기본 구조
+
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { GET, POST } from './+server';
+import type { RequestEvent } from '@sveltejs/kit';
+
+// Mock 모듈
+vi.mock('$lib/utils/file-handler.js', () => ({
+	loadData: vi.fn(),
+	saveData: vi.fn()
+}));
+
+describe('API: /api/endpoint', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	describe('GET', () => {
+		it('should return data successfully', async () => {
+			// Given: 테스트 데이터 준비
+			// When: API 호출
+			// Then: 결과 검증
+		});
+	});
+});
+```
+
+#### 컴포넌트 테스트 기본 구조
+
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/svelte';
+import Component from './Component.svelte';
+
+// Mock 전역 함수
+global.fetch = vi.fn();
+global.alert = vi.fn();
+global.confirm = vi.fn(() => true);
+
+describe('Component', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it('should render correctly', () => {
+		// Given: Props 준비
+		// When: 컴포넌트 렌더링
+		// Then: 결과 검증
+	});
+});
+```
+
+### 테스트 커버리지 목표
+
+- **API 엔드포인트**: 모든 HTTP 메서드 (GET, POST, PUT, DELETE) 테스트
+- **컴포넌트**: 주요 사용자 인터랙션 및 상태 변경 테스트
+- **유틸리티 함수**: 모든 분기 및 엣지 케이스 테스트
+
+### 주제영역별 테스트 관리
+
+각 주제영역의 테스트는 `docs/tests/{주제영역}_TEST_DESCRIPTION.md` 파일에 정리됩니다:
+
+- `VOCABULARY_TEST_DESCRIPTION.md`: 단어집 관련 테스트
+- `DOMAIN_TEST_DESCRIPTION.md`: 도메인 관련 테스트
+- `TERM_TEST_DESCRIPTION.md`: 용어 관련 테스트
+- `DATABASE_TEST_DESCRIPTION.md`: 데이터베이스 관련 테스트
+- `ENTITY_TEST_DESCRIPTION.md`: 엔터티 관련 테스트
+- `ATTRIBUTE_TEST_DESCRIPTION.md`: 속성 관련 테스트
+- `TABLE_TEST_DESCRIPTION.md`: 테이블 관련 테스트
+- `COLUMN_TEST_DESCRIPTION.md`: 컬럼 관련 테스트
+- `COMMON_UTILS_TEST_DESCRIPTION.md`: 공통 유틸리티 테스트
+
+### 테스트 실행
+
+```bash
+# 모든 테스트 실행
+pnpm test
+
+# Watch 모드
+pnpm test:watch
+
+# UI 모드
+pnpm test:ui
+```
+
+### 테스트 작성 체크리스트
+
+새로운 기능을 추가할 때:
+
+- [ ] 테스트 계획을 `docs/tests/{주제영역}_TEST_DESCRIPTION.md`에 추가
+- [ ] 실패하는 테스트를 먼저 작성
+- [ ] 테스트를 통과하는 최소한의 코드 작성
+- [ ] 리팩토링 후 테스트가 계속 통과하는지 확인
+- [ ] 테스트 문서에 완료 표시
 
 ---
 

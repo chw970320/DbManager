@@ -1,18 +1,44 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import type { ApiResponse } from '$lib/types/vocabulary.js';
-import type { TermEntry } from '$lib/types/term.js';
+import type { TermEntry, ValidationError, ValidationErrorType } from '$lib/types/term.js';
 import { loadTermData, listTermFiles, loadVocabularyData } from '$lib/utils/file-handler.js';
 import {
 	validateTermNameSuffix,
 	validateTermUniqueness,
-	validateTermNameUniqueness
+	validateTermNameUniqueness,
+	validateTermNameMapping,
+	validateColumnNameMapping,
+	validateTermColumnOrderMapping
 } from '$lib/utils/validation.js';
+
+/**
+ * 우선순위에 따라 오류 정렬
+ */
+const ERROR_PRIORITY: Record<ValidationErrorType, number> = {
+	TERM_NAME_LENGTH: 1,
+	TERM_NAME_DUPLICATE: 2,
+	TERM_UNIQUENESS: 3,
+	TERM_NAME_MAPPING: 4,
+	COLUMN_NAME_MAPPING: 5,
+	TERM_COLUMN_ORDER_MISMATCH: 6,
+	TERM_NAME_SUFFIX: 7,
+	DOMAIN_NAME_MAPPING: 8
+};
+
+function sortErrorsByPriority(errors: ValidationError[]): ValidationError[] {
+	return [...errors].sort((a, b) => {
+		const priorityA = ERROR_PRIORITY[a.type] || 999;
+		const priorityB = ERROR_PRIORITY[b.type] || 999;
+		return priorityA - priorityB;
+	});
+}
 
 /**
  * 용어 validation API
  * POST /api/term/validate
  *
  * 클라이언트에서 전송 전에 validation을 수행하기 위한 엔드포인트
+ * validate-all API와 동일한 수준의 검증을 수행합니다.
  */
 export async function POST({ request, url }: RequestEvent) {
 	try {
@@ -54,8 +80,8 @@ export async function POST({ request, url }: RequestEvent) {
 		const termParts = termName
 			.trim()
 			.split('_')
-			.map((p) => p.trim())
-			.filter((p) => p.length > 0);
+			.map((p: string) => p.trim())
+			.filter((p: string) => p.length > 0);
 		if (termParts.length < 2) {
 			return json(
 				{
@@ -96,20 +122,60 @@ export async function POST({ request, url }: RequestEvent) {
 			vocabularyData = { entries: [] };
 		}
 
-		// 1. 용어명 접미사 validation
-		const suffixValidationError = validateTermNameSuffix(termName.trim(), vocabularyData.entries);
-		if (suffixValidationError) {
-			return json(
-				{
-					success: false,
-					error: suffixValidationError,
-					message: 'Term name suffix validation failed'
-				} as ApiResponse,
-				{ status: 400 }
-			);
+		// 모든 validation 오류를 수집
+		const validationErrors: ValidationError[] = [];
+
+		// 1. 용어명 매핑 validation (모든 부분이 단어집에 등록되어 있는지 확인)
+		const termMappingError = validateTermNameMapping(termName.trim(), vocabularyData.entries);
+		if (termMappingError) {
+			validationErrors.push({
+				type: 'TERM_NAME_MAPPING',
+				message: termMappingError,
+				field: 'termName'
+			});
 		}
 
-		// 2. 수정 모드가 아닌 경우에만 중복 검사 수행
+		// 2. 컬럼명 매핑 validation (모든 부분이 영문약어로 등록되어 있는지 확인)
+		const columnMappingError = validateColumnNameMapping(
+			columnName.trim(),
+			vocabularyData.entries
+		);
+		if (columnMappingError) {
+			validationErrors.push({
+				type: 'COLUMN_NAME_MAPPING',
+				message: columnMappingError,
+				field: 'columnName'
+			});
+		}
+
+		// 3. 용어명-컬럼명 순서 일치 validation
+		// 용어명 매핑과 컬럼명 매핑이 모두 성공한 경우에만 순서 검증 수행
+		if (!termMappingError && !columnMappingError) {
+			const orderResult = validateTermColumnOrderMapping(
+				termName.trim(),
+				columnName.trim(),
+				vocabularyData.entries
+			);
+			if (orderResult.error) {
+				validationErrors.push({
+					type: 'TERM_COLUMN_ORDER_MISMATCH',
+					message: orderResult.error,
+					field: 'columnName'
+				});
+			}
+		}
+
+		// 4. 용어명 접미사 validation
+		const suffixValidationError = validateTermNameSuffix(termName.trim(), vocabularyData.entries);
+		if (suffixValidationError) {
+			validationErrors.push({
+				type: 'TERM_NAME_SUFFIX',
+				message: suffixValidationError,
+				field: 'termName'
+			});
+		}
+
+		// 5. 수정 모드가 아닌 경우에만 중복 검사 수행
 		if (!validEntryId) {
 			// 모든 용어 파일 로드 (중복 검사에 사용)
 			const allTermEntries: TermEntry[] = [];
@@ -127,22 +193,19 @@ export async function POST({ request, url }: RequestEvent) {
 				console.warn('용어 파일 목록 로드 실패:', loadError);
 			}
 
-			// 3. 용어명 중복 검사 (이미 등록된 용어명인지 확인)
+			// 6. 용어명 중복 검사 (이미 등록된 용어명인지 확인)
 			if (allTermEntries.length > 0) {
 				const termNameUniquenessError = validateTermNameUniqueness(termName.trim(), allTermEntries);
 				if (termNameUniquenessError) {
-					return json(
-						{
-							success: false,
-							error: termNameUniquenessError,
-							message: 'Duplicate term name'
-						} as ApiResponse,
-						{ status: 409 }
-					);
+					validationErrors.push({
+						type: 'TERM_NAME_DUPLICATE',
+						message: termNameUniquenessError,
+						field: 'termName'
+					});
 				}
 			}
 
-			// 4. 용어명 유일성 validation (termName, columnName, domainName 조합) - domainName이 제공된 경우에만 수행
+			// 7. 용어명 유일성 validation (termName, columnName, domainName 조합) - domainName이 제공된 경우에만 수행
 			if (hasDomainName && allTermEntries.length > 0) {
 				const uniquenessError = validateTermUniqueness(
 					termName.trim(),
@@ -151,16 +214,38 @@ export async function POST({ request, url }: RequestEvent) {
 					allTermEntries
 				);
 				if (uniquenessError) {
-					return json(
-						{
-							success: false,
-							error: uniquenessError,
-							message: 'Duplicate term'
-						} as ApiResponse,
-						{ status: 409 }
-					);
+					validationErrors.push({
+						type: 'TERM_UNIQUENESS',
+						message: uniquenessError,
+						field: 'termName'
+					});
 				}
 			}
+		}
+
+		// validation 오류가 있으면 우선순위대로 정렬하여 반환
+		if (validationErrors.length > 0) {
+			const sortedErrors = sortErrorsByPriority(validationErrors);
+			// 가장 높은 우선순위의 오류 메시지를 메인 error로 사용
+			const primaryError = sortedErrors[0];
+			// 중복 관련 오류는 409, 나머지는 400
+			const statusCode =
+				primaryError.type === 'TERM_NAME_DUPLICATE' || primaryError.type === 'TERM_UNIQUENESS'
+					? 409
+					: 400;
+
+			return json(
+				{
+					success: false,
+					error: primaryError.message,
+					message: `Validation failed: ${primaryError.type}`,
+					data: {
+						errors: sortedErrors,
+						errorCount: sortedErrors.length
+					}
+				} as ApiResponse,
+				{ status: statusCode }
+			);
 		}
 
 		// 모든 validation 통과

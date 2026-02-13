@@ -31,6 +31,12 @@ describe('TermGenerator', () => {
 						})
 				});
 			}
+			if (url.includes('/api/term/validate')) {
+				return Promise.resolve({
+					ok: true,
+					json: () => Promise.resolve({ success: true })
+				});
+			}
 			if (url.includes('/api/generator')) {
 				return Promise.resolve({
 					ok: true,
@@ -120,6 +126,12 @@ describe('TermGenerator', () => {
 							})
 					});
 				}
+				if (url.includes('/api/term/validate')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ success: true })
+					});
+				}
 				if (url.includes('/api/generator')) {
 					return Promise.resolve({
 						ok: true,
@@ -128,12 +140,6 @@ describe('TermGenerator', () => {
 								success: true,
 								results: ['PTNT', 'PTNT', 'PTNT_LINK', 'PTNT_LINK'] // 중복된 결과
 							})
-					});
-				}
-				if (url.includes('/api/term/validate')) {
-					return Promise.resolve({
-						ok: true,
-						json: () => Promise.resolve({ success: true })
 					});
 				}
 				return Promise.resolve({
@@ -161,7 +167,7 @@ describe('TermGenerator', () => {
 	});
 
 	describe('Validation', () => {
-		it('should call validate API with filename parameter', async () => {
+		it('should call validate API with filename parameter for each result', async () => {
 			// Given: filename prop이 있는 컴포넌트
 			const filename = 'test-term.json';
 			render(TermGenerator, { props: { filename } });
@@ -196,6 +202,31 @@ describe('TermGenerator', () => {
 			);
 		});
 
+		it('should send columnName in validate API request', async () => {
+			// Given: 용어 변환기
+			render(TermGenerator, { props: { filename: 'test-term.json' } });
+
+			// When: 용어 입력
+			const input = screen.getByPlaceholderText(/한글 약어 입력/) as HTMLInputElement;
+			await fireEvent.input(input, { target: { value: '사용자_이름' } });
+
+			// Then: validate API에 columnName이 포함되어 호출되어야 함
+			await waitFor(
+				() => {
+					const validateCalls = mockFetch.mock.calls.filter((call) =>
+						call[0]?.toString().includes('/api/term/validate')
+					);
+					if (validateCalls.length > 0) {
+						const requestBody = JSON.parse(validateCalls[0][1]?.body);
+						expect(requestBody).toHaveProperty('termName');
+						expect(requestBody).toHaveProperty('columnName');
+						expect(requestBody.columnName).toBe('USER_NAME');
+					}
+				},
+				{ timeout: 3000 }
+			);
+		});
+
 		it('should handle validation API error gracefully', async () => {
 			// Given: validation API가 400 에러를 반환하는 경우
 			mockFetch.mockImplementation((url: string) => {
@@ -206,7 +237,18 @@ describe('TermGenerator', () => {
 						json: () =>
 							Promise.resolve({
 								success: false,
-								error: '용어명이 필요합니다.'
+								error: '용어명의 다음 부분이 단어집에 등록되지 않았습니다: 가능',
+								data: {
+									errors: [
+										{
+											type: 'TERM_NAME_MAPPING',
+											message:
+												'용어명의 다음 부분이 단어집에 등록되지 않았습니다: 가능',
+											field: 'termName'
+										}
+									],
+									errorCount: 1
+								}
 							})
 					});
 				}
@@ -216,7 +258,7 @@ describe('TermGenerator', () => {
 						json: () =>
 							Promise.resolve({
 								success: true,
-								segments: ['사용자_이름'],
+								segments: ['가능_여부'],
 								forbiddenWordInfo: null
 							})
 					});
@@ -227,7 +269,7 @@ describe('TermGenerator', () => {
 						json: () =>
 							Promise.resolve({
 								success: true,
-								results: ['USER_NAME']
+								results: ['##_YN']
 							})
 					});
 				}
@@ -240,7 +282,7 @@ describe('TermGenerator', () => {
 			// When: 용어 입력 및 변환
 			render(TermGenerator, { props: { filename: 'test-term.json' } });
 			const input = screen.getByPlaceholderText(/한글 약어 입력/) as HTMLInputElement;
-			await fireEvent.input(input, { target: { value: '사용자_이름' } });
+			await fireEvent.input(input, { target: { value: '가능_여부' } });
 
 			// Then: 에러가 발생해도 컴포넌트가 정상적으로 동작해야 함
 			await waitFor(
@@ -249,6 +291,77 @@ describe('TermGenerator', () => {
 				},
 				{ timeout: 3000 }
 			);
+		});
+
+		it('should handle validation with multiple errors from API', async () => {
+			// Given: validation API가 복수 오류를 반환하는 경우
+			mockFetch.mockImplementation((url: string) => {
+				if (url.includes('/api/term/validate')) {
+					return Promise.resolve({
+						ok: false,
+						status: 400,
+						json: () =>
+							Promise.resolve({
+								success: false,
+								error: '용어명 매핑 실패',
+								data: {
+									errors: [
+										{
+											type: 'TERM_NAME_MAPPING',
+											message: '용어명 매핑 실패',
+											field: 'termName'
+										},
+										{
+											type: 'COLUMN_NAME_MAPPING',
+											message: '컬럼명 매핑 실패',
+											field: 'columnName'
+										}
+									],
+									errorCount: 2
+								}
+							})
+					});
+				}
+				if (url.includes('/api/generator/segment')) {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({
+								success: true,
+								segments: ['가능_여부'],
+								forbiddenWordInfo: null
+							})
+					});
+				}
+				if (url.includes('/api/generator')) {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({
+								success: true,
+								results: ['##_YN']
+							})
+					});
+				}
+				return Promise.resolve({
+					ok: false,
+					json: () => Promise.resolve({ success: false })
+				});
+			});
+
+			// When: 용어 입력 및 변환
+			render(TermGenerator, { props: { filename: 'test-term.json' } });
+			const input = screen.getByPlaceholderText(/한글 약어 입력/) as HTMLInputElement;
+			await fireEvent.input(input, { target: { value: '가능_여부' } });
+
+			// Then: 컴포넌트가 정상적으로 렌더링되어야 함
+			await waitFor(
+				() => {
+					expect(mockFetch).toHaveBeenCalled();
+				},
+				{ timeout: 3000 }
+			);
+			expect(screen.getByPlaceholderText(/한글 약어 입력/)).toBeInTheDocument();
 		});
 	});
 

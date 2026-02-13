@@ -279,69 +279,156 @@ export function generateERDData(
 export function generateMermaidERD(erdData: ERDData, maxNodes?: number, maxEdges?: number): string {
 	const lines: string[] = ['erDiagram'];
 
-	// 노드 정의
+	// 노드 맵 생성
 	const nodeMap = new Map<string, ERDNodeType>();
 	for (const node of erdData.nodes) {
 		nodeMap.set(node.id, node);
 	}
 
-	// 엔터티/테이블 노드만 필터링 (entity, table 타입만)
-	const entityTableNodes = erdData.nodes.filter(
-		(node) => node.type === 'entity' || node.type === 'table'
+	// Mermaid에 포함할 노드 필터링: database, entity, table 타입 (주요 노드)
+	const diagramNodes = erdData.nodes.filter(
+		(node) => node.type === 'entity' || node.type === 'table' || node.type === 'database'
 	);
 
 	// 노드 수 제한 적용
-	const limitedNodes = maxNodes ? entityTableNodes.slice(0, maxNodes) : entityTableNodes;
+	const limitedNodes = maxNodes ? diagramNodes.slice(0, maxNodes) : diagramNodes;
+	const limitedNodeIds = new Set(limitedNodes.map((n) => n.id));
 
-	// 엔터티/테이블 정의
-	const entityDefinitions = new Map<string, string[]>();
+	// Attribute 노드들을 Entity별로 그룹화 (Entity 필드로 표시)
+	const entityAttributes = new Map<string, ERDNodeType[]>();
+	for (const mapping of erdData.mappings) {
+		if (
+			mapping.sourceType === 'entity' &&
+			mapping.targetType === 'attribute' &&
+			limitedNodeIds.has(mapping.sourceId)
+		) {
+			const attrs = entityAttributes.get(mapping.sourceId) || [];
+			const attrNode = nodeMap.get(mapping.targetId);
+			if (attrNode) {
+				attrs.push(attrNode);
+				entityAttributes.set(mapping.sourceId, attrs);
+			}
+		}
+	}
+
+	// Column 노드들을 Table별로 그룹화 (Table 필드로 표시)
+	const tableColumns = new Map<string, ERDNodeType[]>();
+	for (const mapping of erdData.mappings) {
+		if (
+			mapping.sourceType === 'table' &&
+			mapping.targetType === 'column' &&
+			limitedNodeIds.has(mapping.sourceId)
+		) {
+			const cols = tableColumns.get(mapping.sourceId) || [];
+			const colNode = nodeMap.get(mapping.targetId);
+			if (colNode) {
+				cols.push(colNode);
+				tableColumns.set(mapping.sourceId, cols);
+			}
+		}
+	}
+
+	// PK 컬럼 ID들 수집
+	const pkColumnIds = new Set<string>();
+	for (const node of erdData.nodes) {
+		if (node.type === 'column') {
+			const colData = node.data as ColumnEntry;
+			if (colData.pkInfo && colData.pkInfo.trim() !== '' && colData.pkInfo.trim() !== '-') {
+				pkColumnIds.add(node.id);
+			}
+		}
+	}
+
+	// 엔터티/테이블/데이터베이스 정의 출력
+	const MAX_FIELDS_PER_NODE = 8;
 
 	for (const node of limitedNodes) {
+		const nodeName = sanitizeNodeName(node.label);
 		const fields: string[] = [];
-		const data = node.data as EntityEntry | TableEntry;
 
-		if (node.type === 'entity') {
-			const entity = data as EntityEntry;
+		if (node.type === 'database') {
+			const dbData = node.data as DatabaseEntry;
+			if (dbData.logicalDbName && dbData.logicalDbName.trim() !== '-') {
+				fields.push(`  ${sanitizeNodeName(dbData.logicalDbName)} string "논리명"`);
+			}
+			if (dbData.physicalDbName && dbData.physicalDbName.trim() !== '-') {
+				fields.push(`  ${sanitizeNodeName(dbData.physicalDbName)} string "물리명"`);
+			}
+			if (dbData.dbmsInfo && dbData.dbmsInfo.trim() !== '-') {
+				fields.push(`  ${sanitizeNodeName(dbData.dbmsInfo)} string "DBMS"`);
+			}
+		} else if (node.type === 'entity') {
+			const entity = node.data as EntityEntry;
+			// 엔터티의 속성들을 필드로 표시
+			const attrs = entityAttributes.get(node.id) || [];
 			if (entity.primaryIdentifier) {
 				fields.push(`  ${sanitizeNodeName(entity.primaryIdentifier)} string PK`);
 			}
-			if (entity.entityName) {
-				fields.push(`  ${sanitizeNodeName(entity.entityName)} string`);
+			for (const attr of attrs.slice(0, MAX_FIELDS_PER_NODE - 1)) {
+				const attrData = attr.data as AttributeEntry;
+				const attrName = sanitizeNodeName(attr.label);
+				const attrType = attrData.attributeType
+					? sanitizeNodeName(attrData.attributeType)
+					: 'string';
+				const idFlag = attrData.identifierFlag === 'Y' ? ' PK' : '';
+				fields.push(`  ${attrName} ${attrType}${idFlag}`);
 			}
-		} else {
-			const table = data as TableEntry;
-			if (table.tableEnglishName) {
-				fields.push(`  ${sanitizeNodeName(table.tableEnglishName)} string`);
+		} else if (node.type === 'table') {
+			// 테이블의 칼럼들을 필드로 표시
+			const cols = tableColumns.get(node.id) || [];
+			for (const col of cols.slice(0, MAX_FIELDS_PER_NODE)) {
+				const colData = col.data as ColumnEntry;
+				const colName = sanitizeNodeName(col.label);
+				const dataType = colData.dataType ? sanitizeNodeName(colData.dataType) : 'varchar';
+				const pkFlag = pkColumnIds.has(col.id) ? ' PK' : '';
+				const fkFlag =
+					!pkFlag && colData.fkInfo && colData.fkInfo.trim() !== '' && colData.fkInfo.trim() !== '-'
+						? ' FK'
+						: '';
+				fields.push(`  ${colName} ${dataType}${pkFlag}${fkFlag}`);
 			}
 		}
 
-		const nodeName = sanitizeNodeName(node.label);
-		entityDefinitions.set(node.id, [nodeName, ...fields]);
-	}
-
-	// 엔터티 정의 출력
-	for (const [nodeId, definition] of entityDefinitions.entries()) {
-		const nodeName = definition[0];
-		const fields = definition.slice(1);
 		lines.push(`    ${nodeName} {`);
-		// 필드 수를 3개로 제한 (텍스트 크기 절감)
-		for (const field of fields.slice(0, 3)) {
+		for (const field of fields.slice(0, MAX_FIELDS_PER_NODE)) {
 			lines.push(field);
 		}
 		lines.push('    }');
 	}
 
 	// 관계 정의 - 제한된 노드와 관련된 엣지만 포함
-	const limitedNodeIds = new Set(limitedNodes.map((n) => n.id));
-	const relevantEdges = erdData.edges.filter(
-		(edge) => limitedNodeIds.has(edge.source) && limitedNodeIds.has(edge.target)
-	);
+	// Attribute/Column 간 관계는 제외하고, 상위 노드(database, entity, table) 간 관계만
+	const relevantEdges = erdData.edges.filter((edge) => {
+		// 양쪽 노드가 다이어그램에 포함되어야 함
+		if (!limitedNodeIds.has(edge.source) || !limitedNodeIds.has(edge.target)) {
+			return false;
+		}
+		// contains(entity→attribute, table→column) 관계는 필드로 표시하므로 엣지 제외
+		const sourceNode = nodeMap.get(edge.source);
+		const targetNode = nodeMap.get(edge.target);
+		if (!sourceNode || !targetNode) return false;
+		// attribute, column 노드는 엣지의 대상이 아님 (database, entity, table 간만)
+		if (targetNode.type === 'attribute' || targetNode.type === 'column') return false;
+		if (sourceNode.type === 'attribute' || sourceNode.type === 'column') return false;
+		return true;
+	});
 
 	// 엣지 수 제한 적용
 	const limitedEdges = maxEdges ? relevantEdges.slice(0, maxEdges) : relevantEdges;
 
-	// 관계 정의 출력
+	// 중복 엣지 제거 (동일 source-target 조합)
+	const edgeKeys = new Set<string>();
+	const dedupedEdges: ERDEdge[] = [];
 	for (const edge of limitedEdges) {
+		const key = `${edge.source}-${edge.target}`;
+		if (!edgeKeys.has(key)) {
+			edgeKeys.add(key);
+			dedupedEdges.push(edge);
+		}
+	}
+
+	// 관계 정의 출력
+	for (const edge of dedupedEdges) {
 		const sourceNode = nodeMap.get(edge.source);
 		const targetNode = nodeMap.get(edge.target);
 

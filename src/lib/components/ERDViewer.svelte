@@ -13,7 +13,8 @@
 
 	// 실제 노드/엣지 수와 제한값 비교
 	const entityTableNodeCount = $derived(
-		erdData.nodes.filter((n) => n.type === 'entity' || n.type === 'table').length
+		erdData.nodes.filter((n) => n.type === 'entity' || n.type === 'table' || n.type === 'database')
+			.length
 	);
 	const actualEdgeCount = $derived(erdData.edges.length);
 

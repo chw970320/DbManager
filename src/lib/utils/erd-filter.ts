@@ -27,105 +27,6 @@ export interface ERDFilterOptions {
 }
 
 /**
- * 선택된 테이블과 관련된 컬럼 ID 집합 생성
- */
-function getRelatedColumnIds(selectedTableIds: Set<string>, columns: ColumnEntry[]): Set<string> {
-	const columnIds = new Set<string>();
-
-	for (const column of columns) {
-		if (column.tableEnglishName && column.schemaName) {
-			// 테이블 ID는 schemaName + tableEnglishName 조합으로 찾아야 함
-			// 하지만 현재 TableEntry에는 ID만 있으므로, 테이블 이름으로 매칭
-			// 실제로는 테이블 ID로 매칭해야 하므로, 컬럼의 테이블 참조를 확인
-			// 일단 컬럼의 tableEnglishName과 schemaName으로 필터링
-			columnIds.add(column.id);
-		}
-	}
-
-	return columnIds;
-}
-
-/**
- * 선택된 테이블과 관련된 엔터티 ID 집합 생성
- */
-function getRelatedEntityIds(
-	selectedTableIds: Set<string>,
-	tables: TableEntry[],
-	columns: ColumnEntry[],
-	includeRelated: boolean
-): Set<string> {
-	const entityIds = new Set<string>();
-
-	if (!includeRelated) return entityIds;
-
-	// 선택된 테이블의 relatedEntityName으로 엔터티 찾기
-	const selectedTables = tables.filter((t) => selectedTableIds.has(t.id));
-
-	for (const table of selectedTables) {
-		if (table.relatedEntityName && table.relatedEntityName.trim() !== '-') {
-			// 엔터티 이름으로 찾아야 하므로, 나중에 필터링 단계에서 처리
-			// 여기서는 엔터티 이름을 수집
-		}
-	}
-
-	// 선택된 테이블의 컬럼의 relatedEntityName으로 엔터티 찾기
-	const selectedTableNames = new Set<string>();
-	for (const table of selectedTables) {
-		if (table.tableEnglishName && table.schemaName) {
-			selectedTableNames.add(`${table.schemaName}|${table.tableEnglishName}`);
-		}
-	}
-
-	for (const column of columns) {
-		if (
-			column.tableEnglishName &&
-			column.schemaName &&
-			selectedTableNames.has(`${column.schemaName}|${column.tableEnglishName}`)
-		) {
-			if (column.relatedEntityName && column.relatedEntityName.trim() !== '-') {
-				// 엔터티 이름 수집 (나중에 필터링)
-			}
-		}
-	}
-
-	return entityIds;
-}
-
-/**
- * 선택된 테이블과 관련된 속성 ID 집합 생성
- */
-function getRelatedAttributeIds(
-	relatedEntityNames: Set<string>,
-	attributes: AttributeEntry[]
-): Set<string> {
-	const attributeIds = new Set<string>();
-
-	for (const attribute of attributes) {
-		if (attribute.entityName && relatedEntityNames.has(attribute.entityName)) {
-			attributeIds.add(attribute.id);
-		}
-	}
-
-	return attributeIds;
-}
-
-/**
- * 선택된 테이블과 관련된 도메인 ID 집합 생성
- */
-function getRelatedDomainIds(
-	selectedColumnIds: Set<string>,
-	columns: ColumnEntry[],
-	domains: DomainEntry[]
-): Set<string> {
-	const domainIds = new Set<string>();
-
-	// 선택된 컬럼의 도메인 매핑은 나중에 매핑 단계에서 처리
-	// 여기서는 일단 빈 집합 반환
-
-	return domainIds;
-}
-
-/**
  * MappingContext를 필터링
  */
 export function filterMappingContext(
@@ -185,7 +86,27 @@ export function filterMappingContext(
 			})
 		: [];
 
-	// 관련 속성 필터링
+	// 관련 엔터티의 상위 엔터티(superType)도 포함
+	if (includeRelated && filteredEntities.length > 0) {
+		const superTypeNames = new Set<string>();
+		for (const entity of filteredEntities) {
+			if (entity.superTypeEntityName && entity.superTypeEntityName.trim() !== '-') {
+				superTypeNames.add(entity.superTypeEntityName.trim());
+			}
+		}
+		// superType 엔터티 중 아직 포함되지 않은 것들 추가
+		const additionalEntities = context.entities.filter((entity) => {
+			if (!entity.entityName) return false;
+			const name = entity.entityName.trim();
+			return superTypeNames.has(name) && !relatedEntityNames.has(name);
+		});
+		filteredEntities.push(...additionalEntities);
+		for (const e of additionalEntities) {
+			if (e.entityName) relatedEntityNames.add(e.entityName.trim());
+		}
+	}
+
+	// 관련 속성 필터링 (관련 엔터티에 속한 속성)
 	const filteredAttributes = includeRelated
 		? context.attributes.filter((attribute) => {
 				if (!attribute.entityName) return false;
@@ -204,15 +125,23 @@ export function filterMappingContext(
 		}
 	}
 
+	// 관련 엔터티의 논리 DB명도 수집
+	const relatedLogicalDbNames = new Set<string>();
+	if (includeRelated) {
+		for (const entity of filteredEntities) {
+			if (entity.logicalDbName && entity.logicalDbName.trim() !== '-') {
+				relatedLogicalDbNames.add(entity.logicalDbName.trim());
+			}
+		}
+	}
+
 	const filteredDatabases = context.databases.filter((db) => {
 		if (db.physicalDbName && selectedDbNames.has(db.physicalDbName.trim())) {
 			return true;
 		}
 		if (includeRelated && db.logicalDbName) {
-			// 논리적 DB는 관련 엔터티와 연결된 경우 포함
-			return filteredEntities.some(
-				(e) => e.logicalDbName && e.logicalDbName.trim() === db.logicalDbName?.trim()
-			);
+			// 논리적 DB는 관련 엔터티의 logicalDbName과 매칭
+			return relatedLogicalDbNames.has(db.logicalDbName.trim());
 		}
 		return false;
 	});
@@ -251,7 +180,6 @@ export function filterERDDataByTableIds(
 
 	const selectedTableIdSet = new Set(selectedTableIds);
 	const includedNodeIds = new Set<string>();
-	const includedEntityNames = new Set<string>();
 
 	// 1단계: 선택된 테이블 노드 포함
 	for (const node of erdData.nodes) {
@@ -306,6 +234,17 @@ export function filterERDDataByTableIds(
 			}
 		}
 
+		// 엔터티 상속 관계 포함
+		for (const mapping of erdData.mappings) {
+			if (
+				mapping.sourceType === 'entity' &&
+				mapping.targetType === 'entity' &&
+				includedNodeIds.has(mapping.targetId)
+			) {
+				includedNodeIds.add(mapping.sourceId);
+			}
+		}
+
 		// 도메인 매핑 포함 (컬럼 → 도메인)
 		for (const mapping of erdData.mappings) {
 			if (
@@ -318,7 +257,7 @@ export function filterERDDataByTableIds(
 		}
 	}
 
-	// 4단계: Database 노드 포함 (포함된 테이블과 연결된 경우)
+	// 4단계: Database 노드 포함 (포함된 테이블/엔터티와 연결된 경우)
 	for (const mapping of erdData.mappings) {
 		if (
 			mapping.sourceType === 'database' &&

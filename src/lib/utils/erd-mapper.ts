@@ -446,36 +446,68 @@ export function mapColumnToEntity(
 
 /**
  * Attribute → Column (논리-물리) 매핑 생성
+ * 매핑 전략:
+ * 1) 같은 스키마 + 엔터티와 연결된 테이블의 컬럼 중 columnKoreanName == attributeName 매칭
+ * 2) 테이블의 relatedEntityName으로 엔터티-테이블 연결을 활용
+ * 3) 컬럼의 relatedEntityName으로 직접 연결 확인
  */
 export function mapAttributeToColumn(
 	attribute: AttributeEntry,
-	columns: ColumnEntry[]
+	columns: ColumnEntry[],
+	tables?: TableEntry[]
 ): AttributeColumnMapping[] {
 	if (
-		!attribute.schemaName ||
 		!attribute.entityName ||
 		!attribute.attributeName ||
-		isEmpty(attribute.schemaName) ||
 		isEmpty(attribute.entityName) ||
 		isEmpty(attribute.attributeName)
 	) {
 		return [];
 	}
 
-	const attrSchema = normalizeString(attribute.schemaName);
+	const attrSchema = attribute.schemaName ? normalizeString(attribute.schemaName) : '';
 	const attrEntity = normalizeString(attribute.entityName);
 	const attrName = normalizeString(attribute.attributeName);
 	const mappings: AttributeColumnMapping[] = [];
 
+	// 전략 1: 엔터티와 연결된 테이블의 영문명 집합 구성 (tables 제공 시)
+	const relatedTableKeys = new Set<string>();
+	if (tables) {
+		for (const table of tables) {
+			if (
+				table.relatedEntityName &&
+				!isEmpty(table.relatedEntityName) &&
+				normalizeString(table.relatedEntityName) === attrEntity &&
+				table.schemaName &&
+				table.tableEnglishName
+			) {
+				relatedTableKeys.add(
+					`${normalizeString(table.schemaName)}|${normalizeString(table.tableEnglishName)}`
+				);
+			}
+		}
+	}
+
 	for (const column of columns) {
-		if (
-			column.schemaName &&
-			column.tableEnglishName &&
-			column.columnKoreanName &&
-			normalizeString(column.schemaName) === attrSchema &&
-			normalizeString(column.columnKoreanName) === attrName
-		) {
-			// 같은 스키마와 엔터티명(테이블명)을 가진 경우 매핑
+		if (!column.columnKoreanName || !column.tableEnglishName) continue;
+
+		const colKoreanName = normalizeString(column.columnKoreanName);
+		if (colKoreanName !== attrName) continue;
+
+		const colSchema = column.schemaName ? normalizeString(column.schemaName) : '';
+		const colTableKey = `${colSchema}|${normalizeString(column.tableEnglishName)}`;
+
+		// 매칭 조건: 스키마+테이블이 연결된 테이블과 일치하거나,
+		// 컬럼의 relatedEntityName이 속성의 entityName과 일치하거나,
+		// 스키마가 같으면 매칭 (기존 로직 호환)
+		const isRelatedTable = relatedTableKeys.size > 0 && relatedTableKeys.has(colTableKey);
+		const isRelatedEntity =
+			column.relatedEntityName &&
+			!isEmpty(column.relatedEntityName) &&
+			normalizeString(column.relatedEntityName) === attrEntity;
+		const isSameSchema = attrSchema !== '' && colSchema === attrSchema;
+
+		if (isRelatedTable || isRelatedEntity || isSameSchema) {
 			mappings.push({
 				id: uuidv4(),
 				sourceId: attribute.id,
@@ -485,7 +517,7 @@ export function mapAttributeToColumn(
 				layerType: 'logical-physical',
 				mappingKey: 'schemaName+entityName+attributeName',
 				relationshipType: mappings.length === 0 ? '1:1' : '1:N',
-				schemaName: attribute.schemaName,
+				schemaName: attribute.schemaName || '',
 				entityName: attribute.entityName,
 				attributeName: attribute.attributeName,
 				tableEnglishName: column.tableEnglishName,
@@ -611,7 +643,7 @@ export function generateAllMappings(context: MappingContext): ERDMapping[] {
 	}
 
 	for (const attribute of context.attributes) {
-		mappings.push(...mapAttributeToColumn(attribute, context.columns));
+		mappings.push(...mapAttributeToColumn(attribute, context.columns, context.tables));
 	}
 
 	// 도메인 매핑

@@ -24,6 +24,58 @@
 	let showTableSelector = $state(false);
 	let includeRelated = $state(true);
 	let loadingTables = $state(false);
+	let showMappingSummary = $state(false);
+
+	// 매핑 통계 계산
+	let mappingStats = $derived(() => {
+		if (!erdData) return null;
+		const stats = {
+			databases: erdData.nodes.filter((n) => n.type === 'database').length,
+			entities: erdData.nodes.filter((n) => n.type === 'entity').length,
+			attributes: erdData.nodes.filter((n) => n.type === 'attribute').length,
+			tables: erdData.nodes.filter((n) => n.type === 'table').length,
+			columns: erdData.nodes.filter((n) => n.type === 'column').length,
+			domains: erdData.nodes.filter((n) => n.type === 'domain').length,
+			// 매핑별 카운트
+			dbEntity: erdData.mappings.filter(
+				(m) => m.sourceType === 'database' && m.targetType === 'entity'
+			).length,
+			dbTable: erdData.mappings.filter(
+				(m) => m.sourceType === 'database' && m.targetType === 'table'
+			).length,
+			entityAttribute: erdData.mappings.filter(
+				(m) => m.sourceType === 'entity' && m.targetType === 'attribute'
+			).length,
+			entityInheritance: erdData.mappings.filter(
+				(m) =>
+					m.sourceType === 'entity' &&
+					m.targetType === 'entity' &&
+					m.mappingKey === 'superTypeEntityName'
+			).length,
+			tableColumn: erdData.mappings.filter(
+				(m) => m.sourceType === 'table' && m.targetType === 'column'
+			).length,
+			tableEntity: erdData.mappings.filter(
+				(m) => m.sourceType === 'table' && m.targetType === 'entity'
+			).length,
+			columnFK: erdData.mappings.filter(
+				(m) => m.sourceType === 'column' && m.targetType === 'column' && m.mappingKey === 'fkInfo'
+			).length,
+			columnEntity: erdData.mappings.filter(
+				(m) => m.sourceType === 'column' && m.targetType === 'entity'
+			).length,
+			attributeColumn: erdData.mappings.filter(
+				(m) => m.sourceType === 'attribute' && m.targetType === 'column'
+			).length,
+			attributeEntityRef: erdData.mappings.filter(
+				(m) => m.sourceType === 'attribute' && m.targetType === 'entity'
+			).length,
+			columnDomain: erdData.mappings.filter(
+				(m) => m.sourceType === 'column' && m.targetType === 'domain'
+			).length
+		};
+		return stats;
+	});
 
 	// 필터링된 테이블 목록
 	let filteredTables = $derived(() => {
@@ -151,6 +203,16 @@
 				</p>
 			</div>
 			<div class="flex gap-2">
+				<button
+					onclick={() => {
+						showMappingSummary = !showMappingSummary;
+					}}
+					class="rounded-lg border px-4 py-2 text-sm font-medium transition-colors {showMappingSummary
+						? 'border-indigo-300 bg-indigo-50 text-indigo-700'
+						: 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}"
+				>
+					연관관계 요약
+				</button>
 				<button
 					onclick={() => {
 						showTableSelector = !showTableSelector;
@@ -346,6 +408,118 @@
 							{/each}
 						</div>
 					{/if}
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<!-- 연관관계 요약 패널 -->
+	{#if showMappingSummary && erdData && mappingStats()}
+		{@const stats = mappingStats()}
+		<div class="border-b border-gray-200 bg-white px-4 py-4 sm:px-6 lg:px-8">
+			<div class="space-y-4">
+				<h3 class="text-sm font-semibold text-gray-900">데이터 연관관계 요약</h3>
+
+				<!-- 노드 통계 -->
+				<div class="grid grid-cols-3 gap-3 sm:grid-cols-6">
+					<div class="rounded-lg border border-blue-200 bg-blue-50 p-2 text-center">
+						<div class="text-lg font-bold text-blue-700">{stats.databases}</div>
+						<div class="text-xs text-blue-600">데이터베이스</div>
+					</div>
+					<div class="rounded-lg border border-green-200 bg-green-50 p-2 text-center">
+						<div class="text-lg font-bold text-green-700">{stats.entities}</div>
+						<div class="text-xs text-green-600">엔터티</div>
+					</div>
+					<div class="rounded-lg border border-teal-200 bg-teal-50 p-2 text-center">
+						<div class="text-lg font-bold text-teal-700">{stats.attributes}</div>
+						<div class="text-xs text-teal-600">속성</div>
+					</div>
+					<div class="rounded-lg border border-purple-200 bg-purple-50 p-2 text-center">
+						<div class="text-lg font-bold text-purple-700">{stats.tables}</div>
+						<div class="text-xs text-purple-600">테이블</div>
+					</div>
+					<div class="rounded-lg border border-orange-200 bg-orange-50 p-2 text-center">
+						<div class="text-lg font-bold text-orange-700">{stats.columns}</div>
+						<div class="text-xs text-orange-600">컬럼</div>
+					</div>
+					<div class="rounded-lg border border-pink-200 bg-pink-50 p-2 text-center">
+						<div class="text-lg font-bold text-pink-700">{stats.domains}</div>
+						<div class="text-xs text-pink-600">도메인</div>
+					</div>
+				</div>
+
+				<!-- 매핑 관계 상세 -->
+				<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+					<!-- 논리적 계층 -->
+					<div class="rounded-lg border border-gray-200 p-3">
+						<h4 class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+							논리적 계층
+						</h4>
+						<div class="space-y-1 text-sm">
+							<div class="flex justify-between">
+								<span class="text-gray-600">DB → 엔터티</span>
+								<span class="font-medium text-gray-900">{stats.dbEntity}건</span>
+							</div>
+							<div class="flex justify-between">
+								<span class="text-gray-600">엔터티 → 속성</span>
+								<span class="font-medium text-gray-900">{stats.entityAttribute}건</span>
+							</div>
+							<div class="flex justify-between">
+								<span class="text-gray-600">엔터티 상속</span>
+								<span class="font-medium text-gray-900">{stats.entityInheritance}건</span>
+							</div>
+							<div class="flex justify-between">
+								<span class="text-gray-600">속성 → 엔터티 참조</span>
+								<span class="font-medium text-gray-900">{stats.attributeEntityRef}건</span>
+							</div>
+						</div>
+					</div>
+
+					<!-- 물리적 계층 -->
+					<div class="rounded-lg border border-gray-200 p-3">
+						<h4 class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+							물리적 계층
+						</h4>
+						<div class="space-y-1 text-sm">
+							<div class="flex justify-between">
+								<span class="text-gray-600">DB → 테이블</span>
+								<span class="font-medium text-gray-900">{stats.dbTable}건</span>
+							</div>
+							<div class="flex justify-between">
+								<span class="text-gray-600">테이블 → 컬럼</span>
+								<span class="font-medium text-gray-900">{stats.tableColumn}건</span>
+							</div>
+							<div class="flex justify-between">
+								<span class="text-gray-600">컬럼 FK 관계</span>
+								<span class="font-medium text-gray-900">{stats.columnFK}건</span>
+							</div>
+						</div>
+					</div>
+
+					<!-- 논리-물리 / 도메인 계층 -->
+					<div class="rounded-lg border border-gray-200 p-3">
+						<h4 class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+							논리-물리 / 도메인
+						</h4>
+						<div class="space-y-1 text-sm">
+							<div class="flex justify-between">
+								<span class="text-gray-600">테이블 → 엔터티</span>
+								<span class="font-medium text-gray-900">{stats.tableEntity}건</span>
+							</div>
+							<div class="flex justify-between">
+								<span class="text-gray-600">컬럼 → 엔터티</span>
+								<span class="font-medium text-gray-900">{stats.columnEntity}건</span>
+							</div>
+							<div class="flex justify-between">
+								<span class="text-gray-600">속성 → 컬럼</span>
+								<span class="font-medium text-gray-900">{stats.attributeColumn}건</span>
+							</div>
+							<div class="flex justify-between">
+								<span class="text-gray-600">컬럼 → 도메인</span>
+								<span class="font-medium text-gray-900">{stats.columnDomain}건</span>
+							</div>
+						</div>
+					</div>
 				</div>
 			</div>
 		</div>

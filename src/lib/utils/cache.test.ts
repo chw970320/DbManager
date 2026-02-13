@@ -13,14 +13,23 @@ import type { VocabularyData } from '$lib/types/vocabulary';
 import type { DomainData } from '$lib/types/domain';
 import type { TermData } from '$lib/types/term';
 
-// Mock file-handler
+// Mock file-handler (하위 호환성)
 vi.mock('./file-handler', () => ({
 	loadVocabularyData: vi.fn(),
 	loadDomainData: vi.fn(),
 	loadTermData: vi.fn()
 }));
 
+// Mock data-registry (cache-registry가 내부적으로 사용)
+vi.mock('$lib/registry/data-registry', () => ({
+	loadData: vi.fn()
+}));
+
 import { loadVocabularyData, loadDomainData, loadTermData } from './file-handler';
+import { loadData } from '$lib/registry/data-registry';
+
+// cache-registry의 통합 캐시도 리셋
+import { invalidateAllDataCaches } from '$lib/registry/cache-registry';
 
 describe('cache', () => {
 	beforeEach(() => {
@@ -28,6 +37,7 @@ describe('cache', () => {
 		vocabularyCache.clear();
 		domainCache.clear();
 		termCache.clear();
+		invalidateAllDataCaches();
 	});
 
 	describe('vocabularyCache', () => {
@@ -98,99 +108,72 @@ describe('cache', () => {
 	});
 
 	describe('getCachedVocabularyData', () => {
-		it('should return cached data if available', async () => {
-			const cachedData: VocabularyData = {
-				entries: [],
-				lastUpdated: '2024-01-01T00:00:00.000Z',
-				totalCount: 0
-			};
-
-			vocabularyCache.set('vocabulary', 'vocabulary.json', cachedData);
-
-			const result = await getCachedVocabularyData('vocabulary.json');
-
-			expect(result).toEqual(cachedData);
-			expect(loadVocabularyData).not.toHaveBeenCalled();
-		});
-
-		it('should load and cache data if not cached', async () => {
+		it('should load and cache data via data-registry', async () => {
 			const data: VocabularyData = {
 				entries: [],
 				lastUpdated: '2024-01-01T00:00:00.000Z',
 				totalCount: 0
 			};
 
-			vi.mocked(loadVocabularyData).mockResolvedValue(data);
+			vi.mocked(loadData).mockResolvedValue(data);
 
 			const result = await getCachedVocabularyData('vocabulary.json');
 
 			expect(result).toEqual(data);
-			expect(loadVocabularyData).toHaveBeenCalledWith('vocabulary.json');
-			expect(vocabularyCache.get('vocabulary', 'vocabulary.json')).toEqual(data);
+			expect(loadData).toHaveBeenCalledWith('vocabulary', 'vocabulary.json');
 		});
-	});
 
-	describe('getCachedDomainData', () => {
-		it('should return cached data if available', async () => {
-			const cachedData: DomainData = {
+		it('should return cached data on second call without reloading', async () => {
+			const data: VocabularyData = {
 				entries: [],
 				lastUpdated: '2024-01-01T00:00:00.000Z',
 				totalCount: 0
 			};
 
-			domainCache.set('domain', 'domain.json', cachedData);
+			vi.mocked(loadData).mockResolvedValue(data);
 
-			const result = await getCachedDomainData('domain.json');
+			// 첫 번째 호출 - 로드
+			await getCachedVocabularyData('vocabulary.json');
+			// 두 번째 호출 - 캐시에서
+			const result = await getCachedVocabularyData('vocabulary.json');
 
-			expect(result).toEqual(cachedData);
-			expect(loadDomainData).not.toHaveBeenCalled();
+			expect(result).toEqual(data);
+			// loadData는 한 번만 호출되어야 함
+			expect(loadData).toHaveBeenCalledTimes(1);
 		});
+	});
 
-		it('should load and cache data if not cached', async () => {
+	describe('getCachedDomainData', () => {
+		it('should load and cache data via data-registry', async () => {
 			const data: DomainData = {
 				entries: [],
 				lastUpdated: '2024-01-01T00:00:00.000Z',
 				totalCount: 0
 			};
 
-			vi.mocked(loadDomainData).mockResolvedValue(data);
+			vi.mocked(loadData).mockResolvedValue(data);
 
 			const result = await getCachedDomainData('domain.json');
 
 			expect(result).toEqual(data);
-			expect(loadDomainData).toHaveBeenCalledWith('domain.json');
+			expect(loadData).toHaveBeenCalledWith('domain', 'domain.json');
 		});
 	});
 
 	describe('getCachedTermData', () => {
-		it('should return cached data if available', async () => {
-			const cachedData: TermData = {
-				entries: [],
-				lastUpdated: '2024-01-01T00:00:00.000Z',
-				totalCount: 0
-			};
-
-			termCache.set('term', 'term.json', cachedData);
-
-			const result = await getCachedTermData('term.json');
-
-			expect(result).toEqual(cachedData);
-			expect(loadTermData).not.toHaveBeenCalled();
-		});
-
-		it('should load and cache data if not cached', async () => {
+		it('should load and cache data via data-registry', async () => {
 			const data: TermData = {
 				entries: [],
 				lastUpdated: '2024-01-01T00:00:00.000Z',
 				totalCount: 0
 			};
 
-			vi.mocked(loadTermData).mockResolvedValue(data);
+			vi.mocked(loadData).mockResolvedValue(data);
 
 			const result = await getCachedTermData('term.json');
 
 			expect(result).toEqual(data);
-			expect(loadTermData).toHaveBeenCalledWith('term.json');
+			expect(loadData).toHaveBeenCalledWith('term', 'term.json');
 		});
 	});
 

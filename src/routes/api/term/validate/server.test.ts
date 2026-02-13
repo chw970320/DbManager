@@ -14,7 +14,14 @@ vi.mock('$lib/utils/file-handler.js', () => ({
 vi.mock('$lib/utils/validation.js', () => ({
 	validateTermNameSuffix: vi.fn(() => null),
 	validateTermNameUniqueness: vi.fn(() => null),
-	validateTermUniqueness: vi.fn(() => null)
+	validateTermUniqueness: vi.fn(() => null),
+	validateTermNameMapping: vi.fn(() => null),
+	validateColumnNameMapping: vi.fn(() => null),
+	validateTermColumnOrderMapping: vi.fn(() => ({
+		error: null,
+		mismatches: [],
+		correctedColumnName: null
+	}))
 }));
 
 // Mock import
@@ -22,7 +29,10 @@ import { loadTermData, listTermFiles, loadVocabularyData } from '$lib/utils/file
 import {
 	validateTermNameSuffix,
 	validateTermNameUniqueness,
-	validateTermUniqueness
+	validateTermUniqueness,
+	validateTermNameMapping,
+	validateColumnNameMapping,
+	validateTermColumnOrderMapping
 } from '$lib/utils/validation.js';
 
 // RequestEvent Mock 생성 헬퍼
@@ -119,6 +129,13 @@ describe('Term Validate API: /api/term/validate', () => {
 		vi.mocked(validateTermNameSuffix).mockReturnValue(null);
 		vi.mocked(validateTermNameUniqueness).mockReturnValue(null);
 		vi.mocked(validateTermUniqueness).mockReturnValue(null);
+		vi.mocked(validateTermNameMapping).mockReturnValue(null);
+		vi.mocked(validateColumnNameMapping).mockReturnValue(null);
+		vi.mocked(validateTermColumnOrderMapping).mockReturnValue({
+			error: null,
+			mismatches: [],
+			correctedColumnName: null
+		});
 	});
 
 	it('용어 유효성 검증 성공: 유효한 용어 입력 시 success를 반환한다', async () => {
@@ -269,5 +286,196 @@ describe('Term Validate API: /api/term/validate', () => {
 		await POST(request);
 
 		expect(loadTermData).toHaveBeenCalledWith('term.json');
+	});
+
+	// 새로 추가된 검증 기능 테스트
+	describe('용어명 매핑 validation', () => {
+		it('용어명에 단어집에 없는 단어가 포함된 경우 400 에러를 반환한다', async () => {
+			vi.mocked(validateTermNameMapping).mockReturnValue(
+				"용어명의 다음 부분이 단어집에 등록되지 않았습니다: 가능"
+			);
+
+			const request = createMockRequestEvent({
+				body: {
+					termName: '가능_여부',
+					columnName: '##_YN',
+					domainName: ''
+				}
+			});
+
+			const response = await POST(request);
+			const result = await response.json();
+
+			expect(response.status).toBe(400);
+			expect(result.success).toBe(false);
+			expect(result.error).toContain('단어집에 등록되지 않았습니다');
+			// 상세 오류 목록도 반환되어야 함
+			expect(result.data).toBeDefined();
+			expect(result.data.errors).toBeDefined();
+			expect(result.data.errors.length).toBeGreaterThan(0);
+		});
+
+		it('용어명 매핑이 성공하면 validateTermNameMapping을 호출한다', async () => {
+			const request = createMockRequestEvent({
+				body: {
+					termName: '사용자_이름',
+					columnName: 'USER_NAME',
+					domainName: ''
+				}
+			});
+
+			await POST(request);
+
+			expect(validateTermNameMapping).toHaveBeenCalledWith('사용자_이름', expect.any(Array));
+		});
+	});
+
+	describe('컬럼명 매핑 validation', () => {
+		it('컬럼명에 영문약어에 없는 단어가 포함된 경우 400 에러를 반환한다', async () => {
+			vi.mocked(validateColumnNameMapping).mockReturnValue(
+				"컬럼명의 다음 부분이 영문약어로 등록되지 않았습니다: ##"
+			);
+
+			const request = createMockRequestEvent({
+				body: {
+					termName: '가능_여부',
+					columnName: '##_YN',
+					domainName: ''
+				}
+			});
+
+			const response = await POST(request);
+			const result = await response.json();
+
+			expect(response.status).toBe(400);
+			expect(result.success).toBe(false);
+			expect(result.error).toContain('영문약어로 등록되지 않았습니다');
+		});
+
+		it('컬럼명 매핑 validation이 호출된다', async () => {
+			const request = createMockRequestEvent({
+				body: {
+					termName: '사용자_이름',
+					columnName: 'USER_NAME',
+					domainName: ''
+				}
+			});
+
+			await POST(request);
+
+			expect(validateColumnNameMapping).toHaveBeenCalledWith('USER_NAME', expect.any(Array));
+		});
+	});
+
+	describe('용어명-컬럼명 순서 일치 validation', () => {
+		it('순서가 불일치하면 400 에러를 반환한다', async () => {
+			vi.mocked(validateTermColumnOrderMapping).mockReturnValue({
+				error: '용어명과 컬럼명의 단어 순서가 일치하지 않습니다.',
+				mismatches: [
+					{
+						index: 0,
+						termPart: '사용자',
+						expectedAbbreviation: 'USER',
+						actualColumnPart: 'NAME'
+					}
+				],
+				correctedColumnName: 'USER_NAME'
+			});
+
+			const request = createMockRequestEvent({
+				body: {
+					termName: '사용자_이름',
+					columnName: 'NAME_USER',
+					domainName: ''
+				}
+			});
+
+			const response = await POST(request);
+			const result = await response.json();
+
+			expect(response.status).toBe(400);
+			expect(result.success).toBe(false);
+			expect(result.error).toContain('순서가 일치하지 않습니다');
+		});
+
+		it('용어명 매핑이 실패하면 순서 검증을 건너뛴다', async () => {
+			vi.mocked(validateTermNameMapping).mockReturnValue('매핑 실패');
+
+			const request = createMockRequestEvent({
+				body: {
+					termName: '가능_여부',
+					columnName: '##_YN',
+					domainName: ''
+				}
+			});
+
+			await POST(request);
+
+			// 용어명 매핑이 실패하면 순서 검증은 호출되지 않아야 함
+			expect(validateTermColumnOrderMapping).not.toHaveBeenCalled();
+		});
+
+		it('컬럼명 매핑이 실패하면 순서 검증을 건너뛴다', async () => {
+			vi.mocked(validateColumnNameMapping).mockReturnValue('매핑 실패');
+
+			const request = createMockRequestEvent({
+				body: {
+					termName: '사용자_이름',
+					columnName: '##_NAME',
+					domainName: ''
+				}
+			});
+
+			await POST(request);
+
+			// 컬럼명 매핑이 실패하면 순서 검증은 호출되지 않아야 함
+			expect(validateTermColumnOrderMapping).not.toHaveBeenCalled();
+		});
+	});
+
+	describe('복수 오류 처리', () => {
+		it('여러 검증이 동시에 실패하면 모든 오류를 반환한다', async () => {
+			vi.mocked(validateTermNameMapping).mockReturnValue('용어명 매핑 실패');
+			vi.mocked(validateColumnNameMapping).mockReturnValue('컬럼명 매핑 실패');
+			vi.mocked(validateTermNameSuffix).mockReturnValue('접미사 검증 실패');
+
+			const request = createMockRequestEvent({
+				body: {
+					termName: '가능_여부',
+					columnName: '##_YN',
+					domainName: ''
+				}
+			});
+
+			const response = await POST(request);
+			const result = await response.json();
+
+			expect(response.status).toBe(400);
+			expect(result.success).toBe(false);
+			expect(result.data).toBeDefined();
+			expect(result.data.errors).toBeDefined();
+			// 용어명 매핑, 컬럼명 매핑, 접미사 = 3개 오류
+			expect(result.data.errors.length).toBe(3);
+			expect(result.data.errorCount).toBe(3);
+		});
+
+		it('오류가 우선순위대로 정렬된다', async () => {
+			vi.mocked(validateTermNameSuffix).mockReturnValue('접미사 검증 실패');
+			vi.mocked(validateTermNameMapping).mockReturnValue('용어명 매핑 실패');
+
+			const request = createMockRequestEvent({
+				body: {
+					termName: '가능_여부',
+					columnName: 'ABLE_YN',
+					domainName: ''
+				}
+			});
+
+			const response = await POST(request);
+			const result = await response.json();
+
+			expect(result.data.errors[0].type).toBe('TERM_NAME_MAPPING');
+			expect(result.data.errors[1].type).toBe('TERM_NAME_SUFFIX');
+		});
 	});
 });

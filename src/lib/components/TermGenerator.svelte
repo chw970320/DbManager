@@ -26,8 +26,10 @@
 		recommendations: string[];
 		recommendationMappings?: Array<{ recommendation: string; originalPart: string }>;
 	} | null>(null);
-	// 각 결과에 대한 validation 상태 저장
-	let validationResults = $state<Map<string, { isValid: boolean; error?: string }>>(new Map());
+	// 각 결과에 대한 validation 상태 저장 (key: `${segment}::${result}`)
+	let validationResults = $state<
+		Map<string, { isValid: boolean; errors?: Array<{ type: string; message: string }>; error?: string }>
+	>(new Map());
 
 	// 검색 입력 필드 참조
 	let searchInput: HTMLInputElement | undefined;
@@ -132,11 +134,12 @@
 		}
 	}
 
-	// 단어 조합에 대한 접미사 validation 수행
+	/**
+	 * 각 변환 결과에 대해 개별적으로 validation 수행
+	 * validate-all API와 동일한 수준의 검증 (용어명 매핑, 컬럼명 매핑, 순서 검증, 접미사 검증, 중복 검증)
+	 */
 	async function validateSegmentResults(segment: string) {
-		// columnName이 없으면 validation 건너뛰기
-		const columnName = finalResults[0] || '';
-		if (!columnName || !columnName.trim()) {
+		if (!finalResults || finalResults.length === 0) {
 			return;
 		}
 
@@ -151,49 +154,97 @@
 			return;
 		}
 
-		try {
-			const response = await fetch(`/api/term/validate?filename=${encodeURIComponent(filename)}`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					termName: segment,
-					columnName: columnName,
-					domainName: ''
-				})
-			});
-
-			if (response.ok) {
-				const result = await response.json();
-				if (result.success) {
-					// validation 통과
-					validationResults.set(segment, { isValid: true });
-				} else {
-					// validation 실패 - API에서 반환된 오류 메시지 사용
-					const errorMessage = result.error || result.message || 'Validation 확인 실패';
-					validationResults.set(segment, { isValid: false, error: errorMessage });
-				}
-			} else {
-				// API 호출 실패 시 응답 본문에서 오류 메시지 추출 시도
-				try {
-					const errorData = await response.json();
-					const errorMessage =
-						errorData.error ||
-						errorData.message ||
-						`Validation 확인 실패 (HTTP ${response.status})`;
-					validationResults.set(segment, { isValid: false, error: errorMessage });
-				} catch {
-					// JSON 파싱 실패 시 기본 메시지 사용
-					validationResults.set(segment, {
-						isValid: false,
-						error: `Validation 확인 실패 (HTTP ${response.status})`
-					});
-				}
+		// 각 결과에 대해 개별적으로 validation 수행
+		for (const columnName of finalResults) {
+			if (!columnName || !columnName.trim()) {
+				continue;
 			}
-		} catch (err) {
-			// 네트워크 오류 등 예외 상황은 조용히 처리 (validation은 선택적 기능)
-			// 콘솔 에러는 출력하지 않음 (사용자 경험에 영향을 주지 않도록)
+
+			const resultKey = `${segment}::${columnName}`;
+
+			try {
+				const response = await fetch(
+					`/api/term/validate?filename=${encodeURIComponent(filename)}`,
+					{
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							termName: segment,
+							columnName: columnName,
+							domainName: ''
+						})
+					}
+				);
+
+				if (response.ok) {
+					const result = await response.json();
+					if (result.success) {
+						// validation 통과
+						validationResults.set(resultKey, { isValid: true });
+					} else {
+						// validation 실패 - API에서 반환된 오류 메시지 및 상세 오류 목록 사용
+						const errorMessage = result.error || result.message || 'Validation 확인 실패';
+						const errors = result.data?.errors || [];
+						validationResults.set(resultKey, {
+							isValid: false,
+							error: errorMessage,
+							errors: errors
+						});
+					}
+				} else {
+					// API 호출 실패 시 응답 본문에서 오류 메시지 추출 시도
+					try {
+						const errorData = await response.json();
+						const errorMessage =
+							errorData.error ||
+							errorData.message ||
+							`Validation 확인 실패 (HTTP ${response.status})`;
+						const errors = errorData.data?.errors || [];
+						validationResults.set(resultKey, {
+							isValid: false,
+							error: errorMessage,
+							errors: errors
+						});
+					} catch {
+						// JSON 파싱 실패 시 기본 메시지 사용
+						validationResults.set(resultKey, {
+							isValid: false,
+							error: `Validation 확인 실패 (HTTP ${response.status})`
+						});
+					}
+				}
+			} catch (err) {
+				// 네트워크 오류 등 예외 상황은 조용히 처리 (validation은 선택적 기능)
+			}
 		}
 		validationResults = new Map(validationResults); // 반응성 트리거
+	}
+
+	/**
+	 * 특정 결과에 대한 validation 결과 조회
+	 */
+	function getValidation(
+		segment: string,
+		result: string
+	): { isValid: boolean; errors?: Array<{ type: string; message: string }>; error?: string } | undefined {
+		return validationResults.get(`${segment}::${result}`);
+	}
+
+	/**
+	 * validation 오류 유형에 대한 한글 라벨
+	 */
+	function getErrorTypeLabel(type: string): string {
+		const labels: Record<string, string> = {
+			TERM_NAME_LENGTH: '용어명 길이',
+			TERM_NAME_SUFFIX: '접미사',
+			TERM_NAME_DUPLICATE: '용어명 중복',
+			TERM_UNIQUENESS: '유일성',
+			TERM_NAME_MAPPING: '용어명 매핑',
+			COLUMN_NAME_MAPPING: '컬럼명 매핑',
+			TERM_COLUMN_ORDER_MISMATCH: '순서 불일치',
+			DOMAIN_NAME_MAPPING: '도메인 매핑'
+		};
+		return labels[type] || type;
 	}
 
 	/**
@@ -464,7 +515,7 @@
 			<!-- Final Result -->
 			<div class="space-y-2">
 				<h3 class="font-semibold text-gray-900">변환 결과</h3>
-				<div class="relative h-48 overflow-y-auto rounded-md border bg-white p-2">
+				<div class="relative max-h-80 min-h-[12rem] overflow-y-auto rounded-md border bg-white p-2">
 					{#if isLoadingResult}
 						<div class="flex items-center justify-center p-4">
 							<svg
@@ -492,60 +543,39 @@
 						<!-- 통일된 목록 형태 -->
 						<div class="space-y-1">
 							{#each finalResults as result, index (`${index}-${result}`)}
+								{@const validation = selectedSegment ? getValidation(selectedSegment, result) : undefined}
 								<div
-									class="flex items-center justify-between rounded-md border border-gray-200 p-2 hover:bg-gray-50"
+									class="rounded-md border p-2 {validation?.isValid === false
+										? 'border-red-300 bg-red-50'
+										: validation?.isValid === true
+											? 'border-green-300 bg-green-50'
+											: 'border-gray-200 hover:bg-gray-50'}"
 								>
-									<span class="font-mono text-lg">{result}</span>
-									<div class="flex items-center space-x-1">
-										<button
-											type="button"
-											onclick={() => handleCopy(result)}
-											class="rounded p-1 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-											aria-label="결과 복사"
-										>
-											{#if copiedResults.has(result)}
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													width="20"
-													height="20"
-													viewBox="0 0 24 24"
-													fill="none"
-													stroke="currentColor"
-													stroke-width="2"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-													class="text-green-600"
-												>
-													<polyline points="20,6 9,17 4,12"></polyline>
-												</svg>
-											{:else}
-												<svg
-													xmlns="http://www.w3.org/2000/svg"
-													width="20"
-													height="20"
-													viewBox="0 0 24 24"
-													fill="none"
-													stroke="currentColor"
-													stroke-width="2"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-												>
-													<rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
-													<path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path>
-												</svg>
-											{/if}
-										</button>
-										{#if selectedSegment}
-											{@const validation = validationResults.get(selectedSegment)}
-											{#if validation?.isValid === true}
-												<!-- Validation 통과: + 버튼 -->
-												<button
-													type="button"
-													onclick={() => handleAddTerm(result)}
-													class="rounded p-1 text-blue-600 transition-colors hover:bg-blue-100 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-													aria-label="새 용어 추가"
-													title="새 용어 추가"
-												>
+									<div class="flex items-center justify-between">
+										<span class="font-mono text-lg">{result}</span>
+										<div class="flex items-center space-x-1">
+											<button
+												type="button"
+												onclick={() => handleCopy(result)}
+												class="rounded p-1 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+												aria-label="결과 복사"
+											>
+												{#if copiedResults.has(result)}
+													<svg
+														xmlns="http://www.w3.org/2000/svg"
+														width="20"
+														height="20"
+														viewBox="0 0 24 24"
+														fill="none"
+														stroke="currentColor"
+														stroke-width="2"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														class="text-green-600"
+													>
+														<polyline points="20,6 9,17 4,12"></polyline>
+													</svg>
+												{:else}
 													<svg
 														xmlns="http://www.w3.org/2000/svg"
 														width="20"
@@ -557,62 +587,117 @@
 														stroke-linecap="round"
 														stroke-linejoin="round"
 													>
-														<line x1="12" y1="5" x2="12" y2="19"></line>
-														<line x1="5" y1="12" x2="19" y2="12"></line>
-													</svg>
-												</button>
-											{:else if validation?.isValid === false}
-												<!-- Validation 실패: 금지 버튼 -->
-												<button
-													type="button"
-													disabled
-													class="cursor-not-allowed rounded p-1 text-red-600 opacity-50"
-													aria-label="Validation 실패"
-													title={validation.error || 'Validation 확인 실패'}
-												>
-													<svg
-														xmlns="http://www.w3.org/2000/svg"
-														width="20"
-														height="20"
-														viewBox="0 0 24 24"
-														fill="none"
-														stroke="currentColor"
-														stroke-width="2"
-														stroke-linecap="round"
-														stroke-linejoin="round"
-													>
-														<circle cx="12" cy="12" r="10"></circle>
-														<line x1="12" y1="8" x2="12" y2="12"></line>
-														<line x1="12" y1="16" x2="12.01" y2="16"></line>
-													</svg>
-												</button>
-											{:else}
-												<!-- Validation 진행 중: 로딩 표시 -->
-												<div class="rounded p-1 text-gray-400">
-													<svg
-														class="h-5 w-5 animate-spin"
-														xmlns="http://www.w3.org/2000/svg"
-														fill="none"
-														viewBox="0 0 24 24"
-													>
-														<circle
-															class="opacity-25"
-															cx="12"
-															cy="12"
-															r="10"
-															stroke="currentColor"
-															stroke-width="4"
-														></circle>
-														<path
-															class="opacity-75"
-															fill="currentColor"
-															d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+														<rect width="14" height="14" x="8" y="8" rx="2" ry="2"></rect>
+														<path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"
 														></path>
 													</svg>
-												</div>
+												{/if}
+											</button>
+											{#if selectedSegment}
+												{#if validation?.isValid === true}
+													<!-- Validation 통과: + 버튼 -->
+													<button
+														type="button"
+														onclick={() => handleAddTerm(result)}
+														class="rounded p-1 text-green-600 transition-colors hover:bg-green-100 hover:text-green-800 focus:outline-none focus:ring-2 focus:ring-green-500"
+														aria-label="새 용어 추가"
+														title="새 용어 추가"
+													>
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															width="20"
+															height="20"
+															viewBox="0 0 24 24"
+															fill="none"
+															stroke="currentColor"
+															stroke-width="2"
+															stroke-linecap="round"
+															stroke-linejoin="round"
+														>
+															<line x1="12" y1="5" x2="12" y2="19"></line>
+															<line x1="5" y1="12" x2="19" y2="12"></line>
+														</svg>
+													</button>
+												{:else if validation?.isValid === false}
+													<!-- Validation 실패: 경고 아이콘 -->
+													<button
+														type="button"
+														disabled
+														class="cursor-not-allowed rounded p-1 text-red-600 opacity-70"
+														aria-label="Validation 실패"
+														title={validation.error || 'Validation 확인 실패'}
+													>
+														<svg
+															xmlns="http://www.w3.org/2000/svg"
+															width="20"
+															height="20"
+															viewBox="0 0 24 24"
+															fill="none"
+															stroke="currentColor"
+															stroke-width="2"
+															stroke-linecap="round"
+															stroke-linejoin="round"
+														>
+															<circle cx="12" cy="12" r="10"></circle>
+															<line x1="15" y1="9" x2="9" y2="15"></line>
+															<line x1="9" y1="9" x2="15" y2="15"></line>
+														</svg>
+													</button>
+												{:else}
+													<!-- Validation 진행 중: 로딩 표시 -->
+													<div class="rounded p-1 text-gray-400">
+														<svg
+															class="h-5 w-5 animate-spin"
+															xmlns="http://www.w3.org/2000/svg"
+															fill="none"
+															viewBox="0 0 24 24"
+														>
+															<circle
+																class="opacity-25"
+																cx="12"
+																cy="12"
+																r="10"
+																stroke="currentColor"
+																stroke-width="4"
+															></circle>
+															<path
+																class="opacity-75"
+																fill="currentColor"
+																d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+															></path>
+														</svg>
+													</div>
+												{/if}
 											{/if}
-										{/if}
+										</div>
 									</div>
+									<!-- Validation 오류 상세 표시 -->
+									{#if validation?.isValid === false && validation.errors && validation.errors.length > 0}
+										<div class="mt-1.5 space-y-1 border-t border-red-200 pt-1.5">
+											{#each validation.errors as err (err.type)}
+												<div class="flex items-start gap-1.5">
+													<span
+														class="inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] font-medium {err.type === 'TERM_NAME_MAPPING'
+															? 'bg-blue-100 text-blue-700'
+															: err.type === 'COLUMN_NAME_MAPPING'
+																? 'bg-purple-100 text-purple-700'
+																: err.type === 'TERM_COLUMN_ORDER_MISMATCH'
+																	? 'bg-indigo-100 text-indigo-700'
+																	: err.type === 'TERM_NAME_SUFFIX'
+																		? 'bg-orange-100 text-orange-700'
+																		: 'bg-red-100 text-red-700'}"
+													>
+														{getErrorTypeLabel(err.type)}
+													</span>
+													<span class="text-xs leading-relaxed text-red-700">{err.message}</span>
+												</div>
+											{/each}
+										</div>
+									{:else if validation?.isValid === false && validation.error}
+										<div class="mt-1.5 border-t border-red-200 pt-1.5">
+											<p class="text-xs text-red-700">{validation.error}</p>
+										</div>
+									{/if}
 								</div>
 							{/each}
 						</div>

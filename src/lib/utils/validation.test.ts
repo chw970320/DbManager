@@ -10,7 +10,8 @@ import {
 	validateDomainEntryStrict,
 	validateTermEntryStrict,
 	validateIdParam,
-	validatePagination
+	validatePagination,
+	validateTermColumnOrderMapping
 } from './validation';
 import type { VocabularyEntry } from '$lib/types/vocabulary';
 import type { DomainEntry } from '$lib/types/domain';
@@ -217,6 +218,144 @@ describe('validation', () => {
 			const result2 = validatePagination('-1', '0');
 			expect(result2.page).toBe(1);
 			expect(result2.limit).toBe(20); // 0은 양의 정수가 아니므로 기본값 20
+		});
+	});
+
+	describe('validateTermColumnOrderMapping', () => {
+		const vocabularyEntries = [
+			{ standardName: '방문자', abbreviation: 'VSTR' },
+			{ standardName: '로그아웃', abbreviation: 'LGOT' },
+			{ standardName: '수', abbreviation: 'CNT' },
+			{ standardName: '사용자', abbreviation: 'USER' },
+			{ standardName: '이름', abbreviation: 'NAME' },
+			{ standardName: '일자', abbreviation: 'DT' }
+		];
+
+		it('should pass when term and column order match correctly', () => {
+			const result = validateTermColumnOrderMapping(
+				'방문자_로그아웃_수',
+				'VSTR_LGOT_CNT',
+				vocabularyEntries
+			);
+			expect(result.error).toBeNull();
+			expect(result.mismatches).toHaveLength(0);
+			expect(result.correctedColumnName).toBeNull();
+		});
+
+		it('should detect order mismatch when column parts are swapped', () => {
+			// 용어명: 방문자_로그아웃_수 → VSTR_LGOT_CNT 이어야 하지만
+			// 컬럼명: LGOT_VSTR_CNT (1번째와 2번째가 바뀜)
+			const result = validateTermColumnOrderMapping(
+				'방문자_로그아웃_수',
+				'LGOT_VSTR_CNT',
+				vocabularyEntries
+			);
+			expect(result.error).not.toBeNull();
+			expect(result.error).toContain('순서가 일치하지 않습니다');
+			expect(result.mismatches).toHaveLength(2);
+			// 1번째: 방문자→VSTR이어야 하지만 LGOT
+			expect(result.mismatches[0]).toEqual({
+				index: 0,
+				termPart: '방문자',
+				expectedAbbreviation: 'VSTR',
+				actualColumnPart: 'LGOT'
+			});
+			// 2번째: 로그아웃→LGOT이어야 하지만 VSTR
+			expect(result.mismatches[1]).toEqual({
+				index: 1,
+				termPart: '로그아웃',
+				expectedAbbreviation: 'LGOT',
+				actualColumnPart: 'VSTR'
+			});
+			expect(result.correctedColumnName).toBe('VSTR_LGOT_CNT');
+		});
+
+		it('should detect when a valid abbreviation from vocabulary is in wrong position', () => {
+			// 용어명: 사용자_이름 → USER_NAME 이어야 하지만
+			// 컬럼명: NAME_USER (순서 반대)
+			const result = validateTermColumnOrderMapping(
+				'사용자_이름',
+				'NAME_USER',
+				vocabularyEntries
+			);
+			expect(result.error).not.toBeNull();
+			expect(result.mismatches).toHaveLength(2);
+			expect(result.correctedColumnName).toBe('USER_NAME');
+		});
+
+		it('should skip validation when term and column part counts differ', () => {
+			const result = validateTermColumnOrderMapping(
+				'방문자_로그아웃_수',
+				'VSTR_LGOT',
+				vocabularyEntries
+			);
+			expect(result.error).toBeNull();
+			expect(result.mismatches).toHaveLength(0);
+		});
+
+		it('should skip validation when termName is empty', () => {
+			const result = validateTermColumnOrderMapping('', 'VSTR_LGOT', vocabularyEntries);
+			expect(result.error).toBeNull();
+			expect(result.mismatches).toHaveLength(0);
+		});
+
+		it('should skip validation when columnName is empty', () => {
+			const result = validateTermColumnOrderMapping('방문자_로그아웃', '', vocabularyEntries);
+			expect(result.error).toBeNull();
+			expect(result.mismatches).toHaveLength(0);
+		});
+
+		it('should not report mismatch when column part is not in vocabulary (handled by COLUMN_NAME_MAPPING)', () => {
+			// 컬럼명의 부분이 단어집에 없으면 이 검증에서는 무시 (COLUMN_NAME_MAPPING에서 처리)
+			const result = validateTermColumnOrderMapping(
+				'방문자_로그아웃_수',
+				'VSTR_LGOT_UNKNOWN',
+				vocabularyEntries
+			);
+			// UNKNOWN은 단어집에 없으므로 순서 불일치로 보지 않음
+			expect(result.error).toBeNull();
+			expect(result.mismatches).toHaveLength(0);
+		});
+
+		it('should not report mismatch when term part is not in vocabulary (handled by TERM_NAME_MAPPING)', () => {
+			// 용어명의 부분이 단어집에 없으면 이 검증에서는 해당 위치 스킵
+			const result = validateTermColumnOrderMapping(
+				'미등록단어_로그아웃_수',
+				'VSTR_LGOT_CNT',
+				vocabularyEntries
+			);
+			// 미등록단어는 단어집에 없으므로 순서 검증 스킵
+			expect(result.error).toBeNull();
+			expect(result.mismatches).toHaveLength(0);
+		});
+
+		it('should handle case-insensitive comparison', () => {
+			const result = validateTermColumnOrderMapping(
+				'방문자_로그아웃_수',
+				'vstr_lgot_cnt',
+				vocabularyEntries
+			);
+			expect(result.error).toBeNull();
+			expect(result.mismatches).toHaveLength(0);
+		});
+
+		it('should detect partial order mismatch (only some positions swapped)', () => {
+			// 용어명: 방문자_사용자_수 → VSTR_USER_CNT 이어야 하지만
+			// 컬럼명: USER_VSTR_CNT (1번째와 2번째만 바뀜, 3번째는 맞음)
+			const result = validateTermColumnOrderMapping(
+				'방문자_사용자_수',
+				'USER_VSTR_CNT',
+				vocabularyEntries
+			);
+			expect(result.error).not.toBeNull();
+			expect(result.mismatches).toHaveLength(2);
+			expect(result.mismatches[0].index).toBe(0);
+			expect(result.mismatches[0].expectedAbbreviation).toBe('VSTR');
+			expect(result.mismatches[0].actualColumnPart).toBe('USER');
+			expect(result.mismatches[1].index).toBe(1);
+			expect(result.mismatches[1].expectedAbbreviation).toBe('USER');
+			expect(result.mismatches[1].actualColumnPart).toBe('VSTR');
+			expect(result.correctedColumnName).toBe('VSTR_USER_CNT');
 		});
 	});
 });

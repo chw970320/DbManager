@@ -713,3 +713,130 @@ export function validateDomainNameMapping(
 
 	return null;
 }
+
+/**
+ * 용어명-컬럼명 순서 일치 validation
+ * 용어명의 각 부분(standardName)에 대응하는 영문약어(abbreviation)가
+ * 컬럼명의 동일한 위치에 있는지 순서를 검증합니다.
+ *
+ * 예: 용어명 "방문자_로그아웃_수" → [방문자, 로그아웃, 수]
+ *     단어집: 방문자→VSTR, 로그아웃→LGOT, 수→CNT
+ *     올바른 컬럼명: VSTR_LGOT_CNT (순서 일치)
+ *     잘못된 컬럼명: LGOT_VSTR_CNT (순서 불일치)
+ *
+ * @param termName - 검증할 용어명
+ * @param columnName - 검증할 컬럼명
+ * @param vocabularyEntries - 단어집 엔트리 배열
+ * @returns validation 결과 객체 (에러 메시지 또는 null, 불일치 상세 정보 포함)
+ */
+export function validateTermColumnOrderMapping(
+	termName: string,
+	columnName: string,
+	vocabularyEntries: Array<{ standardName: string; abbreviation: string }>
+): {
+	error: string | null;
+	mismatches: Array<{
+		index: number;
+		termPart: string;
+		expectedAbbreviation: string;
+		actualColumnPart: string;
+	}>;
+	correctedColumnName: string | null;
+} {
+	const result: {
+		error: string | null;
+		mismatches: Array<{
+			index: number;
+			termPart: string;
+			expectedAbbreviation: string;
+			actualColumnPart: string;
+		}>;
+		correctedColumnName: string | null;
+	} = { error: null, mismatches: [], correctedColumnName: null };
+
+	if (!termName || !columnName) {
+		return result;
+	}
+
+	const termParts = termName
+		.split('_')
+		.map((p) => p.trim())
+		.filter((p) => p.length > 0);
+	const columnParts = columnName
+		.split('_')
+		.map((p) => p.trim())
+		.filter((p) => p.length > 0);
+
+	// 단어 개수가 다르면 이 검증은 건너뜀 (COLUMN_NAME_MAPPING에서 처리)
+	if (termParts.length !== columnParts.length) {
+		return result;
+	}
+
+	// 단어집 맵 생성: standardName(lowercase) → abbreviation
+	const standardToAbbreviation = new Map<string, string>();
+	// 단어집 맵 생성: abbreviation(lowercase) → standardName (역방향 확인용)
+	const abbreviationSet = new Set<string>();
+
+	vocabularyEntries.forEach((entry) => {
+		const stdKey = entry.standardName.trim().toLowerCase();
+		const abbrValue = entry.abbreviation.trim();
+		const abbrKey = abbrValue.toLowerCase();
+		standardToAbbreviation.set(stdKey, abbrValue);
+		abbreviationSet.add(abbrKey);
+	});
+
+	const mismatches: Array<{
+		index: number;
+		termPart: string;
+		expectedAbbreviation: string;
+		actualColumnPart: string;
+	}> = [];
+	const correctedParts: string[] = [];
+	let hasMismatch = false;
+
+	for (let i = 0; i < termParts.length; i++) {
+		const termPartLower = termParts[i].toLowerCase();
+		const columnPartLower = columnParts[i].toLowerCase();
+
+		// 용어명의 해당 부분이 단어집에서 찾아지는지 확인
+		const expectedAbbreviation = standardToAbbreviation.get(termPartLower);
+
+		if (expectedAbbreviation) {
+			// 단어집에서 올바른 영문약어를 찾았으면 컬럼명과 비교
+			correctedParts.push(expectedAbbreviation);
+
+			if (expectedAbbreviation.toLowerCase() !== columnPartLower) {
+				// 컬럼명의 해당 위치 단어가 단어집에 등록된 다른 영문약어인지 확인
+				// (단어집에 존재하지만 순서가 잘못된 경우)
+				if (abbreviationSet.has(columnPartLower)) {
+					mismatches.push({
+						index: i,
+						termPart: termParts[i],
+						expectedAbbreviation: expectedAbbreviation,
+						actualColumnPart: columnParts[i]
+					});
+					hasMismatch = true;
+				}
+				// 단어집에 없는 경우는 COLUMN_NAME_MAPPING에서 처리되므로 여기서는 무시
+			}
+		} else {
+			// 용어명 부분이 단어집에 없으면 검증 스킵 (TERM_NAME_MAPPING에서 처리)
+			correctedParts.push(columnParts[i]);
+		}
+	}
+
+	if (hasMismatch && mismatches.length > 0) {
+		const mismatchDetails = mismatches
+			.map(
+				(m) =>
+					`${m.index + 1}번째: 용어명 '${m.termPart}'에 대응하는 영문약어는 '${m.expectedAbbreviation}'이어야 하지만 실제 컬럼명에는 '${m.actualColumnPart}'가 있습니다`
+			)
+			.join('; ');
+
+		result.error = `용어명과 컬럼명의 단어 순서가 일치하지 않습니다. ${mismatchDetails}`;
+		result.mismatches = mismatches;
+		result.correctedColumnName = correctedParts.join('_');
+	}
+
+	return result;
+}

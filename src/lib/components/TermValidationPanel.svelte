@@ -99,6 +99,7 @@
 			TERM_UNIQUENESS: '용어 유일성',
 			TERM_NAME_MAPPING: '용어명 매핑',
 			COLUMN_NAME_MAPPING: '컬럼명 매핑',
+			TERM_COLUMN_ORDER_MISMATCH: '용어명-컬럼명 순서',
 			DOMAIN_NAME_MAPPING: '도메인명 매핑'
 		};
 		return labels[type] || type;
@@ -113,6 +114,7 @@
 			TERM_UNIQUENESS: 'bg-yellow-100 text-yellow-800',
 			TERM_NAME_MAPPING: 'bg-blue-100 text-blue-800',
 			COLUMN_NAME_MAPPING: 'bg-purple-100 text-purple-800',
+			TERM_COLUMN_ORDER_MISMATCH: 'bg-indigo-100 text-indigo-800',
 			DOMAIN_NAME_MAPPING: 'bg-pink-100 text-pink-800'
 		};
 		return colors[type] || 'bg-gray-100 text-gray-800';

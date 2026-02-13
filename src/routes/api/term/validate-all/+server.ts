@@ -16,6 +16,7 @@ import {
 	validateTermNameUniqueness,
 	validateTermNameMapping,
 	validateColumnNameMapping,
+	validateTermColumnOrderMapping,
 	validateDomainNameMapping
 } from '$lib/utils/validation.js';
 import { getCachedVocabularyData, getCachedDomainData } from '$lib/utils/cache.js';
@@ -29,8 +30,9 @@ const ERROR_PRIORITY: Record<ValidationErrorType, number> = {
 	TERM_UNIQUENESS: 3,
 	TERM_NAME_MAPPING: 4,
 	COLUMN_NAME_MAPPING: 5,
-	TERM_NAME_SUFFIX: 6,
-	DOMAIN_NAME_MAPPING: 7
+	TERM_COLUMN_ORDER_MISMATCH: 6,
+	TERM_NAME_SUFFIX: 7,
+	DOMAIN_NAME_MAPPING: 8
 };
 
 function sortErrorsByPriority(errors: ValidationError[]): ValidationError[] {
@@ -392,6 +394,35 @@ function generateAutoFixSuggestions(
 				break;
 			}
 
+			case 'TERM_COLUMN_ORDER_MISMATCH': {
+				// 용어명-컬럼명 순서 불일치 자동 수정
+				const orderResult = validateTermColumnOrderMapping(
+					entry.termName.trim(),
+					entry.columnName.trim(),
+					vocabularyEntries
+				);
+
+				if (orderResult.mismatches.length > 0) {
+					const mismatchDetails = orderResult.mismatches
+						.map(
+							(m) =>
+								`${m.index + 1}번째 단어: '${m.actualColumnPart}' → '${m.expectedAbbreviation}'로 수정 필요 (용어명 '${m.termPart}'에 대응)`
+						)
+						.join(', ');
+
+					recommendationParts.push(
+						`용어명과 컬럼명의 단어 순서가 일치하지 않습니다. ${mismatchDetails}. 올바른 컬럼명: '${orderResult.correctedColumnName}'.`
+					);
+
+					suggestions.actionType = 'FIX_COLUMN_NAME_ORDER';
+					if (!suggestions.metadata) suggestions.metadata = {};
+					suggestions.metadata.orderMismatches = orderResult.mismatches;
+					suggestions.metadata.correctedColumnName = orderResult.correctedColumnName;
+					suggestions.columnName = orderResult.correctedColumnName || undefined;
+				}
+				break;
+			}
+
 			case 'TERM_NAME_SUFFIX': {
 				const termParts = entry.termName
 					.split('_')
@@ -631,7 +662,29 @@ export async function GET({ url }: RequestEvent) {
 				}
 			}
 
-			// 7. 도메인명 매핑 validation
+			// 7. 용어명-컬럼명 순서 일치 validation
+			// 용어명 매핑과 컬럼명 매핑이 모두 성공한 경우에만 순서 검증 수행
+			if (
+				termParts.length >= 2 &&
+				entry.columnName &&
+				!errors.some((e) => e.type === 'TERM_NAME_MAPPING') &&
+				!errors.some((e) => e.type === 'COLUMN_NAME_MAPPING')
+			) {
+				const orderResult = validateTermColumnOrderMapping(
+					entry.termName.trim(),
+					entry.columnName.trim(),
+					vocabularyData.entries
+				);
+				if (orderResult.error) {
+					errors.push({
+						type: 'TERM_COLUMN_ORDER_MISMATCH',
+						message: orderResult.error,
+						field: 'columnName'
+					});
+				}
+			}
+
+			// 8. 도메인명 매핑 validation
 			if (entry.domainName) {
 				const domainMappingError = validateDomainNameMapping(
 					entry.domainName.trim(),

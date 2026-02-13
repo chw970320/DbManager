@@ -37,6 +37,7 @@ export type ValidationErrorType =
 	| 'TERM_UNIQUENESS'
 	| 'TERM_NAME_MAPPING'
 	| 'COLUMN_NAME_MAPPING'
+	| 'TERM_COLUMN_ORDER_MISMATCH'
 	| 'DOMAIN_NAME_MAPPING';
 
 /**
@@ -57,6 +58,7 @@ export type AutoFixActionType =
 	| 'FIX_TERM_NAME' // 용어명 수정 (동음이의어/금칙어)
 	| 'ADD_VOCABULARY' // 단어 추가
 	| 'FIX_COLUMN_NAME' // 컬럼명 수정
+	| 'FIX_COLUMN_NAME_ORDER' // 컬럼명 순서 수정 (TERM_COLUMN_ORDER_MISMATCH)
 	| 'FIX_VOCABULARY_SUFFIX' // 단어 형식단어여부 수정 (TERM_NAME_SUFFIX)
 	| 'FIX_VOCABULARY_DOMAIN' // 단어 형식단어여부/도메인 수정 (DOMAIN_NAME_MAPPING)
 	| 'SELECT_SYNONYM' // 동음이의어 선택
@@ -96,6 +98,15 @@ export interface AutoFixSuggestion {
 			oldValue: string;
 			newValue: string;
 		}>;
+
+		// FIX_COLUMN_NAME_ORDER용 (용어명-컬럼명 순서 불일치)
+		orderMismatches?: Array<{
+			index: number;
+			termPart: string; // 용어명의 해당 위치 단어
+			expectedAbbreviation: string; // 단어집 기준 올바른 영문약어
+			actualColumnPart: string; // 실제 컬럼명의 해당 위치 단어
+		}>;
+		correctedColumnName?: string; // 순서 교정된 올바른 컬럼명
 
 		// FIX_VOCABULARY_SUFFIX, FIX_VOCABULARY_DOMAIN용
 		suffixWord?: string; // 접미사 단어

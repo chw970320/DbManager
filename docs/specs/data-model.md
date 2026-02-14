@@ -55,6 +55,29 @@
 
 ---
 
+## 5개 정의서 관계 정합성/동기화 (2026-02-14)
+
+### 관계 정합성 진단
+- API: `GET /api/erd/relations`
+- 대상: `database/entity/attribute/table/column`
+- 결과:
+  - 관계별 `matched/unmatched`
+  - `error/warning` 집계
+  - 이슈 샘플(`targetId`, `expectedKey`, `reason`)
+
+### 관계 자동보정
+- API: `GET/POST /api/erd/relations/sync`
+- 보정 범위:
+  - `Entity -> Table`: `relatedEntityName`
+  - `Table -> Column`: `schemaName`, `tableEnglishName`, `relatedEntityName`
+  - `Attribute -> Column`: 자동 수정 없이 추천 후보 제공
+
+### 충돌 정책
+- 관계 동기화와 컬럼 동기화(`POST /api/column/sync-term`)의 필드 소유권/실행 순서는
+  `docs/specs/relation-sync-policy.md`를 따른다.
+
+---
+
 ## 1. VocabularyEntry (단어집 엔트리)
 
 ### 개요
@@ -1001,6 +1024,7 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 | `columnKoreanName`  | `string?` | ❌   | 컬럼한글명      |
 | `columnDescription` | `string?` | ❌   | 컬럼설명        |
 | `relatedEntityName` | `string?` | ❌   | 연관엔터티명    |
+| `domainName`        | `string?` | ❌   | 도메인명        |
 | `dataType`          | `string?` | ❌   | 자료타입        |
 | `notNullFlag`       | `string?` | ❌   | NOTNULL여부     |
 | `fkInfo`            | `string?` | ❌   | FK정보          |
@@ -1031,6 +1055,7 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 	"columnKoreanName": "고객ID",
 	"columnDescription": "고객의 고유 ID",
 	"relatedEntityName": "고객",
+	"domainName": "USER_ID_DOM",
 	"dataType": "VARCHAR",
 	"notNullFlag": "Y",
 	"fkInfo": "-",
@@ -1045,6 +1070,18 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 ### 관련 API 엔드포인트
 
 - **GET, POST, PUT, DELETE** `/api/column`
+- **GET, POST** `/api/column/sync-term`
+
+### 컬럼-용어-도메인 동기화 규칙
+
+1. 매핑 키: `ColumnEntry.columnEnglishName` ↔ `TermEntry.columnName`
+2. 용어 매핑 성공 시:
+   - `ColumnEntry.columnKoreanName`을 `TermEntry.termName`으로 동기화
+   - `ColumnEntry.domainName`을 `TermEntry.domainName`으로 동기화
+3. 도메인 매핑 성공 시 (`TermEntry.domainName` ↔ `DomainEntry.standardDomainName`):
+   - `ColumnEntry.dataType` ← `DomainEntry.physicalDataType`
+   - `ColumnEntry.dataLength` ← `DomainEntry.dataLength`
+   - `ColumnEntry.dataDecimalLength` ← `DomainEntry.decimalPlaces`
 
 ---
 

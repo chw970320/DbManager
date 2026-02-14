@@ -13,6 +13,7 @@
 - [Attribute API](#attribute-api)
 - [Table API](#table-api)
 - [Column API](#column-api)
+- [ERD API](#erd-api)
 - [Forbidden Words API](#forbidden-words-api)
 - [Search API](#search-api)
 - [Settings API](#settings-api)
@@ -1314,17 +1315,126 @@ ID를 기반으로 테이블 정의를 삭제합니다.
 
 컬럼 목록을 조회합니다. 페이지네이션, 정렬, 검색을 지원합니다.
 
+- 검색 필드: `all`, `schemaName`, `tableEnglishName`, `columnEnglishName`, `columnKoreanName`, `domainName`, `dataType`
+
 ### POST /api/column
 
 새로운 컬럼 정의를 추가합니다.
+
+- 필수 필드:
+  - `scopeFlag`
+  - `subjectArea`
+  - `schemaName`
+  - `tableEnglishName`
+  - `columnEnglishName`
+  - `columnKoreanName`
+  - `relatedEntityName`
+  - `domainName`
+  - `dataType`
+  - `notNullFlag`
+  - `personalInfoFlag`
+  - `encryptionFlag`
+  - `publicFlag`
 
 ### PUT /api/column
 
 기존 컬럼 정의를 수정합니다.
 
+- `id` + POST와 동일한 필수 필드가 필요합니다.
+
 ### DELETE /api/column
 
 ID를 기반으로 컬럼 정의를 삭제합니다.
+
+### GET /api/column/sync-term
+
+컬럼-용어-도메인 매핑 상태를 조회합니다.
+
+- 기본 파일:
+  - `columnFilename`: `column.json`
+  - `termFilename`: `term.json`
+  - `domainFilename`: `domain.json`
+- 반환 핵심 지표:
+  - `matched`, `unmatched`
+  - `matchedDomain`, `unmatchedDomain`
+  - `total`, `termCount`, `domainCount`
+
+### POST /api/column/sync-term
+
+컬럼 정의서를 시스템 용어집/도메인 기준으로 동기화합니다.
+
+- 동기화 규칙:
+  - `columnEnglishName` ↔ `term.columnName`
+  - 매핑 성공 시 `columnKoreanName`/`domainName` 갱신
+  - `domainName`이 `domain.standardDomainName`과 매핑되면 `dataType`/`dataLength`/`dataDecimalLength` 갱신
+- 요청 바디(선택):
+  - `columnFilename`
+  - `termFilename`
+  - `domainFilename`
+
+---
+
+## ERD API
+
+ERD/관계 분석 관련 API입니다.
+
+### GET /api/erd/generate
+
+ERD 노드/엣지/매핑 데이터를 생성합니다.
+
+- 주요 파라미터:
+  - `databaseFile`, `entityFile`, `attributeFile`, `tableFile`, `columnFile`, `domainFile`
+  - `tableIds`, `includeRelated`
+- 응답 추가 정보:
+  - `data.relationValidation` (5개 정의서 연관관계 정합성 요약)
+
+### GET /api/erd/tables
+
+ERD 대상 테이블 목록을 조회합니다.
+
+- 주요 파라미터:
+  - `filename`
+  - `q` (검색어)
+
+### GET /api/erd/relations
+
+5개 정의서(`database/entity/attribute/table/column`)의 연관관계 정합성을 검증합니다.
+
+- 주요 파라미터:
+  - `databaseFile`, `entityFile`, `attributeFile`, `tableFile`, `columnFile`
+- 응답 핵심:
+  - `files`: 실제 검증에 사용한 파일명
+  - `validation.specs`: 관계 규칙 정의
+  - `validation.summaries`: 관계별 `matched/unmatched` 및 이슈 샘플
+  - `validation.totals`: 전체 집계(`errorCount`, `warningCount` 포함)
+
+### GET /api/erd/relations/sync
+
+5개 정의서 관계 자동보정 미리보기를 조회합니다.
+
+- 주요 파라미터:
+  - `apply` (`true`면 즉시 반영)
+  - `databaseFile`, `entityFile`, `attributeFile`, `tableFile`, `columnFile`
+- 응답 핵심:
+  - `data.mode`: `preview` | `apply`
+  - `data.counts`: 후보 건수/적용 건수/추천 건수
+  - `data.changes`: 필드별 변경 후보
+  - `data.suggestions`: Attribute->Column 추천 후보
+  - `data.validationBefore`, `data.validationAfter`: 보정 전/후 정합성 결과
+
+### POST /api/erd/relations/sync
+
+5개 정의서 관계 자동보정을 실행하거나 미리보기를 생성합니다.
+
+- 요청 바디(선택):
+  - `apply` (`true`면 실제 저장)
+  - `databaseFile`, `entityFile`, `attributeFile`, `tableFile`, `columnFile`
+- 자동보정 범위:
+  - `Entity -> Table`: `relatedEntityName` 보정
+  - `Table -> Column`: `schemaName`, `tableEnglishName`, `relatedEntityName` 보정
+  - `Attribute -> Column`: 자동 수정 없이 추천 후보만 제공
+- 충돌 정책:
+  - 관계 동기화와 컬럼 동기화(`POST /api/column/sync-term`)의 필드 소유권/실행 순서는 `docs/specs/relation-sync-policy.md`를 따릅니다.
 
 ---
 

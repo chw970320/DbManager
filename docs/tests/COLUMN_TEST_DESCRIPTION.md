@@ -41,7 +41,7 @@
 | 테스트명                                           | 설명                 | 검증 내용                                                                                                                                                                                     |
 | -------------------------------------------------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | should create a new column entry successfully      | 새 컬럼 생성 성공    | 201 응답, UUID 생성, createdAt/updatedAt 설정                                                                                                                                                 |
-| should return 400 when required fields are missing | 필수 필드 누락       | scopeFlag, subjectArea, schemaName, tableEnglishName, columnEnglishName, columnKoreanName, relatedEntityName, dataType, notNullFlag, personalInfoFlag, encryptionFlag, publicFlag 누락 시 400 |
+| should return 400 when required fields are missing | 필수 필드 누락       | scopeFlag, subjectArea, schemaName, tableEnglishName, columnEnglishName, columnKoreanName, relatedEntityName, domainName, dataType, notNullFlag, personalInfoFlag, encryptionFlag, publicFlag 누락 시 400 |
 | should use specified filename parameter            | 파일명 파라미터 사용 | filename 쿼리 파라미터 적용 및 저장 확인                                                                                                                                                      |
 
 ### PUT (4개)
@@ -68,15 +68,15 @@
 
 **파일 경로**: `src/routes/api/column/sync-term/server.test.ts`
 
-컬럼 정의서와 용어사전 동기화 API를 테스트합니다. 컬럼의 영문명(columnEnglishName)과 용어의 컬럼명(columnName)을 매핑합니다.
+컬럼 정의서와 시스템 용어집/도메인 동기화 API를 테스트합니다. 컬럼의 영문명(`columnEnglishName`)과 용어의 컬럼명(`columnName`)을 매핑하고, 용어의 도메인명(`domainName`)을 통해 도메인 스펙을 동기화합니다.
 
 ### GET (5개)
 
 | 테스트명                                        | 설명                  | 검증 내용                                    |
 | ----------------------------------------------- | --------------------- | -------------------------------------------- |
 | should return sync status successfully          | 동기화 상태 조회 성공 | 200 응답, matched/unmatched/total 반환       |
-| should use specified filename parameters        | 파일명 파라미터 사용  | columnFilename, termFilename 파라미터 적용   |
-| should use default filenames when not specified | 기본 파일명 사용      | 파라미터 없을 때 column.json, term.json 사용 |
+| should use specified filename parameters        | 파일명 파라미터 사용  | columnFilename, termFilename, domainFilename 파라미터 적용   |
+| should use default filenames when not specified | 기본 파일명 사용      | 파라미터 없을 때 column.json, term.json, domain.json 사용 |
 | should return 500 on column data load error     | 컬럼 데이터 로드 오류 | loadColumnData 실패 시 500 에러              |
 | should return 500 on term data load error       | 용어 데이터 로드 오류 | loadTermData 실패 시 500 에러                |
 
@@ -86,7 +86,7 @@
 | ------------------------------------------------ | ---------------------------- | ----------------------------------------------- |
 | should sync terms successfully                   | 용어 동기화 성공             | 200 응답, matched/unmatched/updated 반환        |
 | should update columnKoreanName when term matches | 용어 매칭 시 컬럼명 업데이트 | columnKoreanName이 용어의 termName으로 업데이트 |
-| should use specified filename parameters         | 파일명 파라미터 사용         | columnFilename, termFilename 파라미터 적용      |
+| should use specified filename parameters         | 파일명 파라미터 사용         | columnFilename, termFilename, domainFilename 파라미터 적용      |
 | should return 500 on column data load error      | 컬럼 데이터 로드 오류        | loadColumnData 실패 시 500 에러                 |
 | should return 500 on term data load error        | 용어 데이터 로드 오류        | loadTermData 실패 시 500 에러                   |
 

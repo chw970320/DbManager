@@ -1,12 +1,81 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type { ApiResponse } from '$lib/types/vocabulary.js';
-import type { TermData, TermEntry } from '$lib/types/term.js';
 import {
+	loadData,
+	saveData,
+	mergeData,
+	listFiles,
+	createFile,
+	renameFile,
+	deleteFile,
+	loadVocabularyData,
+	saveVocabularyData,
+	mergeVocabularyData,
+	listVocabularyFiles,
+	createVocabularyFile,
+	renameVocabularyFile,
+	deleteVocabularyFile,
+	loadDomainData,
+	saveDomainData,
+	mergeDomainData,
+	listDomainFiles,
+	createDomainFile,
+	renameDomainFile,
+	deleteDomainFile,
 	loadTermData,
 	saveTermData,
-	loadVocabularyData,
-	loadDomainData
-} from '$lib/utils/file-handler.js';
+	mergeTermData,
+	listTermFiles,
+	createTermFile,
+	renameTermFile,
+	deleteTermFile,
+	loadDatabaseData,
+	saveDatabaseData,
+	mergeDatabaseData,
+	listDatabaseFiles,
+	createDatabaseFile,
+	renameDatabaseFile,
+	deleteDatabaseFile,
+	loadEntityData,
+	saveEntityData,
+	mergeEntityData,
+	listEntityFiles,
+	createEntityFile,
+	renameEntityFile,
+	deleteEntityFile,
+	loadAttributeData,
+	saveAttributeData,
+	mergeAttributeData,
+	listAttributeFiles,
+	createAttributeFile,
+	renameAttributeFile,
+	deleteAttributeFile,
+	loadTableData,
+	saveTableData,
+	mergeTableData,
+	listTableFiles,
+	createTableFile,
+	renameTableFile,
+	deleteTableFile,
+	loadColumnData,
+	saveColumnData,
+	mergeColumnData,
+	listColumnFiles,
+	createColumnFile,
+	renameColumnFile,
+	deleteColumnFile,
+	loadForbiddenWords
+} from '$lib/registry/data-registry';
+import {
+	getCachedData,
+	getCachedVocabularyData,
+	getCachedDomainData,
+	getCachedTermData,
+	invalidateCache,
+	invalidateDataCache,
+	invalidateAllCaches
+} from '$lib/registry/cache-registry';
+
+import { resolveRelatedFilenames } from '$lib/registry/mapping-registry';
 
 /**
  * 용어 매핑 검증 로직 (업로드 API와 동일)
@@ -86,17 +155,17 @@ export async function POST({ request }: RequestEvent) {
 		const { filename = 'term.json' } = body;
 
 		// 용어 데이터 로드
-		const termData = await loadTermData(filename);
+		const termData = await loadData('term', filename);
 
-		// 매핑 정보 로드
-		const mapping = termData.mapping || {
-			vocabulary: 'vocabulary.json',
-			domain: 'domain.json'
-		};
+		// 3단계 폴백으로 관련 파일 해석
+		const fileMappingOverride: Partial<Record<string, string>> = {};
+		if (termData.mapping?.vocabulary) fileMappingOverride.vocabulary = termData.mapping.vocabulary;
+		if (termData.mapping?.domain) fileMappingOverride.domain = termData.mapping.domain;
+		const relatedFiles = await resolveRelatedFilenames('term', filename, fileMappingOverride as Partial<Record<DataType, string>>);
 
 		// 단어집 및 도메인 데이터 로드
-		const vocabularyData = await loadVocabularyData(mapping.vocabulary);
-		const domainData = await loadDomainData(mapping.domain);
+		const vocabularyData = await loadData('vocabulary', relatedFiles.get('vocabulary'));
+		const domainData = await loadData('domain', relatedFiles.get('domain'));
 
 		// 단어집 맵 생성
 		const vocabularyMap = new Map<string, { standardName: string; abbreviation: string }>();
@@ -175,7 +244,7 @@ export async function POST({ request }: RequestEvent) {
 			entries: syncedEntries,
 			lastUpdated: new Date().toISOString()
 		};
-		await saveTermData(finalData, filename);
+		await saveData('term', finalData, filename);
 
 		return json(
 			{
@@ -204,3 +273,4 @@ export async function POST({ request }: RequestEvent) {
 		);
 	}
 }
+

@@ -1,6 +1,80 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type { DbDesignApiResponse, DatabaseData, DatabaseEntry } from '$lib/types/database-design';
-import { loadDatabaseData, mergeDatabaseData } from '$lib/utils/database-design-handler.js';
+import {
+	loadData,
+	saveData,
+	mergeData,
+	listFiles,
+	createFile,
+	renameFile,
+	deleteFile,
+	loadVocabularyData,
+	saveVocabularyData,
+	mergeVocabularyData,
+	listVocabularyFiles,
+	createVocabularyFile,
+	renameVocabularyFile,
+	deleteVocabularyFile,
+	loadDomainData,
+	saveDomainData,
+	mergeDomainData,
+	listDomainFiles,
+	createDomainFile,
+	renameDomainFile,
+	deleteDomainFile,
+	loadTermData,
+	saveTermData,
+	mergeTermData,
+	listTermFiles,
+	createTermFile,
+	renameTermFile,
+	deleteTermFile,
+	loadDatabaseData,
+	saveDatabaseData,
+	mergeDatabaseData,
+	listDatabaseFiles,
+	createDatabaseFile,
+	renameDatabaseFile,
+	deleteDatabaseFile,
+	loadEntityData,
+	saveEntityData,
+	mergeEntityData,
+	listEntityFiles,
+	createEntityFile,
+	renameEntityFile,
+	deleteEntityFile,
+	loadAttributeData,
+	saveAttributeData,
+	mergeAttributeData,
+	listAttributeFiles,
+	createAttributeFile,
+	renameAttributeFile,
+	deleteAttributeFile,
+	loadTableData,
+	saveTableData,
+	mergeTableData,
+	listTableFiles,
+	createTableFile,
+	renameTableFile,
+	deleteTableFile,
+	loadColumnData,
+	saveColumnData,
+	mergeColumnData,
+	listColumnFiles,
+	createColumnFile,
+	renameColumnFile,
+	deleteColumnFile,
+	loadForbiddenWords
+} from '$lib/registry/data-registry';
+import {
+	getCachedData,
+	getCachedVocabularyData,
+	getCachedDomainData,
+	getCachedTermData,
+	invalidateCache,
+	invalidateDataCache,
+	invalidateAllCaches
+} from '$lib/registry/cache-registry';
+
 import { validateXlsxFile } from '$lib/utils/validation.js';
 import { parseDatabaseXlsxToJson } from '$lib/utils/database-design-xlsx-parser.js';
 import {
@@ -169,3 +243,4 @@ export async function POST({ request }: RequestEvent) {
 		);
 	}
 }
+

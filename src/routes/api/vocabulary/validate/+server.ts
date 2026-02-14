@@ -1,6 +1,80 @@
-import { json } from '@sveltejs/kit';
-import type { RequestEvent } from '@sveltejs/kit';
-import { loadVocabularyData, loadForbiddenWords } from '$lib/utils/file-handler';
+import { json, type RequestEvent } from '@sveltejs/kit';
+import {
+	loadData,
+	saveData,
+	mergeData,
+	listFiles,
+	createFile,
+	renameFile,
+	deleteFile,
+	loadVocabularyData,
+	saveVocabularyData,
+	mergeVocabularyData,
+	listVocabularyFiles,
+	createVocabularyFile,
+	renameVocabularyFile,
+	deleteVocabularyFile,
+	loadDomainData,
+	saveDomainData,
+	mergeDomainData,
+	listDomainFiles,
+	createDomainFile,
+	renameDomainFile,
+	deleteDomainFile,
+	loadTermData,
+	saveTermData,
+	mergeTermData,
+	listTermFiles,
+	createTermFile,
+	renameTermFile,
+	deleteTermFile,
+	loadDatabaseData,
+	saveDatabaseData,
+	mergeDatabaseData,
+	listDatabaseFiles,
+	createDatabaseFile,
+	renameDatabaseFile,
+	deleteDatabaseFile,
+	loadEntityData,
+	saveEntityData,
+	mergeEntityData,
+	listEntityFiles,
+	createEntityFile,
+	renameEntityFile,
+	deleteEntityFile,
+	loadAttributeData,
+	saveAttributeData,
+	mergeAttributeData,
+	listAttributeFiles,
+	createAttributeFile,
+	renameAttributeFile,
+	deleteAttributeFile,
+	loadTableData,
+	saveTableData,
+	mergeTableData,
+	listTableFiles,
+	createTableFile,
+	renameTableFile,
+	deleteTableFile,
+	loadColumnData,
+	saveColumnData,
+	mergeColumnData,
+	listColumnFiles,
+	createColumnFile,
+	renameColumnFile,
+	deleteColumnFile,
+	loadForbiddenWords
+} from '$lib/registry/data-registry';
+import {
+	getCachedData,
+	getCachedVocabularyData,
+	getCachedDomainData,
+	getCachedTermData,
+	invalidateCache,
+	invalidateDataCache,
+	invalidateAllCaches
+} from '$lib/registry/cache-registry';
+
 import type { VocabularyEntry, ForbiddenWord } from '$lib/types/vocabulary';
 import type { ApiResponse } from '$lib/types/api';
 
@@ -63,3 +137,6 @@ export async function POST({ request, url }: RequestEvent): Promise<Response> {
 		return json({ success: false, error: '서버 오류가 발생했습니다.' }, { status: 500 });
 	}
 }
+
+
+

@@ -1,7 +1,81 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type { ApiResponse } from '$lib/types/vocabulary.js';
-import type { TermEntry, ValidationError, ValidationErrorType } from '$lib/types/term.js';
-import { loadTermData, listTermFiles, loadVocabularyData } from '$lib/utils/file-handler.js';
+import {
+	loadData,
+	saveData,
+	mergeData,
+	listFiles,
+	createFile,
+	renameFile,
+	deleteFile,
+	loadVocabularyData,
+	saveVocabularyData,
+	mergeVocabularyData,
+	listVocabularyFiles,
+	createVocabularyFile,
+	renameVocabularyFile,
+	deleteVocabularyFile,
+	loadDomainData,
+	saveDomainData,
+	mergeDomainData,
+	listDomainFiles,
+	createDomainFile,
+	renameDomainFile,
+	deleteDomainFile,
+	loadTermData,
+	saveTermData,
+	mergeTermData,
+	listTermFiles,
+	createTermFile,
+	renameTermFile,
+	deleteTermFile,
+	loadDatabaseData,
+	saveDatabaseData,
+	mergeDatabaseData,
+	listDatabaseFiles,
+	createDatabaseFile,
+	renameDatabaseFile,
+	deleteDatabaseFile,
+	loadEntityData,
+	saveEntityData,
+	mergeEntityData,
+	listEntityFiles,
+	createEntityFile,
+	renameEntityFile,
+	deleteEntityFile,
+	loadAttributeData,
+	saveAttributeData,
+	mergeAttributeData,
+	listAttributeFiles,
+	createAttributeFile,
+	renameAttributeFile,
+	deleteAttributeFile,
+	loadTableData,
+	saveTableData,
+	mergeTableData,
+	listTableFiles,
+	createTableFile,
+	renameTableFile,
+	deleteTableFile,
+	loadColumnData,
+	saveColumnData,
+	mergeColumnData,
+	listColumnFiles,
+	createColumnFile,
+	renameColumnFile,
+	deleteColumnFile,
+	loadForbiddenWords
+} from '$lib/registry/data-registry';
+import {
+	getCachedData,
+	getCachedVocabularyData,
+	getCachedDomainData,
+	getCachedTermData,
+	invalidateCache,
+	invalidateDataCache,
+	invalidateAllCaches
+} from '$lib/registry/cache-registry';
+
+import { resolveRelatedFilenames } from '$lib/registry/mapping-registry';
 import {
 	validateTermNameSuffix,
 	validateTermUniqueness,
@@ -96,7 +170,7 @@ export async function POST({ request, url }: RequestEvent) {
 		// 매핑 정보 로드
 		let termData;
 		try {
-			termData = await loadTermData(filename);
+			termData = await loadData('term', filename);
 		} catch {
 			return json(
 				{
@@ -108,18 +182,19 @@ export async function POST({ request, url }: RequestEvent) {
 			);
 		}
 
-		const mapping = termData.mapping || {
-			vocabulary: 'vocabulary.json',
-			domain: 'domain.json'
-		};
+		// 3단계 폴백으로 관련 파일 해석
+		const fileMappingOverride: Partial<Record<string, string>> = {};
+		if (termData.mapping?.vocabulary) fileMappingOverride.vocabulary = termData.mapping.vocabulary;
+		if (termData.mapping?.domain) fileMappingOverride.domain = termData.mapping.domain;
+		const relatedFiles = await resolveRelatedFilenames('term', filename, fileMappingOverride as Partial<Record<DataType, string>>);
 
 		// 단어집 데이터 로드
 		let vocabularyData;
 		try {
-			vocabularyData = await loadVocabularyData(mapping.vocabulary);
+			vocabularyData = await getCachedVocabularyData(relatedFiles.get('vocabulary'));
 		} catch (vocabError) {
 			console.warn('단어집 데이터 로드 실패:', vocabError);
-			vocabularyData = { entries: [] };
+			vocabularyData = { entries: [], lastUpdated: '', totalCount: 0 };
 		}
 
 		// 모든 validation 오류를 수집
@@ -180,10 +255,10 @@ export async function POST({ request, url }: RequestEvent) {
 			// 모든 용어 파일 로드 (중복 검사에 사용)
 			const allTermEntries: TermEntry[] = [];
 			try {
-				const allTermFiles = await listTermFiles();
+				const allTermFiles = await listFiles('term');
 				for (const file of allTermFiles) {
 					try {
-						const fileData = await loadTermData(file);
+						const fileData = await loadData('term', file);
 						allTermEntries.push(...fileData.entries);
 					} catch (error) {
 						console.warn(`용어 파일 ${file} 로드 실패:`, error);
@@ -268,3 +343,4 @@ export async function POST({ request, url }: RequestEvent) {
 		);
 	}
 }
+

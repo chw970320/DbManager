@@ -1,6 +1,87 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type { ApiResponse } from '$lib/types/vocabulary';
-import { loadVocabularyData, saveVocabularyData } from '$lib/utils/file-handler';
+import {
+	loadData,
+	saveData,
+	mergeData,
+	listFiles,
+	createFile,
+	renameFile,
+	deleteFile,
+	loadVocabularyData,
+	saveVocabularyData,
+	mergeVocabularyData,
+	listVocabularyFiles,
+	createVocabularyFile,
+	renameVocabularyFile,
+	deleteVocabularyFile,
+	loadDomainData,
+	saveDomainData,
+	mergeDomainData,
+	listDomainFiles,
+	createDomainFile,
+	renameDomainFile,
+	deleteDomainFile,
+	loadTermData,
+	saveTermData,
+	mergeTermData,
+	listTermFiles,
+	createTermFile,
+	renameTermFile,
+	deleteTermFile,
+	loadDatabaseData,
+	saveDatabaseData,
+	mergeDatabaseData,
+	listDatabaseFiles,
+	createDatabaseFile,
+	renameDatabaseFile,
+	deleteDatabaseFile,
+	loadEntityData,
+	saveEntityData,
+	mergeEntityData,
+	listEntityFiles,
+	createEntityFile,
+	renameEntityFile,
+	deleteEntityFile,
+	loadAttributeData,
+	saveAttributeData,
+	mergeAttributeData,
+	listAttributeFiles,
+	createAttributeFile,
+	renameAttributeFile,
+	deleteAttributeFile,
+	loadTableData,
+	saveTableData,
+	mergeTableData,
+	listTableFiles,
+	createTableFile,
+	renameTableFile,
+	deleteTableFile,
+	loadColumnData,
+	saveColumnData,
+	mergeColumnData,
+	listColumnFiles,
+	createColumnFile,
+	renameColumnFile,
+	deleteColumnFile,
+	loadForbiddenWords
+} from '$lib/registry/data-registry';
+import {
+	getCachedData,
+	getCachedVocabularyData,
+	getCachedDomainData,
+	getCachedTermData,
+	invalidateCache,
+	invalidateDataCache,
+	invalidateAllCaches
+} from '$lib/registry/cache-registry';
+
+import {
+	resolveRelatedFilenames,
+	getMappingsFor,
+	updateMapping,
+	addMapping
+} from '$lib/registry/mapping-registry';
+import type { DataType } from '$lib/types/base';
 
 /**
  * 단어집 파일 매핑 정보 조회 API
@@ -10,14 +91,19 @@ export async function GET({ url }: RequestEvent) {
 	try {
 		const filename = url.searchParams.get('filename') || 'vocabulary.json';
 
-		const vocabularyData = await loadVocabularyData(filename);
+		// 3단계 폴백으로 매핑 해석 (레지스트리 우선, 파일 폴백)
+		const vocabularyData = await loadData('vocabulary', filename);
+		const fileMappingOverride: Partial<Record<DataType, string>> = {};
+		if (vocabularyData.mapping?.domain) fileMappingOverride.domain = vocabularyData.mapping.domain;
+		const relatedFiles = await resolveRelatedFilenames('vocabulary', filename, fileMappingOverride);
 
 		return json(
 			{
 				success: true,
 				data: {
-					// mapping.domain 사용 (mappedDomainFile은 deprecated)
-					mapping: vocabularyData.mapping || { domain: 'domain.json' }
+					mapping: {
+						domain: relatedFiles.get('domain') || 'domain.json'
+					}
 				},
 				message: 'Vocabulary mapping retrieved successfully'
 			} as ApiResponse,
@@ -38,6 +124,8 @@ export async function GET({ url }: RequestEvent) {
 /**
  * 단어집 파일 매핑 정보 저장 API
  * PUT /api/vocabulary/files/mapping
+ *
+ * 듀얼 라이트: 파일 내 mapping 필드 + 레지스트리 동시 갱신
  */
 export async function PUT({ request }: RequestEvent) {
 	try {
@@ -66,18 +154,37 @@ export async function PUT({ request }: RequestEvent) {
 			);
 		}
 
-		// 기존 데이터 로드
-		const vocabularyData = await loadVocabularyData(filename);
-
-		// 매핑 정보 업데이트 (mapping.domain만 사용)
+		// 1. 파일 내 mapping 필드 업데이트 (하위 호환)
+		const vocabularyData = await loadData('vocabulary', filename);
 		vocabularyData.mapping = {
 			domain: mapping.domain
 		};
-		// mappedDomainFile 제거 (deprecated)
 		delete vocabularyData.mappedDomainFile;
+		await saveData('vocabulary', vocabularyData, filename);
 
-		// 저장
-		await saveVocabularyData(vocabularyData, filename);
+		// 2. 레지스트리 듀얼 라이트 (best-effort)
+		try {
+			const existingMappings = await getMappingsFor('vocabulary', filename);
+			const domainMapping = existingMappings.find((m) => m.relatedType === 'domain');
+
+			if (domainMapping) {
+				await updateMapping(domainMapping.relation.id, {
+					targetFilename: mapping.domain
+				});
+			} else {
+				await addMapping({
+					sourceType: 'vocabulary',
+					sourceFilename: filename,
+					targetType: 'domain',
+					targetFilename: mapping.domain,
+					mappingKey: 'domainCategory',
+					cardinality: 'N:1',
+					description: '단어집 → 도메인 분류 매핑'
+				});
+			}
+		} catch (registryError) {
+			console.warn('[듀얼 라이트] 레지스트리 갱신 실패 (파일 저장은 완료):', registryError);
+		}
 
 		return json(
 			{
@@ -100,3 +207,4 @@ export async function PUT({ request }: RequestEvent) {
 		);
 	}
 }
+

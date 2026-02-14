@@ -1,14 +1,83 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type { ApiResponse, VocabularyData, VocabularyEntry } from '$lib/types/vocabulary.js';
 import {
+	loadData,
+	saveData,
+	mergeData,
+	listFiles,
+	createFile,
+	renameFile,
+	deleteFile,
 	loadVocabularyData,
 	saveVocabularyData,
-	checkVocabularyReferences,
-	listVocabularyFiles
-} from '$lib/utils/file-handler.js';
+	mergeVocabularyData,
+	listVocabularyFiles,
+	createVocabularyFile,
+	renameVocabularyFile,
+	deleteVocabularyFile,
+	loadDomainData,
+	saveDomainData,
+	mergeDomainData,
+	listDomainFiles,
+	createDomainFile,
+	renameDomainFile,
+	deleteDomainFile,
+	loadTermData,
+	saveTermData,
+	mergeTermData,
+	listTermFiles,
+	createTermFile,
+	renameTermFile,
+	deleteTermFile,
+	loadDatabaseData,
+	saveDatabaseData,
+	mergeDatabaseData,
+	listDatabaseFiles,
+	createDatabaseFile,
+	renameDatabaseFile,
+	deleteDatabaseFile,
+	loadEntityData,
+	saveEntityData,
+	mergeEntityData,
+	listEntityFiles,
+	createEntityFile,
+	renameEntityFile,
+	deleteEntityFile,
+	loadAttributeData,
+	saveAttributeData,
+	mergeAttributeData,
+	listAttributeFiles,
+	createAttributeFile,
+	renameAttributeFile,
+	deleteAttributeFile,
+	loadTableData,
+	saveTableData,
+	mergeTableData,
+	listTableFiles,
+	createTableFile,
+	renameTableFile,
+	deleteTableFile,
+	loadColumnData,
+	saveColumnData,
+	mergeColumnData,
+	listColumnFiles,
+	createColumnFile,
+	renameColumnFile,
+	deleteColumnFile,
+	loadForbiddenWords
+} from '$lib/registry/data-registry';
+import {
+	getCachedData,
+	getCachedVocabularyData,
+	getCachedDomainData,
+	getCachedTermData,
+	invalidateCache,
+	invalidateDataCache,
+	invalidateAllCaches
+} from '$lib/registry/cache-registry';
+
+import { checkEntryReferences } from '$lib/registry/mapping-registry';
 import { getDuplicateDetails } from '$lib/utils/duplicate-handler.js';
 import { safeMerge } from '$lib/utils/type-guards.js';
-import { invalidateCache } from '$lib/utils/cache.js';
 import { validateForbiddenWordsAndSynonyms } from '$lib/utils/validation.js';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -540,7 +609,7 @@ export async function DELETE({ url }: RequestEvent) {
 		let warnings: unknown[] = [];
 		if (!force) {
 			try {
-				const refCheck = await checkVocabularyReferences(entryToDelete);
+				const refCheck = await checkEntryReferences('vocabulary', entryToDelete, filename || undefined);
 				if (!refCheck.canDelete && refCheck.references?.length) {
 					warnings = refCheck.references;
 				}
@@ -569,3 +638,4 @@ export async function DELETE({ url }: RequestEvent) {
 		);
 	}
 }
+

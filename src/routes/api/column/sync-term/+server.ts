@@ -1,8 +1,81 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type { DbDesignApiResponse, ColumnEntry, ColumnData } from '$lib/types/database-design';
-import type { TermEntry } from '$lib/types/term';
-import { loadColumnData, saveColumnData } from '$lib/utils/database-design-handler.js';
-import { loadTermData } from '$lib/utils/file-handler.js';
+import {
+	loadData,
+	saveData,
+	mergeData,
+	listFiles,
+	createFile,
+	renameFile,
+	deleteFile,
+	loadVocabularyData,
+	saveVocabularyData,
+	mergeVocabularyData,
+	listVocabularyFiles,
+	createVocabularyFile,
+	renameVocabularyFile,
+	deleteVocabularyFile,
+	loadDomainData,
+	saveDomainData,
+	mergeDomainData,
+	listDomainFiles,
+	createDomainFile,
+	renameDomainFile,
+	deleteDomainFile,
+	loadTermData,
+	saveTermData,
+	mergeTermData,
+	listTermFiles,
+	createTermFile,
+	renameTermFile,
+	deleteTermFile,
+	loadDatabaseData,
+	saveDatabaseData,
+	mergeDatabaseData,
+	listDatabaseFiles,
+	createDatabaseFile,
+	renameDatabaseFile,
+	deleteDatabaseFile,
+	loadEntityData,
+	saveEntityData,
+	mergeEntityData,
+	listEntityFiles,
+	createEntityFile,
+	renameEntityFile,
+	deleteEntityFile,
+	loadAttributeData,
+	saveAttributeData,
+	mergeAttributeData,
+	listAttributeFiles,
+	createAttributeFile,
+	renameAttributeFile,
+	deleteAttributeFile,
+	loadTableData,
+	saveTableData,
+	mergeTableData,
+	listTableFiles,
+	createTableFile,
+	renameTableFile,
+	deleteTableFile,
+	loadColumnData,
+	saveColumnData,
+	mergeColumnData,
+	listColumnFiles,
+	createColumnFile,
+	renameColumnFile,
+	deleteColumnFile,
+	loadForbiddenWords
+} from '$lib/registry/data-registry';
+import {
+	getCachedData,
+	getCachedVocabularyData,
+	getCachedDomainData,
+	getCachedTermData,
+	invalidateCache,
+	invalidateDataCache,
+	invalidateAllCaches
+} from '$lib/registry/cache-registry';
+
+import { resolveRelatedFilenames } from '$lib/registry/mapping-registry';
 
 type SyncRequest = {
 	columnFilename?: string;
@@ -34,12 +107,14 @@ export async function POST({ request }: RequestEvent) {
 		const { columnFilename, termFilename }: SyncRequest = await request.json();
 
 		const colFile = columnFilename || 'column.json';
-		const termFile = termFilename || 'term.json';
+
+		// termFilename이 명시적으로 전달되지 않으면 레지스트리 기반으로 해석
+		const termFile = termFilename || (await resolveRelatedFilenames('column', colFile)).get('term') || 'term.json';
 
 		// 컬럼 데이터 로드
 		let columnData: ColumnData;
 		try {
-			columnData = await loadColumnData(colFile);
+			columnData = await loadData('column', colFile) as ColumnData;
 		} catch (error) {
 			return json(
 				{
@@ -54,7 +129,7 @@ export async function POST({ request }: RequestEvent) {
 		// 용어 데이터 로드
 		let termEntries: TermEntry[] = [];
 		try {
-			const termData = await loadTermData(termFile);
+			const termData = await loadData('term', termFile);
 			termEntries = termData.entries;
 		} catch (error) {
 			return json(
@@ -136,7 +211,7 @@ export async function POST({ request }: RequestEvent) {
 				lastUpdated: now,
 				totalCount: syncedEntries.length
 			};
-			await saveColumnData(finalData, colFile);
+			await saveData('column', finalData, colFile);
 		}
 
 		const result: SyncResult = {
@@ -177,13 +252,14 @@ export async function POST({ request }: RequestEvent) {
 export async function GET({ url }: RequestEvent) {
 	try {
 		const colFile = url.searchParams.get('columnFilename') || 'column.json';
-		const termFile = url.searchParams.get('termFilename') || 'term.json';
+		const termFileParam = url.searchParams.get('termFilename');
+		const termFile = termFileParam || (await resolveRelatedFilenames('column', colFile)).get('term') || 'term.json';
 
 		// 컬럼 데이터 로드
-		const columnData = await loadColumnData(colFile);
+		const columnData = await loadData('column', colFile) as ColumnData;
 
 		// 용어 데이터 로드
-		const termData = await loadTermData(termFile);
+		const termData = await loadData('term', termFile);
 
 		// 용어 맵 생성
 		const termMap = new Map<string, TermEntry>();
@@ -253,3 +329,4 @@ export async function GET({ url }: RequestEvent) {
 		);
 	}
 }
+

@@ -1,6 +1,81 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import { loadVocabularyData, saveVocabularyData, loadDomainData } from '$lib/utils/file-handler.js';
-import { invalidateCache } from '$lib/utils/cache.js';
+import {
+	loadData,
+	saveData,
+	mergeData,
+	listFiles,
+	createFile,
+	renameFile,
+	deleteFile,
+	loadVocabularyData,
+	saveVocabularyData,
+	mergeVocabularyData,
+	listVocabularyFiles,
+	createVocabularyFile,
+	renameVocabularyFile,
+	deleteVocabularyFile,
+	loadDomainData,
+	saveDomainData,
+	mergeDomainData,
+	listDomainFiles,
+	createDomainFile,
+	renameDomainFile,
+	deleteDomainFile,
+	loadTermData,
+	saveTermData,
+	mergeTermData,
+	listTermFiles,
+	createTermFile,
+	renameTermFile,
+	deleteTermFile,
+	loadDatabaseData,
+	saveDatabaseData,
+	mergeDatabaseData,
+	listDatabaseFiles,
+	createDatabaseFile,
+	renameDatabaseFile,
+	deleteDatabaseFile,
+	loadEntityData,
+	saveEntityData,
+	mergeEntityData,
+	listEntityFiles,
+	createEntityFile,
+	renameEntityFile,
+	deleteEntityFile,
+	loadAttributeData,
+	saveAttributeData,
+	mergeAttributeData,
+	listAttributeFiles,
+	createAttributeFile,
+	renameAttributeFile,
+	deleteAttributeFile,
+	loadTableData,
+	saveTableData,
+	mergeTableData,
+	listTableFiles,
+	createTableFile,
+	renameTableFile,
+	deleteTableFile,
+	loadColumnData,
+	saveColumnData,
+	mergeColumnData,
+	listColumnFiles,
+	createColumnFile,
+	renameColumnFile,
+	deleteColumnFile,
+	loadForbiddenWords
+} from '$lib/registry/data-registry';
+import {
+	getCachedData,
+	getCachedVocabularyData,
+	getCachedDomainData,
+	getCachedTermData,
+	invalidateCache,
+	invalidateDataCache,
+	invalidateAllCaches
+} from '$lib/registry/cache-registry';
+
+import { resolveRelatedFilenames } from '$lib/registry/mapping-registry';
 import type { ApiResponse, VocabularyEntry, VocabularyData } from '$lib/types/vocabulary.js';
 import type { DomainEntry } from '$lib/types/domain.js';
 
@@ -16,14 +91,16 @@ export async function POST({ request }: RequestEvent) {
 		const vocabFile = vocabularyFilename || 'vocabulary.json';
 
 		// 단어집 로드
-		const vocabularyData = await loadVocabularyData(vocabFile);
+		const vocabularyData = await loadData('vocabulary', vocabFile) as VocabularyData;
 
-		// 매핑 정보 로드 (mapping.domain 사용)
-		const mapping = vocabularyData.mapping || { domain: 'domain.json' };
-		const domainFile = domainFilename || mapping.domain;
+		// 3단계 폴백으로 도메인 파일 해석
+		const fileMappingOverride: Partial<Record<string, string>> = {};
+		if (vocabularyData.mapping?.domain) fileMappingOverride.domain = vocabularyData.mapping.domain;
+		const relatedFiles = await resolveRelatedFilenames('vocabulary', vocabFile, fileMappingOverride as Partial<Record<DataType, string>>);
+		const domainFile = domainFilename || relatedFiles.get('domain') || 'domain.json';
 
 		// 도메인 데이터 로드
-		const domainData = await loadDomainData(domainFile);
+		const domainData = await loadData('domain', domainFile);
 		const domainMap = new Map<string, string>(); // key: domainCategory(lower/trim) -> domainGroup
 		domainData.entries.forEach((entry: DomainEntry) => {
 			if (entry.domainCategory && entry.domainGroup) {
@@ -73,8 +150,8 @@ export async function POST({ request }: RequestEvent) {
 			},
 			lastUpdated: new Date().toISOString()
 		};
-		await saveVocabularyData(finalData, vocabFile);
-		invalidateCache('vocabulary', vocabFile);
+		await saveData('vocabulary', finalData, vocabFile);
+		invalidateDataCache('vocabulary', vocabFile);
 
 		return json(
 			{
@@ -103,3 +180,4 @@ export async function POST({ request }: RequestEvent) {
 		);
 	}
 }
+

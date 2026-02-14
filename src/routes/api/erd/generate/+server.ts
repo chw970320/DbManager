@@ -1,59 +1,119 @@
+import { json, type RequestEvent } from '@sveltejs/kit';
+import {
+	loadData,
+	saveData,
+	mergeData,
+	listFiles,
+	createFile,
+	renameFile,
+	deleteFile,
+	loadVocabularyData,
+	saveVocabularyData,
+	mergeVocabularyData,
+	listVocabularyFiles,
+	createVocabularyFile,
+	renameVocabularyFile,
+	deleteVocabularyFile,
+	loadDomainData,
+	saveDomainData,
+	mergeDomainData,
+	listDomainFiles,
+	createDomainFile,
+	renameDomainFile,
+	deleteDomainFile,
+	loadTermData,
+	saveTermData,
+	mergeTermData,
+	listTermFiles,
+	createTermFile,
+	renameTermFile,
+	deleteTermFile,
+	loadDatabaseData,
+	saveDatabaseData,
+	mergeDatabaseData,
+	listDatabaseFiles,
+	createDatabaseFile,
+	renameDatabaseFile,
+	deleteDatabaseFile,
+	loadEntityData,
+	saveEntityData,
+	mergeEntityData,
+	listEntityFiles,
+	createEntityFile,
+	renameEntityFile,
+	deleteEntityFile,
+	loadAttributeData,
+	saveAttributeData,
+	mergeAttributeData,
+	listAttributeFiles,
+	createAttributeFile,
+	renameAttributeFile,
+	deleteAttributeFile,
+	loadTableData,
+	saveTableData,
+	mergeTableData,
+	listTableFiles,
+	createTableFile,
+	renameTableFile,
+	deleteTableFile,
+	loadColumnData,
+	saveColumnData,
+	mergeColumnData,
+	listColumnFiles,
+	createColumnFile,
+	renameColumnFile,
+	deleteColumnFile,
+	loadForbiddenWords
+} from '$lib/registry/data-registry';
+import {
+	getCachedData,
+	getCachedVocabularyData,
+	getCachedDomainData,
+	getCachedTermData,
+	invalidateCache,
+	invalidateDataCache,
+	invalidateAllCaches
+} from '$lib/registry/cache-registry';
+
 /**
  * ERD 생성 API
  * GET /api/erd/generate
  */
 
-import { json, type RequestEvent } from '@sveltejs/kit';
-import type { DbDesignApiResponse } from '$lib/types/database-design.js';
-import {
-	loadDatabaseData,
-	loadEntityData,
-	loadAttributeData,
-	loadTableData,
-	loadColumnData,
-	listDatabaseFiles,
-	listEntityFiles,
-	listAttributeFiles,
-	listTableFiles,
-	listColumnFiles
-} from '$lib/utils/database-design-handler.js';
-import { loadDomainData, listDomainFiles, listVocabularyFiles } from '$lib/utils/file-handler.js';
-import { getCachedVocabularyData } from '$lib/utils/cache.js';
 import { generateERDData } from '$lib/utils/erd-generator.js';
 import type { ERDFilterOptions } from '$lib/utils/erd-filter.js';
 import type { MappingContext } from '$lib/types/erd-mapping.js';
-import type { VocabularyEntry } from '$lib/types/vocabulary.js';
 
 /**
- * 모든 파일에서 데이터 로드 (첫 번째 파일만 사용)
+ * 모든 파일에서 데이터 로드 (레지스트리 기반 파일 탐색)
  */
 async function loadAllDataFromFirstFiles(): Promise<MappingContext> {
-	// 파일 목록 가져오기
-	const databaseFiles = await listDatabaseFiles();
-	const entityFiles = await listEntityFiles();
-	const attributeFiles = await listAttributeFiles();
-	const tableFiles = await listTableFiles();
-	const columnFiles = await listColumnFiles();
-	const domainFiles = await listDomainFiles();
+	// 각 타입의 첫 번째 파일 가져오기
+	const databaseFiles = await listFiles('database');
+	const entityFiles = await listFiles('entity');
+	const attributeFiles = await listFiles('attribute');
+	const tableFiles = await listFiles('table');
+	const columnFiles = await listFiles('column');
+	const domainFiles = await listFiles('domain');
+	const vocabFiles = await listFiles('vocabulary');
 
 	// 첫 번째 파일에서 데이터 로드 (없으면 빈 배열)
 	const databases =
-		databaseFiles.length > 0 ? (await loadDatabaseData(databaseFiles[0])).entries : [];
-	const entities = entityFiles.length > 0 ? (await loadEntityData(entityFiles[0])).entries : [];
+		databaseFiles.length > 0 ? (await loadData('database', databaseFiles[0])).entries : [];
+	const entities = entityFiles.length > 0 ? (await loadData('entity', entityFiles[0])).entries : [];
 	const attributes =
-		attributeFiles.length > 0 ? (await loadAttributeData(attributeFiles[0])).entries : [];
-	const tables = tableFiles.length > 0 ? (await loadTableData(tableFiles[0])).entries : [];
-	const columns = columnFiles.length > 0 ? (await loadColumnData(columnFiles[0])).entries : [];
-	const domains = domainFiles.length > 0 ? (await loadDomainData(domainFiles[0])).entries : [];
+		attributeFiles.length > 0 ? (await loadData('attribute', attributeFiles[0])).entries : [];
+	const tables = tableFiles.length > 0 ? (await loadData('table', tableFiles[0])).entries : [];
+	const columns = columnFiles.length > 0 ? (await loadData('column', columnFiles[0])).entries : [];
+	const domains = domainFiles.length > 0 ? (await loadData('domain', domainFiles[0])).entries : [];
 
 	// 단어집 데이터 로드 (도메인 매핑용)
 	let vocabularyMap:
 		| Map<string, { standardName: string; abbreviation: string; domainCategory?: string }>
 		| undefined;
 	try {
-		const vocabFiles = await listVocabularyFiles();
 		if (vocabFiles.length > 0) {
-			const vocabData = await getCachedVocabularyData(vocabFiles[0]);
+			const vocabData = await getCachedData('vocabulary', vocabFiles[0]);
 			if (vocabData) {
 				vocabularyMap = new Map();
 				for (const entry of vocabData.entries) {
@@ -109,21 +169,23 @@ export async function GET({ url }: RequestEvent) {
 
 		// 특정 파일이 지정된 경우 해당 파일 사용, 아니면 첫 번째 파일 사용
 		if (databaseFile || entityFile || attributeFile || tableFile || columnFile || domainFile) {
-			const databases = databaseFile ? (await loadDatabaseData(databaseFile)).entries : [];
-			const entities = entityFile ? (await loadEntityData(entityFile)).entries : [];
-			const attributes = attributeFile ? (await loadAttributeData(attributeFile)).entries : [];
-			const tables = tableFile ? (await loadTableData(tableFile)).entries : [];
-			const columns = columnFile ? (await loadColumnData(columnFile)).entries : [];
-			const domains = domainFile ? (await loadDomainData(domainFile)).entries : [];
+			const databases = databaseFile ? (await loadData('database', databaseFile)).entries : [];
+			const entities = entityFile ? (await loadData('entity', entityFile)).entries : [];
+			const attributes = attributeFile
+				? (await loadData('attribute', attributeFile)).entries
+				: [];
+			const tables = tableFile ? (await loadData('table', tableFile)).entries : [];
+			const columns = columnFile ? (await loadData('column', columnFile)).entries : [];
+			const domains = domainFile ? (await loadData('domain', domainFile)).entries : [];
 
 			// 단어집 데이터 로드
 			let vocabularyMap:
 				| Map<string, { standardName: string; abbreviation: string; domainCategory?: string }>
 				| undefined;
 			try {
-				const vocabFiles = await listVocabularyFiles();
+				const vocabFiles = await listFiles('vocabulary');
 				if (vocabFiles.length > 0) {
-					const vocabData = await getCachedVocabularyData(vocabFiles[0]);
+					const vocabData = await getCachedData('vocabulary', vocabFiles[0]);
 					if (vocabData) {
 						vocabularyMap = new Map();
 						for (const entry of vocabData.entries) {
@@ -201,3 +263,4 @@ export async function GET({ url }: RequestEvent) {
 		);
 	}
 }
+

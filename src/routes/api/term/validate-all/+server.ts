@@ -1,15 +1,81 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type { ApiResponse } from '$lib/types/vocabulary.js';
-import type {
-	TermEntry,
-	ValidationErrorType,
-	ValidationError,
-	AutoFixSuggestion,
-	ValidationResult
-} from '$lib/types/term.js';
-import type { VocabularyEntry } from '$lib/types/vocabulary.js';
-import type { DomainEntry } from '$lib/types/domain.js';
-import { loadTermData } from '$lib/utils/file-handler.js';
+import {
+	loadData,
+	saveData,
+	mergeData,
+	listFiles,
+	createFile,
+	renameFile,
+	deleteFile,
+	loadVocabularyData,
+	saveVocabularyData,
+	mergeVocabularyData,
+	listVocabularyFiles,
+	createVocabularyFile,
+	renameVocabularyFile,
+	deleteVocabularyFile,
+	loadDomainData,
+	saveDomainData,
+	mergeDomainData,
+	listDomainFiles,
+	createDomainFile,
+	renameDomainFile,
+	deleteDomainFile,
+	loadTermData,
+	saveTermData,
+	mergeTermData,
+	listTermFiles,
+	createTermFile,
+	renameTermFile,
+	deleteTermFile,
+	loadDatabaseData,
+	saveDatabaseData,
+	mergeDatabaseData,
+	listDatabaseFiles,
+	createDatabaseFile,
+	renameDatabaseFile,
+	deleteDatabaseFile,
+	loadEntityData,
+	saveEntityData,
+	mergeEntityData,
+	listEntityFiles,
+	createEntityFile,
+	renameEntityFile,
+	deleteEntityFile,
+	loadAttributeData,
+	saveAttributeData,
+	mergeAttributeData,
+	listAttributeFiles,
+	createAttributeFile,
+	renameAttributeFile,
+	deleteAttributeFile,
+	loadTableData,
+	saveTableData,
+	mergeTableData,
+	listTableFiles,
+	createTableFile,
+	renameTableFile,
+	deleteTableFile,
+	loadColumnData,
+	saveColumnData,
+	mergeColumnData,
+	listColumnFiles,
+	createColumnFile,
+	renameColumnFile,
+	deleteColumnFile,
+	loadForbiddenWords
+} from '$lib/registry/data-registry';
+import {
+	getCachedData,
+	getCachedVocabularyData,
+	getCachedDomainData,
+	getCachedTermData,
+	invalidateCache,
+	invalidateDataCache,
+	invalidateAllCaches
+} from '$lib/registry/cache-registry';
+
+import { resolveRelatedFilenames } from '$lib/registry/mapping-registry';
 import {
 	validateTermNameSuffix,
 	validateTermUniqueness,
@@ -19,7 +85,6 @@ import {
 	validateTermColumnOrderMapping,
 	validateDomainNameMapping
 } from '$lib/utils/validation.js';
-import { getCachedVocabularyData, getCachedDomainData } from '$lib/utils/cache.js';
 
 /**
  * 우선순위에 따라 오류 정렬
@@ -538,7 +603,7 @@ export async function GET({ url }: RequestEvent) {
 		// 용어 데이터 로드
 		let termData;
 		try {
-			termData = await loadTermData(filename);
+			termData = await loadData('term', filename);
 		} catch (loadError) {
 			return json(
 				{
@@ -550,14 +615,19 @@ export async function GET({ url }: RequestEvent) {
 			);
 		}
 
-		const mapping = termData.mapping || {
-			vocabulary: 'vocabulary.json',
-			domain: 'domain.json'
+		// 3단계 폴백으로 관련 파일 해석
+		const fileMappingOverride: Partial<Record<string, string>> = {};
+		if (termData.mapping?.vocabulary) fileMappingOverride.vocabulary = termData.mapping.vocabulary;
+		if (termData.mapping?.domain) fileMappingOverride.domain = termData.mapping.domain;
+		const relatedFiles = await resolveRelatedFilenames('term', filename, fileMappingOverride as Partial<Record<DataType, string>>);
+		const mapping = {
+			vocabulary: relatedFiles.get('vocabulary') || 'vocabulary.json',
+			domain: relatedFiles.get('domain') || 'domain.json'
 		};
 
 		// 단어집 및 도메인 데이터 로드
-		const vocabularyData = await getCachedVocabularyData(mapping.vocabulary);
-		const domainData = await getCachedDomainData(mapping.domain);
+		const vocabularyData = await getCachedData('vocabulary', mapping.vocabulary);
+		const domainData = await getCachedData('domain', mapping.domain);
 
 		// 현재 파일의 항목들만 사용 (같은 파일 내에서만 중복 검사)
 		// 참고: 전체 파일 간 중복 검사는 필요시 별도로 구현
@@ -747,3 +817,4 @@ export async function GET({ url }: RequestEvent) {
 		);
 	}
 }
+

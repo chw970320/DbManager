@@ -192,7 +192,7 @@ describe('DomainEditor', () => {
 
 			const submitButton = screen.getByRole('button', { name: /^수정$/ });
 			expect(submitButton).toBeInTheDocument();
-			expect(submitButton.type).toBe('submit');
+			expect((submitButton as HTMLButtonElement).type).toBe('submit');
 		});
 	});
 

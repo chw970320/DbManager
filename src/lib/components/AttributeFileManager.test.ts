@@ -104,8 +104,7 @@ describe('AttributeFileManager', () => {
 		it('선택된 파일 강조 표시', async () => {
 			render(AttributeFileManager, {
 				props: {
-					isOpen: true,
-					selectedFilename: 'custom-attribute.json'
+					isOpen: true
 				}
 			});
 

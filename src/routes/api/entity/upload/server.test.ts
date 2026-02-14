@@ -126,7 +126,7 @@ describe('Entity Upload API: /api/entity/upload', () => {
 			formData.append('file', mockFile);
 
 			vi.mocked(getRequiredFile).mockReturnValue(mockFile);
-			vi.mocked(validateXlsxFile).mockReturnValue(undefined);
+			vi.mocked(validateXlsxFile).mockReturnValue(true);
 			vi.mocked(parseEntityXlsxToJson).mockReturnValue([
 				{
 					id: 'test-id',
@@ -230,7 +230,7 @@ describe('Entity Upload API: /api/entity/upload', () => {
 			formData.append('filename', 'custom-entity.json');
 
 			vi.mocked(getRequiredFile).mockReturnValue(mockFile);
-			vi.mocked(validateXlsxFile).mockReturnValue(undefined);
+			vi.mocked(validateXlsxFile).mockReturnValue(true);
 			vi.mocked(parseEntityXlsxToJson).mockReturnValue([
 				{
 					id: 'test-id',
@@ -260,4 +260,5 @@ describe('Entity Upload API: /api/entity/upload', () => {
 		});
 	});
 });
+
 

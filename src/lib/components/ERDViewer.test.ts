@@ -35,6 +35,10 @@ function createMockERDData(): ERDData {
 					id: 'table-1',
 					tableEnglishName: 'users',
 					schemaName: 'public',
+					businessClassification: 'COMMON',
+					tableVolume: 'SMALL',
+					nonPublicReason: '',
+					openDataList: '',
 					createdAt: '2024-01-01T00:00:00.000Z',
 					updatedAt: '2024-01-01T00:00:00.000Z'
 				}
@@ -88,6 +92,10 @@ describe('ERDViewer', () => {
 						id: `table-${i}`,
 						tableEnglishName: `table-${i}`,
 						schemaName: 'public',
+						businessClassification: 'COMMON',
+						tableVolume: 'SMALL',
+						nonPublicReason: '',
+						openDataList: '',
 						createdAt: '2024-01-01T00:00:00.000Z',
 						updatedAt: '2024-01-01T00:00:00.000Z'
 					}
@@ -171,6 +179,10 @@ describe('ERDViewer', () => {
 							id: 'table-2',
 							tableEnglishName: 'products',
 							schemaName: 'public',
+							businessClassification: 'COMMON',
+							tableVolume: 'SMALL',
+							nonPublicReason: '',
+							openDataList: '',
 							createdAt: '2024-01-01T00:00:00.000Z',
 							updatedAt: '2024-01-01T00:00:00.000Z'
 						}

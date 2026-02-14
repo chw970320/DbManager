@@ -169,7 +169,7 @@ describe('Term Upload API: /api/term/upload', () => {
 			formData.append('file', mockFile);
 
 			vi.mocked(getRequiredFile).mockReturnValue(mockFile);
-			vi.mocked(validateXlsxFile).mockReturnValue(undefined);
+			vi.mocked(validateXlsxFile).mockReturnValue(true);
 			vi.mocked(parseTermXlsxToJson).mockReturnValue([
 				{
 					termName: '사용자_이름',
@@ -272,7 +272,7 @@ describe('Term Upload API: /api/term/upload', () => {
 			formData.append('filename', 'custom-term.json');
 
 			vi.mocked(getRequiredFile).mockReturnValue(mockFile);
-			vi.mocked(validateXlsxFile).mockReturnValue(undefined);
+			vi.mocked(validateXlsxFile).mockReturnValue(true);
 			vi.mocked(parseTermXlsxToJson).mockReturnValue([
 				{
 					termName: '사용자_이름',
@@ -293,4 +293,5 @@ describe('Term Upload API: /api/term/upload', () => {
 		});
 	});
 });
+
 

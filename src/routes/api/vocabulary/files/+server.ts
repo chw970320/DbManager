@@ -74,6 +74,7 @@ import {
 	invalidateDataCache,
 	invalidateAllCaches
 } from '$lib/registry/cache-registry';
+import type { ApiResponse } from '$lib/types/vocabulary';
 
 
 /**

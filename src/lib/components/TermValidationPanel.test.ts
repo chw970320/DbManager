@@ -6,38 +6,37 @@ import type { ValidationResult } from '$lib/types/term';
 // 테스트용 Mock 데이터
 const createMockValidationResults = (): ValidationResult[] => [
 	{
-		entryId: 'entry-1',
 		entry: {
 			id: 'entry-1',
 			termName: '사용자_이름',
 			columnName: 'USER_NAME',
 			domainName: '사용자분류_VARCHAR(50)',
+			isMappedTerm: true,
+			isMappedColumn: true,
+			isMappedDomain: true,
 			createdAt: '2024-01-01T00:00:00.000Z',
 			updatedAt: '2024-01-01T00:00:00.000Z'
 		},
-		isValid: false,
 		errors: [
 			{
 				type: 'TERM_NAME_MAPPING',
-				message: '용어명의 일부가 단어집에 없습니다.',
-				unmappedParts: ['없는단어']
+				message: '용어명의 일부가 단어집에 없습니다.'
 			}
-		],
-		suggestions: []
+		]
 	},
 	{
-		entryId: 'entry-2',
 		entry: {
 			id: 'entry-2',
 			termName: '관리자_이름',
 			columnName: 'ADMIN_NAME',
 			domainName: '사용자분류_VARCHAR(50)',
+			isMappedTerm: true,
+			isMappedColumn: true,
+			isMappedDomain: true,
 			createdAt: '2024-01-02T00:00:00.000Z',
 			updatedAt: '2024-01-02T00:00:00.000Z'
 		},
-		isValid: true,
-		errors: [],
-		suggestions: []
+		errors: []
 	}
 ];
 

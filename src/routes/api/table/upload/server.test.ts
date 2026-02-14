@@ -126,7 +126,7 @@ describe('Table Upload API: /api/table/upload', () => {
 			formData.append('file', mockFile);
 
 			vi.mocked(getRequiredFile).mockReturnValue(mockFile);
-			vi.mocked(validateXlsxFile).mockReturnValue(undefined);
+			vi.mocked(validateXlsxFile).mockReturnValue(true);
 			vi.mocked(parseTableXlsxToJson).mockReturnValue([
 				{
 					id: 'test-id',
@@ -238,7 +238,7 @@ describe('Table Upload API: /api/table/upload', () => {
 			formData.append('filename', 'custom-table.json');
 
 			vi.mocked(getRequiredFile).mockReturnValue(mockFile);
-			vi.mocked(validateXlsxFile).mockReturnValue(undefined);
+			vi.mocked(validateXlsxFile).mockReturnValue(true);
 			vi.mocked(parseTableXlsxToJson).mockReturnValue([
 				{
 					id: 'test-id',
@@ -276,4 +276,5 @@ describe('Table Upload API: /api/table/upload', () => {
 		});
 	});
 });
+
 

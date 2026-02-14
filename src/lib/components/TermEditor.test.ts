@@ -222,7 +222,7 @@ describe('TermEditor', () => {
 				// 수정 모드에서도 "저장" 버튼 사용
 				const saveButton = screen.getByRole('button', { name: /저장/ });
 				expect(saveButton).toBeInTheDocument();
-				expect(saveButton.type).toBe('submit');
+				expect((saveButton as HTMLButtonElement).type).toBe('submit');
 			});
 		});
 	});

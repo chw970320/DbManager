@@ -482,8 +482,8 @@ function generateAutoFixSuggestions(
 					suggestions.actionType = 'FIX_COLUMN_NAME_ORDER';
 					if (!suggestions.metadata) suggestions.metadata = {};
 					suggestions.metadata.orderMismatches = orderResult.mismatches;
-					suggestions.metadata.correctedColumnName = orderResult.correctedColumnName;
-					suggestions.columnName = orderResult.correctedColumnName || undefined;
+					suggestions.metadata.correctedColumnName = orderResult.correctedColumnName ?? undefined;
+					suggestions.columnName = orderResult.correctedColumnName ?? undefined;
 				}
 				break;
 			}

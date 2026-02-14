@@ -28,6 +28,7 @@ const createMockEntry = (): Partial<ColumnEntry> => ({
 	columnEnglishName: 'COLUMN1',
 	columnKoreanName: '컬럼1',
 	relatedEntityName: '엔터티1',
+	domainName: 'USER_NAME_DOM',
 	dataType: 'VARCHAR',
 	notNullFlag: 'Y',
 	personalInfoFlag: 'N',
@@ -77,6 +78,7 @@ describe('ColumnDefEditor', () => {
 			expect(screen.getByLabelText(/^주제영역/)).toBeInTheDocument();
 			expect(screen.getByLabelText(/^스키마명/)).toBeInTheDocument();
 			expect(screen.getByLabelText(/^컬럼영문명/)).toBeInTheDocument();
+			expect(screen.getByLabelText(/^도메인명/)).toBeInTheDocument();
 		});
 
 		it('should populate form with entry data in edit mode', async () => {
@@ -128,6 +130,7 @@ describe('ColumnDefEditor', () => {
 			const columnEnglishNameInput = screen.getByLabelText(/^컬럼영문명/) as HTMLInputElement;
 			const columnKoreanNameInput = screen.getByLabelText(/^컬럼한글명/) as HTMLInputElement;
 			const relatedEntityNameInput = screen.getByLabelText(/^연관엔터티명/) as HTMLInputElement;
+			const domainNameInput = screen.getByLabelText(/^도메인명/) as HTMLInputElement;
 			const dataTypeInput = screen.getByLabelText(/^자료타입/) as HTMLInputElement;
 			const notNullFlagInput = screen.getByLabelText(/^NOT NULL/) as HTMLInputElement;
 			const personalInfoFlagInput = screen.getByLabelText(/^개인정보여부/) as HTMLInputElement;
@@ -141,6 +144,7 @@ describe('ColumnDefEditor', () => {
 			await fireEvent.input(columnEnglishNameInput, { target: { value: 'COLUMN1' } });
 			await fireEvent.input(columnKoreanNameInput, { target: { value: '컬럼1' } });
 			await fireEvent.input(relatedEntityNameInput, { target: { value: '엔터티1' } });
+			await fireEvent.input(domainNameInput, { target: { value: 'USER_NAME_DOM' } });
 			await fireEvent.input(dataTypeInput, { target: { value: 'VARCHAR' } });
 			await fireEvent.input(notNullFlagInput, { target: { value: 'Y' } });
 			await fireEvent.input(personalInfoFlagInput, { target: { value: 'N' } });

@@ -126,7 +126,7 @@ describe('Attribute Upload API: /api/attribute/upload', () => {
 			formData.append('file', mockFile);
 
 			vi.mocked(getRequiredFile).mockReturnValue(mockFile);
-			vi.mocked(validateXlsxFile).mockReturnValue(undefined);
+			vi.mocked(validateXlsxFile).mockReturnValue(true);
 			vi.mocked(parseAttributeXlsxToJson).mockReturnValue([
 				{
 					id: 'test-id',
@@ -135,6 +135,7 @@ describe('Attribute Upload API: /api/attribute/upload', () => {
 					attributeName: '속성1',
 					attributeType: 'VARCHAR',
 					requiredInput: 'Y',
+					refEntityName: '',
 					createdAt: '2024-01-01T00:00:00.000Z',
 					updatedAt: '2024-01-01T00:00:00.000Z'
 				}
@@ -230,7 +231,7 @@ describe('Attribute Upload API: /api/attribute/upload', () => {
 			formData.append('filename', 'custom-attribute.json');
 
 			vi.mocked(getRequiredFile).mockReturnValue(mockFile);
-			vi.mocked(validateXlsxFile).mockReturnValue(undefined);
+			vi.mocked(validateXlsxFile).mockReturnValue(true);
 			vi.mocked(parseAttributeXlsxToJson).mockReturnValue([
 				{
 					id: 'test-id',
@@ -239,6 +240,7 @@ describe('Attribute Upload API: /api/attribute/upload', () => {
 					attributeName: '속성1',
 					attributeType: 'VARCHAR',
 					requiredInput: 'Y',
+					refEntityName: '',
 					createdAt: '2024-01-01T00:00:00.000Z',
 					updatedAt: '2024-01-01T00:00:00.000Z'
 				}
@@ -260,4 +262,5 @@ describe('Attribute Upload API: /api/attribute/upload', () => {
 		});
 	});
 });
+
 

@@ -19,15 +19,15 @@
 	let serverError = $derived(props.serverError ?? '');
 
 	let formData = $state({
-		schemaName: entry.schemaName || '',
-		entityName: entry.entityName || '',
-		attributeName: entry.attributeName || '',
-		attributeType: entry.attributeType || '',
-		requiredInput: entry.requiredInput || '',
-		identifierFlag: entry.identifierFlag || '',
-		refEntityName: entry.refEntityName || '',
-		refAttributeName: entry.refAttributeName || '',
-		attributeDescription: entry.attributeDescription || ''
+		schemaName: '',
+		entityName: '',
+		attributeName: '',
+		attributeType: '',
+		requiredInput: '',
+		identifierFlag: '',
+		refEntityName: '',
+		refAttributeName: '',
+		attributeDescription: ''
 	});
 
 	let errors = $state<Record<string, string>>({});
@@ -63,8 +63,8 @@
 			entityName: formData.entityName.trim(),
 			attributeName: formData.attributeName.trim(),
 			attributeType: formData.attributeType.trim(),
-			requiredInput: formData.requiredInput.trim() || undefined,
-			refEntityName: formData.refEntityName.trim() || undefined,
+			requiredInput: formData.requiredInput.trim(),
+			refEntityName: formData.refEntityName.trim(),
 			identifierFlag: formData.identifierFlag.trim() || undefined,
 			refAttributeName: formData.refAttributeName.trim() || undefined,
 			attributeDescription: formData.attributeDescription.trim() || undefined,
@@ -106,20 +106,16 @@
 	}
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
-
 <div
 	class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
 	onclick={handleBackdropClick}
+	onkeydown={handleKeydown}
 	role="dialog"
 	aria-modal="true"
 	aria-labelledby="modal-title"
+	tabindex="-1"
 >
-	<!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
-	<div
-		class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl"
-		onclick={(e) => e.stopPropagation()}
-	>
+	<div class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl">
 		<div class="flex flex-shrink-0 items-center justify-between border-b p-6">
 			<h2 id="modal-title" class="text-xl font-bold text-gray-900">
 				{isEditMode ? '속성 정의서 수정' : '새 속성 정의서'}

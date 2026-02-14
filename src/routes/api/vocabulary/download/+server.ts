@@ -74,6 +74,7 @@ import {
 	invalidateDataCache,
 	invalidateAllCaches
 } from '$lib/registry/cache-registry';
+import type { VocabularyData } from '$lib/types/vocabulary';
 
 import { getDuplicateDetails } from '$lib/utils/duplicate-handler.js';
 import { exportJsonToXlsxBuffer } from '$lib/utils/xlsx-parser.js';

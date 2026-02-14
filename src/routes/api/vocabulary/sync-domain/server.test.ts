@@ -68,6 +68,7 @@ const createMockDomainData = (): DomainData => ({
 			domainGroup: 'FIN',
 			domainCategory: '금융',
 			standardDomainName: '금융도메인',
+			physicalDataType: 'VARCHAR',
 			description: '금융 관련',
 			createdAt: '2024-01-01T00:00:00.000Z',
 			updatedAt: '2024-01-01T00:00:00.000Z'
@@ -77,6 +78,7 @@ const createMockDomainData = (): DomainData => ({
 			domainGroup: 'BNK',
 			domainCategory: '은행',
 			standardDomainName: '은행도메인',
+			physicalDataType: 'VARCHAR',
 			description: '은행 관련',
 			createdAt: '2024-01-01T00:00:00.000Z',
 			updatedAt: '2024-01-01T00:00:00.000Z'

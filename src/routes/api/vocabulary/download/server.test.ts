@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET } from './+server';
 import type { RequestEvent } from '@sveltejs/kit';
-import type { VocabularyData } from '$lib/types/vocabulary';
+import type { VocabularyData, VocabularyEntry } from '$lib/types/vocabulary';
 
 // Mock 모듈들
 vi.mock('$lib/registry/data-registry', () => ({

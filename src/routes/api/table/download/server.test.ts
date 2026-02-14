@@ -29,6 +29,10 @@ const createMockTableData = (): TableData => ({
 			tableType: '일반',
 			relatedEntityName: '엔터티1',
 			publicFlag: 'Y',
+			businessClassification: '',
+			tableVolume: '',
+			nonPublicReason: '',
+			openDataList: '',
 			createdAt: '2024-01-01T00:00:00.000Z',
 			updatedAt: '2024-01-01T00:00:00.000Z'
 		},
@@ -43,6 +47,10 @@ const createMockTableData = (): TableData => ({
 			tableType: '임시',
 			relatedEntityName: '엔터티2',
 			publicFlag: 'N',
+			businessClassification: '',
+			tableVolume: '',
+			nonPublicReason: '',
+			openDataList: '',
 			createdAt: '2024-01-02T00:00:00.000Z',
 			updatedAt: '2024-01-02T00:00:00.000Z'
 		}

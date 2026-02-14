@@ -1,82 +1,6 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import {
-	loadData,
-	saveData,
-	mergeData,
-	listFiles,
-	createFile,
-	renameFile,
-	deleteFile,
-	loadVocabularyData,
-	saveVocabularyData,
-	mergeVocabularyData,
-	listVocabularyFiles,
-	createVocabularyFile,
-	renameVocabularyFile,
-	deleteVocabularyFile,
-	loadDomainData,
-	saveDomainData,
-	mergeDomainData,
-	listDomainFiles,
-	createDomainFile,
-	renameDomainFile,
-	deleteDomainFile,
-	loadTermData,
-	saveTermData,
-	mergeTermData,
-	listTermFiles,
-	createTermFile,
-	renameTermFile,
-	deleteTermFile,
-	loadDatabaseData,
-	saveDatabaseData,
-	mergeDatabaseData,
-	listDatabaseFiles,
-	createDatabaseFile,
-	renameDatabaseFile,
-	deleteDatabaseFile,
-	loadEntityData,
-	saveEntityData,
-	mergeEntityData,
-	listEntityFiles,
-	createEntityFile,
-	renameEntityFile,
-	deleteEntityFile,
-	loadAttributeData,
-	saveAttributeData,
-	mergeAttributeData,
-	listAttributeFiles,
-	createAttributeFile,
-	renameAttributeFile,
-	deleteAttributeFile,
-	loadTableData,
-	saveTableData,
-	mergeTableData,
-	listTableFiles,
-	createTableFile,
-	renameTableFile,
-	deleteTableFile,
-	loadColumnData,
-	saveColumnData,
-	mergeColumnData,
-	listColumnFiles,
-	createColumnFile,
-	renameColumnFile,
-	deleteColumnFile,
-	loadForbiddenWords
-} from '$lib/registry/data-registry';
-import {
-	getCachedData,
-	getCachedVocabularyData,
-	getCachedDomainData,
-	getCachedTermData,
-	invalidateCache,
-	invalidateDataCache,
-	invalidateAllCaches
-} from '$lib/registry/cache-registry';
-
-import type { VocabularyEntry, ForbiddenWord } from '$lib/types/vocabulary';
-import type { ApiResponse } from '$lib/types/api';
+import { loadVocabularyData, loadForbiddenWords } from '$lib/registry/data-registry';
+import type { ApiResponse, ForbiddenWord } from '$lib/types/vocabulary';
 
 export async function POST({ request, url }: RequestEvent): Promise<Response> {
 	try {
@@ -100,9 +24,10 @@ export async function POST({ request, url }: RequestEvent): Promise<Response> {
 			loadVocabularyData(filename),
 			loadForbiddenWords(forbiddenWordsFilename)
 		]);
+		const forbiddenWords = forbiddenWordsData as ForbiddenWord[];
 
 		// 1. 금칙어 검증
-		const forbiddenWord = forbiddenWordsData.find(
+		const forbiddenWord = forbiddenWords.find(
 			(fw) =>
 				(fw.type === 'standardName' && standardName.includes(fw.keyword)) ||
 				(fw.type === 'abbreviation' && abbreviation.includes(fw.keyword))

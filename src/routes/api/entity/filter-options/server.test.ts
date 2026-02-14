@@ -31,7 +31,7 @@ const createMockEntityData = (): EntityData => ({
 			entityName: '엔터티2',
 			primaryIdentifier: 'ID2',
 			tableKoreanName: '테이블한글명2',
-			superTypeEntityName: null,
+			superTypeEntityName: '',
 			createdAt: '2024-01-02T00:00:00.000Z',
 			updatedAt: '2024-01-02T00:00:00.000Z'
 		},

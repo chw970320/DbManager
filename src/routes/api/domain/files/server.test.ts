@@ -56,8 +56,7 @@ describe('Domain Files API: /api/domain/files', () => {
 			const mockFiles = ['domain.json', 'custom-domain.json'];
 			vi.mocked(listDomainFiles).mockResolvedValue(mockFiles);
 
-			const event = createMockRequestEvent({});
-			const response = await GET(event);
+			const response = await GET();
 			const result = await response.json();
 
 			expect(response.status).toBe(200);
@@ -68,8 +67,7 @@ describe('Domain Files API: /api/domain/files', () => {
 		it('should return 500 on error', async () => {
 			vi.mocked(listDomainFiles).mockRejectedValue(new Error('파일 시스템 오류'));
 
-			const event = createMockRequestEvent({});
-			const response = await GET(event);
+			const response = await GET();
 			const result = await response.json();
 
 			expect(response.status).toBe(500);

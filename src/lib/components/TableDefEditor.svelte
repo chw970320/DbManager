@@ -15,22 +15,22 @@
 	let serverError = $derived(props.serverError ?? '');
 
 	let formData = $state({
-		physicalDbName: entry.physicalDbName || '',
-		tableOwner: entry.tableOwner || '',
-		subjectArea: entry.subjectArea || '',
-		schemaName: entry.schemaName || '',
-		tableEnglishName: entry.tableEnglishName || '',
-		tableKoreanName: entry.tableKoreanName || '',
-		tableType: entry.tableType || '',
-		relatedEntityName: entry.relatedEntityName || '',
-		tableDescription: entry.tableDescription || '',
-		businessClassification: entry.businessClassification || '',
-		retentionPeriod: entry.retentionPeriod || '',
-		tableVolume: entry.tableVolume || '',
-		occurrenceCycle: entry.occurrenceCycle || '',
-		publicFlag: entry.publicFlag || '',
-		nonPublicReason: entry.nonPublicReason || '',
-		openDataList: entry.openDataList || ''
+		physicalDbName: '',
+		tableOwner: '',
+		subjectArea: '',
+		schemaName: '',
+		tableEnglishName: '',
+		tableKoreanName: '',
+		tableType: '',
+		relatedEntityName: '',
+		tableDescription: '',
+		businessClassification: '',
+		retentionPeriod: '',
+		tableVolume: '',
+		occurrenceCycle: '',
+		publicFlag: '',
+		nonPublicReason: '',
+		openDataList: ''
 	});
 
 	let errors = $state<Record<string, string>>({});
@@ -86,12 +86,12 @@
 			relatedEntityName: formData.relatedEntityName.trim(),
 			publicFlag: formData.publicFlag.trim(),
 			tableDescription: formData.tableDescription.trim() || undefined,
-			businessClassification: formData.businessClassification.trim() || undefined,
+			businessClassification: formData.businessClassification.trim(),
 			retentionPeriod: formData.retentionPeriod.trim() || undefined,
-			tableVolume: formData.tableVolume.trim() || undefined,
+			tableVolume: formData.tableVolume.trim(),
 			occurrenceCycle: formData.occurrenceCycle.trim() || undefined,
-			nonPublicReason: formData.nonPublicReason.trim() || undefined,
-			openDataList: formData.openDataList.trim() || undefined,
+			nonPublicReason: formData.nonPublicReason.trim(),
+			openDataList: formData.openDataList.trim(),
 			createdAt: entry.createdAt || new Date().toISOString(),
 			updatedAt: new Date().toISOString()
 		};
@@ -138,20 +138,16 @@
 	}
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
-
 <div
 	class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
 	onclick={handleBackdropClick}
+	onkeydown={handleKeydown}
 	role="dialog"
 	aria-modal="true"
 	aria-labelledby="modal-title"
+	tabindex="-1"
 >
-	<!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
-	<div
-		class="flex max-h-[90vh] w-full max-w-3xl flex-col rounded-lg bg-white shadow-xl"
-		onclick={(e) => e.stopPropagation()}
-	>
+	<div class="flex max-h-[90vh] w-full max-w-3xl flex-col rounded-lg bg-white shadow-xl">
 		<div class="flex flex-shrink-0 items-center justify-between border-b p-6">
 			<h2 id="modal-title" class="text-xl font-bold text-gray-900">
 				{isEditMode ? '테이블 정의서 수정' : '새 테이블 정의서'}

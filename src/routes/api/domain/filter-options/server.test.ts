@@ -30,7 +30,7 @@ const createMockDomainData = (): DomainData => ({
 			domainCategory: '상태분류',
 			standardDomainName: '상태분류_INT',
 			physicalDataType: 'INT',
-			revision: null,
+			revision: '',
 			createdAt: '2024-01-02T00:00:00.000Z',
 			updatedAt: '2024-01-02T00:00:00.000Z'
 		},

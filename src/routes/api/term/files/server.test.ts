@@ -56,8 +56,7 @@ describe('Term Files API: /api/term/files', () => {
 			const mockFiles = ['term.json', 'custom-term.json'];
 			vi.mocked(listTermFiles).mockResolvedValue(mockFiles);
 
-			const event = createMockRequestEvent({});
-			const response = await GET(event);
+			const response = await GET();
 			const result = await response.json();
 
 			expect(response.status).toBe(200);
@@ -68,8 +67,7 @@ describe('Term Files API: /api/term/files', () => {
 		it('should return 500 on error', async () => {
 			vi.mocked(listTermFiles).mockRejectedValue(new Error('파일 시스템 오류'));
 
-			const event = createMockRequestEvent({});
-			const response = await GET(event);
+			const response = await GET();
 			const result = await response.json();
 
 			expect(response.status).toBe(500);

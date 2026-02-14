@@ -13,7 +13,7 @@ vi.mock('$lib/utils/duplicate-handler.js', () => ({
 }));
 
 vi.mock('$lib/utils/validation.js', () => ({
-	sanitizeSearchQuery: vi.fn((query: string) => query.trim() || null)
+	sanitizeSearchQuery: vi.fn((query: string) => query.trim() || '')
 }));
 
 import { loadVocabularyData } from '$lib/registry/data-registry';
@@ -103,7 +103,7 @@ describe('Search API: /api/search', () => {
 		vi.clearAllMocks();
 		vi.mocked(loadVocabularyData).mockResolvedValue(createMockVocabularyData());
 		vi.mocked(getDuplicateDetails).mockReturnValue(new Map());
-		vi.mocked(sanitizeSearchQuery).mockImplementation((query: string) => query.trim() || null);
+		vi.mocked(sanitizeSearchQuery).mockImplementation((query: string) => query.trim() || '');
 	});
 
 	describe('GET', () => {
@@ -184,7 +184,7 @@ describe('Search API: /api/search', () => {
 		});
 
 		it('should return 400 when query is empty', async () => {
-			vi.mocked(sanitizeSearchQuery).mockReturnValue(null);
+			vi.mocked(sanitizeSearchQuery).mockReturnValue('');
 
 			const event = createMockRequestEvent({
 				searchParams: { q: '' }
@@ -335,7 +335,7 @@ describe('Search API: /api/search', () => {
 		});
 
 		it('should return 400 when query is empty', async () => {
-			vi.mocked(sanitizeSearchQuery).mockReturnValue(null);
+			vi.mocked(sanitizeSearchQuery).mockReturnValue('');
 
 			const event = createMockRequestEvent({
 				method: 'POST',

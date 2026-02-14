@@ -22,17 +22,17 @@
 
 	// 폼 상태
 	let formData = $state({
-		organizationName: entry.organizationName || '',
-		departmentName: entry.departmentName || '',
-		appliedTask: entry.appliedTask || '',
-		relatedLaw: entry.relatedLaw || '',
-		logicalDbName: entry.logicalDbName || '',
-		physicalDbName: entry.physicalDbName || '',
-		buildDate: entry.buildDate || '',
-		dbDescription: entry.dbDescription || '',
-		dbmsInfo: entry.dbmsInfo || '',
-		osInfo: entry.osInfo || '',
-		exclusionReason: entry.exclusionReason || ''
+		organizationName: '',
+		departmentName: '',
+		appliedTask: '',
+		relatedLaw: '',
+		logicalDbName: '',
+		physicalDbName: '',
+		buildDate: '',
+		dbDescription: '',
+		dbmsInfo: '',
+		osInfo: '',
+		exclusionReason: ''
 	});
 
 	// 유효성 검증 상태
@@ -162,21 +162,17 @@
 	}
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
-
 <!-- 모달 백드롭 -->
 <div
 	class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
 	onclick={handleBackdropClick}
+	onkeydown={handleKeydown}
 	role="dialog"
 	aria-modal="true"
 	aria-labelledby="modal-title"
+	tabindex="-1"
 >
-	<!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
-	<div
-		class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl"
-		onclick={(e) => e.stopPropagation()}
-	>
+	<div class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl">
 		<!-- 헤더 -->
 		<div class="flex flex-shrink-0 items-center justify-between border-b p-6">
 			<h2 id="modal-title" class="text-xl font-bold text-gray-900">

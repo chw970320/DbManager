@@ -159,7 +159,7 @@ describe('Database Upload API: /api/database/upload', () => {
 			formData.append('filename', 'database.json');
 
 			vi.mocked(getRequiredFile).mockReturnValue(mockFile);
-			vi.mocked(validateXlsxFile).mockReturnValue(undefined);
+			vi.mocked(validateXlsxFile).mockReturnValue(true);
 			vi.mocked(parseDatabaseXlsxToJson).mockReturnValue([createMockDatabaseEntry()]);
 			vi.mocked(mergeDatabaseData).mockResolvedValue({
 				entries: [createMockDatabaseEntry()],
@@ -197,7 +197,7 @@ describe('Database Upload API: /api/database/upload', () => {
 			formData.append('filename', 'custom-database.json');
 
 			vi.mocked(getRequiredFile).mockReturnValue(mockFile);
-			vi.mocked(validateXlsxFile).mockReturnValue(undefined);
+			vi.mocked(validateXlsxFile).mockReturnValue(true);
 			vi.mocked(parseDatabaseXlsxToJson).mockReturnValue([createMockDatabaseEntry()]);
 			vi.mocked(mergeDatabaseData).mockResolvedValue({
 				entries: [createMockDatabaseEntry()],
@@ -282,7 +282,7 @@ describe('Database Upload API: /api/database/upload', () => {
 			formData.append('file', mockFile);
 
 			vi.mocked(getRequiredFile).mockReturnValue(mockFile);
-			vi.mocked(validateXlsxFile).mockReturnValue(undefined);
+			vi.mocked(validateXlsxFile).mockReturnValue(true);
 			vi.mocked(parseDatabaseXlsxToJson).mockImplementation(() => {
 				throw new Error('필수 컬럼이 누락되었습니다');
 			});
@@ -310,7 +310,7 @@ describe('Database Upload API: /api/database/upload', () => {
 			formData.append('file', mockFile);
 
 			vi.mocked(getRequiredFile).mockReturnValue(mockFile);
-			vi.mocked(validateXlsxFile).mockReturnValue(undefined);
+			vi.mocked(validateXlsxFile).mockReturnValue(true);
 			vi.mocked(parseDatabaseXlsxToJson).mockReturnValue([]);
 
 			const event = createMockRequestEvent({
@@ -338,7 +338,7 @@ describe('Database Upload API: /api/database/upload', () => {
 			formData.append('replace', 'true');
 
 			vi.mocked(getRequiredFile).mockReturnValue(mockFile);
-			vi.mocked(validateXlsxFile).mockReturnValue(undefined);
+			vi.mocked(validateXlsxFile).mockReturnValue(true);
 			vi.mocked(parseDatabaseXlsxToJson).mockReturnValue([createMockDatabaseEntry()]);
 			vi.mocked(mergeDatabaseData).mockResolvedValue({
 				entries: [createMockDatabaseEntry()],

@@ -57,6 +57,10 @@ describe('API: /api/erd/tables', () => {
 					tableKoreanName: '사용자',
 					schemaName: 'public',
 					physicalDbName: 'test_db',
+					businessClassification: 'COMMON',
+					tableVolume: 'SMALL',
+					nonPublicReason: '',
+					openDataList: '',
 					createdAt: '2024-01-01T00:00:00.000Z',
 					updatedAt: '2024-01-01T00:00:00.000Z'
 				},
@@ -66,6 +70,10 @@ describe('API: /api/erd/tables', () => {
 					tableKoreanName: '상품',
 					schemaName: 'public',
 					physicalDbName: 'test_db',
+					businessClassification: 'COMMON',
+					tableVolume: 'SMALL',
+					nonPublicReason: '',
+					openDataList: '',
 					createdAt: '2024-01-01T00:00:00.000Z',
 					updatedAt: '2024-01-01T00:00:00.000Z'
 				}
@@ -108,6 +116,10 @@ describe('API: /api/erd/tables', () => {
 						id: 'table-2',
 						tableEnglishName: 'products',
 						schemaName: 'public',
+						businessClassification: 'COMMON',
+						tableVolume: 'SMALL',
+						nonPublicReason: '',
+						openDataList: '',
 						createdAt: '2024-01-01T00:00:00.000Z',
 						updatedAt: '2024-01-01T00:00:00.000Z'
 					},
@@ -115,6 +127,10 @@ describe('API: /api/erd/tables', () => {
 						id: 'table-1',
 						tableEnglishName: 'users',
 						schemaName: 'public',
+						businessClassification: 'COMMON',
+						tableVolume: 'SMALL',
+						nonPublicReason: '',
+						openDataList: '',
 						createdAt: '2024-01-01T00:00:00.000Z',
 						updatedAt: '2024-01-01T00:00:00.000Z'
 					}

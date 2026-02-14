@@ -133,7 +133,7 @@ describe('Domain Upload API: /api/domain/upload', () => {
 			formData.append('file', mockFile);
 
 			vi.mocked(getRequiredFile).mockReturnValue(mockFile);
-			vi.mocked(validateXlsxFile).mockReturnValue(undefined);
+			vi.mocked(validateXlsxFile).mockReturnValue(true);
 			vi.mocked(parseDomainXlsxToJson).mockReturnValue([
 				{
 					id: 'test-id',
@@ -237,7 +237,7 @@ describe('Domain Upload API: /api/domain/upload', () => {
 			formData.append('filename', 'custom-domain.json');
 
 			vi.mocked(getRequiredFile).mockReturnValue(mockFile);
-			vi.mocked(validateXlsxFile).mockReturnValue(undefined);
+			vi.mocked(validateXlsxFile).mockReturnValue(true);
 			vi.mocked(parseDomainXlsxToJson).mockReturnValue([
 				{
 					id: 'test-id',
@@ -267,4 +267,5 @@ describe('Domain Upload API: /api/domain/upload', () => {
 		});
 	});
 });
+
 

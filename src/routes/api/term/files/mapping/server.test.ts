@@ -23,7 +23,7 @@ import {
 	addMapping
 } from '$lib/registry/mapping-registry';
 
-const createMockTermData = (mapping?: { vocabulary?: string; domain?: string }): TermData => ({
+const createMockTermData = (mapping?: { vocabulary: string; domain: string }): TermData => ({
 	entries: [],
 	lastUpdated: '2024-01-01T00:00:00.000Z',
 	totalCount: 0,

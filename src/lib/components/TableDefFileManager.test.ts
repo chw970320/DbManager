@@ -104,8 +104,7 @@ describe('TableDefFileManager', () => {
 		it('선택된 파일 강조 표시', async () => {
 			render(TableDefFileManager, {
 				props: {
-					isOpen: true,
-					selectedFilename: 'custom-table.json'
+					isOpen: true
 				}
 			});
 

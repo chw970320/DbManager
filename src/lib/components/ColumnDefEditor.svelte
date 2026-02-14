@@ -19,28 +19,29 @@
 	let serverError = $derived(props.serverError ?? '');
 
 	let formData = $state({
-		scopeFlag: entry.scopeFlag || '',
-		subjectArea: entry.subjectArea || '',
-		schemaName: entry.schemaName || '',
-		tableEnglishName: entry.tableEnglishName || '',
-		columnEnglishName: entry.columnEnglishName || '',
-		columnKoreanName: entry.columnKoreanName || '',
-		columnDescription: entry.columnDescription || '',
-		relatedEntityName: entry.relatedEntityName || '',
-		dataType: entry.dataType || '',
-		dataLength: entry.dataLength || '',
-		dataDecimalLength: entry.dataDecimalLength || '',
-		dataFormat: entry.dataFormat || '',
-		notNullFlag: entry.notNullFlag || '',
-		pkInfo: entry.pkInfo || '',
-		fkInfo: entry.fkInfo || '',
-		indexName: entry.indexName || '',
-		indexOrder: entry.indexOrder || '',
-		akInfo: entry.akInfo || '',
-		constraint: entry.constraint || '',
-		personalInfoFlag: entry.personalInfoFlag || '',
-		encryptionFlag: entry.encryptionFlag || '',
-		publicFlag: entry.publicFlag || ''
+		scopeFlag: '',
+		subjectArea: '',
+		schemaName: '',
+		tableEnglishName: '',
+		columnEnglishName: '',
+		columnKoreanName: '',
+		columnDescription: '',
+		relatedEntityName: '',
+		domainName: '',
+		dataType: '',
+		dataLength: '',
+		dataDecimalLength: '',
+		dataFormat: '',
+		notNullFlag: '',
+		pkInfo: '',
+		fkInfo: '',
+		indexName: '',
+		indexOrder: '',
+		akInfo: '',
+		constraint: '',
+		personalInfoFlag: '',
+		encryptionFlag: '',
+		publicFlag: ''
 	});
 
 	let errors = $state<Record<string, string>>({});
@@ -55,6 +56,7 @@
 		formData.columnKoreanName = entry.columnKoreanName || '';
 		formData.columnDescription = entry.columnDescription || '';
 		formData.relatedEntityName = entry.relatedEntityName || '';
+		formData.domainName = entry.domainName || '';
 		formData.dataType = entry.dataType || '';
 		formData.dataLength = entry.dataLength || '';
 		formData.dataDecimalLength = entry.dataDecimalLength || '';
@@ -83,6 +85,7 @@
 		if (!formData.columnKoreanName?.trim()) newErrors.columnKoreanName = '컬럼한글명은 필수입니다.';
 		if (!formData.relatedEntityName?.trim())
 			newErrors.relatedEntityName = '연관엔터티명은 필수입니다.';
+		if (!formData.domainName?.trim()) newErrors.domainName = '도메인명은 필수입니다.';
 		if (!formData.dataType?.trim()) newErrors.dataType = '자료타입은 필수입니다.';
 		if (!formData.notNullFlag?.trim()) newErrors.notNullFlag = 'NOTNULL여부는 필수입니다.';
 		if (!formData.personalInfoFlag?.trim())
@@ -104,21 +107,22 @@
 			columnEnglishName: formData.columnEnglishName.trim(),
 			columnKoreanName: formData.columnKoreanName.trim(),
 			relatedEntityName: formData.relatedEntityName.trim(),
+			domainName: formData.domainName.trim(),
 			dataType: formData.dataType.trim(),
 			notNullFlag: formData.notNullFlag.trim(),
 			personalInfoFlag: formData.personalInfoFlag.trim(),
 			encryptionFlag: formData.encryptionFlag.trim(),
 			publicFlag: formData.publicFlag.trim(),
 			columnDescription: formData.columnDescription.trim() || undefined,
-			dataLength: formData.dataLength.trim() || undefined,
-			dataDecimalLength: formData.dataDecimalLength.trim() || undefined,
-			dataFormat: formData.dataFormat.trim() || undefined,
-			pkInfo: formData.pkInfo.trim() || undefined,
+			dataLength: formData.dataLength.trim(),
+			dataDecimalLength: formData.dataDecimalLength.trim(),
+			dataFormat: formData.dataFormat.trim(),
+			pkInfo: formData.pkInfo.trim(),
 			fkInfo: formData.fkInfo.trim() || undefined,
-			indexName: formData.indexName.trim() || undefined,
-			indexOrder: formData.indexOrder.trim() || undefined,
-			akInfo: formData.akInfo.trim() || undefined,
-			constraint: formData.constraint.trim() || undefined,
+			indexName: formData.indexName.trim(),
+			indexOrder: formData.indexOrder.trim(),
+			akInfo: formData.akInfo.trim(),
+			constraint: formData.constraint.trim(),
 			createdAt: entry.createdAt || new Date().toISOString(),
 			updatedAt: new Date().toISOString()
 		};
@@ -149,6 +153,7 @@
 					formData.columnDescription.trim() || entry.columnDescription || undefined,
 				relatedEntityName:
 					formData.relatedEntityName.trim() || entry.relatedEntityName || undefined,
+				domainName: formData.domainName.trim() || entry.domainName || undefined,
 				dataType: formData.dataType.trim() || entry.dataType || undefined,
 				notNullFlag: formData.notNullFlag.trim() || entry.notNullFlag || undefined,
 				fkInfo: formData.fkInfo.trim() || entry.fkInfo || undefined,
@@ -172,20 +177,16 @@
 	}
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
-
 <div
 	class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
 	onclick={handleBackdropClick}
+	onkeydown={handleKeydown}
 	role="dialog"
 	aria-modal="true"
 	aria-labelledby="modal-title"
+	tabindex="-1"
 >
-	<!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
-	<div
-		class="flex max-h-[90vh] w-full max-w-4xl flex-col rounded-lg bg-white shadow-xl"
-		onclick={(e) => e.stopPropagation()}
-	>
+	<div class="flex max-h-[90vh] w-full max-w-4xl flex-col rounded-lg bg-white shadow-xl">
 		<div class="flex flex-shrink-0 items-center justify-between border-b p-6">
 			<h2 id="modal-title" class="text-xl font-bold text-gray-900">
 				{isEditMode ? '컬럼 정의서 수정' : '새 컬럼 정의서'}
@@ -316,6 +317,19 @@
 						/>{#if errors.relatedEntityName}<p class="mt-1 text-xs text-red-500">
 								{errors.relatedEntityName}
 							</p>{/if}
+					</div>
+					<div>
+						<label for="domainName" class="mb-1 block text-sm font-medium text-gray-700"
+							>도메인명 <span class="text-red-500">*</span></label
+						><input
+							id="domainName"
+							type="text"
+							bind:value={formData.domainName}
+							class="w-full rounded-lg border px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 {errors.domainName
+								? 'border-red-500'
+								: 'border-gray-300'}"
+							placeholder="도메인명"
+						/>{#if errors.domainName}<p class="mt-1 text-xs text-red-500">{errors.domainName}</p>{/if}
 					</div>
 					<div>
 						<label for="dataType" class="mb-1 block text-sm font-medium text-gray-700"

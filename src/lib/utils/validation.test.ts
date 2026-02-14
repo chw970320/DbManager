@@ -164,6 +164,9 @@ describe('validation', () => {
 				termName: '테스트용어',
 				columnName: 'TEST_COLUMN',
 				domainName: 'TEST_DOMAIN',
+				isMappedTerm: true,
+				isMappedColumn: true,
+				isMappedDomain: true,
 				createdAt: '2024-01-01T00:00:00.000Z',
 				updatedAt: '2024-01-01T00:00:00.000Z'
 			};

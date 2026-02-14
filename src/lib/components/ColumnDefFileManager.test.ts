@@ -104,8 +104,7 @@ describe('ColumnDefFileManager', () => {
 		it('선택된 파일 강조 표시', async () => {
 			render(ColumnDefFileManager, {
 				props: {
-					isOpen: true,
-					selectedFilename: 'custom-column.json'
+					isOpen: true
 				}
 			});
 

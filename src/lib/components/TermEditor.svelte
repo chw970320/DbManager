@@ -32,9 +32,9 @@
 
 	// Form data
 	let formData = $state({
-		termName: entry.termName || '',
-		columnName: entry.columnName || '',
-		domainName: entry.domainName || ''
+		termName: '',
+		columnName: '',
+		domainName: ''
 	});
 
 	// Validation errors
@@ -581,11 +581,7 @@
 		}
 	}}
 >
-	<!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
-	<div
-		class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl"
-		onclick={(e) => e.stopPropagation()}
-	>
+	<div class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl">
 		<div class="flex flex-shrink-0 items-center justify-between border-b p-6">
 			<h2 class="text-xl font-bold text-gray-900">{isEditMode ? '용어 수정' : '새 용어 추가'}</h2>
 			<button

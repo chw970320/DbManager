@@ -3,13 +3,13 @@ import { POST } from './+server';
 import { json } from '@sveltejs/kit';
 import type { RequestEvent } from '@sveltejs/kit';
 import * as fileHandler from '$lib/registry/data-registry';
-import type { VocabularyEntry, ForbiddenWord } from '$lib/types/vocabulary';
+import type { VocabularyData, VocabularyEntry, ForbiddenWord } from '$lib/types/vocabulary';
 
 vi.mock('$lib/registry/data-registry');
 vi.mock('@sveltejs/kit');
 
 const createMockRequest = async (
-	body: { termName?: string; abbreviation?: string; entryId?: string },
+	body: { standardName?: string; abbreviation?: string; id?: string },
 	searchParams?: Record<string, string>
 ): Promise<RequestEvent> => {
 	const url = new URL('http://localhost/api/vocabulary/validate');
@@ -27,7 +27,7 @@ const createMockRequest = async (
 };
 
 describe('POST /api/vocabulary/validate', () => {
-	const mockVocabData: { entries: VocabularyEntry[] } = {
+	const mockVocabData: VocabularyData = {
 		entries: [
 			{
 				id: '1',
@@ -48,7 +48,9 @@ describe('POST /api/vocabulary/validate', () => {
 				createdAt: '',
 				updatedAt: ''
 			}
-		]
+		],
+		lastUpdated: '',
+		totalCount: 2
 	};
 
 	const mockForbiddenWords: ForbiddenWord[] = [

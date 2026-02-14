@@ -8,7 +8,7 @@ export interface VocabularyEntry {
 	standardName: string; // 표준단어명 (한국어)
 	abbreviation: string; // 영문약어
 	englishName: string; // 영문명
-	description: string; // 설명
+	description?: string; // 설명
 	createdAt: string; // ISO 8601 날짜 문자열
 	updatedAt: string; // ISO 8601 날짜 문자열
 	isFormalWord?: boolean; // 형식단어여부 (Y/N → true/false)
@@ -40,6 +40,15 @@ export interface VocabularyData {
 	mapping?: {
 		domain: string; // 매핑된 도메인 파일명
 	};
+}
+
+// 금칙어 엔트리 인터페이스
+export interface ForbiddenWord {
+	id?: string;
+	keyword: string;
+	type: 'standardName' | 'abbreviation';
+	createdAt?: string;
+	updatedAt?: string;
 }
 
 // 업로드 결과 타입

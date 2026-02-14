@@ -20,13 +20,13 @@
 	let serverError = $derived(props.serverError ?? '');
 
 	let formData = $state({
-		logicalDbName: entry.logicalDbName || '',
-		schemaName: entry.schemaName || '',
-		entityName: entry.entityName || '',
-		entityDescription: entry.entityDescription || '',
-		primaryIdentifier: entry.primaryIdentifier || '',
-		superTypeEntityName: entry.superTypeEntityName || '',
-		tableKoreanName: entry.tableKoreanName || ''
+		logicalDbName: '',
+		schemaName: '',
+		entityName: '',
+		entityDescription: '',
+		primaryIdentifier: '',
+		superTypeEntityName: '',
+		tableKoreanName: ''
 	});
 
 	let errors = $state<Record<string, string>>({});
@@ -101,20 +101,16 @@
 	}
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
-
 <div
 	class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
 	onclick={handleBackdropClick}
+	onkeydown={handleKeydown}
 	role="dialog"
 	aria-modal="true"
 	aria-labelledby="modal-title"
+	tabindex="-1"
 >
-	<!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
-	<div
-		class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl"
-		onclick={(e) => e.stopPropagation()}
-	>
+	<div class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl">
 		<div class="flex flex-shrink-0 items-center justify-between border-b p-6">
 			<h2 id="modal-title" class="text-xl font-bold text-gray-900">
 				{isEditMode ? '엔터티 정의서 수정' : '새 엔터티 정의서'}

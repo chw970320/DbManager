@@ -926,6 +926,7 @@
 						class="w-64 transform bg-white p-4 pt-20 shadow-2xl transition-transform duration-300"
 						role="dialog"
 						aria-modal="true"
+						tabindex="-1"
 					>
 						<div class="mb-4 flex items-center justify-between">
 							<h2 class="text-lg font-bold text-gray-900">용어 파일</h2>
@@ -1149,7 +1150,8 @@
 				{#if showDuplicateSelection}
 					<div
 						class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-						role="button"
+						role="dialog"
+						aria-modal="true"
 						tabindex="-1"
 						onclick={(e) => {
 							if (e.target === e.currentTarget) {
@@ -1164,12 +1166,7 @@
 							}
 						}}
 					>
-						<div
-							class="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl"
-							onclick={(e) => e.stopPropagation()}
-							role="dialog"
-							aria-modal="true"
-						>
+						<div class="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl">
 							<h2 class="mb-4 text-xl font-bold text-gray-900">중복된 용어 선택</h2>
 							<p class="mb-4 text-sm text-gray-600">다음 중 삭제할 용어를 선택해주세요:</p>
 							<div class="mb-4 max-h-96 space-y-2 overflow-y-auto">
@@ -1211,7 +1208,8 @@
 				{#if showSynonymSelection && synonymSelectionData}
 					<div
 						class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-						role="button"
+						role="dialog"
+						aria-modal="true"
 						tabindex="-1"
 						onclick={(e) => {
 							if (e.target === e.currentTarget) {
@@ -1226,12 +1224,7 @@
 							}
 						}}
 					>
-						<div
-							class="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl"
-							onclick={(e) => e.stopPropagation()}
-							role="dialog"
-							aria-modal="true"
-						>
+						<div class="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl">
 							<h2 class="mb-4 text-xl font-bold text-gray-900">동음이의어 선택</h2>
 							{#if synonymSelectionData}
 								<p class="mb-4 text-sm text-gray-600">

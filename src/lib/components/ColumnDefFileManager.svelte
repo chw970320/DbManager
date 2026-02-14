@@ -338,10 +338,7 @@
 		aria-modal="true"
 		tabindex="-1"
 	>
-		<div
-			class="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl"
-			onclick={(e) => e.stopPropagation()}
-		>
+		<div class="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
 			<!-- 헤더 -->
 			<div class="sticky top-0 z-10 border-b border-gray-200 bg-white px-6 py-4">
 				<div class="flex items-center justify-between">

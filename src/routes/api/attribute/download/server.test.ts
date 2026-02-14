@@ -25,6 +25,7 @@ const createMockAttributeData = (): AttributeData => ({
 			attributeName: '속성1',
 			attributeType: 'VARCHAR',
 			requiredInput: 'Y',
+			refEntityName: '',
 			createdAt: '2024-01-01T00:00:00.000Z',
 			updatedAt: '2024-01-01T00:00:00.000Z'
 		},
@@ -35,6 +36,7 @@ const createMockAttributeData = (): AttributeData => ({
 			attributeName: '속성2',
 			attributeType: 'INTEGER',
 			requiredInput: 'N',
+			refEntityName: '',
 			createdAt: '2024-01-02T00:00:00.000Z',
 			updatedAt: '2024-01-02T00:00:00.000Z'
 		}

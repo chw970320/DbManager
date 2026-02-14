@@ -22,6 +22,39 @@
 
 ---
 
+## 매핑 해석 및 참조 무결성 (2026-02-13)
+
+### 매핑 해석 우선순위
+
+데이터 타입 간 관련 파일명은 아래 우선순위로 해석됩니다.
+
+1. `static/data/registry.json`의 매핑 관계
+2. 각 데이터 파일의 `mapping` 필드
+3. 타입별 기본 파일명(`DEFAULT_FILENAMES`)
+
+관련 구현:
+
+- `src/lib/registry/mapping-registry.ts`
+  - `resolveRelatedFilenames`
+  - `getKnownRelatedTypes`
+
+### 참조 검사 모델
+
+엔트리 삭제 시 참조 검사가 제네릭 함수로 통합되었습니다.
+
+- `checkEntryReferences(type, entry, filename?)`
+- 현재 내장 규칙:
+  - `vocabulary -> term` (용어명/컬럼명 파트 참조)
+  - `domain -> vocabulary` (`domainCategory` 참조)
+  - `domain -> term` (`domainName` 참조)
+
+### 하위 호환성
+
+- 파일 내 `mapping` 필드는 유지됩니다.
+- `VocabularyData.mappedDomainFile`은 deprecated 상태이며 제거 예정입니다.
+
+---
+
 ## 1. VocabularyEntry (단어집 엔트리)
 
 ### 개요

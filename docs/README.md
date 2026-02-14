@@ -9,6 +9,7 @@
 | **PROJECT_DEEP_ANALYSIS.md** | 프로젝트 본질 및 핵심 가치 분석    | 모든 사용자 (필수) |
 | **AI_CONTEXT.md**            | AI 컨텍스트 문서 (프로젝트 이해용) | AI, 개발자         |
 | **CONVENTIONS.md**           | 개발 컨벤션 및 코딩 스타일 가이드  | 개발자             |
+| **CHANGELOG.md**             | 코드/아키텍처 변경 이력            | 개발자             |
 | **QUICK_START.md**           | 빠른 시작 가이드                   | 모든 사용자        |
 | **USER_GUIDE.md**            | 사용자 가이드 (상세 매뉴얼)        | 실제 사용자        |
 | **specs/**                   | 데이터 모델, API 레퍼런스          | 개발자             |
@@ -21,6 +22,7 @@
 1. **[빠른 시작 가이드](./QUICK_START.md)**: 프로젝트 설치 및 첫 번째 용어 생성
 2. **[프로젝트 본질 분석](./PROJECT_DEEP_ANALYSIS.md)**: 프로젝트의 핵심 개념 이해
 3. **[사용자 가이드](./USER_GUIDE.md)**: 각 기능의 상세한 사용법
+4. **[변경 이력](./CHANGELOG.md)**: 최근 릴리스/리팩터링 내역 확인
 
 ### 개발자를 위한 문서
 
@@ -29,6 +31,7 @@
 3. **[API 레퍼런스](./specs/api-reference.md)**: API 엔드포인트 상세 정보
 4. **[데이터 모델](./specs/data-model.md)**: 데이터 구조 및 타입 정의
 5. **[AI 컨텍스트](./AI_CONTEXT.md)**: AI가 프로젝트를 이해하기 위한 컨텍스트
+6. **[변경 이력](./CHANGELOG.md)**: 레지스트리/매핑 관련 최신 변경점
 
 ### 문서 관리자
 
@@ -42,6 +45,8 @@ PROJECT_DEEP_ANALYSIS.md (프로젝트 본질)
 QUICK_START.md (빠른 시작)
        ↓
 USER_GUIDE.md (상세 가이드)
+       ↓
+CHANGELOG.md (변경 이력)
        ↓
 specs/ (기술 문서)
 ```

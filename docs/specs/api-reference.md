@@ -52,6 +52,35 @@ http://localhost:5173/api
 
 ---
 
+## 최근 변경 사항 (2026-02-13)
+
+아래 API들은 매핑 파일 해석 시 공통으로 3단계 폴백을 사용합니다.
+
+1. `registry.json`의 매핑 관계
+2. 각 파일의 `mapping` 필드
+3. 기본 파일명(`vocabulary.json`, `domain.json`, `term.json` 등)
+
+적용 API:
+
+- `GET/PUT /api/term/files/mapping`
+- `GET/PUT /api/vocabulary/files/mapping`
+- `POST /api/term/sync`
+- `POST /api/vocabulary/sync-domain`
+- `GET/POST /api/column/sync-term`
+- `POST /api/term/validate`
+- `GET /api/term/validate-all`
+
+추가 변경:
+
+- `PUT /api/term/files/mapping`, `PUT /api/vocabulary/files/mapping`
+  - 파일 내 `mapping` + 레지스트리 매핑을 동시에 갱신합니다(듀얼 라이트, 레지스트리는 best-effort).
+- `DELETE /api/vocabulary`, `DELETE /api/domain`
+  - 삭제 전 참조 검증이 `checkEntryReferences` 기반으로 통합되었습니다.
+- `GET /api/erd/generate`
+  - 파일 목록 조회 및 데이터 로드가 `data-registry` 기반으로 정리되었습니다.
+
+---
+
 ## Vocabulary API
 
 ### GET /api/vocabulary
@@ -1831,4 +1860,4 @@ const data = await response.json();
 
 ---
 
-**마지막 업데이트**: 2024-01-01
+**마지막 업데이트**: 2026-02-13

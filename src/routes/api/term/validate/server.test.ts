@@ -5,10 +5,17 @@ import type { TermEntry } from '$lib/types/term';
 import type { VocabularyData } from '$lib/types/vocabulary';
 
 // Mock 모듈들
-vi.mock('$lib/utils/file-handler.js', () => ({
-	loadTermData: vi.fn(),
-	listTermFiles: vi.fn(),
-	loadVocabularyData: vi.fn()
+vi.mock('$lib/registry/data-registry', () => ({
+	loadData: vi.fn(),
+	listFiles: vi.fn()
+}));
+
+vi.mock('$lib/registry/cache-registry', () => ({
+	getCachedData: vi.fn()
+}));
+
+vi.mock('$lib/registry/mapping-registry', () => ({
+	resolveRelatedFilenames: vi.fn()
 }));
 
 vi.mock('$lib/utils/validation.js', () => ({
@@ -25,7 +32,9 @@ vi.mock('$lib/utils/validation.js', () => ({
 }));
 
 // Mock import
-import { loadTermData, listTermFiles, loadVocabularyData } from '$lib/utils/file-handler.js';
+import { loadData, listFiles } from '$lib/registry/data-registry';
+import { getCachedData } from '$lib/registry/cache-registry';
+import { resolveRelatedFilenames } from '$lib/registry/mapping-registry';
 import {
 	validateTermNameSuffix,
 	validateTermNameUniqueness,
@@ -123,9 +132,18 @@ describe('Term Validate API: /api/term/validate', () => {
 
 	beforeEach(() => {
 		vi.clearAllMocks();
-		vi.mocked(loadTermData).mockResolvedValue(mockTermData);
-		vi.mocked(listTermFiles).mockResolvedValue(['term.json']);
-		vi.mocked(loadVocabularyData).mockResolvedValue(mockVocabularyData);
+		vi.mocked(resolveRelatedFilenames).mockResolvedValue(
+			new Map([
+				['vocabulary', 'vocabulary.json'],
+				['domain', 'domain.json']
+			])
+		);
+		vi.mocked(loadData).mockImplementation(async (type: string) => {
+			if (type === 'term') return mockTermData;
+			return { entries: [], lastUpdated: '', totalCount: 0 };
+		});
+		vi.mocked(listFiles).mockResolvedValue(['term.json']);
+		vi.mocked(getCachedData).mockResolvedValue(mockVocabularyData);
 		vi.mocked(validateTermNameSuffix).mockReturnValue(null);
 		vi.mocked(validateTermNameUniqueness).mockReturnValue(null);
 		vi.mocked(validateTermUniqueness).mockReturnValue(null);
@@ -271,7 +289,7 @@ describe('Term Validate API: /api/term/validate', () => {
 
 		await POST(request);
 
-		expect(loadTermData).toHaveBeenCalledWith('custom-term.json');
+		expect(loadData).toHaveBeenCalledWith('term', 'custom-term.json');
 	});
 
 	it('should use default filename when not specified', async () => {
@@ -285,7 +303,7 @@ describe('Term Validate API: /api/term/validate', () => {
 
 		await POST(request);
 
-		expect(loadTermData).toHaveBeenCalledWith('term.json');
+		expect(loadData).toHaveBeenCalledWith('term', 'term.json');
 	});
 
 	// 새로 추가된 검증 기능 테스트

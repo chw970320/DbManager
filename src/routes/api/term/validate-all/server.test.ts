@@ -6,9 +6,8 @@ import type { VocabularyData } from '$lib/types/vocabulary';
 import type { DomainData } from '$lib/types/domain';
 
 // Mock 모듈들
-vi.mock('$lib/utils/file-handler.js', () => ({
-	loadTermData: vi.fn(),
-	listTermFiles: vi.fn()
+vi.mock('$lib/registry/data-registry', () => ({
+	loadData: vi.fn()
 }));
 
 vi.mock('$lib/utils/validation.js', () => ({
@@ -21,13 +20,17 @@ vi.mock('$lib/utils/validation.js', () => ({
 	validateDomainNameMapping: vi.fn(() => null)
 }));
 
-vi.mock('$lib/utils/cache.js', () => ({
-	getCachedVocabularyData: vi.fn(),
-	getCachedDomainData: vi.fn()
+vi.mock('$lib/registry/cache-registry', () => ({
+	getCachedData: vi.fn()
 }));
 
-import { loadTermData, listTermFiles } from '$lib/utils/file-handler.js';
-import { getCachedVocabularyData, getCachedDomainData } from '$lib/utils/cache.js';
+vi.mock('$lib/registry/mapping-registry', () => ({
+	resolveRelatedFilenames: vi.fn()
+}));
+
+import { loadData } from '$lib/registry/data-registry';
+import { getCachedData } from '$lib/registry/cache-registry';
+import { resolveRelatedFilenames } from '$lib/registry/mapping-registry';
 
 // 테스트용 Mock 데이터
 const createMockTermData = (): TermData => ({
@@ -138,10 +141,18 @@ function createMockRequestEvent(options: { searchParams?: Record<string, string>
 describe('Term Validate-All API: /api/term/validate-all', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		vi.mocked(loadTermData).mockResolvedValue(createMockTermData());
-		vi.mocked(listTermFiles).mockResolvedValue(['term.json']);
-		vi.mocked(getCachedVocabularyData).mockResolvedValue(createMockVocabularyData());
-		vi.mocked(getCachedDomainData).mockResolvedValue(createMockDomainData());
+		vi.mocked(resolveRelatedFilenames).mockResolvedValue(
+			new Map([
+				['vocabulary', 'vocabulary.json'],
+				['domain', 'domain.json']
+			])
+		);
+		vi.mocked(loadData).mockResolvedValue(createMockTermData());
+		vi.mocked(getCachedData).mockImplementation(async (type: string) => {
+			if (type === 'vocabulary') return createMockVocabularyData();
+			if (type === 'domain') return createMockDomainData();
+			return { entries: [], lastUpdated: '', totalCount: 0 };
+		});
 	});
 
 	it('should validate all terms successfully', async () => {
@@ -182,7 +193,7 @@ describe('Term Validate-All API: /api/term/validate-all', () => {
 
 		await GET(event);
 
-		expect(loadTermData).toHaveBeenCalledWith('custom-term.json');
+		expect(loadData).toHaveBeenCalledWith('term', 'custom-term.json');
 	});
 
 	it('should use default filename when not specified', async () => {
@@ -192,11 +203,11 @@ describe('Term Validate-All API: /api/term/validate-all', () => {
 
 		await GET(event);
 
-		expect(loadTermData).toHaveBeenCalledWith('term.json');
+		expect(loadData).toHaveBeenCalledWith('term', 'term.json');
 	});
 
 	it('should return 500 on data load error', async () => {
-		vi.mocked(loadTermData).mockRejectedValue(new Error('파일을 찾을 수 없습니다'));
+		vi.mocked(loadData).mockRejectedValue(new Error('파일을 찾을 수 없습니다'));
 
 		const event = createMockRequestEvent({
 			searchParams: { filename: 'term.json' }

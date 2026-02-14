@@ -1,23 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET, POST } from './+server';
 import type { RequestEvent } from '@sveltejs/kit';
-import type { ColumnData, ColumnEntry } from '$lib/types/database-design';
-import type { TermData, TermEntry } from '$lib/types/term';
+import type { ColumnData } from '$lib/types/database-design';
+import type { TermData } from '$lib/types/term';
 
-// Mock 모듈들
-vi.mock('$lib/utils/database-design-handler.js', () => ({
-	loadColumnData: vi.fn(),
-	saveColumnData: vi.fn()
+vi.mock('$lib/registry/data-registry', () => ({
+	loadData: vi.fn(),
+	saveData: vi.fn()
 }));
 
-vi.mock('$lib/utils/file-handler.js', () => ({
-	loadTermData: vi.fn()
+vi.mock('$lib/registry/mapping-registry', () => ({
+	resolveRelatedFilenames: vi.fn()
 }));
 
-import { loadColumnData, saveColumnData } from '$lib/utils/database-design-handler.js';
-import { loadTermData } from '$lib/utils/file-handler.js';
+import { loadData, saveData } from '$lib/registry/data-registry';
+import { resolveRelatedFilenames } from '$lib/registry/mapping-registry';
 
-// 테스트용 Mock 데이터
 const createMockColumnData = (): ColumnData => ({
 	entries: [
 		{
@@ -52,7 +50,7 @@ const createMockColumnData = (): ColumnData => ({
 			subjectArea: '주제영역2',
 			schemaName: '스키마2',
 			tableEnglishName: 'TABLE2',
-			columnEnglishName: 'COLUMN2',
+			columnEnglishName: 'NO_MATCH',
 			columnKoreanName: '컬럼2',
 			relatedEntityName: '엔터티2',
 			dataType: 'INT',
@@ -92,7 +90,6 @@ const createMockTermData = (): TermData => ({
 	totalCount: 1
 });
 
-// RequestEvent Mock 생성 헬퍼
 function createMockRequestEvent(options: {
 	method?: string;
 	body?: unknown;
@@ -111,34 +108,19 @@ function createMockRequestEvent(options: {
 		method: options.method || 'GET'
 	} as unknown as Request;
 
-	return {
-		url,
-		request,
-		params: {},
-		locals: {},
-		platform: undefined,
-		route: { id: '/api/column/sync-term' },
-		cookies: {
-			get: vi.fn(),
-			getAll: vi.fn(),
-			set: vi.fn(),
-			delete: vi.fn(),
-			serialize: vi.fn()
-		},
-		fetch: vi.fn(),
-		getClientAddress: vi.fn(() => '127.0.0.1'),
-		setHeaders: vi.fn(),
-		isDataRequest: false,
-		isSubRequest: false
-	} as unknown as RequestEvent;
+	return { url, request } as RequestEvent;
 }
 
 describe('Column Sync-Term API: /api/column/sync-term', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		vi.mocked(loadColumnData).mockResolvedValue(createMockColumnData());
-		vi.mocked(loadTermData).mockResolvedValue(createMockTermData());
-		vi.mocked(saveColumnData).mockResolvedValue(undefined);
+		vi.mocked(resolveRelatedFilenames).mockResolvedValue(new Map([['term', 'term.json']]));
+		vi.mocked(saveData).mockResolvedValue(undefined);
+		vi.mocked(loadData).mockImplementation(async (type: string) => {
+			if (type === 'column') return createMockColumnData();
+			if (type === 'term') return createMockTermData();
+			throw new Error('unsupported');
+		});
 	});
 
 	describe('GET', () => {
@@ -165,8 +147,8 @@ describe('Column Sync-Term API: /api/column/sync-term', () => {
 
 			await GET(event);
 
-			expect(loadColumnData).toHaveBeenCalledWith('custom-column.json');
-			expect(loadTermData).toHaveBeenCalledWith('custom-term.json');
+			expect(loadData).toHaveBeenCalledWith('column', 'custom-column.json');
+			expect(loadData).toHaveBeenCalledWith('term', 'custom-term.json');
 		});
 
 		it('should use default filenames when not specified', async () => {
@@ -174,12 +156,16 @@ describe('Column Sync-Term API: /api/column/sync-term', () => {
 
 			await GET(event);
 
-			expect(loadColumnData).toHaveBeenCalledWith('column.json');
-			expect(loadTermData).toHaveBeenCalledWith('term.json');
+			expect(loadData).toHaveBeenCalledWith('column', 'column.json');
+			expect(loadData).toHaveBeenCalledWith('term', 'term.json');
 		});
 
 		it('should return 500 on column data load error', async () => {
-			vi.mocked(loadColumnData).mockRejectedValue(new Error('파일을 찾을 수 없습니다'));
+			vi.mocked(loadData).mockImplementation(async (type: string) => {
+				if (type === 'column') throw new Error('파일을 찾을 수 없습니다');
+				if (type === 'term') return createMockTermData();
+				throw new Error('unsupported');
+			});
 
 			const event = createMockRequestEvent({});
 			const response = await GET(event);
@@ -190,7 +176,11 @@ describe('Column Sync-Term API: /api/column/sync-term', () => {
 		});
 
 		it('should return 500 on term data load error', async () => {
-			vi.mocked(loadTermData).mockRejectedValue(new Error('용어 파일을 찾을 수 없습니다'));
+			vi.mocked(loadData).mockImplementation(async (type: string) => {
+				if (type === 'column') return createMockColumnData();
+				if (type === 'term') throw new Error('용어 파일을 찾을 수 없습니다');
+				throw new Error('unsupported');
+			});
 
 			const event = createMockRequestEvent({});
 			const response = await GET(event);
@@ -213,18 +203,12 @@ describe('Column Sync-Term API: /api/column/sync-term', () => {
 
 			expect(response.status).toBe(200);
 			expect(result.success).toBe(true);
-			expect(result.data).toHaveProperty('matched');
-			expect(result.data).toHaveProperty('unmatched');
-			expect(result.data).toHaveProperty('updated');
-			expect(result.data).toHaveProperty('total');
+			expect(result.data.matched).toBe(1);
+			expect(result.data.unmatched).toBe(1);
+			expect(result.data.total).toBe(2);
 		});
 
 		it('should update columnKoreanName when term matches', async () => {
-			const columnData = createMockColumnData();
-			const termData = createMockTermData();
-			vi.mocked(loadColumnData).mockResolvedValue(columnData);
-			vi.mocked(loadTermData).mockResolvedValue(termData);
-
 			const event = createMockRequestEvent({
 				method: 'POST',
 				body: {}
@@ -235,7 +219,8 @@ describe('Column Sync-Term API: /api/column/sync-term', () => {
 
 			expect(response.status).toBe(200);
 			expect(result.success).toBe(true);
-			expect(result.data.matched).toBeGreaterThan(0);
+			expect(result.data.updated).toBeGreaterThan(0);
+			expect(saveData).toHaveBeenCalled();
 		});
 
 		it('should use specified filename parameters', async () => {
@@ -249,12 +234,16 @@ describe('Column Sync-Term API: /api/column/sync-term', () => {
 
 			await POST(event);
 
-			expect(loadColumnData).toHaveBeenCalledWith('custom-column.json');
-			expect(loadTermData).toHaveBeenCalledWith('custom-term.json');
+			expect(loadData).toHaveBeenCalledWith('column', 'custom-column.json');
+			expect(loadData).toHaveBeenCalledWith('term', 'custom-term.json');
 		});
 
 		it('should return 500 on column data load error', async () => {
-			vi.mocked(loadColumnData).mockRejectedValue(new Error('파일을 찾을 수 없습니다'));
+			vi.mocked(loadData).mockImplementation(async (type: string) => {
+				if (type === 'column') throw new Error('파일을 찾을 수 없습니다');
+				if (type === 'term') return createMockTermData();
+				throw new Error('unsupported');
+			});
 
 			const event = createMockRequestEvent({
 				method: 'POST',
@@ -269,7 +258,11 @@ describe('Column Sync-Term API: /api/column/sync-term', () => {
 		});
 
 		it('should return 500 on term data load error', async () => {
-			vi.mocked(loadTermData).mockRejectedValue(new Error('용어 파일을 찾을 수 없습니다'));
+			vi.mocked(loadData).mockImplementation(async (type: string) => {
+				if (type === 'column') return createMockColumnData();
+				if (type === 'term') throw new Error('용어 파일을 찾을 수 없습니다');
+				throw new Error('unsupported');
+			});
 
 			const event = createMockRequestEvent({
 				method: 'POST',

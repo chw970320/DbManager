@@ -5,23 +5,18 @@ import type { TermData } from '$lib/types/term';
 import type { VocabularyData } from '$lib/types/vocabulary';
 import type { DomainData } from '$lib/types/domain';
 
-// Mock 모듈들
-vi.mock('$lib/utils/file-handler.js', () => ({
-	loadTermData: vi.fn(),
-	saveTermData: vi.fn(),
-	loadVocabularyData: vi.fn(),
-	loadDomainData: vi.fn()
+vi.mock('$lib/registry/data-registry', () => ({
+	loadData: vi.fn(),
+	saveData: vi.fn()
 }));
 
-// Mock import
-import {
-	loadTermData,
-	saveTermData,
-	loadVocabularyData,
-	loadDomainData
-} from '$lib/utils/file-handler.js';
+vi.mock('$lib/registry/mapping-registry', () => ({
+	resolveRelatedFilenames: vi.fn()
+}));
 
-// 테스트용 Mock 데이터
+import { loadData, saveData } from '$lib/registry/data-registry';
+import { resolveRelatedFilenames } from '$lib/registry/mapping-registry';
+
 const createMockTermData = (): TermData => ({
 	entries: [
 		{
@@ -72,10 +67,18 @@ const createMockVocabularyData = (): VocabularyData => ({
 			englishName: 'Name',
 			createdAt: '2024-01-01T00:00:00.000Z',
 			updatedAt: '2024-01-01T00:00:00.000Z'
+		},
+		{
+			id: 'vocab-3',
+			standardName: '관리자',
+			abbreviation: 'ADMIN',
+			englishName: 'Admin',
+			createdAt: '2024-01-01T00:00:00.000Z',
+			updatedAt: '2024-01-01T00:00:00.000Z'
 		}
 	],
 	lastUpdated: '2024-01-01T00:00:00.000Z',
-	totalCount: 2
+	totalCount: 3
 });
 
 const createMockDomainData = (): DomainData => ({
@@ -95,7 +98,6 @@ const createMockDomainData = (): DomainData => ({
 	totalCount: 1
 });
 
-// RequestEvent Mock 생성 헬퍼
 function createMockRequestEvent(options: { body?: unknown }): RequestEvent {
 	const request = {
 		json: vi.fn().mockResolvedValue(options.body || {}),
@@ -104,56 +106,30 @@ function createMockRequestEvent(options: { body?: unknown }): RequestEvent {
 
 	return {
 		request,
-		url: new URL('http://localhost/api/term/sync'),
-		params: {},
-		locals: {},
-		platform: undefined,
-		route: { id: '/api/term/sync' },
-		cookies: {
-			get: vi.fn(),
-			getAll: vi.fn(),
-			set: vi.fn(),
-			delete: vi.fn(),
-			serialize: vi.fn()
-		},
-		fetch: vi.fn(),
-		getClientAddress: vi.fn(() => '127.0.0.1'),
-		setHeaders: vi.fn(),
-		isDataRequest: false,
-		isSubRequest: false
-	} as unknown as RequestEvent;
+		url: new URL('http://localhost/api/term/sync')
+	} as RequestEvent;
 }
 
 describe('Term Sync API: /api/term/sync', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		vi.mocked(loadTermData).mockResolvedValue(createMockTermData());
-		vi.mocked(saveTermData).mockResolvedValue(undefined);
-		vi.mocked(loadVocabularyData).mockResolvedValue(createMockVocabularyData());
-		vi.mocked(loadDomainData).mockResolvedValue(createMockDomainData());
+		vi.mocked(resolveRelatedFilenames).mockResolvedValue(
+			new Map([
+				['vocabulary', 'vocabulary.json'],
+				['domain', 'domain.json']
+			])
+		);
+		vi.mocked(saveData).mockResolvedValue(undefined);
+		vi.mocked(loadData).mockImplementation(async (type: string) => {
+			if (type === 'term') return createMockTermData();
+			if (type === 'vocabulary') return createMockVocabularyData();
+			if (type === 'domain') return createMockDomainData();
+			throw new Error('unsupported');
+		});
 	});
 
-	it('매핑 동기화 성공: 단어집/도메인 변경 후 동기화 시 매핑 상태가 올바르게 업데이트되는지 확인', async () => {
-		const event = createMockRequestEvent({
-			body: { filename: 'term.json' }
-		});
-
-		const response = await POST(event);
-		const result = await response.json();
-
-		expect(response.status).toBe(200);
-		expect(result.success).toBe(true);
-		expect(result.data.updated).toBeDefined();
-		expect(result.data.matchedTerm).toBeDefined();
-		expect(result.data.matchedColumn).toBeDefined();
-		expect(result.data.matchedDomain).toBeDefined();
-		expect(saveTermData).toHaveBeenCalled();
-	});
-
-	it('동기화 결과 카운트: 업데이트된 항목 수가 정확히 반환되는지 확인', async () => {
-		const event = createMockRequestEvent({
-			body: { filename: 'term.json' }
-		});
+	it('매핑 동기화 성공', async () => {
+		const event = createMockRequestEvent({ body: { filename: 'term.json' } });
 
 		const response = await POST(event);
 		const result = await response.json();
@@ -161,40 +137,40 @@ describe('Term Sync API: /api/term/sync', () => {
 		expect(response.status).toBe(200);
 		expect(result.success).toBe(true);
 		expect(result.data.total).toBe(2);
-		expect(typeof result.data.updated).toBe('number');
-		expect(typeof result.data.matchedTerm).toBe('number');
-		expect(typeof result.data.matchedColumn).toBe('number');
-		expect(typeof result.data.matchedDomain).toBe('number');
+		expect(saveData).toHaveBeenCalledWith('term', expect.any(Object), 'term.json');
 	});
 
-	it('filename 파라미터 사용: filename 파라미터로 특정 파일에서 동기화 수행', async () => {
+	it('filename 파라미터 사용', async () => {
 		const event = createMockRequestEvent({
 			body: { filename: 'custom-term.json' }
 		});
 
 		await POST(event);
 
-		expect(loadTermData).toHaveBeenCalledWith('custom-term.json');
-		expect(saveTermData).toHaveBeenCalledWith(expect.any(Object), 'custom-term.json');
+		expect(loadData).toHaveBeenCalledWith('term', 'custom-term.json');
+		expect(resolveRelatedFilenames).toHaveBeenCalledWith(
+			'term',
+			'custom-term.json',
+			expect.any(Object)
+		);
 	});
 
-	it('should use default filename when not specified', async () => {
-		const event = createMockRequestEvent({
-			body: {}
-		});
-
+	it('default filename 사용', async () => {
+		const event = createMockRequestEvent({ body: {} });
 		await POST(event);
 
-		expect(loadTermData).toHaveBeenCalledWith('term.json');
+		expect(loadData).toHaveBeenCalledWith('term', 'term.json');
 	});
 
-	it('should return 500 on vocabulary load error', async () => {
-		vi.mocked(loadVocabularyData).mockRejectedValue(new Error('단어집 파일을 찾을 수 없습니다'));
-
-		const event = createMockRequestEvent({
-			body: { filename: 'term.json' }
+	it('vocabulary 로드 에러 시 500', async () => {
+		vi.mocked(loadData).mockImplementation(async (type: string) => {
+			if (type === 'term') return createMockTermData();
+			if (type === 'vocabulary') throw new Error('단어집 파일을 찾을 수 없습니다');
+			if (type === 'domain') return createMockDomainData();
+			throw new Error('unsupported');
 		});
 
+		const event = createMockRequestEvent({ body: { filename: 'term.json' } });
 		const response = await POST(event);
 		const result = await response.json();
 
@@ -202,13 +178,15 @@ describe('Term Sync API: /api/term/sync', () => {
 		expect(result.success).toBe(false);
 	});
 
-	it('should return 500 on domain load error', async () => {
-		vi.mocked(loadDomainData).mockRejectedValue(new Error('도메인 파일을 찾을 수 없습니다'));
-
-		const event = createMockRequestEvent({
-			body: { filename: 'term.json' }
+	it('domain 로드 에러 시 500', async () => {
+		vi.mocked(loadData).mockImplementation(async (type: string) => {
+			if (type === 'term') return createMockTermData();
+			if (type === 'vocabulary') return createMockVocabularyData();
+			if (type === 'domain') throw new Error('도메인 파일을 찾을 수 없습니다');
+			throw new Error('unsupported');
 		});
 
+		const event = createMockRequestEvent({ body: { filename: 'term.json' } });
 		const response = await POST(event);
 		const result = await response.json();
 
@@ -216,13 +194,10 @@ describe('Term Sync API: /api/term/sync', () => {
 		expect(result.success).toBe(false);
 	});
 
-	it('should return 500 on save error', async () => {
-		vi.mocked(saveTermData).mockRejectedValue(new Error('저장 실패'));
+	it('save 에러 시 500', async () => {
+		vi.mocked(saveData).mockRejectedValue(new Error('저장 실패'));
 
-		const event = createMockRequestEvent({
-			body: { filename: 'term.json' }
-		});
-
+		const event = createMockRequestEvent({ body: { filename: 'term.json' } });
 		const response = await POST(event);
 		const result = await response.json();
 

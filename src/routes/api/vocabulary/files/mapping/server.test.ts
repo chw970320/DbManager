@@ -3,23 +3,33 @@ import { GET, PUT } from './+server';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { VocabularyData } from '$lib/types/vocabulary';
 
-// Mock 모듈들
-vi.mock('$lib/utils/file-handler', () => ({
-	loadVocabularyData: vi.fn(),
-	saveVocabularyData: vi.fn()
+vi.mock('$lib/registry/data-registry', () => ({
+	loadData: vi.fn(),
+	saveData: vi.fn()
 }));
 
-import { loadVocabularyData, saveVocabularyData } from '$lib/utils/file-handler';
+vi.mock('$lib/registry/mapping-registry', () => ({
+	resolveRelatedFilenames: vi.fn(),
+	getMappingsFor: vi.fn(),
+	updateMapping: vi.fn(),
+	addMapping: vi.fn()
+}));
 
-// 테스트용 Mock 데이터
-const createMockVocabularyData = (mapping?: { domain: string }): VocabularyData => ({
+import { loadData, saveData } from '$lib/registry/data-registry';
+import {
+	resolveRelatedFilenames,
+	getMappingsFor,
+	updateMapping,
+	addMapping
+} from '$lib/registry/mapping-registry';
+
+const createMockVocabularyData = (mapping?: { domain?: string }): VocabularyData => ({
 	entries: [],
 	lastUpdated: '2024-01-01T00:00:00.000Z',
 	totalCount: 0,
-	mapping: mapping || { domain: 'domain.json' }
+	mapping
 });
 
-// RequestEvent Mock 생성 헬퍼
 function createMockRequestEvent(options: {
 	method?: string;
 	body?: unknown;
@@ -40,35 +50,23 @@ function createMockRequestEvent(options: {
 
 	return {
 		url,
-		request,
-		params: {},
-		locals: {},
-		platform: undefined,
-		route: { id: '/api/vocabulary/files/mapping' },
-		cookies: {
-			get: vi.fn(),
-			getAll: vi.fn(),
-			set: vi.fn(),
-			delete: vi.fn(),
-			serialize: vi.fn()
-		},
-		fetch: vi.fn(),
-		getClientAddress: vi.fn(() => '127.0.0.1'),
-		setHeaders: vi.fn(),
-		isDataRequest: false,
-		isSubRequest: false
-	} as unknown as RequestEvent;
+		request
+	} as RequestEvent;
 }
 
 describe('Vocabulary Mapping API: /api/vocabulary/files/mapping', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		vi.mocked(resolveRelatedFilenames).mockResolvedValue(new Map([['domain', 'domain.json']]));
+		vi.mocked(getMappingsFor).mockResolvedValue([]);
 	});
 
 	describe('GET', () => {
 		it('should return mapping info successfully', async () => {
-			const mockData = createMockVocabularyData({ domain: 'custom-domain.json' });
-			vi.mocked(loadVocabularyData).mockResolvedValue(mockData);
+			vi.mocked(loadData).mockResolvedValue(createMockVocabularyData({ domain: 'custom-domain.json' }));
+			vi.mocked(resolveRelatedFilenames).mockResolvedValue(
+				new Map([['domain', 'custom-domain.json']])
+			);
 
 			const event = createMockRequestEvent({});
 			const response = await GET(event);
@@ -77,37 +75,32 @@ describe('Vocabulary Mapping API: /api/vocabulary/files/mapping', () => {
 			expect(response.status).toBe(200);
 			expect(result.success).toBe(true);
 			expect(result.data.mapping.domain).toBe('custom-domain.json');
+			expect(loadData).toHaveBeenCalledWith('vocabulary', 'vocabulary.json');
 		});
 
 		it('should use specified filename parameter', async () => {
-			const mockData = createMockVocabularyData();
-			vi.mocked(loadVocabularyData).mockResolvedValue(mockData);
+			vi.mocked(loadData).mockResolvedValue(createMockVocabularyData());
 
 			const event = createMockRequestEvent({
 				searchParams: { filename: 'custom.json' }
 			});
 			await GET(event);
 
-			expect(loadVocabularyData).toHaveBeenCalledWith('custom.json');
+			expect(loadData).toHaveBeenCalledWith('vocabulary', 'custom.json');
 		});
 
 		it('should use default filename when not specified', async () => {
-			const mockData = createMockVocabularyData();
-			vi.mocked(loadVocabularyData).mockResolvedValue(mockData);
+			vi.mocked(loadData).mockResolvedValue(createMockVocabularyData());
 
 			const event = createMockRequestEvent({});
 			await GET(event);
 
-			expect(loadVocabularyData).toHaveBeenCalledWith('vocabulary.json');
+			expect(loadData).toHaveBeenCalledWith('vocabulary', 'vocabulary.json');
 		});
 
-		it('should return default mapping when not set', async () => {
-			const mockData: VocabularyData = {
-				entries: [],
-				lastUpdated: '',
-				totalCount: 0
-			};
-			vi.mocked(loadVocabularyData).mockResolvedValue(mockData);
+		it('should return default mapping when resolver has no domain', async () => {
+			vi.mocked(loadData).mockResolvedValue(createMockVocabularyData());
+			vi.mocked(resolveRelatedFilenames).mockResolvedValue(new Map());
 
 			const event = createMockRequestEvent({});
 			const response = await GET(event);
@@ -118,7 +111,7 @@ describe('Vocabulary Mapping API: /api/vocabulary/files/mapping', () => {
 		});
 
 		it('should return 500 on error', async () => {
-			vi.mocked(loadVocabularyData).mockRejectedValue(new Error('파일을 찾을 수 없습니다'));
+			vi.mocked(loadData).mockRejectedValue(new Error('파일을 찾을 수 없습니다'));
 
 			const event = createMockRequestEvent({});
 			const response = await GET(event);
@@ -132,9 +125,8 @@ describe('Vocabulary Mapping API: /api/vocabulary/files/mapping', () => {
 
 	describe('PUT', () => {
 		it('should save mapping info successfully', async () => {
-			const mockData = createMockVocabularyData();
-			vi.mocked(loadVocabularyData).mockResolvedValue(mockData);
-			vi.mocked(saveVocabularyData).mockResolvedValue(undefined);
+			vi.mocked(loadData).mockResolvedValue(createMockVocabularyData());
+			vi.mocked(saveData).mockResolvedValue(undefined);
 
 			const event = createMockRequestEvent({
 				method: 'PUT',
@@ -149,7 +141,38 @@ describe('Vocabulary Mapping API: /api/vocabulary/files/mapping', () => {
 			expect(response.status).toBe(200);
 			expect(result.success).toBe(true);
 			expect(result.data.mapping.domain).toBe('new-domain.json');
-			expect(saveVocabularyData).toHaveBeenCalled();
+			expect(saveData).toHaveBeenCalledWith(
+				'vocabulary',
+				expect.objectContaining({
+					mapping: { domain: 'new-domain.json' }
+				}),
+				'vocabulary.json'
+			);
+			expect(addMapping).toHaveBeenCalled();
+		});
+
+		it('should update existing registry mapping if present', async () => {
+			vi.mocked(loadData).mockResolvedValue(createMockVocabularyData());
+			vi.mocked(getMappingsFor).mockResolvedValue([
+				{
+					relatedType: 'domain',
+					relation: { id: 'rel-1' }
+				} as never
+			]);
+
+			const event = createMockRequestEvent({
+				method: 'PUT',
+				body: {
+					filename: 'vocabulary.json',
+					mapping: { domain: 'new-domain.json' }
+				}
+			});
+			await PUT(event);
+
+			expect(updateMapping).toHaveBeenCalledWith('rel-1', {
+				targetFilename: 'new-domain.json'
+			});
+			expect(addMapping).not.toHaveBeenCalled();
 		});
 
 		it('should return 400 when filename is missing', async () => {
@@ -191,10 +214,9 @@ describe('Vocabulary Mapping API: /api/vocabulary/files/mapping', () => {
 			expect(result.error).toContain('domain');
 		});
 
-		it('should return 500 on save error', async () => {
-			const mockData = createMockVocabularyData();
-			vi.mocked(loadVocabularyData).mockResolvedValue(mockData);
-			vi.mocked(saveVocabularyData).mockRejectedValue(new Error('저장 실패'));
+		it('should return 500 on file save error', async () => {
+			vi.mocked(loadData).mockResolvedValue(createMockVocabularyData());
+			vi.mocked(saveData).mockRejectedValue(new Error('저장 실패'));
 
 			const event = createMockRequestEvent({
 				method: 'PUT',

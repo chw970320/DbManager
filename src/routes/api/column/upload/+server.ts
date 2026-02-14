@@ -112,6 +112,7 @@ export async function GET({ url }: RequestEvent) {
 					'컬럼한글명',
 					'컬럼설명',
 					'연관엔터티명',
+					'도메인명',
 					'자료타입',
 					'NOTNULL여부',
 					'FK정보',

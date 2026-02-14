@@ -32,6 +32,12 @@ function createMockDatabase(): DatabaseEntry {
 		logicalDbName: 'TestDB',
 		physicalDbName: 'test_db',
 		organizationName: 'TestOrg',
+		departmentName: 'Platform',
+		appliedTask: 'Catalog',
+		relatedLaw: '',
+		buildDate: '2024-01-01',
+		osInfo: 'Linux',
+		exclusionReason: '',
 		createdAt: '2024-01-01T00:00:00.000Z',
 		updatedAt: '2024-01-01T00:00:00.000Z'
 	};
@@ -55,6 +61,8 @@ function createMockAttribute(): AttributeEntry {
 		entityName: 'User',
 		attributeName: 'userName',
 		schemaName: 'public',
+		requiredInput: 'Y',
+		refEntityName: '',
 		createdAt: '2024-01-01T00:00:00.000Z',
 		updatedAt: '2024-01-01T00:00:00.000Z'
 	};
@@ -68,6 +76,10 @@ function createMockTable(): TableEntry {
 		schemaName: 'public',
 		physicalDbName: 'test_db',
 		relatedEntityName: 'User',
+		businessClassification: 'COMMON',
+		tableVolume: 'SMALL',
+		nonPublicReason: '',
+		openDataList: '',
 		createdAt: '2024-01-01T00:00:00.000Z',
 		updatedAt: '2024-01-01T00:00:00.000Z'
 	};
@@ -81,6 +93,14 @@ function createMockColumn(): ColumnEntry {
 		tableEnglishName: 'users',
 		schemaName: 'public',
 		relatedEntityName: 'User',
+		dataLength: '50',
+		dataDecimalLength: '0',
+		dataFormat: '',
+		pkInfo: '',
+		indexName: '',
+		indexOrder: '',
+		akInfo: '',
+		constraint: '',
 		createdAt: '2024-01-01T00:00:00.000Z',
 		updatedAt: '2024-01-01T00:00:00.000Z'
 	};
@@ -255,6 +275,24 @@ describe('erd-mapper', () => {
 	});
 
 	describe('mapColumnToDomain', () => {
+		it('should map column to domain by direct domainName', () => {
+			const column: ColumnEntry = {
+				...createMockColumn(),
+				domainName: '사용자ID_VARCHAR(50)'
+			};
+			const mapping = mapColumnToDomain(column, [], [
+				{
+					...createMockDomain(),
+					id: 'domain-direct',
+					standardDomainName: '사용자ID_VARCHAR(50)'
+				}
+			]);
+
+			expect(mapping).not.toBeNull();
+			expect(mapping?.targetId).toBe('domain-direct');
+			expect(mapping?.mappingKey).toBe('domainName');
+		});
+
 		it('should map column to domain by suffix', () => {
 			const column: ColumnEntry = {
 				...createMockColumn(),
@@ -323,6 +361,7 @@ describe('erd-mapper', () => {
 					standardName: 'ID',
 					abbreviation: 'ID',
 					englishName: 'Identifier',
+					description: '',
 					domainCategory: '사용자ID',
 					isDomainCategoryMapped: true,
 					createdAt: '2024-01-01T00:00:00.000Z',

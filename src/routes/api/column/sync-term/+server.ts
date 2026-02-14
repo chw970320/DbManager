@@ -80,13 +80,17 @@ import { resolveRelatedFilenames } from '$lib/registry/mapping-registry';
 type SyncRequest = {
 	columnFilename?: string;
 	termFilename?: string;
+	domainFilename?: string;
 };
 
 type SyncResult = {
 	columnFilename: string;
 	termFilename: string;
+	domainFilename: string;
 	matched: number;
 	unmatched: number;
+	matchedDomain: number;
+	unmatchedDomain: number;
 	updated: number;
 	total: number;
 	unmatchedColumns: Array<{
@@ -104,12 +108,14 @@ type SyncResult = {
  */
 export async function POST({ request }: RequestEvent) {
 	try {
-		const { columnFilename, termFilename }: SyncRequest = await request.json();
+		const { columnFilename, termFilename, domainFilename }: SyncRequest = await request.json();
 
 		const colFile = columnFilename || 'column.json';
+		const relatedFiles = await resolveRelatedFilenames('column', colFile);
 
 		// termFilename이 명시적으로 전달되지 않으면 레지스트리 기반으로 해석
-		const termFile = termFilename || (await resolveRelatedFilenames('column', colFile)).get('term') || 'term.json';
+		const termFile = termFilename || relatedFiles.get('term') || 'term.json';
+		const domFile = domainFilename || relatedFiles.get('domain') || 'domain.json';
 
 		// 컬럼 데이터 로드
 		let columnData: ColumnData;
@@ -142,6 +148,27 @@ export async function POST({ request }: RequestEvent) {
 			);
 		}
 
+		// 도메인 데이터 로드
+		let domainEntries: Array<{
+			standardDomainName?: string;
+			physicalDataType?: string;
+			dataLength?: string;
+			decimalPlaces?: string;
+		}> = [];
+		try {
+			const domainData = await loadData('domain', domFile);
+			domainEntries = domainData.entries;
+		} catch (error) {
+			return json(
+				{
+					success: false,
+					error: `도메인 데이터 로드 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`,
+					message: 'Failed to load domain data'
+				} as DbDesignApiResponse,
+				{ status: 500 }
+			);
+		}
+
 		// 용어 맵 생성 (columnName -> TermEntry)
 		const termMap = new Map<string, TermEntry>();
 		termEntries.forEach((entry) => {
@@ -151,8 +178,18 @@ export async function POST({ request }: RequestEvent) {
 			}
 		});
 
+		// 도메인 맵 생성 (standardDomainName -> DomainEntry)
+		const domainMap = new Map<string, (typeof domainEntries)[number]>();
+		domainEntries.forEach((entry) => {
+			if (entry.standardDomainName) {
+				domainMap.set(entry.standardDomainName.toLowerCase().trim(), entry);
+			}
+		});
+
 		let matched = 0;
 		let unmatched = 0;
+		let matchedDomain = 0;
+		let unmatchedDomain = 0;
 		let updated = 0;
 		const unmatchedColumns: SyncResult['unmatchedColumns'] = [];
 		const now = new Date().toISOString();
@@ -175,23 +212,59 @@ export async function POST({ request }: RequestEvent) {
 
 			if (mappedTerm) {
 				matched += 1;
+				const nextEntry: ColumnEntry = { ...entry };
+				let hasChanged = false;
 
-				// 기존 값과 비교하여 업데이트 필요 여부 확인
-				const needsUpdate =
-					entry.columnKoreanName !== mappedTerm.termName ||
-					entry.dataType !== mappedTerm.domainName;
-
-				if (needsUpdate) {
-					updated += 1;
-					return {
-						...entry,
-						// 용어에서 정보 동기화
-						columnKoreanName: mappedTerm.termName || entry.columnKoreanName,
-						updatedAt: now
-					};
+				// 용어명 동기화
+				const nextKoreanName = mappedTerm.termName?.trim();
+				if (nextKoreanName && nextKoreanName !== entry.columnKoreanName) {
+					nextEntry.columnKoreanName = nextKoreanName;
+					hasChanged = true;
 				}
 
-				return entry;
+				// 도메인명 동기화 (term.domainName 우선)
+				const mappedDomainName = mappedTerm.domainName?.trim();
+				if (mappedDomainName) {
+					if (mappedDomainName !== entry.domainName) {
+						nextEntry.domainName = mappedDomainName;
+						hasChanged = true;
+					}
+
+					const domainSpec = domainMap.get(mappedDomainName.toLowerCase());
+					if (domainSpec) {
+						matchedDomain += 1;
+
+						// 도메인 스펙 기반 자료형 동기화
+						const physicalDataType = domainSpec.physicalDataType?.trim();
+						if (physicalDataType && physicalDataType !== entry.dataType) {
+							nextEntry.dataType = physicalDataType;
+							hasChanged = true;
+						}
+
+						const dataLength = domainSpec.dataLength?.toString().trim();
+						if (dataLength && dataLength !== entry.dataLength) {
+							nextEntry.dataLength = dataLength;
+							hasChanged = true;
+						}
+
+						const decimalPlaces = domainSpec.decimalPlaces?.toString().trim();
+						if (decimalPlaces && decimalPlaces !== entry.dataDecimalLength) {
+							nextEntry.dataDecimalLength = decimalPlaces;
+							hasChanged = true;
+						}
+					} else {
+						unmatchedDomain += 1;
+					}
+				} else {
+					unmatchedDomain += 1;
+				}
+
+				if (hasChanged) {
+					updated += 1;
+					nextEntry.updatedAt = now;
+				}
+
+				return nextEntry;
 			} else {
 				unmatched += 1;
 				unmatchedColumns.push({
@@ -217,8 +290,11 @@ export async function POST({ request }: RequestEvent) {
 		const result: SyncResult = {
 			columnFilename: colFile,
 			termFilename: termFile,
+			domainFilename: domFile,
 			matched,
 			unmatched,
+			matchedDomain,
+			unmatchedDomain,
 			updated,
 			total: columnData.entries.length,
 			unmatchedColumns: unmatchedColumns.slice(0, 100) // 최대 100개만 반환
@@ -253,13 +329,17 @@ export async function GET({ url }: RequestEvent) {
 	try {
 		const colFile = url.searchParams.get('columnFilename') || 'column.json';
 		const termFileParam = url.searchParams.get('termFilename');
-		const termFile = termFileParam || (await resolveRelatedFilenames('column', colFile)).get('term') || 'term.json';
+		const domainFileParam = url.searchParams.get('domainFilename');
+		const relatedFiles = await resolveRelatedFilenames('column', colFile);
+		const termFile = termFileParam || relatedFiles.get('term') || 'term.json';
+		const domFile = domainFileParam || relatedFiles.get('domain') || 'domain.json';
 
 		// 컬럼 데이터 로드
 		const columnData = await loadData('column', colFile) as ColumnData;
 
 		// 용어 데이터 로드
 		const termData = await loadData('term', termFile);
+		const domainData = await loadData('domain', domFile);
 
 		// 용어 맵 생성
 		const termMap = new Map<string, TermEntry>();
@@ -269,8 +349,18 @@ export async function GET({ url }: RequestEvent) {
 			}
 		});
 
+		// 도메인 맵 생성
+		const domainMap = new Set<string>();
+		domainData.entries.forEach((entry) => {
+			if (entry.standardDomainName) {
+				domainMap.add(entry.standardDomainName.toLowerCase().trim());
+			}
+		});
+
 		let matched = 0;
 		let unmatched = 0;
+		let matchedDomain = 0;
+		let unmatchedDomain = 0;
 		const unmatchedColumns: Array<{
 			id: string;
 			columnEnglishName: string;
@@ -289,8 +379,16 @@ export async function GET({ url }: RequestEvent) {
 			}
 
 			const key = entry.columnEnglishName.toLowerCase().trim();
-			if (termMap.has(key)) {
+			const mappedTerm = termMap.get(key);
+			if (mappedTerm) {
 				matched += 1;
+
+				const mappedDomainName = mappedTerm.domainName?.toLowerCase().trim();
+				if (mappedDomainName && domainMap.has(mappedDomainName)) {
+					matchedDomain += 1;
+				} else {
+					unmatchedDomain += 1;
+				}
 			} else {
 				unmatched += 1;
 				unmatchedColumns.push({
@@ -307,10 +405,14 @@ export async function GET({ url }: RequestEvent) {
 				data: {
 					columnFilename: colFile,
 					termFilename: termFile,
+					domainFilename: domFile,
 					matched,
 					unmatched,
+					matchedDomain,
+					unmatchedDomain,
 					total: columnData.entries.length,
 					termCount: termData.entries.length,
+					domainCount: domainData.entries.length,
 					unmatchedColumns: unmatchedColumns.slice(0, 100)
 				},
 				message: '매핑 상태 조회 완료'

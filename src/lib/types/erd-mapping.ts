@@ -188,9 +188,9 @@ export interface ColumnDomainMapping extends BaseMapping {
 	sourceType: 'column';
 	targetType: 'domain';
 	layerType: 'domain';
-	mappingKey: 'columnEnglishName_suffix';
+	mappingKey: 'columnEnglishName_suffix' | 'domainName';
 	relationshipType: 'N:1';
-	suffix: string;
+	suffix?: string;
 	domainCategory?: string;
 	standardDomainName: string;
 }

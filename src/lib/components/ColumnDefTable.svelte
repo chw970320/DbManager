@@ -130,6 +130,15 @@
 			align: 'left'
 		},
 		{
+			key: 'domainName',
+			label: '도메인명',
+			sortable: true,
+			filterable: true,
+			filterType: 'text',
+			width: 'min-w-[140px]',
+			align: 'left'
+		},
+		{
 			key: 'dataType',
 			label: '자료타입',
 			sortable: false,

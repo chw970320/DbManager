@@ -201,8 +201,8 @@ export const DEFAULT_MAPPING_RELATIONS: Omit<MappingRelation, 'id' | 'createdAt'
 		sourceFilename: 'column.json',
 		targetType: 'domain',
 		targetFilename: 'domain.json',
-		mappingKey: 'columnEnglishName_suffix→domainCategory',
+		mappingKey: 'domainName→standardDomainName',
 		cardinality: 'N:1',
-		description: '컬럼 → 도메인 매핑 (컬럼영문명 접미사 기반 도메인 결정)'
+		description: '컬럼 → 도메인 매핑 (domainName 직접 매핑, 접미사 기반은 하위 호환 fallback)'
 	}
 ];

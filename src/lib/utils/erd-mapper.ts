@@ -541,9 +541,29 @@ export function mapColumnToDomain(
 	vocabularyEntries: VocabularyEntry[],
 	domainEntries: DomainEntry[]
 ): ColumnDomainMapping | null {
-	if (!column.columnEnglishName) {
-		return null;
+	// 1순위: 컬럼의 domainName 직접 매핑
+	const directDomainName = normalizeString(column.domainName);
+	if (directDomainName) {
+		for (const domain of domainEntries) {
+			if (!domain.standardDomainName) continue;
+			if (normalizeString(domain.standardDomainName) === directDomainName) {
+				return {
+					id: uuidv4(),
+					sourceId: column.id,
+					targetId: domain.id,
+					sourceType: 'column',
+					targetType: 'domain',
+					layerType: 'domain',
+					mappingKey: 'domainName',
+					relationshipType: 'N:1',
+					standardDomainName: domain.standardDomainName
+				};
+			}
+		}
 	}
+
+	// 2순위(하위 호환): 컬럼명 접미사 + 단어집(domainCategory) 기반 추정
+	if (!column.columnEnglishName) return null;
 
 	const suffix = extractSuffix(column.columnEnglishName);
 	if (!suffix) return null;
@@ -646,12 +666,11 @@ export function generateAllMappings(context: MappingContext): ERDMapping[] {
 		mappings.push(...mapAttributeToColumn(attribute, context.columns, context.tables));
 	}
 
-	// 도메인 매핑
-	if (context.vocabularyMap && context.domains.length > 0) {
-		// VocabularyEntry 배열을 Map에서 추출
+	// 도메인 매핑 (직접 domainName 우선, 접미사 추정은 fallback)
+	if (context.domains.length > 0) {
 		const vocabularyEntries: VocabularyEntry[] = [];
 		if (context.vocabularyMap) {
-			for (const [key, value] of context.vocabularyMap.entries()) {
+			for (const [, value] of context.vocabularyMap.entries()) {
 				vocabularyEntries.push({
 					id: '',
 					standardName: value.standardName,
@@ -665,7 +684,6 @@ export function generateAllMappings(context: MappingContext): ERDMapping[] {
 				} as VocabularyEntry);
 			}
 		}
-
 		for (const column of context.columns) {
 			const domainMapping = mapColumnToDomain(column, vocabularyEntries, context.domains);
 			if (domainMapping) mappings.push(domainMapping);

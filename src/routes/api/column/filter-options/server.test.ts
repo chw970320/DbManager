@@ -22,6 +22,7 @@ const createMockColumnData = (): ColumnData => ({
 			columnEnglishName: 'COLUMN1',
 			columnKoreanName: '컬럼1',
 			relatedEntityName: '엔터티1',
+			domainName: 'USER_NAME_DOM',
 			dataType: 'VARCHAR',
 			notNullFlag: 'Y',
 			pkInfo: '',
@@ -48,6 +49,7 @@ const createMockColumnData = (): ColumnData => ({
 			columnEnglishName: 'COLUMN2',
 			columnKoreanName: '컬럼2',
 			relatedEntityName: '엔터티2',
+			domainName: 'USER_ID_DOM',
 			dataType: 'INT',
 			notNullFlag: 'N',
 			pkInfo: '',
@@ -74,6 +76,7 @@ const createMockColumnData = (): ColumnData => ({
 			columnEnglishName: 'COLUMN3',
 			columnKoreanName: '컬럼3',
 			relatedEntityName: '엔터티3',
+			domainName: 'USER_NAME_DOM',
 			dataType: 'VARCHAR',
 			notNullFlag: 'Y',
 			pkInfo: '',
@@ -145,6 +148,7 @@ describe('Column Filter Options API: /api/column/filter-options', () => {
 		expect(result.data.scopeFlag).toBeInstanceOf(Array);
 		expect(result.data.schemaName).toBeInstanceOf(Array);
 		expect(result.data.columnEnglishName).toBeInstanceOf(Array);
+		expect(result.data.domainName).toBeInstanceOf(Array);
 	});
 
 	it('should return unique values for each filterable column', async () => {
@@ -156,6 +160,7 @@ describe('Column Filter Options API: /api/column/filter-options', () => {
 		expect(result.data.scopeFlag).toHaveLength(2); // Y, N
 		expect(result.data.schemaName).toHaveLength(3); // 스키마1, 스키마2, 스키마3
 		expect(result.data.columnEnglishName).toHaveLength(3); // COLUMN1, COLUMN2, COLUMN3
+		expect(result.data.domainName).toHaveLength(2); // USER_NAME_DOM, USER_ID_DOM
 	});
 
 	it('should include "(빈값)" option for nullable fields', async () => {

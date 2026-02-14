@@ -126,7 +126,7 @@ describe('Column Upload API: /api/column/upload', () => {
 			formData.append('file', mockFile);
 
 			vi.mocked(getRequiredFile).mockReturnValue(mockFile);
-			vi.mocked(validateXlsxFile).mockReturnValue(undefined);
+			vi.mocked(validateXlsxFile).mockReturnValue(true);
 			vi.mocked(parseColumnXlsxToJson).mockReturnValue([
 				{
 					id: 'test-id',
@@ -246,7 +246,7 @@ describe('Column Upload API: /api/column/upload', () => {
 			formData.append('filename', 'custom-column.json');
 
 			vi.mocked(getRequiredFile).mockReturnValue(mockFile);
-			vi.mocked(validateXlsxFile).mockReturnValue(undefined);
+			vi.mocked(validateXlsxFile).mockReturnValue(true);
 			vi.mocked(parseColumnXlsxToJson).mockReturnValue([
 				{
 					id: 'test-id',
@@ -292,4 +292,5 @@ describe('Column Upload API: /api/column/upload', () => {
 		});
 	});
 });
+
 

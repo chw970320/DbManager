@@ -154,6 +154,8 @@ export async function GET({ url }: RequestEvent) {
 						return matchFn(entry.columnEnglishName);
 					case 'columnKoreanName':
 						return matchFn(entry.columnKoreanName);
+					case 'domainName':
+						return matchFn(entry.domainName);
 					case 'dataType':
 						return matchFn(entry.dataType);
 					case 'all':
@@ -163,6 +165,7 @@ export async function GET({ url }: RequestEvent) {
 							matchFn(entry.tableEnglishName) ||
 							matchFn(entry.columnEnglishName) ||
 							matchFn(entry.columnKoreanName) ||
+							matchFn(entry.domainName) ||
 							matchFn(entry.dataType)
 						);
 				}
@@ -243,6 +246,7 @@ export async function POST({ request, url }: RequestEvent) {
 			'columnEnglishName',
 			'columnKoreanName',
 			'relatedEntityName',
+			'domainName',
 			'dataType',
 			'notNullFlag',
 			'personalInfoFlag',
@@ -281,6 +285,7 @@ export async function POST({ request, url }: RequestEvent) {
 			columnEnglishName: body.columnEnglishName,
 			columnKoreanName: body.columnKoreanName,
 			relatedEntityName: body.relatedEntityName,
+			domainName: body.domainName,
 			dataType: body.dataType,
 			notNullFlag: body.notNullFlag,
 			personalInfoFlag: body.personalInfoFlag,
@@ -339,6 +344,7 @@ export async function PUT({ request, url }: RequestEvent) {
 			'columnEnglishName',
 			'columnKoreanName',
 			'relatedEntityName',
+			'domainName',
 			'dataType',
 			'notNullFlag',
 			'personalInfoFlag',

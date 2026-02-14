@@ -92,6 +92,7 @@ export async function GET({ url }: RequestEvent) {
 				(entry) =>
 					entry.columnEnglishName?.includes(searchQuery) ||
 					entry.columnKoreanName?.includes(searchQuery) ||
+					entry.domainName?.includes(searchQuery) ||
 					entry.tableEnglishName?.includes(searchQuery) ||
 					entry.columnDescription?.includes(searchQuery)
 			);

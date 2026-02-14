@@ -187,6 +187,7 @@ export interface ColumnEntry {
 	columnKoreanName?: string; // 컬럼한글명
 	columnDescription?: string; // 컬럼설명
 	relatedEntityName?: string; // 연관엔터티명
+	domainName?: string; // 도메인명 (시스템 용어집/도메인 연계)
 	dataType?: string; // 자료타입
 	notNullFlag?: string; // NOTNULL여부
 	fkInfo?: string; // FK정보
@@ -350,6 +351,7 @@ export interface RawColumnData {
 	'컬럼 한글명'?: string;
 	'컬럼 설명'?: string;
 	'연관 엔터티명'?: string;
+	도메인명?: string;
 	'자료 타입'?: string;
 	'자료 길이': string;
 	자료소수점길이: string;
@@ -459,6 +461,7 @@ export const COLUMN_FIELDS: FieldDefinition[] = [
 	{ key: 'columnKoreanName', label: '컬럼한글명', nullable: true, type: 'string' },
 	{ key: 'columnDescription', label: '컬럼설명', nullable: true, type: 'string' },
 	{ key: 'relatedEntityName', label: '연관엔터티명', nullable: true, type: 'string' },
+	{ key: 'domainName', label: '도메인명', nullable: true, type: 'string' },
 	{ key: 'dataType', label: '자료타입', nullable: true, type: 'string' },
 	{ key: 'dataLength', label: '자료길이', nullable: false, type: 'string' },
 	{ key: 'dataDecimalLength', label: '자료소수점길이', nullable: false, type: 'string' },

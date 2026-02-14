@@ -167,6 +167,7 @@ function getEdgeLabel(mapping: ERDMapping): string | undefined {
 			return 'FK';
 		case 'relatedEntityName':
 			return 'maps to';
+		case 'domainName':
 		case 'columnEnglishName_suffix':
 			return 'uses';
 		default:

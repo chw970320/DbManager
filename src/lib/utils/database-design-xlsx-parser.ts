@@ -681,6 +681,8 @@ export function parseColumnXlsxToJson(
 ): ColumnEntry[] {
 	try {
 		const rawData = parseWorkbookToArray(fileBuffer);
+		const headerRow = (rawData[0] || []).map((cell) => String(cell).trim());
+		const hasDomainColumn = headerRow.includes('도메인명');
 		const dataRows = rawData.slice(1);
 		const entries: ColumnEntry[] = [];
 		const seenKeys = skipDuplicates ? new Set<string>() : null;
@@ -689,11 +691,9 @@ export function parseColumnXlsxToJson(
 			const row = dataRows[i];
 			if (isEmptyRow(row)) continue;
 
-			// 컬럼 매핑 (번호 열 없음, 22개 컬럼)
-			// A=사업범위여부, B=주제영역, C=스키마명, D=테이블영문명, E=컬럼영문명, F=컬럼한글명,
-			// G=컬럼설명, H=연관엔터티명, I=자료타입, J=자료길이, K=자료소수점길이, L=자료형식,
-			// M=NOTNULL여부, N=PK정보, O=FK정보, P=인덱스명, Q=인덱스순번, R=AK정보, S=제약조건,
-			// T=개인정보여부, U=암호화여부, V=공개/비공개여부
+			// 컬럼 매핑 (번호 열 없음)
+			// 최신 형식(23개): A=사업범위여부 ... H=연관엔터티명, I=도메인명, J=자료타입 ... W=공개/비공개여부
+			// 구형 형식(22개): A=사업범위여부 ... H=연관엔터티명, I=자료타입 ... V=공개/비공개여부
 			const scopeFlag = parseOptionalText(row[0]);
 			const subjectArea = parseOptionalText(row[1]);
 			const schemaName = parseOptionalText(row[2]);
@@ -702,20 +702,21 @@ export function parseColumnXlsxToJson(
 			const columnKoreanName = parseOptionalText(row[5]);
 			const columnDescription = parseOptionalText(row[6]);
 			const relatedEntityName = parseOptionalText(row[7]);
-			const dataType = parseOptionalText(row[8]);
-			const dataLength = parseRequiredText(row[9]);
-			const dataDecimalLength = parseRequiredText(row[10]);
-			const dataFormat = parseRequiredText(row[11]);
-			const notNullFlag = parseOptionalText(row[12]);
-			const pkInfo = parseRequiredText(row[13]);
-			const fkInfo = parseOptionalText(row[14]);
-			const indexName = parseRequiredText(row[15]);
-			const indexOrder = parseRequiredText(row[16]);
-			const akInfo = parseRequiredText(row[17]);
-			const constraint = parseRequiredText(row[18]);
-			const personalInfoFlag = parseOptionalText(row[19]);
-			const encryptionFlag = parseOptionalText(row[20]);
-			const publicFlag = parseOptionalText(row[21]);
+			const domainName = hasDomainColumn ? parseOptionalText(row[8]) : undefined;
+			const dataType = parseOptionalText(row[hasDomainColumn ? 9 : 8]);
+			const dataLength = parseRequiredText(row[hasDomainColumn ? 10 : 9]);
+			const dataDecimalLength = parseRequiredText(row[hasDomainColumn ? 11 : 10]);
+			const dataFormat = parseRequiredText(row[hasDomainColumn ? 12 : 11]);
+			const notNullFlag = parseOptionalText(row[hasDomainColumn ? 13 : 12]);
+			const pkInfo = parseRequiredText(row[hasDomainColumn ? 14 : 13]);
+			const fkInfo = parseOptionalText(row[hasDomainColumn ? 15 : 14]);
+			const indexName = parseRequiredText(row[hasDomainColumn ? 16 : 15]);
+			const indexOrder = parseRequiredText(row[hasDomainColumn ? 17 : 16]);
+			const akInfo = parseRequiredText(row[hasDomainColumn ? 18 : 17]);
+			const constraint = parseRequiredText(row[hasDomainColumn ? 19 : 18]);
+			const personalInfoFlag = parseOptionalText(row[hasDomainColumn ? 20 : 19]);
+			const encryptionFlag = parseOptionalText(row[hasDomainColumn ? 21 : 20]);
+			const publicFlag = parseOptionalText(row[hasDomainColumn ? 22 : 21]);
 
 			// 중복 체크
 			if (skipDuplicates && seenKeys) {
@@ -737,6 +738,7 @@ export function parseColumnXlsxToJson(
 				columnKoreanName,
 				columnDescription,
 				relatedEntityName,
+				domainName,
 				dataType,
 				dataLength,
 				dataDecimalLength,
@@ -787,6 +789,7 @@ export function exportColumnToXlsxBuffer(data: ColumnEntry[]): Buffer {
 			'컬럼한글명',
 			'컬럼설명',
 			'연관엔터티명',
+			'도메인명',
 			'자료타입',
 			'자료길이',
 			'자료소수점길이',
@@ -819,6 +822,7 @@ export function exportColumnToXlsxBuffer(data: ColumnEntry[]): Buffer {
 				entry.columnKoreanName ?? '',
 				entry.columnDescription ?? '',
 				entry.relatedEntityName ?? '',
+				entry.domainName ?? '',
 				entry.dataType ?? '',
 				entry.dataLength,
 				entry.dataDecimalLength,

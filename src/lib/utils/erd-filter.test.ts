@@ -17,6 +17,12 @@ function createMockDatabase(): DatabaseEntry {
 		logicalDbName: 'TestDB',
 		physicalDbName: 'test_db',
 		organizationName: 'TestOrg',
+		departmentName: 'Platform',
+		appliedTask: 'Catalog',
+		relatedLaw: '',
+		buildDate: '2024-01-01',
+		osInfo: 'Linux',
+		exclusionReason: '',
 		createdAt: '2024-01-01T00:00:00.000Z',
 		updatedAt: '2024-01-01T00:00:00.000Z'
 	};
@@ -39,6 +45,8 @@ function createMockAttribute(): AttributeEntry {
 		entityName: 'User',
 		attributeName: 'userName',
 		schemaName: 'public',
+		requiredInput: 'Y',
+		refEntityName: '',
 		createdAt: '2024-01-01T00:00:00.000Z',
 		updatedAt: '2024-01-01T00:00:00.000Z'
 	};
@@ -52,6 +60,10 @@ function createMockTable(): TableEntry {
 		schemaName: 'public',
 		physicalDbName: 'test_db',
 		relatedEntityName: 'User',
+		businessClassification: 'COMMON',
+		tableVolume: 'SMALL',
+		nonPublicReason: '',
+		openDataList: '',
 		createdAt: '2024-01-01T00:00:00.000Z',
 		updatedAt: '2024-01-01T00:00:00.000Z'
 	};
@@ -65,6 +77,14 @@ function createMockColumn(): ColumnEntry {
 		tableEnglishName: 'users',
 		schemaName: 'public',
 		relatedEntityName: 'User',
+		dataLength: '50',
+		dataDecimalLength: '0',
+		dataFormat: '',
+		pkInfo: '',
+		indexName: '',
+		indexOrder: '',
+		akInfo: '',
+		constraint: '',
 		createdAt: '2024-01-01T00:00:00.000Z',
 		updatedAt: '2024-01-01T00:00:00.000Z'
 	};

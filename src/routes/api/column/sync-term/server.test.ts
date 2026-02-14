@@ -3,6 +3,7 @@ import { GET, POST } from './+server';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { ColumnData } from '$lib/types/database-design';
 import type { TermData } from '$lib/types/term';
+import type { DomainData } from '$lib/types/domain';
 
 vi.mock('$lib/registry/data-registry', () => ({
 	loadData: vi.fn(),
@@ -27,6 +28,7 @@ const createMockColumnData = (): ColumnData => ({
 			columnEnglishName: 'COLUMN1',
 			columnKoreanName: '컬럼1',
 			relatedEntityName: '엔터티1',
+			domainName: '기존도메인1',
 			dataType: 'VARCHAR',
 			notNullFlag: 'Y',
 			personalInfoFlag: 'N',
@@ -53,6 +55,7 @@ const createMockColumnData = (): ColumnData => ({
 			columnEnglishName: 'NO_MATCH',
 			columnKoreanName: '컬럼2',
 			relatedEntityName: '엔터티2',
+			domainName: '기존도메인2',
 			dataType: 'INT',
 			notNullFlag: 'N',
 			personalInfoFlag: 'Y',
@@ -81,7 +84,28 @@ const createMockTermData = (): TermData => ({
 			id: 'term-1',
 			termName: '컬럼1용어',
 			columnName: 'COLUMN1',
-			domainName: 'VARCHAR',
+			domainName: 'USER_NAME_DOM',
+			isMappedTerm: true,
+			isMappedColumn: true,
+			isMappedDomain: true,
+			createdAt: '2024-01-01T00:00:00.000Z',
+			updatedAt: '2024-01-01T00:00:00.000Z'
+		}
+	],
+	lastUpdated: '2024-01-01T00:00:00.000Z',
+	totalCount: 1
+});
+
+const createMockDomainData = (): DomainData => ({
+	entries: [
+		{
+			id: 'domain-1',
+			domainGroup: '공통',
+			domainCategory: '사용자',
+			standardDomainName: 'USER_NAME_DOM',
+			physicalDataType: 'VARCHAR',
+			dataLength: '200',
+			decimalPlaces: '0',
 			createdAt: '2024-01-01T00:00:00.000Z',
 			updatedAt: '2024-01-01T00:00:00.000Z'
 		}
@@ -114,11 +138,17 @@ function createMockRequestEvent(options: {
 describe('Column Sync-Term API: /api/column/sync-term', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		vi.mocked(resolveRelatedFilenames).mockResolvedValue(new Map([['term', 'term.json']]));
+		vi.mocked(resolveRelatedFilenames).mockResolvedValue(
+			new Map([
+				['term', 'term.json'],
+				['domain', 'domain.json']
+			])
+		);
 		vi.mocked(saveData).mockResolvedValue(undefined);
 		vi.mocked(loadData).mockImplementation(async (type: string) => {
 			if (type === 'column') return createMockColumnData();
 			if (type === 'term') return createMockTermData();
+			if (type === 'domain') return createMockDomainData();
 			throw new Error('unsupported');
 		});
 	});
@@ -134,6 +164,8 @@ describe('Column Sync-Term API: /api/column/sync-term', () => {
 			expect(result.success).toBe(true);
 			expect(result.data).toHaveProperty('matched');
 			expect(result.data).toHaveProperty('unmatched');
+			expect(result.data).toHaveProperty('matchedDomain');
+			expect(result.data).toHaveProperty('unmatchedDomain');
 			expect(result.data).toHaveProperty('total');
 		});
 
@@ -141,7 +173,8 @@ describe('Column Sync-Term API: /api/column/sync-term', () => {
 			const event = createMockRequestEvent({
 				searchParams: {
 					columnFilename: 'custom-column.json',
-					termFilename: 'custom-term.json'
+					termFilename: 'custom-term.json',
+					domainFilename: 'custom-domain.json'
 				}
 			});
 
@@ -149,6 +182,7 @@ describe('Column Sync-Term API: /api/column/sync-term', () => {
 
 			expect(loadData).toHaveBeenCalledWith('column', 'custom-column.json');
 			expect(loadData).toHaveBeenCalledWith('term', 'custom-term.json');
+			expect(loadData).toHaveBeenCalledWith('domain', 'custom-domain.json');
 		});
 
 		it('should use default filenames when not specified', async () => {
@@ -158,6 +192,7 @@ describe('Column Sync-Term API: /api/column/sync-term', () => {
 
 			expect(loadData).toHaveBeenCalledWith('column', 'column.json');
 			expect(loadData).toHaveBeenCalledWith('term', 'term.json');
+			expect(loadData).toHaveBeenCalledWith('domain', 'domain.json');
 		});
 
 		it('should return 500 on column data load error', async () => {
@@ -205,6 +240,8 @@ describe('Column Sync-Term API: /api/column/sync-term', () => {
 			expect(result.success).toBe(true);
 			expect(result.data.matched).toBe(1);
 			expect(result.data.unmatched).toBe(1);
+			expect(result.data.matchedDomain).toBe(1);
+			expect(result.data.unmatchedDomain).toBe(0);
 			expect(result.data.total).toBe(2);
 		});
 
@@ -228,7 +265,8 @@ describe('Column Sync-Term API: /api/column/sync-term', () => {
 				method: 'POST',
 				body: {
 					columnFilename: 'custom-column.json',
-					termFilename: 'custom-term.json'
+					termFilename: 'custom-term.json',
+					domainFilename: 'custom-domain.json'
 				}
 			});
 
@@ -236,6 +274,7 @@ describe('Column Sync-Term API: /api/column/sync-term', () => {
 
 			expect(loadData).toHaveBeenCalledWith('column', 'custom-column.json');
 			expect(loadData).toHaveBeenCalledWith('term', 'custom-term.json');
+			expect(loadData).toHaveBeenCalledWith('domain', 'custom-domain.json');
 		});
 
 		it('should return 500 on column data load error', async () => {

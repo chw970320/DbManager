@@ -15,7 +15,10 @@ vi.mock('$lib/utils/file-handler.js', () => ({
 vi.mock('$lib/utils/validation.js', () => ({
 	validateXlsxFile: vi.fn(),
 	validateTermNameSuffix: vi.fn(() => null),
-	validateTermNameUniqueness: vi.fn(() => null)
+	validateTermNameUniqueness: vi.fn(() => null),
+	validateTermNameMapping: vi.fn(() => null),
+	validateColumnNameMapping: vi.fn(() => null),
+	validateDomainNameMapping: vi.fn(() => null)
 }));
 
 vi.mock('$lib/utils/xlsx-parser.js', () => ({
@@ -54,7 +57,10 @@ import { loadTermData, mergeTermData, listTermFiles } from '$lib/utils/file-hand
 import {
 	validateXlsxFile,
 	validateTermNameSuffix,
-	validateTermNameUniqueness
+	validateTermNameUniqueness,
+	validateTermNameMapping,
+	validateColumnNameMapping,
+	validateDomainNameMapping
 } from '$lib/utils/validation.js';
 import { parseTermXlsxToJson } from '$lib/utils/xlsx-parser.js';
 import { getRequiredFile } from '$lib/utils/type-guards.js';
@@ -134,6 +140,9 @@ describe('Term Upload API: /api/term/upload', () => {
 		});
 		vi.mocked(validateTermNameSuffix).mockReturnValue(null);
 		vi.mocked(validateTermNameUniqueness).mockReturnValue(null);
+		vi.mocked(validateTermNameMapping).mockReturnValue(null);
+		vi.mocked(validateColumnNameMapping).mockReturnValue(null);
+		vi.mocked(validateDomainNameMapping).mockReturnValue(null);
 	});
 
 	describe('GET', () => {

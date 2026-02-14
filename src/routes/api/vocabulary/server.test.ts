@@ -7,8 +7,11 @@ import type { VocabularyData, VocabularyEntry } from '$lib/types/vocabulary';
 vi.mock('$lib/utils/file-handler.js', () => ({
 	loadVocabularyData: vi.fn(),
 	saveVocabularyData: vi.fn(),
-	checkVocabularyReferences: vi.fn(),
 	listVocabularyFiles: vi.fn()
+}));
+
+vi.mock('$lib/registry/mapping-registry', () => ({
+	checkEntryReferences: vi.fn()
 }));
 
 vi.mock('$lib/utils/duplicate-handler.js', () => ({
@@ -31,9 +34,9 @@ vi.mock('uuid', () => ({
 import {
 	loadVocabularyData,
 	saveVocabularyData,
-	checkVocabularyReferences,
 	listVocabularyFiles
 } from '$lib/utils/file-handler.js';
+import { checkEntryReferences } from '$lib/registry/mapping-registry';
 
 // 테스트용 Mock 데이터
 const createMockVocabularyData = (): VocabularyData => ({
@@ -108,7 +111,7 @@ describe('Vocabulary API: /api/vocabulary', () => {
 		vi.mocked(loadVocabularyData).mockResolvedValue(createMockVocabularyData());
 		vi.mocked(saveVocabularyData).mockResolvedValue(undefined);
 		vi.mocked(listVocabularyFiles).mockResolvedValue(['vocabulary.json']);
-		vi.mocked(checkVocabularyReferences).mockResolvedValue({ canDelete: true, references: [] });
+		vi.mocked(checkEntryReferences).mockResolvedValue({ canDelete: true, references: [] });
 	});
 
 	describe('GET', () => {
@@ -384,6 +387,43 @@ describe('Vocabulary API: /api/vocabulary', () => {
 			expect(result.success).toBe(true);
 			expect(result.message).toContain('삭제');
 			expect(saveVocabularyData).toHaveBeenCalled();
+		});
+
+		it('should include warnings when references exist and force is false', async () => {
+			vi.mocked(checkEntryReferences).mockResolvedValue({
+				canDelete: false,
+				references: [{ type: 'term', filename: 'term.json', count: 2, entries: [] }]
+			});
+
+			const event = createMockRequestEvent({
+				searchParams: { id: 'entry-1' }
+			});
+
+			const response = await DELETE(event);
+			const result = await response.json();
+
+			expect(response.status).toBe(200);
+			expect(result.success).toBe(true);
+			expect(result.warnings).toHaveLength(1);
+			expect(checkEntryReferences).toHaveBeenCalledWith(
+				'vocabulary',
+				expect.objectContaining({ id: 'entry-1' }),
+				undefined
+			);
+		});
+
+		it('should skip reference check when force=true', async () => {
+			const event = createMockRequestEvent({
+				searchParams: { id: 'entry-1', force: 'true' }
+			});
+
+			const response = await DELETE(event);
+			const result = await response.json();
+
+			expect(response.status).toBe(200);
+			expect(result.success).toBe(true);
+			expect(result.warnings).toEqual([]);
+			expect(checkEntryReferences).not.toHaveBeenCalled();
 		});
 
 		it('should return 400 when id is missing', async () => {

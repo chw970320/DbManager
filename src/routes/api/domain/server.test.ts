@@ -7,8 +7,11 @@ import type { DomainData, DomainEntry } from '$lib/types/domain';
 vi.mock('$lib/utils/file-handler.js', () => ({
 	loadDomainData: vi.fn(),
 	saveDomainData: vi.fn(),
-	checkDomainReferences: vi.fn(),
 	listDomainFiles: vi.fn()
+}));
+
+vi.mock('$lib/registry/mapping-registry', () => ({
+	checkEntryReferences: vi.fn()
 }));
 
 vi.mock('$lib/utils/cache.js', () => ({
@@ -30,9 +33,9 @@ vi.mock('uuid', () => ({
 import {
 	loadDomainData,
 	saveDomainData,
-	checkDomainReferences,
 	listDomainFiles
 } from '$lib/utils/file-handler.js';
+import { checkEntryReferences } from '$lib/registry/mapping-registry';
 import { generateStandardDomainName, validateDomainNameUniqueness } from '$lib/utils/validation.js';
 
 // 테스트용 Mock 데이터
@@ -109,7 +112,7 @@ describe('Domain API: /api/domain', () => {
 		vi.mocked(loadDomainData).mockResolvedValue(createMockDomainData());
 		vi.mocked(saveDomainData).mockResolvedValue(undefined);
 		vi.mocked(listDomainFiles).mockResolvedValue(['domain.json']);
-		vi.mocked(checkDomainReferences).mockResolvedValue({ canDelete: true, references: [] });
+		vi.mocked(checkEntryReferences).mockResolvedValue({ canDelete: true, references: [] });
 		vi.mocked(validateDomainNameUniqueness).mockReturnValue(null);
 	});
 
@@ -389,6 +392,43 @@ describe('Domain API: /api/domain', () => {
 			expect(result.success).toBe(true);
 			expect(result.message).toContain('삭제');
 			expect(saveDomainData).toHaveBeenCalled();
+		});
+
+		it('should include warnings when references exist and force is false', async () => {
+			vi.mocked(checkEntryReferences).mockResolvedValue({
+				canDelete: false,
+				references: [{ type: 'term', filename: 'term.json', count: 1, entries: [] }]
+			});
+
+			const event = createMockRequestEvent({
+				searchParams: { id: 'entry-1' }
+			});
+
+			const response = await DELETE(event);
+			const result = await response.json();
+
+			expect(response.status).toBe(200);
+			expect(result.success).toBe(true);
+			expect(result.warnings).toHaveLength(1);
+			expect(checkEntryReferences).toHaveBeenCalledWith(
+				'domain',
+				expect.objectContaining({ id: 'entry-1' }),
+				'domain.json'
+			);
+		});
+
+		it('should skip reference check when force=true', async () => {
+			const event = createMockRequestEvent({
+				searchParams: { id: 'entry-1', force: 'true' }
+			});
+
+			const response = await DELETE(event);
+			const result = await response.json();
+
+			expect(response.status).toBe(200);
+			expect(result.success).toBe(true);
+			expect(result.warnings).toEqual([]);
+			expect(checkEntryReferences).not.toHaveBeenCalled();
 		});
 
 		it('should return 400 when id is missing', async () => {

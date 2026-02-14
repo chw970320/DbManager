@@ -15,9 +15,14 @@ vi.mock('$lib/utils/erd-generator.js', () => ({
 	generateERDData: vi.fn()
 }));
 
+vi.mock('$lib/utils/design-relation-validator.js', () => ({
+	validateDesignRelations: vi.fn()
+}));
+
 import { loadData, listFiles } from '$lib/registry/data-registry';
 import { getCachedData } from '$lib/registry/cache-registry';
 import { generateERDData } from '$lib/utils/erd-generator.js';
+import { validateDesignRelations } from '$lib/utils/design-relation-validator.js';
 
 function createMockRequestEvent(options: { searchParams?: Record<string, string> }): RequestEvent {
 	const url = new URL('http://localhost/api/erd/generate');
@@ -70,6 +75,17 @@ describe('API: /api/erd/generate', () => {
 				domainNodes: 0
 			}
 		});
+		vi.mocked(validateDesignRelations).mockReturnValue({
+			specs: [],
+			summaries: [],
+			totals: {
+				totalChecked: 0,
+				matched: 0,
+				unmatched: 0,
+				errorCount: 0,
+				warningCount: 0
+			}
+		});
 	});
 
 	describe('GET', () => {
@@ -81,6 +97,8 @@ describe('API: /api/erd/generate', () => {
 			expect(response.status).toBe(200);
 			expect(result.success).toBe(true);
 			expect(result.data).toBeDefined();
+			expect(result.data.relationValidation).toBeDefined();
+			expect(validateDesignRelations).toHaveBeenCalledWith(expect.any(Object));
 		});
 
 		it('should filter by tableIds when provided', async () => {

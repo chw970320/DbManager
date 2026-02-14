@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import SearchBar from '$lib/components/SearchBar.svelte';
+	import DesignRelationPanel from '$lib/components/DesignRelationPanel.svelte';
 	import ColumnDefTable from '$lib/components/ColumnDefTable.svelte';
 	import ColumnDefEditor from '$lib/components/ColumnDefEditor.svelte';
 	import ColumnDefFileManager from '$lib/components/ColumnDefFileManager.svelte';
@@ -527,6 +528,12 @@
 					</div>
 				</div>
 
+				<DesignRelationPanel
+					currentType="column"
+					currentFilename={selectedFilename}
+					onApplied={refreshData}
+				/>
+
 				{#if showEditor}<ColumnDefEditor
 						entry={currentEditingEntry || {}}
 						isEditMode={!!currentEditingEntry}
@@ -554,7 +561,7 @@
 				>
 					<div class="mb-6">
 						<h2 class="text-2xl font-bold text-gray-900">통합검색</h2>
-						<p class="mt-2 text-gray-600">컬럼영문명, 컬럼한글명 등으로 검색하세요</p>
+						<p class="mt-2 text-gray-600">컬럼영문명, 컬럼한글명, 도메인명 등으로 검색하세요</p>
 					</div>
 					<div class="mb-6">
 						<SearchBar
@@ -567,6 +574,7 @@
 								{ value: 'tableEnglishName', label: '테이블영문명' },
 								{ value: 'columnEnglishName', label: '컬럼영문명' },
 								{ value: 'columnKoreanName', label: '컬럼한글명' },
+								{ value: 'domainName', label: '도메인명' },
 								{ value: 'dataType', label: '자료타입' }
 							]}
 							onsearch={handleSearch}

@@ -3,6 +3,10 @@
 	import ERDViewer from '$lib/components/ERDViewer.svelte';
 	import type { ERDData } from '$lib/types/erd-mapping.js';
 	import type { DbDesignApiResponse } from '$lib/types/database-design.js';
+	import type {
+		DesignRelationSyncPreview,
+		DesignRelationValidationResult
+	} from '$lib/types/design-relation.js';
 
 	interface ERDTableInfo {
 		id: string;
@@ -11,8 +15,23 @@
 		schemaName?: string;
 		physicalDbName?: string;
 	}
+	interface ERDDataWithValidation extends ERDData {
+		relationValidation?: DesignRelationValidationResult;
+	}
+	interface RelationSyncResult {
+		mode: 'preview' | 'apply';
+		counts: DesignRelationSyncPreview['counts'] & {
+			appliedTableUpdates: number;
+			appliedColumnUpdates: number;
+			appliedTotalUpdates: number;
+		};
+		changes: DesignRelationSyncPreview['changes'];
+		suggestions: DesignRelationSyncPreview['suggestions'];
+		validationBefore: DesignRelationValidationResult;
+		validationAfter: DesignRelationValidationResult;
+	}
 
-	let erdData = $state<ERDData | null>(null);
+	let erdData = $state<ERDDataWithValidation | null>(null);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 
@@ -25,6 +44,9 @@
 	let includeRelated = $state(true);
 	let loadingTables = $state(false);
 	let showMappingSummary = $state(false);
+	let relationSyncLoading = $state(false);
+	let relationSyncError = $state<string | null>(null);
+	let relationSyncResult = $state<RelationSyncResult | null>(null);
 
 	// 매핑 통계 계산
 	let mappingStats = $derived(() => {
@@ -118,7 +140,7 @@
 
 			const url = `/api/erd/generate${params.toString() ? `?${params.toString()}` : ''}`;
 			const response = await fetch(url);
-			const result: DbDesignApiResponse<ERDData> = await response.json();
+			const result: DbDesignApiResponse<ERDDataWithValidation> = await response.json();
 
 			if (result.success && result.data) {
 				erdData = result.data;
@@ -178,6 +200,37 @@
 			loadERDData();
 		} else {
 			loadERDData(Array.from(selectedTableIds));
+		}
+	}
+
+	async function handleRelationSync(apply: boolean) {
+		relationSyncLoading = true;
+		relationSyncError = null;
+
+		try {
+			const response = await fetch('/api/erd/relations/sync', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ apply })
+			});
+			const result: DbDesignApiResponse<RelationSyncResult> = await response.json();
+
+			if (!result.success || !result.data) {
+				relationSyncError = result.error || '관계 동기화 실행 중 오류가 발생했습니다.';
+				return;
+			}
+
+			relationSyncResult = result.data;
+
+			if (apply && result.data.counts.appliedTotalUpdates > 0) {
+				handleRefresh();
+			}
+		} catch (err) {
+			console.error('관계 동기화 오류:', err);
+			relationSyncError =
+				err instanceof Error ? err.message : '관계 동기화 실행 중 오류가 발생했습니다.';
+		} finally {
+			relationSyncLoading = false;
 		}
 	}
 
@@ -414,9 +467,10 @@
 	{/if}
 
 	<!-- 연관관계 요약 패널 -->
-	{#if showMappingSummary && erdData && mappingStats()}
+	{#if showMappingSummary && erdData}
 		{@const stats = mappingStats()}
-		<div class="border-b border-gray-200 bg-white px-4 py-4 sm:px-6 lg:px-8">
+		{#if stats}
+			<div class="border-b border-gray-200 bg-white px-4 py-4 sm:px-6 lg:px-8">
 			<div class="space-y-4">
 				<h3 class="text-sm font-semibold text-gray-900">데이터 연관관계 요약</h3>
 
@@ -521,8 +575,92 @@
 						</div>
 					</div>
 				</div>
+
+				{#if erdData.relationValidation}
+					<div class="rounded-lg border border-amber-200 bg-amber-50 p-3">
+						<div class="mb-2 flex items-center justify-between">
+							<h4 class="text-xs font-semibold uppercase tracking-wider text-amber-700">
+								5개 정의서 정합성
+							</h4>
+							<div class="flex items-center gap-2">
+								<span class="text-xs text-amber-700">
+									검사 {erdData.relationValidation.totals.totalChecked}건
+								</span>
+								<button
+									onclick={() => handleRelationSync(false)}
+									disabled={relationSyncLoading}
+									class="rounded border border-amber-300 bg-white px-2 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+								>
+									보정 미리보기
+								</button>
+								<button
+									onclick={() => handleRelationSync(true)}
+									disabled={relationSyncLoading}
+									class="rounded border border-blue-300 bg-blue-600 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+								>
+									자동 보정 실행
+								</button>
+							</div>
+						</div>
+						<div class="mb-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+							<div class="rounded border border-green-200 bg-white p-2 text-center">
+								<div class="font-semibold text-green-700">
+									{erdData.relationValidation.totals.matched}
+								</div>
+								<div class="text-xs text-green-600">매칭</div>
+							</div>
+							<div class="rounded border border-red-200 bg-white p-2 text-center">
+								<div class="font-semibold text-red-700">
+									{erdData.relationValidation.totals.errorCount}
+								</div>
+								<div class="text-xs text-red-600">오류</div>
+							</div>
+							<div class="rounded border border-yellow-200 bg-white p-2 text-center">
+								<div class="font-semibold text-yellow-700">
+									{erdData.relationValidation.totals.warningCount}
+								</div>
+								<div class="text-xs text-yellow-600">경고</div>
+							</div>
+							<div class="rounded border border-gray-200 bg-white p-2 text-center">
+								<div class="font-semibold text-gray-700">
+									{erdData.relationValidation.totals.unmatched}
+								</div>
+								<div class="text-xs text-gray-600">총 미매칭</div>
+							</div>
+						</div>
+						<div class="grid grid-cols-1 gap-1 text-xs text-gray-700 sm:grid-cols-2">
+							{#each erdData.relationValidation.summaries as summary (summary.relationId)}
+								<div class="flex items-center justify-between rounded bg-white px-2 py-1">
+									<span>{summary.relationName}</span>
+									<span class={summary.severity === 'error'
+										? 'font-medium text-red-700'
+										: 'font-medium text-yellow-700'}>{summary.unmatched}</span>
+								</div>
+							{/each}
+						</div>
+						{#if relationSyncError}
+							<div class="mt-2 rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700">
+								{relationSyncError}
+							</div>
+						{/if}
+						{#if relationSyncResult}
+							<div class="mt-2 rounded border border-blue-200 bg-white p-2 text-xs text-gray-700">
+								<div class="mb-1 font-semibold text-blue-700">
+									최근 동기화 결과 ({relationSyncResult.mode === 'apply' ? '실행' : '미리보기'})
+								</div>
+								<div class="grid grid-cols-2 gap-1 sm:grid-cols-4">
+									<div>후보 테이블: {relationSyncResult.counts.tableCandidates}</div>
+									<div>후보 컬럼: {relationSyncResult.counts.columnCandidates}</div>
+									<div>추천(속성→컬럼): {relationSyncResult.counts.attributeColumnSuggestions}</div>
+									<div>실제 반영: {relationSyncResult.counts.appliedTotalUpdates}</div>
+								</div>
+							</div>
+						{/if}
+					</div>
+				{/if}
+				</div>
 			</div>
-		</div>
+		{/if}
 	{/if}
 
 	<!-- ERD 뷰어 -->

@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import SearchBar from '$lib/components/SearchBar.svelte';
+	import DesignRelationPanel from '$lib/components/DesignRelationPanel.svelte';
 	import TableDefTable from '$lib/components/TableDefTable.svelte';
 	import TableDefEditor from '$lib/components/TableDefEditor.svelte';
 	import TableDefFileManager from '$lib/components/TableDefFileManager.svelte';
@@ -526,6 +527,12 @@
 						</div>
 					</div>
 				</div>
+
+				<DesignRelationPanel
+					currentType="table"
+					currentFilename={selectedFilename}
+					onApplied={refreshData}
+				/>
 
 				{#if showEditor}<TableDefEditor
 						entry={currentEditingEntry || {}}

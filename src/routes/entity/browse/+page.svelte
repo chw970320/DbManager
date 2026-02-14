@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import SearchBar from '$lib/components/SearchBar.svelte';
+	import DesignRelationPanel from '$lib/components/DesignRelationPanel.svelte';
 	import EntityTable from '$lib/components/EntityTable.svelte';
 	import EntityEditor from '$lib/components/EntityEditor.svelte';
 	import EntityFileManager from '$lib/components/EntityFileManager.svelte';
@@ -540,6 +541,12 @@
 						</div>
 					</div>
 				</div>
+
+				<DesignRelationPanel
+					currentType="entity"
+					currentFilename={selectedFilename}
+					onApplied={refreshData}
+				/>
 
 				{#if showEditor}<EntityEditor
 						entry={currentEditingEntry || {}}

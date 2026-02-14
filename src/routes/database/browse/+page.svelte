@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import SearchBar from '$lib/components/SearchBar.svelte';
+	import DesignRelationPanel from '$lib/components/DesignRelationPanel.svelte';
 	import DatabaseTable from '$lib/components/DatabaseTable.svelte';
 	import DatabaseEditor from '$lib/components/DatabaseEditor.svelte';
 	import DatabaseFileManager from '$lib/components/DatabaseFileManager.svelte';
@@ -691,6 +692,12 @@
 						</div>
 					</div>
 				</div>
+
+				<DesignRelationPanel
+					currentType="database"
+					currentFilename={selectedFilename}
+					onApplied={refreshData}
+				/>
 
 				<!-- Editor 모달 -->
 				{#if showEditor}

@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import SearchBar from '$lib/components/SearchBar.svelte';
+	import DesignRelationPanel from '$lib/components/DesignRelationPanel.svelte';
 	import AttributeTable from '$lib/components/AttributeTable.svelte';
 	import AttributeEditor from '$lib/components/AttributeEditor.svelte';
 	import AttributeFileManager from '$lib/components/AttributeFileManager.svelte';
@@ -526,6 +527,12 @@
 						</div>
 					</div>
 				</div>
+
+				<DesignRelationPanel
+					currentType="attribute"
+					currentFilename={selectedFilename}
+					onApplied={refreshData}
+				/>
 
 				{#if showEditor}<AttributeEditor
 						entry={currentEditingEntry || {}}

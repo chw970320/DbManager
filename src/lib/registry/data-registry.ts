@@ -498,3 +498,127 @@ export async function deleteFile(type: DataType, filename: string): Promise<void
 		console.warn('[매핑 동기화 경고] 매핑 레지스트리 정리 실패:', syncError);
 	}
 }
+
+// ============================================================================
+// Legacy Named Exports (for test migration compatibility)
+// ============================================================================
+
+export const loadVocabularyData = (filename = 'vocabulary.json') =>
+	loadData('vocabulary', filename);
+export const saveVocabularyData = (data: DataTypeMap['vocabulary'], filename = 'vocabulary.json') =>
+	saveData('vocabulary', data, filename);
+export const mergeVocabularyData = (
+	newEntries: EntryTypeMap['vocabulary'][],
+	replaceExisting = true,
+	filename = 'vocabulary.json'
+) => mergeData('vocabulary', newEntries, replaceExisting, filename);
+export const listVocabularyFiles = () => listFiles('vocabulary');
+export const createVocabularyFile = (filename: string) => createFile('vocabulary', filename);
+export const renameVocabularyFile = (oldFilename: string, newFilename: string) =>
+	renameFile('vocabulary', oldFilename, newFilename);
+export const deleteVocabularyFile = (filename: string) => deleteFile('vocabulary', filename);
+
+export const loadDomainData = (filename = 'domain.json') => loadData('domain', filename);
+export const saveDomainData = (data: DataTypeMap['domain'], filename = 'domain.json') =>
+	saveData('domain', data, filename);
+export const mergeDomainData = (
+	newEntries: EntryTypeMap['domain'][],
+	replaceExisting = true,
+	filename = 'domain.json'
+) => mergeData('domain', newEntries, replaceExisting, filename);
+export const listDomainFiles = () => listFiles('domain');
+export const createDomainFile = (filename: string) => createFile('domain', filename);
+export const renameDomainFile = (oldFilename: string, newFilename: string) =>
+	renameFile('domain', oldFilename, newFilename);
+export const deleteDomainFile = (filename: string) => deleteFile('domain', filename);
+
+export const loadTermData = (filename = 'term.json') => loadData('term', filename);
+export const saveTermData = (data: DataTypeMap['term'], filename = 'term.json') =>
+	saveData('term', data, filename);
+export const mergeTermData = (
+	newEntries: EntryTypeMap['term'][],
+	replaceExisting = true,
+	filename = 'term.json'
+) => mergeData('term', newEntries, replaceExisting, filename);
+export const listTermFiles = () => listFiles('term');
+export const createTermFile = (filename: string) => createFile('term', filename);
+export const renameTermFile = (oldFilename: string, newFilename: string) =>
+	renameFile('term', oldFilename, newFilename);
+export const deleteTermFile = (filename: string) => deleteFile('term', filename);
+
+export const loadDatabaseData = (filename = 'database.json') => loadData('database', filename);
+export const saveDatabaseData = (data: DataTypeMap['database'], filename = 'database.json') =>
+	saveData('database', data, filename);
+export const mergeDatabaseData = (
+	newEntries: EntryTypeMap['database'][],
+	replaceExisting = true,
+	filename = 'database.json'
+) => mergeData('database', newEntries, replaceExisting, filename);
+export const listDatabaseFiles = () => listFiles('database');
+export const createDatabaseFile = (filename: string) => createFile('database', filename);
+export const renameDatabaseFile = (oldFilename: string, newFilename: string) =>
+	renameFile('database', oldFilename, newFilename);
+export const deleteDatabaseFile = (filename: string) => deleteFile('database', filename);
+
+export const loadEntityData = (filename = 'entity.json') => loadData('entity', filename);
+export const saveEntityData = (data: DataTypeMap['entity'], filename = 'entity.json') =>
+	saveData('entity', data, filename);
+export const mergeEntityData = (
+	newEntries: EntryTypeMap['entity'][],
+	replaceExisting = true,
+	filename = 'entity.json'
+) => mergeData('entity', newEntries, replaceExisting, filename);
+export const listEntityFiles = () => listFiles('entity');
+export const createEntityFile = (filename: string) => createFile('entity', filename);
+export const renameEntityFile = (oldFilename: string, newFilename: string) =>
+	renameFile('entity', oldFilename, newFilename);
+export const deleteEntityFile = (filename: string) => deleteFile('entity', filename);
+
+export const loadAttributeData = (filename = 'attribute.json') => loadData('attribute', filename);
+export const saveAttributeData = (data: DataTypeMap['attribute'], filename = 'attribute.json') =>
+	saveData('attribute', data, filename);
+export const mergeAttributeData = (
+	newEntries: EntryTypeMap['attribute'][],
+	replaceExisting = true,
+	filename = 'attribute.json'
+) => mergeData('attribute', newEntries, replaceExisting, filename);
+export const listAttributeFiles = () => listFiles('attribute');
+export const createAttributeFile = (filename: string) => createFile('attribute', filename);
+export const renameAttributeFile = (oldFilename: string, newFilename: string) =>
+	renameFile('attribute', oldFilename, newFilename);
+export const deleteAttributeFile = (filename: string) => deleteFile('attribute', filename);
+
+export const loadTableData = (filename = 'table.json') => loadData('table', filename);
+export const saveTableData = (data: DataTypeMap['table'], filename = 'table.json') =>
+	saveData('table', data, filename);
+export const mergeTableData = (
+	newEntries: EntryTypeMap['table'][],
+	replaceExisting = true,
+	filename = 'table.json'
+) => mergeData('table', newEntries, replaceExisting, filename);
+export const listTableFiles = () => listFiles('table');
+export const createTableFile = (filename: string) => createFile('table', filename);
+export const renameTableFile = (oldFilename: string, newFilename: string) =>
+	renameFile('table', oldFilename, newFilename);
+export const deleteTableFile = (filename: string) => deleteFile('table', filename);
+
+export const loadColumnData = (filename = 'column.json') => loadData('column', filename);
+export const saveColumnData = (data: DataTypeMap['column'], filename = 'column.json') =>
+	saveData('column', data, filename);
+export const mergeColumnData = (
+	newEntries: EntryTypeMap['column'][],
+	replaceExisting = true,
+	filename = 'column.json'
+) => mergeData('column', newEntries, replaceExisting, filename);
+export const listColumnFiles = () => listFiles('column');
+export const createColumnFile = (filename: string) => createFile('column', filename);
+export const renameColumnFile = (oldFilename: string, newFilename: string) =>
+	renameFile('column', oldFilename, newFilename);
+export const deleteColumnFile = (filename: string) => deleteFile('column', filename);
+
+// Forbidden words loader remains in file-handler by design.
+// Re-exported here only for migration compatibility.
+export async function loadForbiddenWords(filename = 'forbidden-words.json') {
+	const { loadForbiddenWords: loadLegacyForbiddenWords } = await import('$lib/utils/file-handler');
+	return loadLegacyForbiddenWords(filename);
+}

@@ -9,6 +9,7 @@ import { existsSync } from 'fs';
 import { join, resolve } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import type { DataType, ReferenceCheckResult } from '$lib/types/base';
+import { DEFAULT_FILENAMES, DATA_TYPE_LABELS } from '$lib/types/base';
 import type {
 	MappingRelation,
 	MappingRegistryData,
@@ -431,4 +432,214 @@ export async function getRelatedFilenames(
 	}
 
 	return result;
+}
+
+// ============================================================================
+// 3단계 폴백 매핑 해석
+// ============================================================================
+
+/**
+ * DEFAULT_MAPPING_RELATIONS에서 해당 타입과 관계가 정의된 타입 목록 반환 (동기, I/O 없음)
+ */
+export function getKnownRelatedTypes(type: DataType): DataType[] {
+	const related = new Set<DataType>();
+	for (const rel of DEFAULT_MAPPING_RELATIONS) {
+		if (rel.sourceType === type) related.add(rel.targetType);
+		if (rel.targetType === type) related.add(rel.sourceType);
+	}
+	return Array.from(related);
+}
+
+/**
+ * 3단계 폴백 전략으로 관련 파일명 해석
+ * Tier 1: 레지스트리 (registry.json)
+ * Tier 2: 파일 내 mapping 필드 (fileMappingOverride)
+ * Tier 3: DEFAULT_FILENAMES에서 알려진 관계 타입만 채움
+ */
+export async function resolveRelatedFilenames(
+	type: DataType,
+	filename: string,
+	fileMappingOverride?: Partial<Record<DataType, string>>
+): Promise<Map<DataType, string>> {
+	// Tier 1: 레지스트리에서 조회
+	const result = await getRelatedFilenames(type, filename);
+
+	// 알려진 관계 타입 목록
+	const knownTypes = getKnownRelatedTypes(type);
+
+	// Tier 2: fileMappingOverride로 빈 슬롯 채우기
+	if (fileMappingOverride) {
+		for (const relatedType of knownTypes) {
+			if (!result.has(relatedType) && fileMappingOverride[relatedType]) {
+				result.set(relatedType, fileMappingOverride[relatedType]!);
+			}
+		}
+	}
+
+	// Tier 3: DEFAULT_FILENAMES로 나머지 빈 슬롯 채우기
+	for (const relatedType of knownTypes) {
+		if (!result.has(relatedType)) {
+			result.set(relatedType, DEFAULT_FILENAMES[relatedType]);
+		}
+	}
+
+	return result;
+}
+
+// ============================================================================
+// 엔트리 레벨 참조 검사
+// ============================================================================
+
+/**
+ * 엔트리 레벨 참조 검사 규칙 정의
+ */
+interface EntryReferenceChecker {
+	sourceType: DataType;
+	targetType: DataType;
+	check: (
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		entry: any,
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		targetEntries: any[]
+	) => { count: number; entries: Array<{ id: string; name: string }> };
+}
+
+const ENTRY_REFERENCE_CHECKERS: EntryReferenceChecker[] = [
+	// vocabulary → term: term.termName/columnName 파트에 standardName/abbreviation 포함 여부
+	{
+		sourceType: 'vocabulary',
+		targetType: 'term',
+		check: (vocabEntry, termEntries) => {
+			const standardNameLower = vocabEntry.standardName?.toLowerCase() || '';
+			const abbreviationLower = vocabEntry.abbreviation?.toLowerCase() || '';
+
+			const refs = termEntries.filter((term) => {
+				const termParts = (term.termName || '').toLowerCase().split('_');
+				const hasTermNameRef = termParts.some(
+					(part: string) => part === standardNameLower || part === abbreviationLower
+				);
+				const columnParts = (term.columnName || '').toLowerCase().split('_');
+				const hasColumnRef = columnParts.some(
+					(part: string) => part === standardNameLower || part === abbreviationLower
+				);
+				return hasTermNameRef || hasColumnRef;
+			});
+
+			return {
+				count: refs.length,
+				entries: refs.slice(0, 5).map((t: { id: string; termName: string }) => ({
+					id: t.id,
+					name: t.termName
+				}))
+			};
+		}
+	},
+	// domain → vocabulary: vocabulary.domainCategory === domain.domainCategory
+	{
+		sourceType: 'domain',
+		targetType: 'vocabulary',
+		check: (domainEntry, vocabEntries) => {
+			const domainCategoryLower = domainEntry.domainCategory?.toLowerCase() || '';
+
+			const refs = vocabEntries.filter(
+				(vocab) =>
+					vocab.isDomainCategoryMapped &&
+					vocab.domainCategory?.toLowerCase() === domainCategoryLower
+			);
+
+			return {
+				count: refs.length,
+				entries: refs
+					.slice(0, 5)
+					.map((v: { id: string; standardName: string }) => ({
+						id: v.id,
+						name: v.standardName
+					}))
+			};
+		}
+	},
+	// domain → term: term.domainName === domain.standardDomainName
+	{
+		sourceType: 'domain',
+		targetType: 'term',
+		check: (domainEntry, termEntries) => {
+			const domainNameLower = domainEntry.standardDomainName?.toLowerCase() || '';
+
+			const refs = termEntries.filter(
+				(term) => (term.domainName || '').toLowerCase() === domainNameLower
+			);
+
+			return {
+				count: refs.length,
+				entries: refs.slice(0, 5).map((t: { id: string; termName: string }) => ({
+					id: t.id,
+					name: t.termName
+				}))
+			};
+		}
+	}
+];
+
+/**
+ * 제네릭 엔트리 레벨 참조 검사
+ * checkVocabularyReferences / checkDomainReferences를 대체합니다.
+ */
+export async function checkEntryReferences(
+	type: DataType,
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	entry: any,
+	filename?: string
+): Promise<ReferenceCheckResult> {
+	const { loadData } = await import('./data-registry');
+
+	// 해당 타입에 대한 체커 필터링
+	const checkers = ENTRY_REFERENCE_CHECKERS.filter((c) => c.sourceType === type);
+
+	if (checkers.length === 0) {
+		return { canDelete: true, references: [] };
+	}
+
+	// 관련 파일명 해석
+	const relatedFilenames = await resolveRelatedFilenames(
+		type,
+		filename || DEFAULT_FILENAMES[type]
+	);
+
+	const references: ReferenceCheckResult['references'] = [];
+
+	for (const checker of checkers) {
+		const targetFilename = relatedFilenames.get(checker.targetType) || DEFAULT_FILENAMES[checker.targetType];
+
+		try {
+			const targetData = await loadData(checker.targetType, targetFilename);
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const targetEntries = (targetData as any).entries || [];
+			const result = checker.check(entry, targetEntries);
+
+			if (result.count > 0) {
+				references.push({
+					type: checker.targetType,
+					filename: targetFilename,
+					count: result.count,
+					entries: result.entries
+				});
+			}
+		} catch (error) {
+			console.warn(
+				`[참조 검사] ${DATA_TYPE_LABELS[checker.targetType]} 데이터 로드 실패:`,
+				error
+			);
+		}
+	}
+
+	if (references.length > 0) {
+		const totalCount = references.reduce((sum, ref) => sum + ref.count, 0);
+		return {
+			canDelete: false,
+			references,
+			message: `${totalCount}개의 항목에서 이 ${DATA_TYPE_LABELS[type]}을(를) 참조하고 있습니다.`
+		};
+	}
+
+	return { canDelete: true, references: [] };
 }

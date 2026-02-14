@@ -257,3 +257,15 @@ export function invalidateAllDataCaches(): void {
 export function getDataCacheStats(): Record<DataType, { size: number; keys: string[] }> {
 	return unifiedCache.getStats();
 }
+
+// ============================================================================
+// Legacy Named Exports (for test migration compatibility)
+// ============================================================================
+
+export const getCachedVocabularyData = (filename = 'vocabulary.json') =>
+	getCachedData('vocabulary', filename);
+export const getCachedDomainData = (filename = 'domain.json') => getCachedData('domain', filename);
+export const getCachedTermData = (filename = 'term.json') => getCachedData('term', filename);
+export const invalidateCache = (type: DataType, filename?: string) =>
+	invalidateDataCache(type, filename);
+export const invalidateAllCaches = () => invalidateAllDataCaches();

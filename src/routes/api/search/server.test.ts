@@ -4,7 +4,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { VocabularyData, VocabularyEntry } from '$lib/types/vocabulary';
 
 // Mock 모듈들
-vi.mock('$lib/utils/file-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadVocabularyData: vi.fn()
 }));
 
@@ -16,7 +16,7 @@ vi.mock('$lib/utils/validation.js', () => ({
 	sanitizeSearchQuery: vi.fn((query: string) => query.trim() || null)
 }));
 
-import { loadVocabularyData } from '$lib/utils/file-handler.js';
+import { loadVocabularyData } from '$lib/registry/data-registry';
 import { getDuplicateDetails } from '$lib/utils/duplicate-handler.js';
 import { sanitizeSearchQuery } from '$lib/utils/validation.js';
 
@@ -402,3 +402,4 @@ describe('Search API: /api/search', () => {
 		});
 	});
 });
+

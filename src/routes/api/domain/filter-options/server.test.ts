@@ -4,11 +4,11 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { DomainData } from '$lib/types/domain';
 
 // Mock 모듈들
-vi.mock('$lib/utils/file-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadDomainData: vi.fn()
 }));
 
-import { loadDomainData } from '$lib/utils/file-handler.js';
+import { loadDomainData } from '$lib/registry/data-registry';
 
 // 테스트용 Mock 데이터
 const createMockDomainData = (): DomainData => ({
@@ -182,3 +182,4 @@ describe('Domain Filter Options API: /api/domain/filter-options', () => {
 		expect(result.data.domainCategory).toEqual([]);
 	});
 });
+

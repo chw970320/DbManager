@@ -3,13 +3,13 @@ import { GET } from './+server';
 import type { RequestEvent } from '@sveltejs/kit';
 
 // Mock 모듈들
-vi.mock('$lib/utils/database-design-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadTableData: vi.fn(),
 	listTableFiles: vi.fn()
 }));
 
 // Mock import
-import { loadTableData, listTableFiles } from '$lib/utils/database-design-handler.js';
+import { loadTableData, listTableFiles } from '$lib/registry/data-registry';
 
 // RequestEvent Mock 생성 헬퍼
 function createMockRequestEvent(options: { searchParams?: Record<string, string> }): RequestEvent {
@@ -185,3 +185,4 @@ describe('API: /api/erd/tables', () => {
 		});
 	});
 });
+

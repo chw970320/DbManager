@@ -4,7 +4,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { AttributeData } from '$lib/types/database-design';
 
 // Mock 모듈들
-vi.mock('$lib/utils/database-design-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadAttributeData: vi.fn(),
 	mergeAttributeData: vi.fn()
 }));
@@ -35,7 +35,7 @@ vi.mock('$lib/utils/type-guards.js', () => ({
 	}
 }));
 
-import { loadAttributeData, mergeAttributeData } from '$lib/utils/database-design-handler.js';
+import { loadAttributeData, mergeAttributeData } from '$lib/registry/data-registry';
 import { validateXlsxFile } from '$lib/utils/validation.js';
 import { parseAttributeXlsxToJson } from '$lib/utils/database-design-xlsx-parser.js';
 import { getRequiredFile } from '$lib/utils/type-guards.js';
@@ -260,3 +260,4 @@ describe('Attribute Upload API: /api/attribute/upload', () => {
 		});
 	});
 });
+

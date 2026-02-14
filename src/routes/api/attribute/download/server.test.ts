@@ -4,7 +4,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { AttributeData } from '$lib/types/database-design';
 
 // Mock 모듈들
-vi.mock('$lib/utils/database-design-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadAttributeData: vi.fn()
 }));
 
@@ -12,7 +12,7 @@ vi.mock('$lib/utils/database-design-xlsx-parser.js', () => ({
 	exportAttributeToXlsxBuffer: vi.fn(() => Buffer.from('mock-xlsx-data'))
 }));
 
-import { loadAttributeData } from '$lib/utils/database-design-handler.js';
+import { loadAttributeData } from '$lib/registry/data-registry';
 import { exportAttributeToXlsxBuffer } from '$lib/utils/database-design-xlsx-parser.js';
 
 // 테스트용 Mock 데이터
@@ -145,3 +145,4 @@ describe('Attribute Download API: /api/attribute/download', () => {
 		expect(loadAttributeData).toHaveBeenCalledWith('attribute.json');
 	});
 });
+

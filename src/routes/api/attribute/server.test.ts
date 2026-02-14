@@ -4,7 +4,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { AttributeData, AttributeEntry } from '$lib/types/database-design';
 
 // Mock 모듈들
-vi.mock('$lib/utils/database-design-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadAttributeData: vi.fn(),
 	saveAttributeData: vi.fn()
 }));
@@ -14,7 +14,7 @@ vi.mock('uuid', () => ({
 }));
 
 // Mock import
-import { loadAttributeData, saveAttributeData } from '$lib/utils/database-design-handler.js';
+import { loadAttributeData, saveAttributeData } from '$lib/registry/data-registry';
 
 // 테스트용 Mock 데이터
 const createMockAttributeData = (): AttributeData => ({
@@ -381,3 +381,4 @@ describe('Attribute API: /api/attribute', () => {
 		});
 	});
 });
+

@@ -4,7 +4,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { TermData } from '$lib/types/term';
 
 // Mock 모듈들
-vi.mock('$lib/utils/file-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadTermData: vi.fn()
 }));
 
@@ -12,7 +12,7 @@ vi.mock('$lib/utils/xlsx-parser.js', () => ({
 	exportTermToXlsxBuffer: vi.fn(() => Buffer.from('mock-xlsx-data'))
 }));
 
-import { loadTermData } from '$lib/utils/file-handler.js';
+import { loadTermData } from '$lib/registry/data-registry';
 import { exportTermToXlsxBuffer } from '$lib/utils/xlsx-parser.js';
 
 // 테스트용 Mock 데이터
@@ -124,3 +124,4 @@ describe('Term Download API: /api/term/download', () => {
 		expect(loadTermData).toHaveBeenCalledWith('term.json');
 	});
 });
+

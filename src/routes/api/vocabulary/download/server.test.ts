@@ -4,7 +4,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { VocabularyData } from '$lib/types/vocabulary';
 
 // Mock 모듈들
-vi.mock('$lib/utils/file-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadVocabularyData: vi.fn()
 }));
 
@@ -16,7 +16,7 @@ vi.mock('$lib/utils/xlsx-parser.js', () => ({
 	exportJsonToXlsxBuffer: vi.fn(() => Buffer.from('mock-xlsx-data'))
 }));
 
-import { loadVocabularyData } from '$lib/utils/file-handler.js';
+import { loadVocabularyData } from '$lib/registry/data-registry';
 import { getDuplicateDetails } from '$lib/utils/duplicate-handler.js';
 import { exportJsonToXlsxBuffer } from '$lib/utils/xlsx-parser.js';
 
@@ -201,3 +201,4 @@ describe('Vocabulary Download API: /api/vocabulary/download', () => {
 		expect(loadVocabularyData).toHaveBeenCalledWith(undefined);
 	});
 });
+

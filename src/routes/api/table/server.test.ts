@@ -4,7 +4,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { TableData, TableEntry } from '$lib/types/database-design';
 
 // Mock 모듈들
-vi.mock('$lib/utils/database-design-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadTableData: vi.fn(),
 	saveTableData: vi.fn()
 }));
@@ -14,7 +14,7 @@ vi.mock('uuid', () => ({
 }));
 
 // Mock import
-import { loadTableData, saveTableData } from '$lib/utils/database-design-handler.js';
+import { loadTableData, saveTableData } from '$lib/registry/data-registry';
 
 // 테스트용 Mock 데이터
 const createMockTableData = (): TableData => ({
@@ -422,3 +422,4 @@ describe('Table API: /api/table', () => {
 		});
 	});
 });
+

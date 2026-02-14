@@ -4,7 +4,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { ColumnData } from '$lib/types/database-design';
 
 // Mock 모듈들
-vi.mock('$lib/utils/database-design-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadColumnData: vi.fn(),
 	mergeColumnData: vi.fn()
 }));
@@ -35,7 +35,7 @@ vi.mock('$lib/utils/type-guards.js', () => ({
 	}
 }));
 
-import { loadColumnData, mergeColumnData } from '$lib/utils/database-design-handler.js';
+import { loadColumnData, mergeColumnData } from '$lib/registry/data-registry';
 import { validateXlsxFile } from '$lib/utils/validation.js';
 import { parseColumnXlsxToJson } from '$lib/utils/database-design-xlsx-parser.js';
 import { getRequiredFile } from '$lib/utils/type-guards.js';
@@ -292,3 +292,4 @@ describe('Column Upload API: /api/column/upload', () => {
 		});
 	});
 });
+

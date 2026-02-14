@@ -4,7 +4,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { ColumnData, ColumnEntry } from '$lib/types/database-design';
 
 // Mock 모듈들
-vi.mock('$lib/utils/database-design-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadColumnData: vi.fn(),
 	saveColumnData: vi.fn()
 }));
@@ -14,7 +14,7 @@ vi.mock('uuid', () => ({
 }));
 
 // Mock import
-import { loadColumnData, saveColumnData } from '$lib/utils/database-design-handler.js';
+import { loadColumnData, saveColumnData } from '$lib/registry/data-registry';
 
 // 테스트용 Mock 데이터
 const createMockColumnData = (): ColumnData => ({
@@ -457,3 +457,4 @@ describe('Column API: /api/column', () => {
 		});
 	});
 });
+

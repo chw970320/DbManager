@@ -4,7 +4,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { DatabaseData, DatabaseEntry } from '$lib/types/database-design';
 
 // Mock 모듈들
-vi.mock('$lib/utils/database-design-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadDatabaseData: vi.fn(),
 	saveDatabaseData: vi.fn(),
 	listDatabaseFiles: vi.fn()
@@ -15,7 +15,7 @@ vi.mock('uuid', () => ({
 }));
 
 // Mock import
-import { loadDatabaseData, saveDatabaseData } from '$lib/utils/database-design-handler.js';
+import { loadDatabaseData, saveDatabaseData } from '$lib/registry/data-registry';
 
 // 테스트용 Mock 데이터
 const createMockDatabaseData = (): DatabaseData => ({
@@ -502,3 +502,4 @@ describe('Database API: /api/database', () => {
 		});
 	});
 });
+

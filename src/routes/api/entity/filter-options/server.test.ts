@@ -4,11 +4,11 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { EntityData } from '$lib/types/database-design';
 
 // Mock 모듈들
-vi.mock('$lib/utils/database-design-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadEntityData: vi.fn()
 }));
 
-import { loadEntityData } from '$lib/utils/database-design-handler.js';
+import { loadEntityData } from '$lib/registry/data-registry';
 
 // 테스트용 Mock 데이터
 const createMockEntityData = (): EntityData => ({
@@ -184,3 +184,4 @@ describe('Entity Filter Options API: /api/entity/filter-options', () => {
 		expect(result.data.schemaName).toEqual([]);
 	});
 });
+

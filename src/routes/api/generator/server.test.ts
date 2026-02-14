@@ -5,13 +5,13 @@ import type { TermData } from '$lib/types/term';
 import type { VocabularyData } from '$lib/types/vocabulary';
 
 // Mock 모듈들
-vi.mock('$lib/utils/file-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadTermData: vi.fn(),
 	loadVocabularyData: vi.fn()
 }));
 
 // Mock import
-import { loadTermData, loadVocabularyData } from '$lib/utils/file-handler.js';
+import { loadTermData, loadVocabularyData } from '$lib/registry/data-registry';
 
 // 테스트용 Mock 데이터
 const createMockTermData = (): TermData => ({
@@ -207,3 +207,4 @@ describe('Generator API: /api/generator', () => {
 		expect(result.success).toBe(false);
 	});
 });
+

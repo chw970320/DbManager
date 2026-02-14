@@ -4,7 +4,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { DomainData, DomainEntry } from '$lib/types/domain';
 
 // Mock 모듈들
-vi.mock('$lib/utils/file-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadDomainData: vi.fn(),
 	saveDomainData: vi.fn(),
 	listDomainFiles: vi.fn()
@@ -14,7 +14,7 @@ vi.mock('$lib/registry/mapping-registry', () => ({
 	checkEntryReferences: vi.fn()
 }));
 
-vi.mock('$lib/utils/cache.js', () => ({
+vi.mock('$lib/registry/cache-registry', () => ({
 	invalidateCache: vi.fn()
 }));
 
@@ -34,7 +34,7 @@ import {
 	loadDomainData,
 	saveDomainData,
 	listDomainFiles
-} from '$lib/utils/file-handler.js';
+} from '$lib/registry/data-registry';
 import { checkEntryReferences } from '$lib/registry/mapping-registry';
 import { generateStandardDomainName, validateDomainNameUniqueness } from '$lib/utils/validation.js';
 
@@ -469,3 +469,4 @@ describe('Domain API: /api/domain', () => {
 		});
 	});
 });
+

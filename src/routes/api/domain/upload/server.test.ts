@@ -4,7 +4,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { DomainData } from '$lib/types/domain';
 
 // Mock 모듈들
-vi.mock('$lib/utils/file-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadDomainData: vi.fn(),
 	mergeDomainData: vi.fn(),
 	listDomainFiles: vi.fn()
@@ -40,7 +40,7 @@ vi.mock('$lib/utils/type-guards.js', () => ({
 	}
 }));
 
-import { loadDomainData, mergeDomainData, listDomainFiles } from '$lib/utils/file-handler.js';
+import { loadDomainData, mergeDomainData, listDomainFiles } from '$lib/registry/data-registry';
 import { validateXlsxFile, validateDomainNameUniqueness } from '$lib/utils/validation.js';
 import { parseDomainXlsxToJson } from '$lib/utils/xlsx-parser.js';
 import { getRequiredFile } from '$lib/utils/type-guards.js';
@@ -267,3 +267,4 @@ describe('Domain Upload API: /api/domain/upload', () => {
 		});
 	});
 });
+

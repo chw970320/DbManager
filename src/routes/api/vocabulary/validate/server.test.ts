@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { POST } from './+server';
 import { json } from '@sveltejs/kit';
 import type { RequestEvent } from '@sveltejs/kit';
-import * as fileHandler from '$lib/utils/file-handler';
+import * as fileHandler from '$lib/registry/data-registry';
 import type { VocabularyEntry, ForbiddenWord } from '$lib/types/vocabulary';
 
-vi.mock('$lib/utils/file-handler');
+vi.mock('$lib/registry/data-registry');
 vi.mock('@sveltejs/kit');
 
 const createMockRequest = async (
@@ -156,3 +156,4 @@ describe('POST /api/vocabulary/validate', () => {
 		expect(fileHandler.loadVocabularyData).toHaveBeenCalledWith('vocabulary.json');
 	});
 });
+

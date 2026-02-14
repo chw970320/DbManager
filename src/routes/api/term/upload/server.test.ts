@@ -4,7 +4,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { TermData } from '$lib/types/term';
 
 // Mock 모듈들
-vi.mock('$lib/utils/file-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadTermData: vi.fn(),
 	mergeTermData: vi.fn(),
 	listTermFiles: vi.fn(),
@@ -25,7 +25,7 @@ vi.mock('$lib/utils/xlsx-parser.js', () => ({
 	parseTermXlsxToJson: vi.fn()
 }));
 
-vi.mock('$lib/utils/cache.js', () => ({
+vi.mock('$lib/registry/cache-registry', () => ({
 	getCachedVocabularyData: vi.fn(),
 	getCachedDomainData: vi.fn(),
 	invalidateCache: vi.fn()
@@ -53,7 +53,7 @@ vi.mock('$lib/utils/type-guards.js', () => ({
 	}
 }));
 
-import { loadTermData, mergeTermData, listTermFiles } from '$lib/utils/file-handler.js';
+import { loadTermData, mergeTermData, listTermFiles } from '$lib/registry/data-registry';
 import {
 	validateXlsxFile,
 	validateTermNameSuffix,
@@ -64,7 +64,7 @@ import {
 } from '$lib/utils/validation.js';
 import { parseTermXlsxToJson } from '$lib/utils/xlsx-parser.js';
 import { getRequiredFile } from '$lib/utils/type-guards.js';
-import { getCachedVocabularyData, getCachedDomainData } from '$lib/utils/cache.js';
+import { getCachedVocabularyData, getCachedDomainData } from '$lib/registry/cache-registry';
 
 // 테스트용 Mock 데이터
 const createMockTermData = (): TermData => ({
@@ -293,3 +293,4 @@ describe('Term Upload API: /api/term/upload', () => {
 		});
 	});
 });
+

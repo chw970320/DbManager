@@ -4,7 +4,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { ColumnData } from '$lib/types/database-design';
 
 // Mock 모듈들
-vi.mock('$lib/utils/database-design-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadColumnData: vi.fn()
 }));
 
@@ -12,7 +12,7 @@ vi.mock('$lib/utils/database-design-xlsx-parser.js', () => ({
 	exportColumnToXlsxBuffer: vi.fn(() => Buffer.from('mock-xlsx-data'))
 }));
 
-import { loadColumnData } from '$lib/utils/database-design-handler.js';
+import { loadColumnData } from '$lib/registry/data-registry';
 import { exportColumnToXlsxBuffer } from '$lib/utils/database-design-xlsx-parser.js';
 
 // 테스트용 Mock 데이터
@@ -177,3 +177,4 @@ describe('Column Download API: /api/column/download', () => {
 		expect(loadColumnData).toHaveBeenCalledWith('column.json');
 	});
 });
+

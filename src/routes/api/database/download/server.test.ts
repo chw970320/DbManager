@@ -4,7 +4,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { DatabaseData, DatabaseEntry } from '$lib/types/database-design';
 
 // Mock 모듈들
-vi.mock('$lib/utils/database-design-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadDatabaseData: vi.fn()
 }));
 
@@ -12,7 +12,7 @@ vi.mock('$lib/utils/database-design-xlsx-parser.js', () => ({
 	exportDatabaseToXlsxBuffer: vi.fn(() => Buffer.from('mock-xlsx-data'))
 }));
 
-import { loadDatabaseData } from '$lib/utils/database-design-handler.js';
+import { loadDatabaseData } from '$lib/registry/data-registry';
 import { exportDatabaseToXlsxBuffer } from '$lib/utils/database-design-xlsx-parser.js';
 
 // 테스트용 Mock 데이터
@@ -141,3 +141,4 @@ describe('Database Download API: /api/database/download', () => {
 		expect(result.success).toBe(false);
 	});
 });
+

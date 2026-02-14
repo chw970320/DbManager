@@ -4,11 +4,11 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { AttributeData } from '$lib/types/database-design';
 
 // Mock 모듈들
-vi.mock('$lib/utils/database-design-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadAttributeData: vi.fn()
 }));
 
-import { loadAttributeData } from '$lib/utils/database-design-handler.js';
+import { loadAttributeData } from '$lib/registry/data-registry';
 
 // 테스트용 Mock 데이터
 const createMockAttributeData = (): AttributeData => ({
@@ -183,3 +183,4 @@ describe('Attribute Filter Options API: /api/attribute/filter-options', () => {
 		expect(result.data.entityName).toEqual([]);
 	});
 });
+

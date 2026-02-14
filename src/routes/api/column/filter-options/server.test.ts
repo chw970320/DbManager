@@ -4,11 +4,11 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { ColumnData } from '$lib/types/database-design';
 
 // Mock 모듈들
-vi.mock('$lib/utils/database-design-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadColumnData: vi.fn()
 }));
 
-import { loadColumnData } from '$lib/utils/database-design-handler.js';
+import { loadColumnData } from '$lib/registry/data-registry';
 
 // 테스트용 Mock 데이터
 const createMockColumnData = (): ColumnData => ({
@@ -228,3 +228,4 @@ describe('Column Filter Options API: /api/column/filter-options', () => {
 		expect(result.data.schemaName).toEqual([]);
 	});
 });
+

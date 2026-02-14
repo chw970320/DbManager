@@ -4,11 +4,11 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { DatabaseData, DatabaseEntry } from '$lib/types/database-design';
 
 // Mock 모듈들
-vi.mock('$lib/utils/database-design-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadDatabaseData: vi.fn()
 }));
 
-import { loadDatabaseData } from '$lib/utils/database-design-handler.js';
+import { loadDatabaseData } from '$lib/registry/data-registry';
 
 // 테스트용 Mock 데이터
 const createMockDatabaseData = (): DatabaseData => ({
@@ -202,3 +202,4 @@ describe('Database Filter Options API: /api/database/filter-options', () => {
 		expect(result.data.logicalDbName[0]).toBe('(빈값)');
 	});
 });
+

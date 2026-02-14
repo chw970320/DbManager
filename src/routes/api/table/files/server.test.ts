@@ -3,7 +3,7 @@ import { GET, POST, PUT, DELETE } from './+server';
 import type { RequestEvent } from '@sveltejs/kit';
 
 // Mock 모듈들
-vi.mock('$lib/utils/database-design-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	listTableFiles: vi.fn(),
 	createTableFile: vi.fn(),
 	renameTableFile: vi.fn(),
@@ -15,7 +15,7 @@ import {
 	createTableFile,
 	renameTableFile,
 	deleteTableFile
-} from '$lib/utils/database-design-handler.js';
+} from '$lib/registry/data-registry';
 
 // RequestEvent Mock 생성 헬퍼
 function createMockRequestEvent(options: { method?: string; body?: unknown }): RequestEvent {
@@ -226,3 +226,4 @@ describe('Table Files API: /api/table/files', () => {
 		});
 	});
 });
+

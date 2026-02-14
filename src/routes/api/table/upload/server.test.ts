@@ -4,7 +4,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { TableData } from '$lib/types/database-design';
 
 // Mock 모듈들
-vi.mock('$lib/utils/database-design-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadTableData: vi.fn(),
 	mergeTableData: vi.fn()
 }));
@@ -35,7 +35,7 @@ vi.mock('$lib/utils/type-guards.js', () => ({
 	}
 }));
 
-import { loadTableData, mergeTableData } from '$lib/utils/database-design-handler.js';
+import { loadTableData, mergeTableData } from '$lib/registry/data-registry';
 import { validateXlsxFile } from '$lib/utils/validation.js';
 import { parseTableXlsxToJson } from '$lib/utils/database-design-xlsx-parser.js';
 import { getRequiredFile } from '$lib/utils/type-guards.js';
@@ -276,3 +276,4 @@ describe('Table Upload API: /api/table/upload', () => {
 		});
 	});
 });
+

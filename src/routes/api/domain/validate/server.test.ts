@@ -4,7 +4,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { DomainEntry } from '$lib/types/domain';
 
 // Mock 모듈들
-vi.mock('$lib/utils/file-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadDomainData: vi.fn(),
 	listDomainFiles: vi.fn()
 }));
@@ -17,7 +17,7 @@ vi.mock('$lib/utils/validation.js', () => ({
 }));
 
 // Mock import
-import { loadDomainData, listDomainFiles } from '$lib/utils/file-handler.js';
+import { loadDomainData, listDomainFiles } from '$lib/registry/data-registry';
 import { validateDomainNameUniqueness } from '$lib/utils/validation.js';
 
 // RequestEvent Mock 생성 헬퍼
@@ -206,3 +206,4 @@ describe('Domain Validate API: /api/domain/validate', () => {
 		expect(loadDomainData).toHaveBeenCalledWith('domain.json');
 	});
 });
+

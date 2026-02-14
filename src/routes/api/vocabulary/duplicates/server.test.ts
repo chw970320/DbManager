@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GET } from './+server';
 import { json } from '@sveltejs/kit';
 import type { RequestEvent } from '@sveltejs/kit';
-import * as fileHandler from '$lib/utils/file-handler';
+import * as fileHandler from '$lib/registry/data-registry';
 import type { VocabularyData } from '$lib/types/vocabulary';
 
-vi.mock('$lib/utils/file-handler');
+vi.mock('$lib/registry/data-registry');
 vi.mock('@sveltejs/kit');
 
 const createMockRequest = (searchParams: Record<string, string> = {}): RequestEvent => {
@@ -171,3 +171,4 @@ describe('GET /api/vocabulary/duplicates', () => {
 		);
 	});
 });
+

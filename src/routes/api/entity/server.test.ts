@@ -4,7 +4,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { EntityData, EntityEntry } from '$lib/types/database-design';
 
 // Mock 모듈들
-vi.mock('$lib/utils/database-design-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadEntityData: vi.fn(),
 	saveEntityData: vi.fn()
 }));
@@ -14,7 +14,7 @@ vi.mock('uuid', () => ({
 }));
 
 // Mock import
-import { loadEntityData, saveEntityData } from '$lib/utils/database-design-handler.js';
+import { loadEntityData, saveEntityData } from '$lib/registry/data-registry';
 
 // 테스트용 Mock 데이터
 const createMockEntityData = (): EntityData => ({
@@ -397,3 +397,4 @@ describe('Entity API: /api/entity', () => {
 		});
 	});
 });
+

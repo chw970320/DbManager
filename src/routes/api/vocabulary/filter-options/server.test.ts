@@ -4,11 +4,11 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { VocabularyData } from '$lib/types/vocabulary';
 
 // Mock 모듈들
-vi.mock('$lib/utils/file-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadVocabularyData: vi.fn()
 }));
 
-import { loadVocabularyData } from '$lib/utils/file-handler.js';
+import { loadVocabularyData } from '$lib/registry/data-registry';
 
 // 테스트용 Mock 데이터
 const createMockVocabularyData = (): VocabularyData => ({
@@ -204,3 +204,4 @@ describe('Vocabulary Filter Options API: /api/vocabulary/filter-options', () => 
 		expect(result.data.abbreviation).toEqual([]);
 	});
 });
+

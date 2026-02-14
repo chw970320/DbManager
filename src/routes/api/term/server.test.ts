@@ -6,7 +6,7 @@ import type { VocabularyData } from '$lib/types/vocabulary';
 import type { DomainData } from '$lib/types/domain';
 
 // Mock 모듈들
-vi.mock('$lib/utils/file-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadTermData: vi.fn(),
 	saveTermData: vi.fn(),
 	listTermFiles: vi.fn(),
@@ -14,7 +14,7 @@ vi.mock('$lib/utils/file-handler.js', () => ({
 	loadDomainData: vi.fn()
 }));
 
-vi.mock('$lib/utils/cache.js', () => ({
+vi.mock('$lib/registry/cache-registry', () => ({
 	getCachedVocabularyData: vi.fn(),
 	getCachedDomainData: vi.fn(),
 	invalidateCache: vi.fn()
@@ -36,8 +36,8 @@ import {
 	listTermFiles,
 	loadVocabularyData,
 	loadDomainData
-} from '$lib/utils/file-handler.js';
-import { getCachedVocabularyData, getCachedDomainData } from '$lib/utils/cache.js';
+} from '$lib/registry/data-registry';
+import { getCachedVocabularyData, getCachedDomainData } from '$lib/registry/cache-registry';
 import { validateTermNameSuffix, validateTermNameUniqueness } from '$lib/utils/validation.js';
 
 // 테스트용 Mock 데이터
@@ -482,3 +482,4 @@ describe('Term API: /api/term', () => {
 		});
 	});
 });
+

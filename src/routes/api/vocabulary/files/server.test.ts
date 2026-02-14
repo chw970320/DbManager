@@ -3,7 +3,7 @@ import { GET, POST, PUT, DELETE } from './+server';
 import type { RequestEvent } from '@sveltejs/kit';
 
 // Mock 모듈들
-vi.mock('$lib/utils/file-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	listVocabularyFiles: vi.fn(),
 	createVocabularyFile: vi.fn(),
 	renameVocabularyFile: vi.fn(),
@@ -15,7 +15,7 @@ import {
 	createVocabularyFile,
 	renameVocabularyFile,
 	deleteVocabularyFile
-} from '$lib/utils/file-handler.js';
+} from '$lib/registry/data-registry';
 
 // RequestEvent Mock 생성 헬퍼
 function createMockRequestEvent(options: { method?: string; body?: unknown }): RequestEvent {
@@ -226,3 +226,4 @@ describe('Vocabulary Files API: /api/vocabulary/files', () => {
 		});
 	});
 });
+

@@ -4,7 +4,7 @@ import type { RequestEvent } from '@sveltejs/kit';
 import type { DomainData } from '$lib/types/domain';
 
 // Mock 모듈들
-vi.mock('$lib/utils/file-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadDomainData: vi.fn()
 }));
 
@@ -12,7 +12,7 @@ vi.mock('$lib/utils/xlsx-parser.js', () => ({
 	exportDomainToXlsxBuffer: vi.fn(() => Buffer.from('mock-xlsx-data'))
 }));
 
-import { loadDomainData } from '$lib/utils/file-handler.js';
+import { loadDomainData } from '$lib/registry/data-registry';
 import { exportDomainToXlsxBuffer } from '$lib/utils/xlsx-parser.js';
 
 // 테스트용 Mock 데이터
@@ -144,3 +144,4 @@ describe('Domain Download API: /api/domain/download', () => {
 		expect(loadDomainData).toHaveBeenCalledWith('domain.json');
 	});
 });
+

@@ -6,13 +6,13 @@ import type { VocabularyData } from '$lib/types/vocabulary';
 import type { DomainData } from '$lib/types/domain';
 
 // Mock 모듈들
-vi.mock('$lib/utils/file-handler.js', () => ({
+vi.mock('$lib/registry/data-registry', () => ({
 	loadTermData: vi.fn(),
 	loadVocabularyData: vi.fn(),
 	loadDomainData: vi.fn()
 }));
 
-import { loadTermData, loadVocabularyData, loadDomainData } from '$lib/utils/file-handler.js';
+import { loadTermData, loadVocabularyData, loadDomainData } from '$lib/registry/data-registry';
 
 // 테스트용 Mock 데이터
 const createMockTermData = (): TermData => ({
@@ -188,3 +188,4 @@ describe('Term Recommend API: /api/term/recommend', () => {
 		expect(result.success).toBe(false);
 	});
 });
+

@@ -76,11 +76,13 @@ import {
 } from '$lib/registry/cache-registry';
 
 import { resolveRelatedFilenames } from '$lib/registry/mapping-registry';
+import { normalizeKey } from '$lib/utils/mapping-key.js';
 
 type SyncRequest = {
 	columnFilename?: string;
 	termFilename?: string;
 	domainFilename?: string;
+	apply?: boolean;
 };
 
 type SyncResult = {
@@ -98,6 +100,22 @@ type SyncResult = {
 		columnEnglishName: string;
 		tableEnglishName: string;
 	}>;
+	issues?: ColumnSyncIssue[];
+};
+
+type ColumnSyncIssueCode =
+	| 'COLUMN_NAME_EMPTY'
+	| 'TERM_NOT_FOUND'
+	| 'TERM_DOMAIN_EMPTY'
+	| 'DOMAIN_NOT_FOUND';
+
+type ColumnSyncIssue = {
+	id: string;
+	columnEnglishName: string;
+	tableEnglishName: string;
+	code: ColumnSyncIssueCode;
+	message: string;
+	severity: 'error' | 'warning';
 };
 
 /**
@@ -106,9 +124,21 @@ type SyncResult = {
  *
  * 컬럼의 영문명(columnEnglishName)과 용어의 컬럼명(columnName)을 매핑합니다.
  */
-export async function POST({ request }: RequestEvent) {
+export async function POST({ request, url }: RequestEvent) {
 	try {
-		const { columnFilename, termFilename, domainFilename }: SyncRequest = await request.json();
+		const {
+			columnFilename,
+			termFilename,
+			domainFilename,
+			apply: applyFromBody
+		}: SyncRequest = await request.json();
+		const applyQuery = url.searchParams.get('apply');
+		const apply =
+			typeof applyFromBody === 'boolean'
+				? applyFromBody
+				: applyQuery === null
+					? true
+					: !['false', '0', 'no'].includes(applyQuery.toLowerCase());
 
 		const colFile = columnFilename || 'column.json';
 		const relatedFiles = await resolveRelatedFilenames('column', colFile);
@@ -174,7 +204,7 @@ export async function POST({ request }: RequestEvent) {
 		termEntries.forEach((entry) => {
 			if (entry.columnName) {
 				// 대소문자 구분 없이 매핑
-				termMap.set(entry.columnName.toLowerCase().trim(), entry);
+				termMap.set(normalizeKey(entry.columnName), entry);
 			}
 		});
 
@@ -182,7 +212,7 @@ export async function POST({ request }: RequestEvent) {
 		const domainMap = new Map<string, (typeof domainEntries)[number]>();
 		domainEntries.forEach((entry) => {
 			if (entry.standardDomainName) {
-				domainMap.set(entry.standardDomainName.toLowerCase().trim(), entry);
+				domainMap.set(normalizeKey(entry.standardDomainName), entry);
 			}
 		});
 
@@ -192,6 +222,29 @@ export async function POST({ request }: RequestEvent) {
 		let unmatchedDomain = 0;
 		let updated = 0;
 		const unmatchedColumns: SyncResult['unmatchedColumns'] = [];
+		const issues: ColumnSyncIssue[] = [];
+		const changes: Array<{
+			id: string;
+			columnEnglishName: string;
+			tableEnglishName: string;
+			owner: 'column/sync-term';
+			reason: string;
+			before: {
+				columnKoreanName?: string;
+				domainName?: string;
+				dataType?: string;
+				dataLength?: string;
+				dataDecimalLength?: string;
+			};
+			after: {
+				columnKoreanName?: string;
+				domainName?: string;
+				dataType?: string;
+				dataLength?: string;
+				dataDecimalLength?: string;
+			};
+			changedFields: string[];
+		}> = [];
 		const now = new Date().toISOString();
 
 		// 컬럼 데이터 동기화
@@ -204,10 +257,18 @@ export async function POST({ request }: RequestEvent) {
 					columnEnglishName: entry.columnEnglishName || '(빈값)',
 					tableEnglishName: entry.tableEnglishName || ''
 				});
+				issues.push({
+					id: entry.id,
+					columnEnglishName: entry.columnEnglishName || '(빈값)',
+					tableEnglishName: entry.tableEnglishName || '',
+					code: 'COLUMN_NAME_EMPTY',
+					message: 'columnEnglishName 값이 비어 있어 용어 매핑을 수행할 수 없습니다.',
+					severity: 'error'
+				});
 				return entry;
 			}
 
-			const key = entry.columnEnglishName.toLowerCase().trim();
+			const key = normalizeKey(entry.columnEnglishName);
 			const mappedTerm = termMap.get(key);
 
 			if (mappedTerm) {
@@ -230,7 +291,7 @@ export async function POST({ request }: RequestEvent) {
 						hasChanged = true;
 					}
 
-					const domainSpec = domainMap.get(mappedDomainName.toLowerCase());
+					const domainSpec = domainMap.get(normalizeKey(mappedDomainName));
 					if (domainSpec) {
 						matchedDomain += 1;
 
@@ -254,13 +315,58 @@ export async function POST({ request }: RequestEvent) {
 						}
 					} else {
 						unmatchedDomain += 1;
+						issues.push({
+							id: entry.id,
+							columnEnglishName: entry.columnEnglishName,
+							tableEnglishName: entry.tableEnglishName || '',
+							code: 'DOMAIN_NOT_FOUND',
+							message: `도메인 '${mappedDomainName}'을(를) domain 파일에서 찾지 못했습니다.`,
+							severity: 'warning'
+						});
 					}
 				} else {
 					unmatchedDomain += 1;
+					issues.push({
+						id: entry.id,
+						columnEnglishName: entry.columnEnglishName,
+						tableEnglishName: entry.tableEnglishName || '',
+						code: 'TERM_DOMAIN_EMPTY',
+						message: '매핑된 term 항목에 domainName이 비어 있습니다.',
+						severity: 'warning'
+					});
 				}
 
 				if (hasChanged) {
 					updated += 1;
+					const changedFields: string[] = [];
+					if (nextEntry.columnKoreanName !== entry.columnKoreanName) changedFields.push('columnKoreanName');
+					if (nextEntry.domainName !== entry.domainName) changedFields.push('domainName');
+					if (nextEntry.dataType !== entry.dataType) changedFields.push('dataType');
+					if (nextEntry.dataLength !== entry.dataLength) changedFields.push('dataLength');
+					if (nextEntry.dataDecimalLength !== entry.dataDecimalLength)
+						changedFields.push('dataDecimalLength');
+					changes.push({
+						id: entry.id,
+						columnEnglishName: entry.columnEnglishName,
+						tableEnglishName: entry.tableEnglishName || '',
+						owner: 'column/sync-term',
+						reason: 'term.columnName 및 domain 표준에 맞춰 컬럼 표준 필드를 보정했습니다.',
+						before: {
+							columnKoreanName: entry.columnKoreanName,
+							domainName: entry.domainName,
+							dataType: entry.dataType,
+							dataLength: entry.dataLength,
+							dataDecimalLength: entry.dataDecimalLength
+						},
+						after: {
+							columnKoreanName: nextEntry.columnKoreanName,
+							domainName: nextEntry.domainName,
+							dataType: nextEntry.dataType,
+							dataLength: nextEntry.dataLength,
+							dataDecimalLength: nextEntry.dataDecimalLength
+						},
+						changedFields
+					});
 					nextEntry.updatedAt = now;
 				}
 
@@ -272,12 +378,20 @@ export async function POST({ request }: RequestEvent) {
 					columnEnglishName: entry.columnEnglishName,
 					tableEnglishName: entry.tableEnglishName || ''
 				});
+				issues.push({
+					id: entry.id,
+					columnEnglishName: entry.columnEnglishName,
+					tableEnglishName: entry.tableEnglishName || '',
+					code: 'TERM_NOT_FOUND',
+					message: `columnEnglishName '${entry.columnEnglishName}'과 일치하는 term.columnName을 찾지 못했습니다.`,
+					severity: 'error'
+				});
 				return entry;
 			}
 		});
 
-		// 변경된 데이터 저장
-		if (updated > 0) {
+		// 적용 모드일 때만 저장
+		if (apply && updated > 0) {
 			const finalData: ColumnData = {
 				...columnData,
 				entries: syncedEntries,
@@ -297,14 +411,22 @@ export async function POST({ request }: RequestEvent) {
 			unmatchedDomain,
 			updated,
 			total: columnData.entries.length,
-			unmatchedColumns: unmatchedColumns.slice(0, 100) // 최대 100개만 반환
+			unmatchedColumns: unmatchedColumns.slice(0, 100), // 최대 100개만 반환
+			issues: issues.slice(0, 100)
 		};
 
 		return json(
 			{
 				success: true,
-				data: result,
-				message: `용어 매핑 동기화가 완료되었습니다. 매핑됨: ${matched}, 미매핑: ${unmatched}, 업데이트: ${updated}`
+				data: {
+					...result,
+					mode: apply ? 'apply' : 'preview',
+					applied: apply,
+					changes: changes.slice(0, 100)
+				},
+				message: apply
+					? `용어 매핑 동기화가 완료되었습니다. 매핑됨: ${matched}, 미매핑: ${unmatched}, 업데이트: ${updated}`
+					: `용어 매핑 동기화 미리보기입니다. 매핑됨: ${matched}, 미매핑: ${unmatched}, 업데이트 예정: ${updated}`
 			} as DbDesignApiResponse,
 			{ status: 200 }
 		);
@@ -345,7 +467,7 @@ export async function GET({ url }: RequestEvent) {
 		const termMap = new Map<string, TermEntry>();
 		termData.entries.forEach((entry) => {
 			if (entry.columnName) {
-				termMap.set(entry.columnName.toLowerCase().trim(), entry);
+				termMap.set(normalizeKey(entry.columnName), entry);
 			}
 		});
 
@@ -353,7 +475,7 @@ export async function GET({ url }: RequestEvent) {
 		const domainMap = new Set<string>();
 		domainData.entries.forEach((entry) => {
 			if (entry.standardDomainName) {
-				domainMap.add(entry.standardDomainName.toLowerCase().trim());
+				domainMap.add(normalizeKey(entry.standardDomainName));
 			}
 		});
 
@@ -361,6 +483,7 @@ export async function GET({ url }: RequestEvent) {
 		let unmatched = 0;
 		let matchedDomain = 0;
 		let unmatchedDomain = 0;
+		const issues: ColumnSyncIssue[] = [];
 		const unmatchedColumns: Array<{
 			id: string;
 			columnEnglishName: string;
@@ -375,19 +498,37 @@ export async function GET({ url }: RequestEvent) {
 					columnEnglishName: entry.columnEnglishName || '(빈값)',
 					tableEnglishName: entry.tableEnglishName || ''
 				});
+				issues.push({
+					id: entry.id,
+					columnEnglishName: entry.columnEnglishName || '(빈값)',
+					tableEnglishName: entry.tableEnglishName || '',
+					code: 'COLUMN_NAME_EMPTY',
+					message: 'columnEnglishName 값이 비어 있어 용어 매핑을 수행할 수 없습니다.',
+					severity: 'error'
+				});
 				return;
 			}
 
-			const key = entry.columnEnglishName.toLowerCase().trim();
+			const key = normalizeKey(entry.columnEnglishName);
 			const mappedTerm = termMap.get(key);
 			if (mappedTerm) {
 				matched += 1;
 
-				const mappedDomainName = mappedTerm.domainName?.toLowerCase().trim();
+				const mappedDomainName = normalizeKey(mappedTerm.domainName);
 				if (mappedDomainName && domainMap.has(mappedDomainName)) {
 					matchedDomain += 1;
 				} else {
 					unmatchedDomain += 1;
+					issues.push({
+						id: entry.id,
+						columnEnglishName: entry.columnEnglishName,
+						tableEnglishName: entry.tableEnglishName || '',
+						code: mappedDomainName ? 'DOMAIN_NOT_FOUND' : 'TERM_DOMAIN_EMPTY',
+						message: mappedDomainName
+							? `도메인 '${mappedDomainName}'을(를) domain 파일에서 찾지 못했습니다.`
+							: '매핑된 term 항목에 domainName이 비어 있습니다.',
+						severity: 'warning'
+					});
 				}
 			} else {
 				unmatched += 1;
@@ -395,6 +536,14 @@ export async function GET({ url }: RequestEvent) {
 					id: entry.id,
 					columnEnglishName: entry.columnEnglishName,
 					tableEnglishName: entry.tableEnglishName || ''
+				});
+				issues.push({
+					id: entry.id,
+					columnEnglishName: entry.columnEnglishName,
+					tableEnglishName: entry.tableEnglishName || '',
+					code: 'TERM_NOT_FOUND',
+					message: `columnEnglishName '${entry.columnEnglishName}'과 일치하는 term.columnName을 찾지 못했습니다.`,
+					severity: 'error'
 				});
 			}
 		});
@@ -413,7 +562,8 @@ export async function GET({ url }: RequestEvent) {
 					total: columnData.entries.length,
 					termCount: termData.entries.length,
 					domainCount: domainData.entries.length,
-					unmatchedColumns: unmatchedColumns.slice(0, 100)
+					unmatchedColumns: unmatchedColumns.slice(0, 100),
+					issues: issues.slice(0, 100)
 				},
 				message: '매핑 상태 조회 완료'
 			} as DbDesignApiResponse,

@@ -5,6 +5,7 @@ import type {
 	RelationSyncSuggestion
 } from '$lib/types/design-relation.js';
 import type { MappingContext } from '$lib/types/erd-mapping.js';
+import { buildCompositeKey, normalizeKey } from '$lib/utils/mapping-key.js';
 
 type TablePatch = Partial<Pick<TableEntry, 'relatedEntityName'>>;
 type ColumnPatch = Partial<Pick<ColumnEntry, 'schemaName' | 'tableEnglishName' | 'relatedEntityName'>>;
@@ -22,13 +23,6 @@ export interface DesignRelationSyncPlan {
 	preview: DesignRelationSyncPreview;
 }
 
-function normalize(value: string | undefined | null): string {
-	if (!value) return '';
-	const v = value.trim();
-	if (v === '' || v === '-') return '';
-	return v.toLowerCase();
-}
-
 function addMapValue<T>(map: Map<string, T[]>, key: string, value: T): void {
 	const prev = map.get(key);
 	if (prev) {
@@ -43,12 +37,12 @@ function buildAttributeColumnSuggestions(context: MappingContext): RelationSyncS
 	const exactKeySet = new Set<string>();
 
 	for (const column of context.columns) {
-		const schema = normalize(column.schemaName);
-		const entity = normalize(column.relatedEntityName);
-		const columnKorean = normalize(column.columnKoreanName);
+		const schema = normalizeKey(column.schemaName, { emptyLikeDash: true });
+		const entity = normalizeKey(column.relatedEntityName, { emptyLikeDash: true });
+		const columnKorean = normalizeKey(column.columnKoreanName, { emptyLikeDash: true });
 		if (!schema || !entity) continue;
 
-		const entityKey = `${schema}|${entity}`;
+		const entityKey = buildCompositeKey([schema, entity]);
 		addMapValue(bySchemaEntity, entityKey, column);
 
 		if (columnKorean) {
@@ -59,19 +53,19 @@ function buildAttributeColumnSuggestions(context: MappingContext): RelationSyncS
 	const suggestions: RelationSyncSuggestion[] = [];
 
 	for (const attribute of context.attributes) {
-		const schema = normalize(attribute.schemaName);
-		const entity = normalize(attribute.entityName);
-		const attrName = normalize(attribute.attributeName);
+		const schema = normalizeKey(attribute.schemaName, { emptyLikeDash: true });
+		const entity = normalizeKey(attribute.entityName, { emptyLikeDash: true });
+		const attrName = normalizeKey(attribute.attributeName, { emptyLikeDash: true });
 		if (!schema || !entity || !attrName) continue;
 
-		const exactKey = `${schema}|${entity}|${attrName}`;
+		const exactKey = buildCompositeKey([schema, entity, attrName]);
 		if (exactKeySet.has(exactKey)) {
 			continue;
 		}
 
-		const candidates = (bySchemaEntity.get(`${schema}|${entity}`) || [])
+		const candidates = (bySchemaEntity.get(buildCompositeKey([schema, entity])) || [])
 			.filter((column) => {
-				const colName = normalize(column.columnKoreanName);
+				const colName = normalizeKey(column.columnKoreanName, { emptyLikeDash: true });
 				return colName !== '' && (colName.includes(attrName) || attrName.includes(colName));
 			})
 			.slice(0, 3)
@@ -102,15 +96,15 @@ export function buildDesignRelationSyncPlan(context: MappingContext): DesignRela
 	const entityBySchemaKorean = new Map<string, MappingContext['entities'][number][]>();
 
 	for (const entity of context.entities) {
-		const schema = normalize(entity.schemaName);
-		const entityName = normalize(entity.entityName);
-		const tableKoreanName = normalize(entity.tableKoreanName);
+		const schema = normalizeKey(entity.schemaName, { emptyLikeDash: true });
+		const entityName = normalizeKey(entity.entityName, { emptyLikeDash: true });
+		const tableKoreanName = normalizeKey(entity.tableKoreanName, { emptyLikeDash: true });
 
 		if (schema && entityName) {
-			entityBySchemaName.set(`${schema}|${entityName}`, entity);
+			entityBySchemaName.set(buildCompositeKey([schema, entityName]), entity);
 		}
 		if (schema && tableKoreanName) {
-			addMapValue(entityBySchemaKorean, `${schema}|${tableKoreanName}`, entity);
+			addMapValue(entityBySchemaKorean, buildCompositeKey([schema, tableKoreanName]), entity);
 		}
 	}
 
@@ -119,27 +113,27 @@ export function buildDesignRelationSyncPlan(context: MappingContext): DesignRela
 	const changes: RelationSyncChange[] = [];
 
 	for (const table of context.tables) {
-		const schema = normalize(table.schemaName);
+		const schema = normalizeKey(table.schemaName, { emptyLikeDash: true });
 		if (!schema) continue;
 
-		const relatedEntity = normalize(table.relatedEntityName);
-		const tableKorean = normalize(table.tableKoreanName);
+		const relatedEntity = normalizeKey(table.relatedEntityName, { emptyLikeDash: true });
+		const tableKorean = normalizeKey(table.tableKoreanName, { emptyLikeDash: true });
 
 		let canonicalEntityName: string | undefined;
 		let reason = '';
 
 		if (relatedEntity) {
-			if (entityBySchemaName.has(`${schema}|${relatedEntity}`)) {
+			if (entityBySchemaName.has(buildCompositeKey([schema, relatedEntity]))) {
 				continue;
 			}
 
-			const byKorean = entityBySchemaKorean.get(`${schema}|${relatedEntity}`) || [];
+			const byKorean = entityBySchemaKorean.get(buildCompositeKey([schema, relatedEntity])) || [];
 			if (byKorean.length === 1 && byKorean[0].entityName) {
 				canonicalEntityName = byKorean[0].entityName;
 				reason = 'relatedEntityName이 엔터티 한글명과 일치하여 엔터티명으로 보정';
 			}
 		} else if (tableKorean) {
-			const byTableName = entityBySchemaKorean.get(`${schema}|${tableKorean}`) || [];
+			const byTableName = entityBySchemaKorean.get(buildCompositeKey([schema, tableKorean])) || [];
 			if (byTableName.length === 1 && byTableName[0].entityName) {
 				canonicalEntityName = byTableName[0].entityName;
 				reason = 'tableKoreanName과 일치하는 엔터티를 찾아 relatedEntityName을 보정';
@@ -180,31 +174,31 @@ export function buildDesignRelationSyncPlan(context: MappingContext): DesignRela
 	const tableBySchemaRelatedEntity = new Map<string, TableEntry[]>();
 
 	for (const table of effectiveTables) {
-		const schema = normalize(table.schemaName);
-		const tableEnglish = normalize(table.tableEnglishName);
-		const tableKorean = normalize(table.tableKoreanName);
-		const relatedEntity = normalize(table.relatedEntityName);
+		const schema = normalizeKey(table.schemaName, { emptyLikeDash: true });
+		const tableEnglish = normalizeKey(table.tableEnglishName, { emptyLikeDash: true });
+		const tableKorean = normalizeKey(table.tableKoreanName, { emptyLikeDash: true });
+		const relatedEntity = normalizeKey(table.relatedEntityName, { emptyLikeDash: true });
 
 		if (schema && tableEnglish) {
-			tableBySchemaEnglish.set(`${schema}|${tableEnglish}`, table);
+			tableBySchemaEnglish.set(buildCompositeKey([schema, tableEnglish]), table);
 		}
 		if (schema && tableKorean) {
-			addMapValue(tableBySchemaKorean, `${schema}|${tableKorean}`, table);
+			addMapValue(tableBySchemaKorean, buildCompositeKey([schema, tableKorean]), table);
 		}
 		if (tableEnglish) {
 			addMapValue(tableByEnglish, tableEnglish, table);
 		}
 		if (schema && relatedEntity) {
-			addMapValue(tableBySchemaRelatedEntity, `${schema}|${relatedEntity}`, table);
+			addMapValue(tableBySchemaRelatedEntity, buildCompositeKey([schema, relatedEntity]), table);
 		}
 	}
 
 	for (const column of context.columns) {
-		const schema = normalize(column.schemaName);
-		const tableEnglish = normalize(column.tableEnglishName);
-		const relatedEntity = normalize(column.relatedEntityName);
+		const schema = normalizeKey(column.schemaName, { emptyLikeDash: true });
+		const tableEnglish = normalizeKey(column.tableEnglishName, { emptyLikeDash: true });
+		const relatedEntity = normalizeKey(column.relatedEntityName, { emptyLikeDash: true });
 
-		if (schema && tableEnglish && tableBySchemaEnglish.has(`${schema}|${tableEnglish}`)) {
+		if (schema && tableEnglish && tableBySchemaEnglish.has(buildCompositeKey([schema, tableEnglish]))) {
 			continue;
 		}
 
@@ -212,7 +206,7 @@ export function buildDesignRelationSyncPlan(context: MappingContext): DesignRela
 		let reason = '';
 
 		if (schema && tableEnglish) {
-			const byKorean = tableBySchemaKorean.get(`${schema}|${tableEnglish}`) || [];
+			const byKorean = tableBySchemaKorean.get(buildCompositeKey([schema, tableEnglish])) || [];
 			if (byKorean.length === 1) {
 				matchedTable = byKorean[0];
 				reason = '컬럼 tableEnglishName이 테이블 한글명으로 입력되어 영문명으로 보정';
@@ -228,7 +222,8 @@ export function buildDesignRelationSyncPlan(context: MappingContext): DesignRela
 		}
 
 		if (!matchedTable && schema && relatedEntity) {
-			const byEntity = tableBySchemaRelatedEntity.get(`${schema}|${relatedEntity}`) || [];
+			const byEntity =
+				tableBySchemaRelatedEntity.get(buildCompositeKey([schema, relatedEntity])) || [];
 			if (byEntity.length === 1) {
 				matchedTable = byEntity[0];
 				reason = 'schema+relatedEntityName 단일 매칭으로 tableEnglishName을 보정';

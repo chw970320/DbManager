@@ -146,7 +146,10 @@ async function runRelationSync(params: RelationSyncParams) {
 			appliedColumnUpdates,
 			appliedTotalUpdates: appliedTableUpdates + appliedColumnUpdates
 		},
-		changes: syncPlan.preview.changes.slice(0, 200),
+		changes: syncPlan.preview.changes.slice(0, 200).map((change) => ({
+			...change,
+			owner: 'erd/relations/sync' as const
+		})),
 		suggestions: syncPlan.preview.suggestions.slice(0, 100),
 		validationBefore,
 		validationAfter

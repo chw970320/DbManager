@@ -76,6 +76,7 @@ import {
 } from '$lib/registry/cache-registry';
 
 import { resolveRelatedFilenames } from '$lib/registry/mapping-registry';
+import { normalizeKey } from '$lib/utils/mapping-key.js';
 
 /**
  * 용어 매핑 검증 로직 (업로드 API와 동일)
@@ -102,10 +103,10 @@ function checkTermMapping(
 	const isMappedTerm =
 		termParts.length > 0 &&
 		termParts.every((part) => {
-			const partLower = part.toLowerCase();
+			const partLower = normalizeKey(part);
 			// 정확히 일치하거나 부분 일치하는지 확인
 			for (const [key, value] of vocabularyMap.entries()) {
-				if (key === partLower || value.standardName.toLowerCase() === partLower) {
+				if (key === partLower || normalizeKey(value.standardName) === partLower) {
 					return true;
 				}
 			}
@@ -122,10 +123,10 @@ function checkTermMapping(
 	const isMappedColumn =
 		columnParts.length > 0 &&
 		columnParts.every((part) => {
-			const partLower = part.toLowerCase();
+			const partLower = normalizeKey(part);
 			// 정확히 일치하거나 부분 일치하는지 확인
 			for (const [key, value] of vocabularyMap.entries()) {
-				if (key === partLower || value.abbreviation.toLowerCase() === partLower) {
+				if (key === partLower || normalizeKey(value.abbreviation) === partLower) {
 					return true;
 				}
 			}
@@ -134,7 +135,7 @@ function checkTermMapping(
 		});
 
 	// 도메인명 매핑: 도메인의 standardDomainName과 정확히 일치하는지 확인
-	const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
+	const isMappedDomain = domainMap.has(normalizeKey(domainName));
 
 	return {
 		isMappedTerm,
@@ -149,10 +150,20 @@ function checkTermMapping(
  * 용어 매핑 동기화 API
  * POST /api/term/sync
  */
-export async function POST({ request }: RequestEvent) {
+export async function POST({ request, url }: RequestEvent) {
 	try {
 		const body = await request.json();
-		const { filename = 'term.json' } = body;
+		const { filename = 'term.json', apply: applyFromBody } = body as {
+			filename?: string;
+			apply?: boolean;
+		};
+		const applyQuery = url.searchParams.get('apply');
+		const apply =
+			typeof applyFromBody === 'boolean'
+				? applyFromBody
+				: applyQuery === null
+					? true
+					: !['false', '0', 'no'].includes(applyQuery.toLowerCase());
 
 		// 용어 데이터 로드
 		const termData = await loadData('term', filename);
@@ -170,8 +181,8 @@ export async function POST({ request }: RequestEvent) {
 		// 단어집 맵 생성
 		const vocabularyMap = new Map<string, { standardName: string; abbreviation: string }>();
 		vocabularyData.entries.forEach((vocabEntry) => {
-			const standardNameKey = vocabEntry.standardName.trim().toLowerCase();
-			const abbreviationKey = vocabEntry.abbreviation.trim().toLowerCase();
+			const standardNameKey = normalizeKey(vocabEntry.standardName);
+			const abbreviationKey = normalizeKey(vocabEntry.abbreviation);
 			vocabularyMap.set(standardNameKey, {
 				standardName: vocabEntry.standardName,
 				abbreviation: vocabEntry.abbreviation
@@ -185,7 +196,7 @@ export async function POST({ request }: RequestEvent) {
 		// 도메인 맵 생성
 		const domainMap = new Map<string, string>();
 		domainData.entries.forEach((domainEntry) => {
-			const key = domainEntry.standardDomainName.trim().toLowerCase();
+			const key = normalizeKey(domainEntry.standardDomainName);
 			domainMap.set(key, domainEntry.standardDomainName);
 		});
 
@@ -194,6 +205,23 @@ export async function POST({ request }: RequestEvent) {
 		let matchedTerm = 0;
 		let matchedColumn = 0;
 		let matchedDomain = 0;
+		const changes: Array<{
+			id: string;
+			termName: string;
+			columnName: string;
+			owner: 'term/sync';
+			reason: string;
+			before: {
+				isMappedTerm: boolean;
+				isMappedColumn: boolean;
+				isMappedDomain: boolean;
+			};
+			after: {
+				isMappedTerm: boolean;
+				isMappedColumn: boolean;
+				isMappedDomain: boolean;
+			};
+		}> = [];
 
 		const now = new Date().toISOString();
 		const syncedEntries: TermEntry[] = termData.entries.map((entry) => {
@@ -217,6 +245,23 @@ export async function POST({ request }: RequestEvent) {
 
 			if (hasChanged) {
 				updated += 1;
+				changes.push({
+					id: entry.id,
+					termName: entry.termName,
+					columnName: entry.columnName,
+					owner: 'term/sync',
+					reason: '단어집/도메인 기준으로 용어 매핑 상태를 재계산했습니다.',
+					before: {
+						isMappedTerm: !!entry.isMappedTerm,
+						isMappedColumn: !!entry.isMappedColumn,
+						isMappedDomain: !!entry.isMappedDomain
+					},
+					after: {
+						isMappedTerm: mappingResult.isMappedTerm,
+						isMappedColumn: mappingResult.isMappedColumn,
+						isMappedDomain: mappingResult.isMappedDomain
+					}
+				});
 			}
 
 			if (mappingResult.isMappedTerm) matchedTerm += 1;
@@ -238,26 +283,33 @@ export async function POST({ request }: RequestEvent) {
 			};
 		});
 
-		// 저장
-		const finalData: TermData = {
-			...termData,
-			entries: syncedEntries,
-			lastUpdated: new Date().toISOString()
-		};
-		await saveData('term', finalData, filename);
+		// 적용 모드일 때만 저장
+		if (apply) {
+			const finalData: TermData = {
+				...termData,
+				entries: syncedEntries,
+				lastUpdated: new Date().toISOString()
+			};
+			await saveData('term', finalData, filename);
+		}
 
 		return json(
 			{
 				success: true,
 				data: {
+					mode: apply ? 'apply' : 'preview',
+					applied: apply,
 					filename,
 					updated,
 					matchedTerm,
 					matchedColumn,
 					matchedDomain,
-					total: termData.entries.length
+					total: termData.entries.length,
+					changes: changes.slice(0, 100)
 				},
-				message: '용어 매핑 동기화가 완료되었습니다.'
+				message: apply
+					? '용어 매핑 동기화가 완료되었습니다.'
+					: '용어 매핑 동기화 미리보기 결과입니다.'
 			} as ApiResponse,
 			{ status: 200 }
 		);

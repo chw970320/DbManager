@@ -77,6 +77,45 @@ import {
 
 import { generateStandardDomainName, validateDomainNameUniqueness } from '$lib/utils/validation.js';
 
+type ValidationIssue = {
+	type: string;
+	code: string;
+	message: string;
+	field?: string;
+	priority: number;
+};
+
+const ERROR_PRIORITY: Record<string, number> = {
+	REQUIRED_FIELD: 1,
+	DOMAIN_NAME_DUPLICATE: 2
+};
+
+function sortByPriority(errors: ValidationIssue[]): ValidationIssue[] {
+	return [...errors].sort((a, b) => a.priority - b.priority);
+}
+
+function buildFailResponse(
+	errors: ValidationIssue[],
+	status: number,
+	generatedDomainName?: string
+): Response {
+	const sorted = sortByPriority(errors);
+	const primaryError = sorted[0];
+	return json(
+		{
+			success: false,
+			error: primaryError?.message || 'Validation failed',
+			message: `Validation failed: ${primaryError?.type || 'UNKNOWN'}`,
+			data: {
+				generatedDomainName,
+				errors: sorted,
+				errorCount: sorted.length
+			}
+		} as DomainApiResponse,
+		{ status }
+	);
+}
+
 /**
  * 도메인 validation API
  * POST /api/domain/validate
@@ -91,24 +130,32 @@ export async function POST({ request, url }: RequestEvent) {
 
 		// 필수 필드 검증
 		if (!domainCategory || typeof domainCategory !== 'string' || !domainCategory.trim()) {
-			return json(
-				{
-					success: false,
-					error: '도메인 분류명이 필요합니다.',
-					message: 'Missing domainCategory'
-				} as DomainApiResponse,
-				{ status: 400 }
+			return buildFailResponse(
+				[
+					{
+						type: 'REQUIRED_FIELD',
+						code: 'REQUIRED_FIELD',
+						message: '도메인 분류명이 필요합니다.',
+						field: 'domainCategory',
+						priority: ERROR_PRIORITY.REQUIRED_FIELD
+					}
+				],
+				400
 			);
 		}
 
 		if (!physicalDataType || typeof physicalDataType !== 'string' || !physicalDataType.trim()) {
-			return json(
-				{
-					success: false,
-					error: '물리 데이터타입이 필요합니다.',
-					message: 'Missing physicalDataType'
-				} as DomainApiResponse,
-				{ status: 400 }
+			return buildFailResponse(
+				[
+					{
+						type: 'REQUIRED_FIELD',
+						code: 'REQUIRED_FIELD',
+						message: '물리 데이터타입이 필요합니다.',
+						field: 'physicalDataType',
+						priority: ERROR_PRIORITY.REQUIRED_FIELD
+					}
+				],
+				400
 			);
 		}
 
@@ -129,13 +176,18 @@ export async function POST({ request, url }: RequestEvent) {
 
 			const uniquenessError = validateDomainNameUniqueness(generatedDomainName, allDomainEntries);
 			if (uniquenessError) {
-				return json(
-					{
-						success: false,
-						error: uniquenessError,
-						message: 'Duplicate domain name'
-					} as DomainApiResponse,
-					{ status: 409 }
+				return buildFailResponse(
+					[
+						{
+							type: 'DOMAIN_NAME_DUPLICATE',
+							code: 'DOMAIN_NAME_DUPLICATE',
+							message: uniquenessError,
+							field: 'standardDomainName',
+							priority: ERROR_PRIORITY.DOMAIN_NAME_DUPLICATE
+						}
+					],
+					409,
+					generatedDomainName
 				);
 			}
 		} catch (validationError) {
@@ -147,7 +199,12 @@ export async function POST({ request, url }: RequestEvent) {
 		return json(
 			{
 				success: true,
-				message: 'Validation passed'
+				message: 'Validation passed',
+				data: {
+					generatedDomainName,
+					errors: [],
+					errorCount: 0
+				}
 			} as DomainApiResponse,
 			{ status: 200 }
 		);

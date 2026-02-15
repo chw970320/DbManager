@@ -171,17 +171,24 @@
 							body: JSON.stringify({
 								standardName,
 								abbreviation: formData.abbreviation.trim(),
-								entryId: entry.id // 수정 모드인 경우 현재 entry ID 전달
-							})
-						}
-					);
+							entryId: entry.id // 수정 모드인 경우 현재 entry ID 전달
+						})
+					}
+				);
 
-					if (validationResponse.ok) {
-						const validationResult = await validationResponse.json();
-						if (!validationResult.success) {
-							if (validationResult.error) {
-								validationErrors.push(validationResult.error);
+					const validationResult = await validationResponse.json().catch(() => null);
+					if (!validationResponse.ok || !validationResult?.success) {
+						const apiErrors = validationResult?.data?.errors;
+						if (Array.isArray(apiErrors) && apiErrors.length > 0) {
+							for (const issue of apiErrors) {
+								if (issue?.message) {
+									validationErrors.push(issue.message);
+								}
 							}
+						} else if (validationResult?.error) {
+							validationErrors.push(validationResult.error);
+						} else {
+							validationErrors.push('단어 검증에 실패했습니다.');
 						}
 					}
 				} catch (validationErr) {

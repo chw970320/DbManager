@@ -18,6 +18,7 @@ import type {
 } from '$lib/types/registry';
 import { DEFAULT_MAPPING_RELATIONS } from '$lib/types/registry';
 import { safeWriteFile, safeReadFile } from '$lib/utils/file-lock';
+import { buildCompositeKey, normalizeKey, splitUnderscoreParts } from '$lib/utils/mapping-key';
 
 // ============================================================================
 // 레지스트리 파일 경로
@@ -504,21 +505,31 @@ interface EntryReferenceChecker {
 	) => { count: number; entries: Array<{ id: string; name: string }> };
 }
 
+function toRefEntry(entry: { id?: string; name?: string; label?: string }): { id: string; name: string } {
+	return {
+		id: entry.id || '(unknown)',
+		name: entry.name || entry.label || entry.id || '(unknown)'
+	};
+}
+
 const ENTRY_REFERENCE_CHECKERS: EntryReferenceChecker[] = [
 	// vocabulary → term: term.termName/columnName 파트에 standardName/abbreviation 포함 여부
 	{
 		sourceType: 'vocabulary',
 		targetType: 'term',
 		check: (vocabEntry, termEntries) => {
-			const standardNameLower = vocabEntry.standardName?.toLowerCase() || '';
-			const abbreviationLower = vocabEntry.abbreviation?.toLowerCase() || '';
+			const standardNameLower = normalizeKey(vocabEntry.standardName);
+			const abbreviationLower = normalizeKey(vocabEntry.abbreviation);
+			if (!standardNameLower && !abbreviationLower) {
+				return { count: 0, entries: [] };
+			}
 
 			const refs = termEntries.filter((term) => {
-				const termParts = (term.termName || '').toLowerCase().split('_');
+				const termParts = splitUnderscoreParts(term.termName);
 				const hasTermNameRef = termParts.some(
 					(part: string) => part === standardNameLower || part === abbreviationLower
 				);
-				const columnParts = (term.columnName || '').toLowerCase().split('_');
+				const columnParts = splitUnderscoreParts(term.columnName);
 				const hasColumnRef = columnParts.some(
 					(part: string) => part === standardNameLower || part === abbreviationLower
 				);
@@ -527,10 +538,11 @@ const ENTRY_REFERENCE_CHECKERS: EntryReferenceChecker[] = [
 
 			return {
 				count: refs.length,
-				entries: refs.slice(0, 5).map((t: { id: string; termName: string }) => ({
-					id: t.id,
-					name: t.termName
-				}))
+				entries: refs
+					.slice(0, 5)
+					.map((t: { id?: string; termName?: string }) =>
+						toRefEntry({ id: t.id, name: t.termName })
+					)
 			};
 		}
 	},
@@ -539,22 +551,24 @@ const ENTRY_REFERENCE_CHECKERS: EntryReferenceChecker[] = [
 		sourceType: 'domain',
 		targetType: 'vocabulary',
 		check: (domainEntry, vocabEntries) => {
-			const domainCategoryLower = domainEntry.domainCategory?.toLowerCase() || '';
+			const domainCategoryLower = normalizeKey(domainEntry.domainCategory);
+			if (!domainCategoryLower) {
+				return { count: 0, entries: [] };
+			}
 
 			const refs = vocabEntries.filter(
 				(vocab) =>
 					vocab.isDomainCategoryMapped &&
-					vocab.domainCategory?.toLowerCase() === domainCategoryLower
+					normalizeKey(vocab.domainCategory) === domainCategoryLower
 			);
 
 			return {
 				count: refs.length,
 				entries: refs
 					.slice(0, 5)
-					.map((v: { id: string; standardName: string }) => ({
-						id: v.id,
-						name: v.standardName
-					}))
+					.map((v: { id?: string; standardName?: string }) =>
+						toRefEntry({ id: v.id, name: v.standardName })
+					)
 			};
 		}
 	},
@@ -563,18 +577,260 @@ const ENTRY_REFERENCE_CHECKERS: EntryReferenceChecker[] = [
 		sourceType: 'domain',
 		targetType: 'term',
 		check: (domainEntry, termEntries) => {
-			const domainNameLower = domainEntry.standardDomainName?.toLowerCase() || '';
+			const domainNameLower = normalizeKey(domainEntry.standardDomainName);
+			if (!domainNameLower) {
+				return { count: 0, entries: [] };
+			}
 
 			const refs = termEntries.filter(
-				(term) => (term.domainName || '').toLowerCase() === domainNameLower
+				(term) => normalizeKey(term.domainName) === domainNameLower
 			);
 
 			return {
 				count: refs.length,
-				entries: refs.slice(0, 5).map((t: { id: string; termName: string }) => ({
-					id: t.id,
-					name: t.termName
-				}))
+				entries: refs
+					.slice(0, 5)
+					.map((t: { id?: string; termName?: string }) =>
+						toRefEntry({ id: t.id, name: t.termName })
+					)
+			};
+		}
+	},
+	// domain → column: column.domainName === domain.standardDomainName
+	{
+		sourceType: 'domain',
+		targetType: 'column',
+		check: (domainEntry, columnEntries) => {
+			const domainNameLower = normalizeKey(domainEntry.standardDomainName);
+			if (!domainNameLower) {
+				return { count: 0, entries: [] };
+			}
+
+			const refs = columnEntries.filter(
+				(column) => normalizeKey(column.domainName) === domainNameLower
+			);
+
+			return {
+				count: refs.length,
+				entries: refs.slice(0, 5).map((c: { id?: string; columnEnglishName?: string }) =>
+					toRefEntry({ id: c.id, name: c.columnEnglishName })
+				)
+			};
+		}
+	},
+	// term → column: column.columnEnglishName === term.columnName
+	{
+		sourceType: 'term',
+		targetType: 'column',
+		check: (termEntry, columnEntries) => {
+			const columnName = normalizeKey(termEntry.columnName);
+			if (!columnName) {
+				return { count: 0, entries: [] };
+			}
+
+			const refs = columnEntries.filter(
+				(column) => normalizeKey(column.columnEnglishName) === columnName
+			);
+
+			return {
+				count: refs.length,
+				entries: refs.slice(0, 5).map((c: { id?: string; columnEnglishName?: string }) =>
+					toRefEntry({ id: c.id, name: c.columnEnglishName })
+				)
+			};
+		}
+	},
+	// database → entity: entity.logicalDbName === database.logicalDbName
+	{
+		sourceType: 'database',
+		targetType: 'entity',
+		check: (databaseEntry, entityEntries) => {
+			const logicalDbName = normalizeKey(databaseEntry.logicalDbName);
+			if (!logicalDbName) {
+				return { count: 0, entries: [] };
+			}
+
+			const refs = entityEntries.filter(
+				(entity) => normalizeKey(entity.logicalDbName) === logicalDbName
+			);
+
+			return {
+				count: refs.length,
+				entries: refs.slice(0, 5).map((entity: { id?: string; entityName?: string }) =>
+					toRefEntry({ id: entity.id, name: entity.entityName })
+				)
+			};
+		}
+	},
+	// database → table: table.physicalDbName === database.physicalDbName
+	{
+		sourceType: 'database',
+		targetType: 'table',
+		check: (databaseEntry, tableEntries) => {
+			const physicalDbName = normalizeKey(databaseEntry.physicalDbName);
+			if (!physicalDbName) {
+				return { count: 0, entries: [] };
+			}
+
+			const refs = tableEntries.filter(
+				(table) => normalizeKey(table.physicalDbName) === physicalDbName
+			);
+
+			return {
+				count: refs.length,
+				entries: refs.slice(0, 5).map((table: { id?: string; tableEnglishName?: string }) =>
+					toRefEntry({ id: table.id, name: table.tableEnglishName })
+				)
+			};
+		}
+	},
+	// entity → attribute: schema+entityName 매칭
+	{
+		sourceType: 'entity',
+		targetType: 'attribute',
+		check: (entityEntry, attributeEntries) => {
+			const entityKey = buildCompositeKey([entityEntry.schemaName, entityEntry.entityName]);
+			if (!entityKey) {
+				return { count: 0, entries: [] };
+			}
+
+			const refs = attributeEntries.filter(
+				(attribute) =>
+					buildCompositeKey([attribute.schemaName, attribute.entityName]) === entityKey
+			);
+
+			return {
+				count: refs.length,
+				entries: refs.slice(0, 5).map((attr: { id?: string; attributeName?: string }) =>
+					toRefEntry({ id: attr.id, name: attr.attributeName })
+				)
+			};
+		}
+	},
+	// entity → table: schema+relatedEntityName(entityName/tableKoreanName) 매칭
+	{
+		sourceType: 'entity',
+		targetType: 'table',
+		check: (entityEntry, tableEntries) => {
+			const entityNameKey = buildCompositeKey([entityEntry.schemaName, entityEntry.entityName]);
+			const tableKoreanNameKey = buildCompositeKey([
+				entityEntry.schemaName,
+				entityEntry.tableKoreanName
+			]);
+			if (!entityNameKey && !tableKoreanNameKey) {
+				return { count: 0, entries: [] };
+			}
+
+			const refs = tableEntries.filter((table) => {
+				const key = buildCompositeKey([table.schemaName, table.relatedEntityName]);
+				return key !== '' && (key === entityNameKey || key === tableKoreanNameKey);
+			});
+
+			return {
+				count: refs.length,
+				entries: refs.slice(0, 5).map((table: { id?: string; tableEnglishName?: string }) =>
+					toRefEntry({ id: table.id, name: table.tableEnglishName })
+				)
+			};
+		}
+	},
+	// attribute → column: schema+entityName+attributeName 매칭
+	{
+		sourceType: 'attribute',
+		targetType: 'column',
+		check: (attributeEntry, columnEntries) => {
+			const attrKey = buildCompositeKey([
+				attributeEntry.schemaName,
+				attributeEntry.entityName,
+				attributeEntry.attributeName
+			]);
+			if (!attrKey) {
+				return { count: 0, entries: [] };
+			}
+
+			const refs = columnEntries.filter(
+				(column) =>
+					buildCompositeKey([
+						column.schemaName,
+						column.relatedEntityName,
+						column.columnKoreanName
+					]) === attrKey
+			);
+
+			return {
+				count: refs.length,
+				entries: refs.slice(0, 5).map((column: { id?: string; columnEnglishName?: string }) =>
+					toRefEntry({ id: column.id, name: column.columnEnglishName })
+				)
+			};
+		}
+	},
+	// table → column: schema+tableEnglishName 매칭
+	{
+		sourceType: 'table',
+		targetType: 'column',
+		check: (tableEntry, columnEntries) => {
+			const tableKey = buildCompositeKey([tableEntry.schemaName, tableEntry.tableEnglishName]);
+			if (!tableKey) {
+				return { count: 0, entries: [] };
+			}
+
+			const refs = columnEntries.filter(
+				(column) => buildCompositeKey([column.schemaName, column.tableEnglishName]) === tableKey
+			);
+
+			return {
+				count: refs.length,
+				entries: refs.slice(0, 5).map((column: { id?: string; columnEnglishName?: string }) =>
+					toRefEntry({ id: column.id, name: column.columnEnglishName })
+				)
+			};
+		}
+	},
+	// column → attribute: schema+relatedEntityName+columnKoreanName 매칭
+	{
+		sourceType: 'column',
+		targetType: 'attribute',
+		check: (columnEntry, attributeEntries) => {
+			const columnLogicalKey = buildCompositeKey([
+				columnEntry.schemaName,
+				columnEntry.relatedEntityName,
+				columnEntry.columnKoreanName
+			]);
+			if (!columnLogicalKey) {
+				return { count: 0, entries: [] };
+			}
+
+			const refs = attributeEntries.filter(
+				(attr) =>
+					buildCompositeKey([attr.schemaName, attr.entityName, attr.attributeName]) === columnLogicalKey
+			);
+
+			return {
+				count: refs.length,
+				entries: refs.slice(0, 5).map((attr: { id?: string; attributeName?: string }) =>
+					toRefEntry({ id: attr.id, name: attr.attributeName })
+				)
+			};
+		}
+	},
+	// column → term: term.columnName === column.columnEnglishName
+	{
+		sourceType: 'column',
+		targetType: 'term',
+		check: (columnEntry, termEntries) => {
+			const columnName = normalizeKey(columnEntry.columnEnglishName);
+			if (!columnName) {
+				return { count: 0, entries: [] };
+			}
+
+			const refs = termEntries.filter((term) => normalizeKey(term.columnName) === columnName);
+
+			return {
+				count: refs.length,
+				entries: refs.slice(0, 5).map((term: { id?: string; termName?: string }) =>
+					toRefEntry({ id: term.id, name: term.termName })
+				)
 			};
 		}
 	}

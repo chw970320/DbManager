@@ -75,6 +75,7 @@ import {
 	invalidateAllCaches
 } from '$lib/registry/cache-registry';
 
+import { checkEntryReferences } from '$lib/registry/mapping-registry';
 import { validateTermNameSuffix, validateTermNameUniqueness } from '$lib/utils/validation.js';
 
 /**
@@ -667,7 +668,7 @@ export async function POST({ request }: RequestEvent) {
 export async function DELETE({ request }: RequestEvent) {
 	try {
 		const body = await request.json();
-		const { id, filename = 'term.json' } = body;
+		const { id, filename = 'term.json', force = false } = body;
 
 		if (!id) {
 			return json(
@@ -694,6 +695,18 @@ export async function DELETE({ request }: RequestEvent) {
 			);
 		}
 
+		let warnings: unknown[] = [];
+		if (!force) {
+			try {
+				const refCheck = await checkEntryReferences('term', termData.entries[index], filename);
+				if (!refCheck.canDelete && refCheck.references?.length) {
+					warnings = refCheck.references;
+				}
+			} catch (refError) {
+				console.warn('참조 검증 경고 수집 중 오류:', refError);
+			}
+		}
+
 		termData.entries.splice(index, 1);
 		termData.totalCount = termData.entries.length;
 		termData.lastUpdated = new Date().toISOString();
@@ -703,7 +716,8 @@ export async function DELETE({ request }: RequestEvent) {
 
 		return json({
 			success: true,
-			message: 'Term deleted successfully'
+			message: 'Term deleted successfully',
+			warnings
 		} as ApiResponse);
 	} catch (error) {
 		console.error('용어 삭제 중 오류:', error);

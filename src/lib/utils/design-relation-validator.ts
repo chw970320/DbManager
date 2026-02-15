@@ -5,13 +5,7 @@ import type {
 	RelationSpec,
 	RelationValidationSummary
 } from '$lib/types/design-relation.js';
-
-function normalize(value: string | undefined | null): string {
-	if (!value) return '';
-	const v = value.trim();
-	if (v === '' || v === '-') return '';
-	return v.toLowerCase();
-}
+import { buildCompositeKey, normalizeKey } from '$lib/utils/mapping-key.js';
 
 function makeIssue(
 	spec: RelationSpec,
@@ -118,36 +112,49 @@ export function validateDesignRelations(context: MappingContext): DesignRelation
 	}
 
 	const dbLogicalKeySet = new Set(
-		context.databases.map((db) => normalize(db.logicalDbName)).filter((k) => k !== '')
+		context.databases
+			.map((db) => normalizeKey(db.logicalDbName, { emptyLikeDash: true }))
+			.filter((k) => k !== '')
 	);
 	const dbPhysicalKeySet = new Set(
-		context.databases.map((db) => normalize(db.physicalDbName)).filter((k) => k !== '')
+		context.databases
+			.map((db) => normalizeKey(db.physicalDbName, { emptyLikeDash: true }))
+			.filter((k) => k !== '')
 	);
 
 	const entityKeySet = new Set(
 		context.entities
-			.map((entity) => `${normalize(entity.schemaName)}|${normalize(entity.entityName)}`)
-			.filter((k) => !k.startsWith('|') && !k.endsWith('|'))
+			.map((entity) =>
+				buildCompositeKey([entity.schemaName, entity.entityName], { emptyLikeDash: true })
+			)
+			.filter((k) => k !== '')
 	);
 	const entityKoreanKeySet = new Set(
 		context.entities
-			.map((entity) => `${normalize(entity.schemaName)}|${normalize(entity.tableKoreanName)}`)
-			.filter((k) => !k.startsWith('|') && !k.endsWith('|'))
+			.map((entity) =>
+				buildCompositeKey([entity.schemaName, entity.tableKoreanName], { emptyLikeDash: true })
+			)
+			.filter((k) => k !== '')
 	);
 
 	const tableKeySet = new Set(
 		context.tables
-			.map((table) => `${normalize(table.schemaName)}|${normalize(table.tableEnglishName)}`)
-			.filter((k) => !k.startsWith('|') && !k.endsWith('|'))
+			.map((table) =>
+				buildCompositeKey([table.schemaName, table.tableEnglishName], { emptyLikeDash: true })
+			)
+			.filter((k) => k !== '')
 	);
 
 	const columnLogicalKeySet = new Set(
 		context.columns
 			.map(
 				(column) =>
-					`${normalize(column.schemaName)}|${normalize(column.relatedEntityName)}|${normalize(column.columnKoreanName)}`
+					buildCompositeKey(
+						[column.schemaName, column.relatedEntityName, column.columnKoreanName],
+						{ emptyLikeDash: true }
+					)
 			)
-			.filter((k) => !k.startsWith('|') && !k.endsWith('|'))
+			.filter((k) => k !== '')
 	);
 
 	// DB -> Entity
@@ -155,7 +162,7 @@ export function validateDesignRelations(context: MappingContext): DesignRelation
 		const spec = specMap.get('DB_ENTITY')!;
 		const summary = summaryMap.get(spec.id)!;
 		for (const entity of context.entities) {
-			const key = normalize(entity.logicalDbName);
+			const key = normalizeKey(entity.logicalDbName, { emptyLikeDash: true });
 			if (!key) continue;
 			summary.totalChecked += 1;
 			if (dbLogicalKeySet.has(key)) {
@@ -180,7 +187,7 @@ export function validateDesignRelations(context: MappingContext): DesignRelation
 		const spec = specMap.get('DB_TABLE')!;
 		const summary = summaryMap.get(spec.id)!;
 		for (const table of context.tables) {
-			const key = normalize(table.physicalDbName);
+			const key = normalizeKey(table.physicalDbName, { emptyLikeDash: true });
 			if (!key) continue;
 			summary.totalChecked += 1;
 			if (dbPhysicalKeySet.has(key)) {
@@ -205,11 +212,11 @@ export function validateDesignRelations(context: MappingContext): DesignRelation
 		const spec = specMap.get('ENTITY_ATTRIBUTE')!;
 		const summary = summaryMap.get(spec.id)!;
 		for (const attr of context.attributes) {
-			const schema = normalize(attr.schemaName);
-			const entityName = normalize(attr.entityName);
+			const schema = normalizeKey(attr.schemaName, { emptyLikeDash: true });
+			const entityName = normalizeKey(attr.entityName, { emptyLikeDash: true });
 			if (!schema || !entityName) continue;
 			summary.totalChecked += 1;
-			const key = `${schema}|${entityName}`;
+			const key = buildCompositeKey([schema, entityName]);
 			if (entityKeySet.has(key)) {
 				summary.matched += 1;
 				continue;
@@ -232,11 +239,11 @@ export function validateDesignRelations(context: MappingContext): DesignRelation
 		const spec = specMap.get('ENTITY_TABLE')!;
 		const summary = summaryMap.get(spec.id)!;
 		for (const table of context.tables) {
-			const schema = normalize(table.schemaName);
-			const relatedEntity = normalize(table.relatedEntityName);
+			const schema = normalizeKey(table.schemaName, { emptyLikeDash: true });
+			const relatedEntity = normalizeKey(table.relatedEntityName, { emptyLikeDash: true });
 			if (!schema || !relatedEntity) continue;
 			summary.totalChecked += 1;
-			const key = `${schema}|${relatedEntity}`;
+			const key = buildCompositeKey([schema, relatedEntity]);
 			if (entityKeySet.has(key) || entityKoreanKeySet.has(key)) {
 				summary.matched += 1;
 				continue;
@@ -259,11 +266,11 @@ export function validateDesignRelations(context: MappingContext): DesignRelation
 		const spec = specMap.get('TABLE_COLUMN')!;
 		const summary = summaryMap.get(spec.id)!;
 		for (const column of context.columns) {
-			const schema = normalize(column.schemaName);
-			const tableName = normalize(column.tableEnglishName);
+			const schema = normalizeKey(column.schemaName, { emptyLikeDash: true });
+			const tableName = normalizeKey(column.tableEnglishName, { emptyLikeDash: true });
 			if (!schema || !tableName) continue;
 			summary.totalChecked += 1;
-			const key = `${schema}|${tableName}`;
+			const key = buildCompositeKey([schema, tableName]);
 			if (tableKeySet.has(key)) {
 				summary.matched += 1;
 				continue;
@@ -286,12 +293,12 @@ export function validateDesignRelations(context: MappingContext): DesignRelation
 		const spec = specMap.get('ATTRIBUTE_COLUMN')!;
 		const summary = summaryMap.get(spec.id)!;
 		for (const attr of context.attributes) {
-			const schema = normalize(attr.schemaName);
-			const entityName = normalize(attr.entityName);
-			const attributeName = normalize(attr.attributeName);
+			const schema = normalizeKey(attr.schemaName, { emptyLikeDash: true });
+			const entityName = normalizeKey(attr.entityName, { emptyLikeDash: true });
+			const attributeName = normalizeKey(attr.attributeName, { emptyLikeDash: true });
 			if (!schema || !entityName || !attributeName) continue;
 			summary.totalChecked += 1;
-			const key = `${schema}|${entityName}|${attributeName}`;
+			const key = buildCompositeKey([schema, entityName, attributeName]);
 			if (columnLogicalKeySet.has(key)) {
 				summary.matched += 1;
 				continue;
@@ -328,4 +335,3 @@ export function validateDesignRelations(context: MappingContext): DesignRelation
 		totals
 	};
 }
-

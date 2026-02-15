@@ -238,11 +238,38 @@ describe('Column Sync-Term API: /api/column/sync-term', () => {
 
 			expect(response.status).toBe(200);
 			expect(result.success).toBe(true);
+			expect(result.data.applied).toBe(true);
+			expect(result.data.mode).toBe('apply');
 			expect(result.data.matched).toBe(1);
 			expect(result.data.unmatched).toBe(1);
 			expect(result.data.matchedDomain).toBe(1);
 			expect(result.data.unmatchedDomain).toBe(0);
 			expect(result.data.total).toBe(2);
+		});
+
+		it('should return preview and skip save when apply is false', async () => {
+			const event = createMockRequestEvent({
+				method: 'POST',
+				body: {
+					apply: false
+				}
+			});
+
+			const response = await POST(event);
+			const result = await response.json();
+
+			expect(response.status).toBe(200);
+			expect(result.success).toBe(true);
+			expect(result.data.applied).toBe(false);
+			expect(result.data.mode).toBe('preview');
+			expect(Array.isArray(result.data.changes)).toBe(true);
+			expect(result.data.changes[0]).toMatchObject({
+				owner: 'column/sync-term'
+			});
+			expect(typeof result.data.changes[0].reason).toBe('string');
+			expect(result.data.changes[0]).toHaveProperty('before');
+			expect(result.data.changes[0]).toHaveProperty('after');
+			expect(saveData).not.toHaveBeenCalled();
 		});
 
 		it('should update columnKoreanName when term matches', async () => {

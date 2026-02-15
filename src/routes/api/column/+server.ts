@@ -75,6 +75,7 @@ import {
 	invalidateAllCaches
 } from '$lib/registry/cache-registry';
 
+import { checkEntryReferences } from '$lib/registry/mapping-registry';
 import { safeMerge } from '$lib/utils/type-guards.js';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -392,16 +393,30 @@ export async function DELETE({ url }: RequestEvent) {
 	try {
 		const id = url.searchParams.get('id');
 		const filename = url.searchParams.get('filename') || 'column.json';
+		const force = url.searchParams.get('force') === 'true';
 		if (!id) return json({ success: false, error: '삭제할 ID가 필요합니다.' }, { status: 400 });
 
 		const columnData = await loadColumnData(filename);
-		if (!columnData.entries.find((e) => e.id === id))
+		const entryToDelete = columnData.entries.find((e) => e.id === id);
+		if (!entryToDelete)
 			return json({ success: false, error: '삭제할 데이터를 찾을 수 없습니다.' }, { status: 404 });
+
+		let warnings: unknown[] = [];
+		if (!force) {
+			try {
+				const refCheck = await checkEntryReferences('column', entryToDelete, filename);
+				if (!refCheck.canDelete && refCheck.references?.length) {
+					warnings = refCheck.references;
+				}
+			} catch (refError) {
+				console.warn('참조 검증 경고 수집 중 오류:', refError);
+			}
+		}
 
 		columnData.entries = columnData.entries.filter((e) => e.id !== id);
 		await saveColumnData(columnData, filename);
 
-		return json({ success: true, message: '삭제 완료' }, { status: 200 });
+		return json({ success: true, message: '삭제 완료', warnings }, { status: 200 });
 	} catch (error) {
 		return json({ success: false, error: '서버 오류' }, { status: 500 });
 	}

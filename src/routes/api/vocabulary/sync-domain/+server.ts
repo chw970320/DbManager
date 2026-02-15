@@ -76,17 +76,27 @@ import {
 } from '$lib/registry/cache-registry';
 
 import { resolveRelatedFilenames } from '$lib/registry/mapping-registry';
+import { normalizeKey } from '$lib/utils/mapping-key.js';
 import type { ApiResponse, VocabularyEntry, VocabularyData } from '$lib/types/vocabulary.js';
 import type { DomainEntry } from '$lib/types/domain.js';
 
 type SyncRequest = {
 	vocabularyFilename?: string;
 	domainFilename?: string;
+	apply?: boolean;
 };
 
-export async function POST({ request }: RequestEvent) {
+export async function POST({ request, url }: RequestEvent) {
 	try {
-		const { vocabularyFilename, domainFilename }: SyncRequest = await request.json();
+		const { vocabularyFilename, domainFilename, apply: applyFromBody }: SyncRequest =
+			await request.json();
+		const applyQuery = url.searchParams.get('apply');
+		const apply =
+			typeof applyFromBody === 'boolean'
+				? applyFromBody
+				: applyQuery === null
+					? true
+					: !['false', '0', 'no'].includes(applyQuery.toLowerCase());
 
 		const vocabFile = vocabularyFilename || 'vocabulary.json';
 
@@ -104,13 +114,22 @@ export async function POST({ request }: RequestEvent) {
 		const domainMap = new Map<string, string>(); // key: domainCategory(lower/trim) -> domainGroup
 		domainData.entries.forEach((entry: DomainEntry) => {
 			if (entry.domainCategory && entry.domainGroup) {
-				domainMap.set(entry.domainCategory.trim().toLowerCase(), entry.domainGroup);
+				domainMap.set(normalizeKey(entry.domainCategory), entry.domainGroup);
 			}
 		});
 
 		let updated = 0;
 		let matched = 0;
 		let unmatched = 0;
+		const changes: Array<{
+			id: string;
+			standardName: string;
+			domainCategory?: string;
+			owner: 'vocabulary/sync-domain';
+			reason: string;
+			before: { domainGroup?: string; isDomainCategoryMapped?: boolean };
+			after: { domainGroup?: string; isDomainCategoryMapped?: boolean };
+		}> = [];
 
 		const now = new Date().toISOString();
 
@@ -120,7 +139,7 @@ export async function POST({ request }: RequestEvent) {
 				unmatched += 1;
 				return { ...entry, isDomainCategoryMapped: false };
 			}
-			const key = entry.domainCategory.trim().toLowerCase();
+			const key = normalizeKey(entry.domainCategory);
 			const mappedGroup = domainMap.get(key);
 			if (mappedGroup) {
 				matched += 1;
@@ -128,6 +147,21 @@ export async function POST({ request }: RequestEvent) {
 				const shouldUpdateFlag = entry.isDomainCategoryMapped !== true;
 				if (shouldUpdateGroup || shouldUpdateFlag) {
 					updated += 1;
+					changes.push({
+						id: entry.id,
+						standardName: entry.standardName,
+						domainCategory: entry.domainCategory,
+						owner: 'vocabulary/sync-domain',
+						reason: 'domainCategory 기준으로 domainGroup과 매핑 상태를 보정했습니다.',
+						before: {
+							domainGroup: entry.domainGroup,
+							isDomainCategoryMapped: entry.isDomainCategoryMapped
+						},
+						after: {
+							domainGroup: mappedGroup,
+							isDomainCategoryMapped: true
+						}
+					});
 					return {
 						...entry,
 						domainGroup: mappedGroup,
@@ -141,30 +175,37 @@ export async function POST({ request }: RequestEvent) {
 			return { ...entry, isDomainCategoryMapped: false };
 		});
 
-		// 저장 (mapping.domain만 사용, mappedDomainFile은 deprecated)
-		const finalData: VocabularyData = {
-			...vocabularyData,
-			entries: mappedEntries,
-			mapping: {
-				domain: domainFile
-			},
-			lastUpdated: new Date().toISOString()
-		};
-		await saveData('vocabulary', finalData, vocabFile);
-		invalidateDataCache('vocabulary', vocabFile);
+		// 적용 모드일 때만 저장 (mapping.domain만 사용, mappedDomainFile은 deprecated)
+		if (apply) {
+			const finalData: VocabularyData = {
+				...vocabularyData,
+				entries: mappedEntries,
+				mapping: {
+					domain: domainFile
+				},
+				lastUpdated: new Date().toISOString()
+			};
+			await saveData('vocabulary', finalData, vocabFile);
+			invalidateDataCache('vocabulary', vocabFile);
+		}
 
 		return json(
 			{
 				success: true,
 				data: {
+					mode: apply ? 'apply' : 'preview',
+					applied: apply,
 					vocabularyFilename: vocabFile,
 					domainFilename: domainFile,
 					updated,
 					matched,
 					unmatched,
-					total: vocabularyData.entries.length
+					total: vocabularyData.entries.length,
+					changes: changes.slice(0, 100)
 				},
-				message: '도메인 매핑 동기화가 완료되었습니다.'
+				message: apply
+					? '도메인 매핑 동기화가 완료되었습니다.'
+					: '도메인 매핑 동기화 미리보기 결과입니다.'
 			} as ApiResponse,
 			{ status: 200 }
 		);

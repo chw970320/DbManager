@@ -45,8 +45,11 @@ export type ValidationErrorType =
  */
 export interface ValidationError {
 	type: ValidationErrorType;
+	code?: string;
 	message: string;
 	field?: string;
+	priority?: number;
+	level?: 'error' | 'warning' | 'info' | 'auto-fixable';
 }
 
 /**

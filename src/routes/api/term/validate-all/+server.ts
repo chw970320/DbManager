@@ -102,8 +102,8 @@ const ERROR_PRIORITY: Record<ValidationErrorType, number> = {
 
 function sortErrorsByPriority(errors: ValidationError[]): ValidationError[] {
 	return [...errors].sort((a, b) => {
-		const priorityA = ERROR_PRIORITY[a.type] || 999;
-		const priorityB = ERROR_PRIORITY[b.type] || 999;
+		const priorityA = a.priority ?? ERROR_PRIORITY[a.type] ?? 999;
+		const priorityB = b.priority ?? ERROR_PRIORITY[b.type] ?? 999;
 		return priorityA - priorityB;
 	});
 }
@@ -651,8 +651,11 @@ export async function GET({ url }: RequestEvent) {
 			if (termParts.length < 2) {
 				errors.push({
 					type: 'TERM_NAME_LENGTH',
+					code: 'TERM_NAME_LENGTH',
 					message: '용어명은 2단어 이상의 조합이어야 합니다.',
-					field: 'termName'
+					field: 'termName',
+					priority: ERROR_PRIORITY.TERM_NAME_LENGTH,
+					level: 'error'
 				});
 			}
 
@@ -662,8 +665,11 @@ export async function GET({ url }: RequestEvent) {
 				if (suffixError) {
 					errors.push({
 						type: 'TERM_NAME_SUFFIX',
+						code: 'TERM_NAME_SUFFIX',
 						message: suffixError,
-						field: 'termName'
+						field: 'termName',
+						priority: ERROR_PRIORITY.TERM_NAME_SUFFIX,
+						level: 'error'
 					});
 				}
 			}
@@ -678,8 +684,11 @@ export async function GET({ url }: RequestEvent) {
 				if (uniquenessError) {
 					errors.push({
 						type: 'TERM_NAME_DUPLICATE',
+						code: 'TERM_NAME_DUPLICATE',
 						message: uniquenessError,
-						field: 'termName'
+						field: 'termName',
+						priority: ERROR_PRIORITY.TERM_NAME_DUPLICATE,
+						level: 'error'
 					});
 				}
 			}
@@ -696,8 +705,11 @@ export async function GET({ url }: RequestEvent) {
 				if (termUniquenessError) {
 					errors.push({
 						type: 'TERM_UNIQUENESS',
+						code: 'TERM_UNIQUENESS',
 						message: termUniquenessError,
-						field: 'termName'
+						field: 'termName',
+						priority: ERROR_PRIORITY.TERM_UNIQUENESS,
+						level: 'error'
 					});
 				}
 			}
@@ -711,8 +723,11 @@ export async function GET({ url }: RequestEvent) {
 				if (termMappingError) {
 					errors.push({
 						type: 'TERM_NAME_MAPPING',
+						code: 'TERM_NAME_MAPPING',
 						message: termMappingError,
-						field: 'termName'
+						field: 'termName',
+						priority: ERROR_PRIORITY.TERM_NAME_MAPPING,
+						level: 'error'
 					});
 				}
 			}
@@ -726,8 +741,11 @@ export async function GET({ url }: RequestEvent) {
 				if (columnMappingError) {
 					errors.push({
 						type: 'COLUMN_NAME_MAPPING',
+						code: 'COLUMN_NAME_MAPPING',
 						message: columnMappingError,
-						field: 'columnName'
+						field: 'columnName',
+						priority: ERROR_PRIORITY.COLUMN_NAME_MAPPING,
+						level: 'error'
 					});
 				}
 			}
@@ -748,8 +766,11 @@ export async function GET({ url }: RequestEvent) {
 				if (orderResult.error) {
 					errors.push({
 						type: 'TERM_COLUMN_ORDER_MISMATCH',
+						code: 'TERM_COLUMN_ORDER_MISMATCH',
 						message: orderResult.error,
-						field: 'columnName'
+						field: 'columnName',
+						priority: ERROR_PRIORITY.TERM_COLUMN_ORDER_MISMATCH,
+						level: 'error'
 					});
 				}
 			}
@@ -763,8 +784,11 @@ export async function GET({ url }: RequestEvent) {
 				if (domainMappingError) {
 					errors.push({
 						type: 'DOMAIN_NAME_MAPPING',
+						code: 'DOMAIN_NAME_MAPPING',
 						message: domainMappingError,
-						field: 'domainName'
+						field: 'domainName',
+						priority: ERROR_PRIORITY.DOMAIN_NAME_MAPPING,
+						level: 'error'
 					});
 				}
 			}

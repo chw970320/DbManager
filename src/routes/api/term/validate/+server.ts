@@ -101,8 +101,8 @@ const ERROR_PRIORITY: Record<ValidationErrorType, number> = {
 
 function sortErrorsByPriority(errors: ValidationError[]): ValidationError[] {
 	return [...errors].sort((a, b) => {
-		const priorityA = ERROR_PRIORITY[a.type] || 999;
-		const priorityB = ERROR_PRIORITY[b.type] || 999;
+		const priorityA = a.priority ?? ERROR_PRIORITY[a.type] ?? 999;
+		const priorityB = b.priority ?? ERROR_PRIORITY[b.type] ?? 999;
 		return priorityA - priorityB;
 	});
 }
@@ -205,8 +205,11 @@ export async function POST({ request, url }: RequestEvent) {
 		if (termMappingError) {
 			validationErrors.push({
 				type: 'TERM_NAME_MAPPING',
+				code: 'TERM_NAME_MAPPING',
 				message: termMappingError,
-				field: 'termName'
+				field: 'termName',
+				priority: ERROR_PRIORITY.TERM_NAME_MAPPING,
+				level: 'error'
 			});
 		}
 
@@ -218,8 +221,11 @@ export async function POST({ request, url }: RequestEvent) {
 		if (columnMappingError) {
 			validationErrors.push({
 				type: 'COLUMN_NAME_MAPPING',
+				code: 'COLUMN_NAME_MAPPING',
 				message: columnMappingError,
-				field: 'columnName'
+				field: 'columnName',
+				priority: ERROR_PRIORITY.COLUMN_NAME_MAPPING,
+				level: 'error'
 			});
 		}
 
@@ -234,8 +240,11 @@ export async function POST({ request, url }: RequestEvent) {
 			if (orderResult.error) {
 				validationErrors.push({
 					type: 'TERM_COLUMN_ORDER_MISMATCH',
+					code: 'TERM_COLUMN_ORDER_MISMATCH',
 					message: orderResult.error,
-					field: 'columnName'
+					field: 'columnName',
+					priority: ERROR_PRIORITY.TERM_COLUMN_ORDER_MISMATCH,
+					level: 'error'
 				});
 			}
 		}
@@ -245,8 +254,11 @@ export async function POST({ request, url }: RequestEvent) {
 		if (suffixValidationError) {
 			validationErrors.push({
 				type: 'TERM_NAME_SUFFIX',
+				code: 'TERM_NAME_SUFFIX',
 				message: suffixValidationError,
-				field: 'termName'
+				field: 'termName',
+				priority: ERROR_PRIORITY.TERM_NAME_SUFFIX,
+				level: 'error'
 			});
 		}
 
@@ -274,8 +286,11 @@ export async function POST({ request, url }: RequestEvent) {
 				if (termNameUniquenessError) {
 					validationErrors.push({
 						type: 'TERM_NAME_DUPLICATE',
+						code: 'TERM_NAME_DUPLICATE',
 						message: termNameUniquenessError,
-						field: 'termName'
+						field: 'termName',
+						priority: ERROR_PRIORITY.TERM_NAME_DUPLICATE,
+						level: 'error'
 					});
 				}
 			}
@@ -291,8 +306,11 @@ export async function POST({ request, url }: RequestEvent) {
 				if (uniquenessError) {
 					validationErrors.push({
 						type: 'TERM_UNIQUENESS',
+						code: 'TERM_UNIQUENESS',
 						message: uniquenessError,
-						field: 'termName'
+						field: 'termName',
+						priority: ERROR_PRIORITY.TERM_UNIQUENESS,
+						level: 'error'
 					});
 				}
 			}

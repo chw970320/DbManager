@@ -77,7 +77,17 @@ describe('POST /api/vocabulary/validate', () => {
 	it('금칙어 검증 성공: 금칙어가 아닌 단어 입력 시 success를 반환한다', async () => {
 		const request = await createMockRequest({ standardName: '유효한단어', abbreviation: 'VALID' });
 		await POST(request);
-		expect(json).toHaveBeenCalledWith({ success: true, data: { validation: 'ok' } });
+		expect(json).toHaveBeenCalledWith(
+			expect.objectContaining({
+				success: true,
+				message: 'Validation passed',
+				data: expect.objectContaining({
+					validation: 'ok',
+					errorCount: 0
+				})
+			}),
+			{ status: 200 }
+		);
 	});
 
 	it('금칙어 검증 실패: 금칙어가 포함된 standardName 입력 시 에러를 반환한다', async () => {
@@ -89,7 +99,13 @@ describe('POST /api/vocabulary/validate', () => {
 		expect(json).toHaveBeenCalledWith(
 			expect.objectContaining({
 				success: false,
-				error: expect.stringContaining('금지된 단어')
+				error: expect.stringContaining('금지된 단어'),
+				data: expect.objectContaining({
+					errorCount: 1,
+					errors: expect.arrayContaining([
+						expect.objectContaining({ type: 'FORBIDDEN_WORD', field: 'standardName' })
+					])
+				})
 			}),
 			{ status: 400 }
 		);
@@ -101,7 +117,13 @@ describe('POST /api/vocabulary/validate', () => {
 		expect(json).toHaveBeenCalledWith(
 			expect.objectContaining({
 				success: false,
-				error: expect.stringContaining('이미 [사용자]의 이음동의어로 등록')
+				error: expect.stringContaining('이미 [사용자]의 이음동의어로 등록'),
+				data: expect.objectContaining({
+					errorCount: 1,
+					errors: expect.arrayContaining([
+						expect.objectContaining({ type: 'SYNONYM_CONFLICT', field: 'standardName' })
+					])
+				})
 			}),
 			{ status: 409 }
 		);
@@ -111,7 +133,16 @@ describe('POST /api/vocabulary/validate', () => {
 		const request = await createMockRequest({ standardName: '새단어', abbreviation: 'USER' });
 		await POST(request);
 		expect(json).toHaveBeenCalledWith(
-			{ success: false, error: '이미 존재하는 영문약어입니다.' },
+			expect.objectContaining({
+				success: false,
+				error: '이미 존재하는 영문약어입니다.',
+				data: expect.objectContaining({
+					errorCount: 1,
+					errors: expect.arrayContaining([
+						expect.objectContaining({ type: 'ABBREVIATION_DUPLICATE', field: 'abbreviation' })
+					])
+				})
+			}),
 			{ status: 409 }
 		);
 	});
@@ -123,7 +154,13 @@ describe('POST /api/vocabulary/validate', () => {
 			abbreviation: 'USER'
 		});
 		await POST(request);
-		expect(json).toHaveBeenCalledWith({ success: true, data: { validation: 'ok' } });
+		expect(json).toHaveBeenCalledWith(
+			expect.objectContaining({
+				success: true,
+				data: expect.objectContaining({ validation: 'ok', errorCount: 0 })
+			}),
+			{ status: 200 }
+		);
 	});
 
 	it('필수 파라미터 누락: standardName이 누락된 경우 400 에러를 반환한다', async () => {
@@ -132,7 +169,13 @@ describe('POST /api/vocabulary/validate', () => {
 		expect(json).toHaveBeenCalledWith(
 			expect.objectContaining({
 				success: false,
-				error: '필수 필드가 누락되었습니다: standardName'
+				error: '표준단어명(standardName)은 필수입니다.',
+				data: expect.objectContaining({
+					errorCount: 1,
+					errors: expect.arrayContaining([
+						expect.objectContaining({ type: 'REQUIRED_FIELD', field: 'standardName' })
+					])
+				})
 			}),
 			{ status: 400 }
 		);

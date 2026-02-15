@@ -119,11 +119,35 @@ describe('Vocabulary Sync-Domain API: /api/vocabulary/sync-domain', () => {
 
 		expect(response.status).toBe(200);
 		expect(result.success).toBe(true);
+		expect(result.data.applied).toBe(true);
+		expect(result.data.mode).toBe('apply');
 		expect(result.data.matched).toBe(2);
 		expect(result.data.unmatched).toBe(1);
 		expect(result.data.total).toBe(3);
 		expect(saveData).toHaveBeenCalled();
 		expect(invalidateDataCache).toHaveBeenCalledWith('vocabulary', 'vocabulary.json');
+	});
+
+	it('should return preview without saving when apply is false', async () => {
+		const event = createMockRequestEvent({
+			apply: false
+		});
+		const response = await POST(event);
+		const result = await response.json();
+
+		expect(response.status).toBe(200);
+		expect(result.success).toBe(true);
+		expect(result.data.applied).toBe(false);
+		expect(result.data.mode).toBe('preview');
+		expect(Array.isArray(result.data.changes)).toBe(true);
+		expect(result.data.changes[0]).toMatchObject({
+			owner: 'vocabulary/sync-domain'
+		});
+		expect(typeof result.data.changes[0].reason).toBe('string');
+		expect(result.data.changes[0]).toHaveProperty('before');
+		expect(result.data.changes[0]).toHaveProperty('after');
+		expect(saveData).not.toHaveBeenCalled();
+		expect(invalidateDataCache).not.toHaveBeenCalled();
 	});
 
 	it('should use specified vocabulary and domain filenames', async () => {

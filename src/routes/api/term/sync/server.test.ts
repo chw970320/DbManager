@@ -136,8 +136,32 @@ describe('Term Sync API: /api/term/sync', () => {
 
 		expect(response.status).toBe(200);
 		expect(result.success).toBe(true);
+		expect(result.data.applied).toBe(true);
+		expect(result.data.mode).toBe('apply');
 		expect(result.data.total).toBe(2);
 		expect(saveData).toHaveBeenCalledWith('term', expect.any(Object), 'term.json');
+	});
+
+	it('apply=false이면 미리보기만 수행하고 저장하지 않는다', async () => {
+		const event = createMockRequestEvent({
+			body: { filename: 'term.json', apply: false }
+		});
+
+		const response = await POST(event);
+		const result = await response.json();
+
+		expect(response.status).toBe(200);
+		expect(result.success).toBe(true);
+		expect(result.data.applied).toBe(false);
+		expect(result.data.mode).toBe('preview');
+		expect(Array.isArray(result.data.changes)).toBe(true);
+		expect(result.data.changes[0]).toMatchObject({
+			owner: 'term/sync'
+		});
+		expect(typeof result.data.changes[0].reason).toBe('string');
+		expect(result.data.changes[0]).toHaveProperty('before');
+		expect(result.data.changes[0]).toHaveProperty('after');
+		expect(saveData).not.toHaveBeenCalled();
 	});
 
 	it('filename 파라미터 사용', async () => {

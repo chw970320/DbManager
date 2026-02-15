@@ -111,6 +111,7 @@ describe('Domain Validate API: /api/domain/validate', () => {
 		expect(response.status).toBe(200);
 		expect(result.success).toBe(true);
 		expect(result.message).toBe('Validation passed');
+		expect(result.data.errorCount).toBe(0);
 	});
 
 	it('필수 필드 누락: domainCategory 누락 시 400 에러를 반환한다', async () => {
@@ -126,6 +127,9 @@ describe('Domain Validate API: /api/domain/validate', () => {
 		expect(response.status).toBe(400);
 		expect(result.success).toBe(false);
 		expect(result.error).toContain('도메인 분류명');
+		expect(result.data.errorCount).toBe(1);
+		expect(result.data.errors[0].type).toBe('REQUIRED_FIELD');
+		expect(result.data.errors[0].field).toBe('domainCategory');
 	});
 
 	it('필수 필드 누락: physicalDataType 누락 시 400 에러를 반환한다', async () => {
@@ -141,6 +145,9 @@ describe('Domain Validate API: /api/domain/validate', () => {
 		expect(response.status).toBe(400);
 		expect(result.success).toBe(false);
 		expect(result.error).toContain('물리 데이터타입');
+		expect(result.data.errorCount).toBe(1);
+		expect(result.data.errors[0].type).toBe('REQUIRED_FIELD');
+		expect(result.data.errors[0].field).toBe('physicalDataType');
 	});
 
 	it('중복 standardDomainName: 이미 존재하는 도메인명 입력 시 에러를 반환한다', async () => {
@@ -160,6 +167,10 @@ describe('Domain Validate API: /api/domain/validate', () => {
 		expect(response.status).toBe(409);
 		expect(result.success).toBe(false);
 		expect(result.error).toContain('이미 존재하는 도메인명');
+		expect(result.data.errorCount).toBe(1);
+		expect(result.data.errors[0].type).toBe('DOMAIN_NAME_DUPLICATE');
+		expect(result.data.errors[0].field).toBe('standardDomainName');
+		expect(result.data.generatedDomainName).toBeDefined();
 	});
 
 	it('영문약어 중복 검사 (수정): 자기 자신을 제외하고 중복 검사를 통과한다', async () => {

@@ -75,6 +75,7 @@ import {
 	invalidateAllCaches
 } from '$lib/registry/cache-registry';
 
+import { checkEntryReferences } from '$lib/registry/mapping-registry';
 import { safeMerge } from '$lib/utils/type-guards.js';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -365,16 +366,30 @@ export async function DELETE({ url }: RequestEvent) {
 	try {
 		const id = url.searchParams.get('id');
 		const filename = url.searchParams.get('filename') || 'entity.json';
+		const force = url.searchParams.get('force') === 'true';
 		if (!id) return json({ success: false, error: '삭제할 ID가 필요합니다.' }, { status: 400 });
 
 		const entityData = await loadEntityData(filename);
-		if (!entityData.entries.find((e) => e.id === id))
+		const entryToDelete = entityData.entries.find((e) => e.id === id);
+		if (!entryToDelete)
 			return json({ success: false, error: '삭제할 데이터를 찾을 수 없습니다.' }, { status: 404 });
+
+		let warnings: unknown[] = [];
+		if (!force) {
+			try {
+				const refCheck = await checkEntryReferences('entity', entryToDelete, filename);
+				if (!refCheck.canDelete && refCheck.references?.length) {
+					warnings = refCheck.references;
+				}
+			} catch (refError) {
+				console.warn('참조 검증 경고 수집 중 오류:', refError);
+			}
+		}
 
 		entityData.entries = entityData.entries.filter((e) => e.id !== id);
 		await saveEntityData(entityData, filename);
 
-		return json({ success: true, message: '삭제 완료' }, { status: 200 });
+		return json({ success: true, message: '삭제 완료', warnings }, { status: 200 });
 	} catch (error) {
 		console.error('엔터티 정의서 삭제 중 오류:', error);
 		return json({ success: false, error: '서버 오류' }, { status: 500 });

@@ -75,6 +75,7 @@ import {
 	invalidateAllCaches
 } from '$lib/registry/cache-registry';
 
+import { checkEntryReferences } from '$lib/registry/mapping-registry';
 import { safeMerge } from '$lib/utils/type-guards.js';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -429,6 +430,7 @@ export async function DELETE({ url }: RequestEvent) {
 	try {
 		const id = url.searchParams.get('id');
 		const filename = url.searchParams.get('filename') || 'database.json';
+		const force = url.searchParams.get('force') === 'true';
 
 		if (!id) {
 			return json(
@@ -447,10 +449,22 @@ export async function DELETE({ url }: RequestEvent) {
 			);
 		}
 
+		let warnings: unknown[] = [];
+		if (!force) {
+			try {
+				const refCheck = await checkEntryReferences('database', entryToDelete, filename);
+				if (!refCheck.canDelete && refCheck.references?.length) {
+					warnings = refCheck.references;
+				}
+			} catch (refError) {
+				console.warn('참조 검증 경고 수집 중 오류:', refError);
+			}
+		}
+
 		dbData.entries = dbData.entries.filter((e) => e.id !== id);
 		await saveDatabaseData(dbData, filename);
 
-		return json({ success: true, message: '삭제 완료' }, { status: 200 });
+		return json({ success: true, message: '삭제 완료', warnings }, { status: 200 });
 	} catch (error) {
 		console.error('데이터베이스 정의서 삭제 중 오류:', error);
 		return json(

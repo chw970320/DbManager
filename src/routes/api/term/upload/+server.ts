@@ -90,6 +90,8 @@ import {
 	getOptionalBoolean,
 	FormDataValidationError
 } from '$lib/utils/type-guards.js';
+import { normalizeUploadPostProcessMode, runUploadPostProcess } from '$lib/utils/upload-postprocess.js';
+import { classifyUploadParseError, noValidDataUploadError } from '$lib/utils/upload-error.js';
 
 
 /**
@@ -200,7 +202,7 @@ function checkTermMapping(
  * 용어 파일 업로드 처리 API
  * POST /api/term/upload
  */
-export async function POST({ request }: RequestEvent) {
+export async function POST({ request, fetch }: RequestEvent) {
 	try {
 		// Content-Type 확인
 		const contentType = request.headers.get('content-type');
@@ -242,6 +244,9 @@ export async function POST({ request }: RequestEvent) {
 		// 기존 데이터와 병합 (replace 옵션 확인)
 		const replaceExisting = getOptionalBoolean(formData, 'replace');
 		const filename = getOptionalString(formData, 'filename', 'term.json');
+		const postProcessMode = normalizeUploadPostProcessMode(
+			getOptionalString(formData, 'postProcessMode', 'none')
+		);
 		// validation 옵션 확인 (기본값: true - 검증 교체 모드)
 		const performValidation = getOptionalBoolean(formData, 'validation', true);
 
@@ -260,10 +265,12 @@ export async function POST({ request }: RequestEvent) {
 		try {
 			parsedEntries = parseTermXlsxToJson(buffer, !replaceExisting);
 		} catch (parseError) {
+			const uploadError = classifyUploadParseError(parseError);
 			return json(
 				{
 					success: false,
-					error: parseError instanceof Error ? parseError.message : 'Excel 파일 파싱 실패',
+					error: uploadError.message,
+					data: { errorCode: uploadError.code },
 					message: 'Excel parsing failed'
 				} as ApiResponse,
 				{ status: 422 }
@@ -271,10 +278,12 @@ export async function POST({ request }: RequestEvent) {
 		}
 
 		if (parsedEntries.length === 0) {
+			const uploadError = noValidDataUploadError('파일에서 유효한 용어 데이터를 찾을 수 없습니다.');
 			return json(
 				{
 					success: false,
-					error: '파일에서 유효한 용어 데이터를 찾을 수 없습니다.',
+					error: uploadError.message,
+					data: { errorCode: uploadError.code },
 					message: 'No valid term data found'
 				} as ApiResponse,
 				{ status: 422 }
@@ -438,6 +447,12 @@ export async function POST({ request }: RequestEvent) {
 			totalCount: finalData.totalCount,
 			lastUpdated: finalData.lastUpdated,
 			replaceMode: replaceExisting,
+			postProcess: await runUploadPostProcess({
+				fetch,
+				dataType: 'term',
+				filename,
+				mode: postProcessMode
+			}),
 			message: `용어 데이터 업로드 완료: ${termEntries.length}개 항목`
 		};
 

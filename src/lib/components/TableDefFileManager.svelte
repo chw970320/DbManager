@@ -545,7 +545,7 @@
 								id="uploadTargetFile"
 								bind:value={selectedUploadFile}
 								class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-								disabled={isSubmitting || files.length === 0}
+								disabled={isSubmitting}
 							>
 								{#each files as file (file)}
 									<option value={file}>{file}</option>
@@ -559,7 +559,7 @@
 						<!-- FileUpload 컴포넌트 -->
 						<div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
 							<FileUpload
-								disabled={isSubmitting || files.length === 0}
+								disabled={isSubmitting}
 								apiEndpoint="/api/table/upload"
 								contentType="테이블 정의서"
 								filename={selectedUploadFile}

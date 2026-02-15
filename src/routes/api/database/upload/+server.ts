@@ -83,6 +83,8 @@ import {
 	getOptionalBoolean,
 	FormDataValidationError
 } from '$lib/utils/type-guards.js';
+import { normalizeUploadPostProcessMode, runUploadPostProcess } from '$lib/utils/upload-postprocess.js';
+import { classifyUploadParseError, noValidDataUploadError } from '$lib/utils/upload-error.js';
 
 /**
  * 데이터베이스 정의서 업로드 정보 조회 API
@@ -130,7 +132,7 @@ export async function GET({ url }: RequestEvent) {
  * 데이터베이스 정의서 파일 업로드 처리 API
  * POST /api/database-def/upload
  */
-export async function POST({ request }: RequestEvent) {
+export async function POST({ request, fetch }: RequestEvent) {
 	try {
 		const contentType = request.headers.get('content-type');
 		if (!contentType?.includes('multipart/form-data')) {
@@ -165,15 +167,20 @@ export async function POST({ request }: RequestEvent) {
 
 		const replaceExisting = getOptionalBoolean(formData, 'replace');
 		const filename = getOptionalString(formData, 'filename', 'database.json');
+		const postProcessMode = normalizeUploadPostProcessMode(
+			getOptionalString(formData, 'postProcessMode', 'none')
+		);
 
 		let parsedEntries: DatabaseEntry[];
 		try {
 			parsedEntries = parseDatabaseXlsxToJson(buffer, !replaceExisting);
 		} catch (parseError) {
+			const uploadError = classifyUploadParseError(parseError);
 			return json(
 				{
 					success: false,
-					error: parseError instanceof Error ? parseError.message : 'Excel 파일 파싱 실패',
+					error: uploadError.message,
+					data: { errorCode: uploadError.code },
 					message: 'Excel parsing failed'
 				} as DbDesignApiResponse,
 				{ status: 422 }
@@ -181,10 +188,12 @@ export async function POST({ request }: RequestEvent) {
 		}
 
 		if (parsedEntries.length === 0) {
+			const uploadError = noValidDataUploadError();
 			return json(
 				{
 					success: false,
-					error: '파일에서 유효한 데이터를 찾을 수 없습니다.',
+					error: uploadError.message,
+					data: { errorCode: uploadError.code },
 					message: 'No valid data found'
 				} as DbDesignApiResponse,
 				{ status: 422 }
@@ -204,6 +213,12 @@ export async function POST({ request }: RequestEvent) {
 				{ status: 500 }
 			);
 		}
+		const postProcess = await runUploadPostProcess({
+			fetch,
+			dataType: 'database',
+			filename,
+			mode: postProcessMode
+		});
 
 		return json(
 			{
@@ -213,6 +228,7 @@ export async function POST({ request }: RequestEvent) {
 					totalCount: finalData.totalCount,
 					lastUpdated: finalData.lastUpdated,
 					replaceMode: replaceExisting,
+					postProcess,
 					message: `데이터베이스 정의서 업로드 완료: ${parsedEntries.length}개 항목`
 				},
 				message: 'Data uploaded successfully'

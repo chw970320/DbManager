@@ -13,12 +13,14 @@ import {
 import { parseXlsxToJson } from '$lib/utils/xlsx-parser.js';
 import { validateForbiddenWordsAndSynonyms, validateXlsxFile } from '$lib/utils/validation.js';
 import type { ApiResponse, UploadResult, VocabularyData, VocabularyEntry } from '$lib/types/vocabulary';
+import { normalizeUploadPostProcessMode, runUploadPostProcess } from '$lib/utils/upload-postprocess.js';
+import { classifyUploadParseError } from '$lib/utils/upload-error.js';
 
 /**
  * 파일 업로드 및 처리 API
  * POST /api/upload
  */
-export async function POST({ request }: RequestEvent) {
+export async function POST({ request, fetch }: RequestEvent) {
 	try {
 		// Content-Type 확인
 		const contentType = request.headers.get('content-type');
@@ -58,6 +60,9 @@ export async function POST({ request }: RequestEvent) {
 
 		// 기존 데이터와 병합 (replace 옵션 확인)
 		const replaceExisting = getOptionalBoolean(formData, 'replace');
+		const postProcessMode = normalizeUploadPostProcessMode(
+			getOptionalString(formData, 'postProcessMode', 'none')
+		);
 		// validation 옵션 확인 (기본값: true - 검증 교체 모드)
 		const performValidation = getOptionalBoolean(formData, 'validation', true);
 
@@ -66,10 +71,12 @@ export async function POST({ request }: RequestEvent) {
 		try {
 			parsedEntries = parseXlsxToJson(buffer, !replaceExisting);
 		} catch (parseError) {
+			const uploadError = classifyUploadParseError(parseError);
 			return json(
 				{
 					success: false,
-					error: parseError instanceof Error ? parseError.message : 'Excel 파일 파싱 실패',
+					error: uploadError.message,
+					data: { errorCode: uploadError.code },
 					message: 'Excel parsing failed'
 				} as ApiResponse,
 				{ status: 422 }
@@ -144,11 +151,20 @@ export async function POST({ request }: RequestEvent) {
 			message: `${parsedEntries.length}개의 단어가 성공적으로 처리되었습니다.`,
 			data: finalData
 		};
+		const postProcess = await runUploadPostProcess({
+			fetch,
+			dataType: 'vocabulary',
+			filename,
+			mode: postProcessMode
+		});
 
 		return json(
 			{
 				success: true,
-				data: uploadResult,
+				data: {
+					...uploadResult,
+					postProcess
+				},
 				message: 'Upload successful'
 			} as ApiResponse,
 			{ status: 200 }

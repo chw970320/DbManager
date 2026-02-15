@@ -53,6 +53,33 @@ function parseRequiredText(value: string | number | undefined): string {
 }
 
 /**
+ * 여러 시트 중 필수 헤더를 포함한 시트를 선택해 2D 배열로 반환
+ */
+function parseWorkbookToArrayByRequiredHeaders(
+	fileBuffer: Buffer,
+	requiredHeaders: string[]
+): string[][] {
+	const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+	for (const sheetName of workbook.SheetNames) {
+		const worksheet = workbook.Sheets[sheetName];
+		if (!worksheet) continue;
+		const rawData: string[][] = XLSX.utils.sheet_to_json(worksheet, {
+			header: 1,
+			defval: ''
+		});
+		if (rawData.length < 2) continue;
+		const headerRow = (rawData[0] || []).map((cell) => String(cell).trim());
+		const matched = requiredHeaders.every((header) => headerRow.includes(header));
+		if (matched) {
+			return rawData;
+		}
+	}
+	throw new Error(
+		`필수 헤더(${requiredHeaders.join(', ')})를 포함한 시트를 찾을 수 없습니다.`
+	);
+}
+
+/**
  * 스타일이 적용된 헤더 셀 생성
  */
 function createHeaderCell(value: string) {
@@ -680,7 +707,11 @@ export function parseColumnXlsxToJson(
 	skipDuplicates: boolean = true
 ): ColumnEntry[] {
 	try {
-		const rawData = parseWorkbookToArray(fileBuffer);
+		const rawData = parseWorkbookToArrayByRequiredHeaders(fileBuffer, [
+			'컬럼영문명',
+			'자료길이',
+			'PK정보'
+		]);
 		const headerRow = (rawData[0] || []).map((cell) => String(cell).trim());
 		const hasDomainColumn = headerRow.includes('도메인명');
 		const dataRows = rawData.slice(1);

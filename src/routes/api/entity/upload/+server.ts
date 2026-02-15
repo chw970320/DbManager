@@ -83,6 +83,8 @@ import {
 	getOptionalBoolean,
 	FormDataValidationError
 } from '$lib/utils/type-guards.js';
+import { normalizeUploadPostProcessMode, runUploadPostProcess } from '$lib/utils/upload-postprocess.js';
+import { classifyUploadParseError, noValidDataUploadError } from '$lib/utils/upload-error.js';
 
 export async function GET({ url }: RequestEvent) {
 	try {
@@ -114,7 +116,7 @@ export async function GET({ url }: RequestEvent) {
 	}
 }
 
-export async function POST({ request }: RequestEvent) {
+export async function POST({ request, fetch }: RequestEvent) {
 	try {
 		const contentType = request.headers.get('content-type');
 		if (!contentType?.includes('multipart/form-data')) {
@@ -145,31 +147,44 @@ export async function POST({ request }: RequestEvent) {
 		const buffer = Buffer.from(await file.arrayBuffer());
 		const replaceExisting = getOptionalBoolean(formData, 'replace');
 		const filename = getOptionalString(formData, 'filename', 'entity.json');
+		const postProcessMode = normalizeUploadPostProcessMode(
+			getOptionalString(formData, 'postProcessMode', 'none')
+		);
 
 		let parsedEntries: EntityEntry[];
 		try {
 			parsedEntries = parseEntityXlsxToJson(buffer, !replaceExisting);
 		} catch (e) {
+			const uploadError = classifyUploadParseError(e);
 			return json(
 				{
 					success: false,
-					error: e instanceof Error ? e.message : 'Excel 파일 파싱 실패'
+					error: uploadError.message,
+					data: { errorCode: uploadError.code }
 				} as DbDesignApiResponse,
 				{ status: 422 }
 			);
 		}
 
 		if (parsedEntries.length === 0) {
+			const uploadError = noValidDataUploadError();
 			return json(
 				{
 					success: false,
-					error: '파일에서 유효한 데이터를 찾을 수 없습니다.'
+					error: uploadError.message,
+					data: { errorCode: uploadError.code }
 				} as DbDesignApiResponse,
 				{ status: 422 }
 			);
 		}
 
 		const finalData = await mergeEntityData(parsedEntries, replaceExisting, filename);
+		const postProcess = await runUploadPostProcess({
+			fetch,
+			dataType: 'entity',
+			filename,
+			mode: postProcessMode
+		});
 
 		return json(
 			{
@@ -179,6 +194,7 @@ export async function POST({ request }: RequestEvent) {
 					totalCount: finalData.totalCount,
 					lastUpdated: finalData.lastUpdated,
 					replaceMode: replaceExisting,
+					postProcess,
 					message: `엔터티 정의서 업로드 완료: ${parsedEntries.length}개 항목`
 				}
 			} as DbDesignApiResponse,

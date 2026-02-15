@@ -823,6 +823,15 @@
 								<span>{loading ? '준비 중' : 'XLSX 다운로드'}</span>
 							</button>
 
+							<button
+								type="button"
+								onclick={handleValidateAllDomain}
+								disabled={loading || validationLoading}
+								class="group inline-flex items-center space-x-2 rounded-xl border border-blue-200/50 bg-blue-50/80 px-6 py-3 text-sm font-medium text-blue-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-blue-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+							>
+								<span>{validationLoading ? '검사 중' : '유효성 검사'}</span>
+							</button>
+							
 							<!-- 새로고침 버튼 -->
 							<button
 								type="button"
@@ -846,14 +855,6 @@
 									/>
 								</svg>
 								<span>{loading ? '로딩 중' : '새로고침'}</span>
-							</button>
-							<button
-								type="button"
-								onclick={handleValidateAllDomain}
-								disabled={loading || validationLoading}
-								class="group inline-flex items-center space-x-2 rounded-xl border border-blue-200/50 bg-blue-50/80 px-6 py-3 text-sm font-medium text-blue-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-blue-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-							>
-								<span>{validationLoading ? '검사 중' : '유효성 검사'}</span>
 							</button>
 						</div>
 					</div>

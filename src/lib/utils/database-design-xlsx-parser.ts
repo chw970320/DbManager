@@ -53,6 +53,17 @@ function parseRequiredText(value: string | number | undefined): string {
 }
 
 /**
+ * 헤더 비교용 정규화 (공백/개행/대소문자 차이 무시)
+ */
+function normalizeHeaderText(value: string | number | undefined): string {
+	if (value === undefined || value === null) return '';
+	return String(value)
+		.replace(/[\s\u00A0]+/g, '')
+		.trim()
+		.toLowerCase();
+}
+
+/**
  * 여러 시트 중 필수 헤더를 포함한 시트를 선택해 2D 배열로 반환
  */
 function parseWorkbookToArrayByRequiredHeaders(
@@ -60,18 +71,34 @@ function parseWorkbookToArrayByRequiredHeaders(
 	requiredHeaders: string[]
 ): string[][] {
 	const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+	const normalizedRequiredHeaders = requiredHeaders.map((header) => normalizeHeaderText(header));
+
 	for (const sheetName of workbook.SheetNames) {
 		const worksheet = workbook.Sheets[sheetName];
 		if (!worksheet) continue;
 		const rawData: string[][] = XLSX.utils.sheet_to_json(worksheet, {
 			header: 1,
-			defval: ''
+			defval: '',
+			blankrows: false
 		});
 		if (rawData.length < 2) continue;
-		const headerRow = (rawData[0] || []).map((cell) => String(cell).trim());
-		const matched = requiredHeaders.every((header) => headerRow.includes(header));
-		if (matched) {
-			return rawData;
+
+		for (let rowIndex = 0; rowIndex < rawData.length; rowIndex++) {
+			const candidateHeaderRow = rawData[rowIndex] || [];
+			if (candidateHeaderRow.length === 0) continue;
+
+			const normalizedHeaderSet = new Set(
+				candidateHeaderRow.map((cell) => normalizeHeaderText(cell)).filter(Boolean)
+			);
+			const matched = normalizedRequiredHeaders.every((header) =>
+				normalizedHeaderSet.has(header)
+			);
+
+			if (!matched) continue;
+
+			const dataFromHeader = rawData.slice(rowIndex);
+			if (dataFromHeader.length < 2) continue;
+			return dataFromHeader;
 		}
 	}
 	throw new Error(
@@ -712,8 +739,10 @@ export function parseColumnXlsxToJson(
 			'자료길이',
 			'PK정보'
 		]);
-		const headerRow = (rawData[0] || []).map((cell) => String(cell).trim());
-		const hasDomainColumn = headerRow.includes('도메인명');
+		const normalizedHeaderSet = new Set(
+			(rawData[0] || []).map((cell) => normalizeHeaderText(cell)).filter(Boolean)
+		);
+		const hasDomainColumn = normalizedHeaderSet.has(normalizeHeaderText('도메인명'));
 		const dataRows = rawData.slice(1);
 		const entries: ColumnEntry[] = [];
 		const seenKeys = skipDuplicates ? new Set<string>() : null;

@@ -18,6 +18,17 @@
 	interface ERDDataWithValidation extends ERDData {
 		relationValidation?: DesignRelationValidationResult;
 	}
+	interface UnifiedValidationSummary {
+		totalIssues: number;
+		errorCount: number;
+		autoFixableCount: number;
+		warningCount: number;
+		infoCount: number;
+		termFailedCount: number;
+		relationUnmatchedCount: number;
+		termPassedCount: number;
+		termTotalCount: number;
+	}
 	interface RelationSyncResult {
 		mode: 'preview' | 'apply';
 		counts: DesignRelationSyncPreview['counts'] & {
@@ -29,6 +40,23 @@
 		suggestions: DesignRelationSyncPreview['suggestions'];
 		validationBefore: DesignRelationValidationResult;
 		validationAfter: DesignRelationValidationResult;
+	}
+	interface AlignmentSyncResult {
+		mode: 'preview' | 'apply';
+		applied: boolean;
+		steps: {
+			relation?: { data?: RelationSyncResult };
+			column?: { data?: { updated?: number } };
+		};
+		summary: {
+			appliedVocabularyUpdates: number;
+			appliedTermUpdates: number;
+			appliedRelationUpdates: number;
+			appliedColumnUpdates: number;
+			remainingTermFailed: number;
+			relationUnmatchedCount: number;
+			totalIssues: number;
+		};
 	}
 
 	let erdData = $state<ERDDataWithValidation | null>(null);
@@ -47,6 +75,18 @@
 	let relationSyncLoading = $state(false);
 	let relationSyncError = $state<string | null>(null);
 	let relationSyncResult = $state<RelationSyncResult | null>(null);
+	let unifiedValidationSummary = $state<UnifiedValidationSummary | null>(null);
+	let unifiedValidationLoading = $state(false);
+	let unifiedValidationError = $state<string | null>(null);
+	let alignmentFlowLoading = $state(false);
+	let alignmentFlowError = $state<string | null>(null);
+	let alignmentFlowResult = $state<{
+		appliedVocabularyUpdates: number;
+		appliedTermUpdates: number;
+		appliedRelationUpdates: number;
+		appliedColumnUpdates: number;
+		remainingTermFailed: number;
+	} | null>(null);
 
 	// 매핑 통계 계산
 	let mappingStats = $derived(() => {
@@ -195,11 +235,83 @@
 		showTableSelector = false;
 	}
 
-	function handleRefresh() {
+	async function loadUnifiedValidationSummary(termFilename = 'term.json') {
+		unifiedValidationLoading = true;
+		unifiedValidationError = null;
+		try {
+			const params = new URLSearchParams({ termFilename });
+			const response = await fetch(`/api/validation/report?${params.toString()}`);
+			const result: DbDesignApiResponse<{
+				summary: Omit<UnifiedValidationSummary, 'termPassedCount' | 'termTotalCount'>;
+				sections: {
+					term: {
+						totalCount: number;
+						passedCount: number;
+						failedCount: number;
+					};
+				};
+			}> = await response.json();
+			if (!result.success || !result.data) {
+				unifiedValidationError = result.error || '통합 진단 요약을 불러오지 못했습니다.';
+				unifiedValidationSummary = null;
+				return;
+			}
+			unifiedValidationSummary = {
+				...result.data.summary,
+				termPassedCount: result.data.sections.term?.passedCount || 0,
+				termTotalCount: result.data.sections.term?.totalCount || 0
+			};
+		} catch (err) {
+			console.error('통합 진단 요약 로드 오류:', err);
+			unifiedValidationError =
+				err instanceof Error ? err.message : '통합 진단 요약을 불러오는 중 오류가 발생했습니다.';
+			unifiedValidationSummary = null;
+		} finally {
+			unifiedValidationLoading = false;
+		}
+	}
+
+	async function handleRefresh() {
 		if (selectedTableIds.size === 0) {
-			loadERDData();
+			await loadERDData();
 		} else {
-			loadERDData(Array.from(selectedTableIds));
+			await loadERDData(Array.from(selectedTableIds));
+		}
+		await loadUnifiedValidationSummary();
+	}
+
+	async function handleStandardAlignmentFlow() {
+		alignmentFlowLoading = true;
+		alignmentFlowError = null;
+		alignmentFlowResult = null;
+		try {
+			const response = await fetch('/api/alignment/sync', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ apply: true })
+			});
+			const result: DbDesignApiResponse<AlignmentSyncResult> = await response.json();
+			if (!result.success || !result.data) {
+				throw new Error(result.error || '통합 정합화 실행 중 오류가 발생했습니다.');
+			}
+			if (result.data.steps.relation?.data) {
+				relationSyncResult = result.data.steps.relation.data;
+			}
+
+			await handleRefresh();
+			alignmentFlowResult = {
+				appliedVocabularyUpdates: result.data.summary.appliedVocabularyUpdates || 0,
+				appliedTermUpdates: result.data.summary.appliedTermUpdates || 0,
+				appliedRelationUpdates: result.data.summary.appliedRelationUpdates || 0,
+				appliedColumnUpdates: result.data.summary.appliedColumnUpdates || 0,
+				remainingTermFailed: result.data.summary.remainingTermFailed || 0
+			};
+		} catch (err) {
+			console.error('표준 정합화 순서 실행 오류:', err);
+			alignmentFlowError =
+				err instanceof Error ? err.message : '표준 정합화 실행 중 오류가 발생했습니다.';
+		} finally {
+			alignmentFlowLoading = false;
 		}
 	}
 
@@ -237,6 +349,7 @@
 	onMount(() => {
 		loadTables();
 		loadERDData();
+		loadUnifiedValidationSummary();
 	});
 </script>
 
@@ -658,6 +771,103 @@
 						{/if}
 					</div>
 				{/if}
+
+				<div class="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
+					<div class="mb-2 flex items-center justify-between">
+						<h4 class="text-xs font-semibold uppercase tracking-wider text-indigo-700">
+							통합 정합성 요약
+						</h4>
+						<div class="flex items-center gap-2">
+							<button
+								onclick={() => loadUnifiedValidationSummary()}
+								disabled={unifiedValidationLoading || alignmentFlowLoading}
+								class="rounded border border-indigo-300 bg-white px-2 py-1 text-xs font-medium text-indigo-700 transition-colors hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
+							>
+								통합 재검증
+							</button>
+							<button
+								onclick={handleStandardAlignmentFlow}
+								disabled={alignmentFlowLoading || relationSyncLoading}
+								class="rounded border border-blue-300 bg-blue-600 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+							>
+								표준 순서 실행
+							</button>
+						</div>
+					</div>
+					<div class="mb-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+						<div class="rounded border border-amber-200 bg-white p-2 text-center">
+							<div class="font-semibold text-amber-700">
+								{unifiedValidationSummary
+									? unifiedValidationSummary.relationUnmatchedCount
+									: erdData.relationValidation
+										? erdData.relationValidation.totals.unmatched
+										: 0}
+							</div>
+							<div class="text-xs text-amber-600">관계 미매칭</div>
+						</div>
+						<div class="rounded border border-rose-200 bg-white p-2 text-center">
+							<div class="font-semibold text-rose-700">
+								{unifiedValidationSummary ? unifiedValidationSummary.termFailedCount : 0}
+							</div>
+							<div class="text-xs text-rose-600">용어계 실패</div>
+						</div>
+						<div class="rounded border border-green-200 bg-white p-2 text-center">
+							<div class="font-semibold text-green-700">
+								{unifiedValidationSummary ? unifiedValidationSummary.termPassedCount : 0}
+							</div>
+							<div class="text-xs text-green-600">용어계 통과</div>
+						</div>
+						<div class="rounded border border-gray-200 bg-white p-2 text-center">
+							<div class="font-semibold text-gray-700">
+								{unifiedValidationSummary ? unifiedValidationSummary.totalIssues : 0}
+							</div>
+							<div class="text-xs text-gray-600">통합 이슈</div>
+						</div>
+					</div>
+					{#if unifiedValidationSummary}
+						<div class="mb-2 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+							<div class="rounded border border-red-200 bg-white p-1 text-center text-red-700">
+								Error {unifiedValidationSummary.errorCount}
+							</div>
+							<div class="rounded border border-yellow-200 bg-white p-1 text-center text-yellow-700">
+								Auto-fixable {unifiedValidationSummary.autoFixableCount}
+							</div>
+							<div class="rounded border border-amber-200 bg-white p-1 text-center text-amber-700">
+								Warning {unifiedValidationSummary.warningCount}
+							</div>
+							<div class="rounded border border-slate-200 bg-white p-1 text-center text-slate-700">
+								Info {unifiedValidationSummary.infoCount}
+							</div>
+						</div>
+					{/if}
+					<p class="text-xs text-indigo-700">
+						권장 실행 순서: <code>vocabulary sync-domain(apply=true)</code> ->
+						<code>term sync(apply=true)</code> -> <code>relations sync(apply=true)</code> ->
+						<code>column sync-term(apply=true)</code> -> <code>validation/report</code>
+					</p>
+					{#if unifiedValidationLoading}
+						<div class="mt-2 text-xs text-indigo-700">통합 진단 요약을 불러오는 중...</div>
+					{/if}
+					{#if unifiedValidationError}
+						<div class="mt-2 rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700">
+							{unifiedValidationError}
+						</div>
+					{/if}
+					{#if alignmentFlowError}
+						<div class="mt-2 rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700">
+							{alignmentFlowError}
+						</div>
+					{/if}
+					{#if alignmentFlowResult}
+						<div class="mt-2 rounded border border-blue-200 bg-white p-2 text-xs text-gray-700">
+							<div>단어집 반영: {alignmentFlowResult.appliedVocabularyUpdates}</div>
+							<div>용어 반영: {alignmentFlowResult.appliedTermUpdates}</div>
+							<div>관계 반영: {alignmentFlowResult.appliedRelationUpdates}</div>
+							<div>컬럼 반영: {alignmentFlowResult.appliedColumnUpdates}</div>
+							<div>재검증 실패(용어계): {alignmentFlowResult.remainingTermFailed}</div>
+						</div>
+					{/if}
+				</div>
 				</div>
 			</div>
 		{/if}

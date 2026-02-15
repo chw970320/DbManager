@@ -1,0 +1,18 @@
+{
+	"name": "partial-mismatch",
+	"description": "일부 관계와 용어 매핑이 불일치한 샘플",
+	"vocabulary": [
+		{ "standardName": "사용자", "abbreviation": "USER", "domainCategory": "회원" },
+		{ "standardName": "이름", "abbreviation": "NAME", "domainCategory": "회원" }
+	],
+	"domain": [{ "standardDomainName": "USER_NAME_DOM", "domainCategory": "회원", "physicalDataType": "VARCHAR", "dataLength": "50" }],
+	"term": [
+		{ "termName": "사용자_이름", "columnName": "USER_NAME", "domainName": "USER_NAME_DOM" },
+		{ "termName": "사용자_별명", "columnName": "USER_NICK", "domainName": "MISSING_DOM" }
+	],
+	"database": [{ "logicalDbName": "회원DB", "physicalDbName": "MEMBER_DB" }],
+	"entity": [{ "schemaName": "MEM", "entityName": "사용자", "logicalDbName": "회원DB" }],
+	"attribute": [{ "schemaName": "MEM", "entityName": "사용자", "attributeName": "이름" }],
+	"table": [{ "schemaName": "MEM", "tableEnglishName": "TB_USER", "relatedEntityName": "사용자", "physicalDbName": "MEMBER_DB" }],
+	"column": [{ "schemaName": "MEM", "tableEnglishName": "TB_USER", "columnEnglishName": "USER_NICK", "domainName": "OLD_DOM" }]
+}

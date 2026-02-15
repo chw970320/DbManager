@@ -89,6 +89,38 @@ function createSyncResponse() {
 	};
 }
 
+function createUnifiedResponse() {
+	return {
+		success: true,
+		data: {
+			files: {
+				term: 'term.json',
+				database: 'database.json',
+				entity: 'entity.json',
+				attribute: 'attribute.json',
+				table: 'table.json',
+				column: 'column.json'
+			},
+			summary: {
+				totalIssues: 3,
+				errorCount: 1,
+				autoFixableCount: 1,
+				warningCount: 1,
+				infoCount: 0,
+				termFailedCount: 1,
+				relationUnmatchedCount: 1
+			},
+			sections: {
+				term: {
+					totalCount: 10,
+					passedCount: 9,
+					failedCount: 1
+				}
+			}
+		}
+	};
+}
+
 describe('DesignRelationPanel', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -97,9 +129,14 @@ describe('DesignRelationPanel', () => {
 	it('should load and render relation validation summary', async () => {
 		vi.stubGlobal(
 			'fetch',
-			vi.fn().mockResolvedValue({
-				json: async () => createRelationsResponse()
-			})
+			vi
+				.fn()
+				.mockResolvedValueOnce({
+					json: async () => createRelationsResponse()
+				})
+				.mockResolvedValueOnce({
+					json: async () => createUnifiedResponse()
+				})
 		);
 
 		render(DesignRelationPanel, {
@@ -113,6 +150,8 @@ describe('DesignRelationPanel', () => {
 			expect(screen.getByText('5개 정의서 연관 상태')).toBeInTheDocument();
 			expect(screen.getByText('table.json')).toBeInTheDocument();
 			expect(screen.getByText('테이블 -> 컬럼')).toBeInTheDocument();
+			expect(screen.getByText('통합 정합성 요약')).toBeInTheDocument();
+			expect(screen.getByText('용어계 실패')).toBeInTheDocument();
 		});
 	});
 
@@ -126,7 +165,13 @@ describe('DesignRelationPanel', () => {
 					json: async () => createRelationsResponse()
 				})
 				.mockResolvedValueOnce({
+					json: async () => createUnifiedResponse()
+				})
+				.mockResolvedValueOnce({
 					json: async () => createSyncResponse()
+				})
+				.mockResolvedValueOnce({
+					json: async () => createUnifiedResponse()
 				})
 		);
 

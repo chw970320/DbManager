@@ -51,6 +51,23 @@
 	let showValidationPanel = $state(false);
 	let validationLoading = $state(false);
 	let validationResults = $state<ValidationCheckResult | null>(null);
+	let relationshipSummaryLoading = $state(false);
+	let relationshipSummary = $state<{
+		files: { term: string; vocabulary: string; domain: string };
+		summary: {
+			termTotalCount: number;
+			vocabularyTotalCount: number;
+			domainTotalCount: number;
+			termNameMappedCount: number;
+			columnNameMappedCount: number;
+			termDomainMappedCount: number;
+			vocabularyDomainMappedCount: number;
+			missingTermPartCount: number;
+			missingColumnPartCount: number;
+			missingDomainCount: number;
+			orphanDomainCount: number;
+		};
+	} | null>(null);
 
 	// 자동 수정 관련 상태
 	let showDuplicateSelection = $state(false);
@@ -154,6 +171,7 @@
 			termStore.set({ selectedFilename });
 			await loadFilterOptions();
 			await loadTermData();
+			await loadRelationshipSummary();
 		}
 	});
 
@@ -363,6 +381,7 @@
 		} else {
 			await loadTermData();
 		}
+		await loadRelationshipSummary();
 	}
 
 	/**
@@ -427,6 +446,25 @@
 			errorMessage = '유효성 검사 중 오류가 발생했습니다.';
 		} finally {
 			validationLoading = false;
+		}
+	}
+
+	async function loadRelationshipSummary() {
+		relationshipSummaryLoading = true;
+		try {
+			const params = new URLSearchParams({ termFilename: selectedFilename });
+			const response = await fetch(`/api/term/relationship-summary?${params.toString()}`);
+			const result: ApiResponse = await response.json();
+			if (result.success && result.data) {
+				relationshipSummary = result.data as NonNullable<typeof relationshipSummary>;
+			} else {
+				throw new Error(result.error || '용어계 관계 진단에 실패했습니다.');
+			}
+		} catch (error) {
+			console.error('용어계 관계 진단 오류:', error);
+			errorMessage = error instanceof Error ? error.message : '용어계 관계 진단 중 오류가 발생했습니다.';
+		} finally {
+			relationshipSummaryLoading = false;
 		}
 	}
 
@@ -760,6 +798,7 @@
 		searchQuery = '';
 		await loadFilterOptions();
 		await loadTermData();
+		await loadRelationshipSummary();
 	}
 
 	async function handleFileChange() {
@@ -1059,6 +1098,14 @@
 								</svg>
 								<span>{validationLoading ? '검사 중...' : '전체 유효성 검사'}</span>
 							</button>
+							<button
+								type="button"
+								onclick={loadRelationshipSummary}
+								disabled={loading || relationshipSummaryLoading}
+								class="group inline-flex items-center space-x-2 rounded-xl border border-indigo-200/50 bg-indigo-50/80 px-6 py-3 text-sm font-medium text-indigo-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-indigo-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+							>
+								<span>{relationshipSummaryLoading ? '진단 중...' : '용어계 관계 진단'}</span>
+							</button>
 
 							<!-- XLSX 다운로드 버튼 -->
 							<button
@@ -1110,6 +1157,39 @@
 						</div>
 					</div>
 				</div>
+
+				{#if relationshipSummary}
+					<div class="mb-8 rounded-2xl border border-indigo-200/60 bg-indigo-50/80 p-4 shadow-sm backdrop-blur-sm">
+						<div class="mb-2 flex items-center justify-between">
+							<h2 class="text-sm font-semibold text-indigo-800">용어계 관계 진단 요약</h2>
+							<div class="text-xs text-indigo-700">
+								term: {relationshipSummary.files.term}, vocabulary: {relationshipSummary.files.vocabulary}, domain: {relationshipSummary.files.domain}
+							</div>
+						</div>
+						<div class="grid grid-cols-2 gap-2 text-xs sm:grid-cols-5">
+							<div class="rounded border border-green-200 bg-white p-2 text-center">
+								<div class="font-semibold text-green-700">{relationshipSummary.summary.termNameMappedCount}</div>
+								<div class="text-green-600">용어명 매핑</div>
+							</div>
+							<div class="rounded border border-blue-200 bg-white p-2 text-center">
+								<div class="font-semibold text-blue-700">{relationshipSummary.summary.columnNameMappedCount}</div>
+								<div class="text-blue-600">컬럼명 매핑</div>
+							</div>
+							<div class="rounded border border-purple-200 bg-white p-2 text-center">
+								<div class="font-semibold text-purple-700">{relationshipSummary.summary.termDomainMappedCount}</div>
+								<div class="text-purple-600">도메인 매핑</div>
+							</div>
+							<div class="rounded border border-rose-200 bg-white p-2 text-center">
+								<div class="font-semibold text-rose-700">{relationshipSummary.summary.missingDomainCount}</div>
+								<div class="text-rose-600">미매핑 도메인</div>
+							</div>
+							<div class="rounded border border-amber-200 bg-white p-2 text-center">
+								<div class="font-semibold text-amber-700">{relationshipSummary.summary.orphanDomainCount}</div>
+								<div class="text-amber-600">미참조 도메인</div>
+							</div>
+						</div>
+					</div>
+				{/if}
 
 				<!-- TermEditor 모달 -->
 				{#if showEditor}

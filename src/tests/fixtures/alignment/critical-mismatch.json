@@ -1,0 +1,15 @@
+{
+	"name": "critical-mismatch",
+	"description": "핵심 키 누락/불일치가 다수 포함된 중대 불일치 샘플",
+	"vocabulary": [{ "standardName": "고객", "abbreviation": "CUST", "domainCategory": "고객" }],
+	"domain": [{ "standardDomainName": "CUST_ID_DOM", "domainCategory": "고객", "physicalDataType": "VARCHAR", "dataLength": "20" }],
+	"term": [
+		{ "termName": "없는_단어", "columnName": "NO_WORD", "domainName": "NO_DOMAIN" },
+		{ "termName": "고객_ID", "columnName": "CUSTOMER_ID", "domainName": "CUST_ID_DOM" }
+	],
+	"database": [{ "logicalDbName": "고객DB", "physicalDbName": "CUSTOMER_DB" }],
+	"entity": [{ "schemaName": "CUS", "entityName": "고객", "logicalDbName": "다른DB" }],
+	"attribute": [{ "schemaName": "CUS", "entityName": "고객", "attributeName": "고객식별자" }],
+	"table": [{ "schemaName": "CUS", "tableEnglishName": "TB_MEMBER", "relatedEntityName": "회원", "physicalDbName": "CUSTOMER_DB" }],
+	"column": [{ "schemaName": "CUS", "tableEnglishName": "TB_MEMBER", "columnEnglishName": "NO_WORD", "domainName": "LEGACY_DOM" }]
+}

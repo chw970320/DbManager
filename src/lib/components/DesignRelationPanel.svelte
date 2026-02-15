@@ -48,6 +48,43 @@
 		validationBefore: DesignRelationValidationResult;
 		validationAfter: DesignRelationValidationResult;
 	};
+	type UnifiedValidationPayload = {
+		files: {
+			term: string;
+		} & Record<DefinitionType, string | null>;
+		summary: {
+			totalIssues: number;
+			errorCount: number;
+			autoFixableCount: number;
+			warningCount: number;
+			infoCount: number;
+			termFailedCount: number;
+			relationUnmatchedCount: number;
+		};
+		sections: {
+			term: {
+				totalCount: number;
+				passedCount: number;
+				failedCount: number;
+			};
+		};
+	};
+	type AlignmentSyncPayload = {
+		mode: 'preview' | 'apply';
+		applied: boolean;
+		steps: {
+			relation?: { data?: RelationSyncPayload };
+			column?: { data?: { updated?: number } };
+			validation?: { data?: UnifiedValidationPayload };
+		};
+		summary: {
+			appliedRelationUpdates: number;
+			appliedColumnUpdates: number;
+			remainingTermFailed: number;
+			relationUnmatchedCount: number;
+			totalIssues: number;
+		};
+	};
 
 	let {
 		currentType,
@@ -63,6 +100,7 @@
 	let syncing = $state(false);
 	let error = $state<string | null>(null);
 	let validationData = $state<RelationValidationPayload | null>(null);
+	let unifiedValidationData = $state<UnifiedValidationPayload | null>(null);
 	let syncData = $state<RelationSyncPayload | null>(null);
 	let lastLoadedKey = $state('');
 	let showSyncDetails = $state(false);
@@ -83,16 +121,20 @@
 		return 'columnFile';
 	}
 
+	function buildFileParams() {
+		const params = new URLSearchParams();
+		if (currentFilename?.trim()) {
+			params.set(currentFileParamName(currentType), currentFilename.trim());
+		}
+		return params;
+	}
+
 	async function loadValidation() {
 		loading = true;
 		error = null;
 
 		try {
-			const params = new URLSearchParams();
-			if (currentFilename?.trim()) {
-				params.set(currentFileParamName(currentType), currentFilename.trim());
-			}
-
+			const params = buildFileParams();
 			const response = await fetch(`/api/erd/relations?${params.toString()}`);
 			const result = (await response.json()) as DbDesignApiResponse<RelationValidationPayload>;
 
@@ -105,6 +147,39 @@
 		} catch (err) {
 			console.error('연관관계 상태 조회 오류:', err);
 			error = err instanceof Error ? err.message : '연관관계 상태 조회 중 오류가 발생했습니다.';
+		} finally {
+			loading = false;
+		}
+	}
+
+	async function loadUnifiedValidation() {
+		loading = true;
+		error = null;
+
+		try {
+			const params = buildFileParams();
+			const response = await fetch(`/api/validation/report?${params.toString()}`);
+			const result = (await response.json()) as DbDesignApiResponse<UnifiedValidationPayload>;
+
+			if (!result.success || !result.data) {
+				error = result.error || '통합 정합성 상태를 불러오지 못했습니다.';
+				return;
+			}
+
+			unifiedValidationData = result.data;
+		} catch (err) {
+			console.error('통합 정합성 상태 조회 오류:', err);
+			error = err instanceof Error ? err.message : '통합 정합성 상태 조회 중 오류가 발생했습니다.';
+		} finally {
+			loading = false;
+		}
+	}
+
+	async function loadAllValidations() {
+		loading = true;
+		error = null;
+		try {
+			await Promise.all([loadValidation(), loadUnifiedValidation()]);
 		} finally {
 			loading = false;
 		}
@@ -149,9 +224,55 @@
 		}
 	}
 
+	async function runStandardAlignment() {
+		syncing = true;
+		error = null;
+		try {
+			const body: Record<string, string | boolean> = { apply: true };
+			if (currentFilename?.trim()) {
+				body[currentFileParamName(currentType)] = currentFilename.trim();
+			}
+
+			const response = await fetch('/api/alignment/sync', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(body)
+			});
+			const result = (await response.json()) as DbDesignApiResponse<AlignmentSyncPayload>;
+			if (!result.success || !result.data) {
+				error = result.error || '표준 순서 실행에 실패했습니다.';
+				return;
+			}
+
+			if (result.data.steps.relation?.data) {
+				syncData = result.data.steps.relation.data;
+				validationData = {
+					files: result.data.steps.relation.data.files,
+					validation: result.data.steps.relation.data.validationAfter
+				};
+			}
+
+			if (result.data.steps.validation?.data) {
+				unifiedValidationData = result.data.steps.validation.data;
+			} else {
+				await loadUnifiedValidation();
+			}
+
+			showSyncDetails = false;
+			if (onApplied) {
+				await onApplied();
+			}
+		} catch (err) {
+			console.error('표준 순서 실행 오류:', err);
+			error = err instanceof Error ? err.message : '표준 순서 실행 중 오류가 발생했습니다.';
+		} finally {
+			syncing = false;
+		}
+	}
+
 	onMount(async () => {
 		lastLoadedKey = `${currentType}:${currentFilename}`;
-		await loadValidation();
+		await loadAllValidations();
 	});
 
 	$effect(() => {
@@ -160,7 +281,7 @@
 		lastLoadedKey = nextKey;
 		syncData = null;
 		showSyncDetails = false;
-		void loadValidation();
+		void loadAllValidations();
 	});
 </script>
 
@@ -173,11 +294,19 @@
 		<div class="flex items-center gap-2">
 			<button
 				type="button"
-				onclick={loadValidation}
+				onclick={loadAllValidations}
 				disabled={loading || syncing}
 				class="rounded-md border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
 			>
 				{loading ? '조회 중...' : '정합성 조회'}
+			</button>
+			<button
+				type="button"
+				onclick={runStandardAlignment}
+				disabled={loading || syncing}
+				class="rounded-md border border-indigo-300 bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
+			>
+				{syncing ? '실행 중...' : '표준 순서 실행'}
 			</button>
 			<button
 				type="button"
@@ -240,6 +369,52 @@
 					</span>
 				</div>
 			{/each}
+		</div>
+	{/if}
+
+	{#if unifiedValidationData}
+		<div class="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 p-3">
+			<div class="mb-2 text-xs font-semibold uppercase tracking-wider text-indigo-700">
+				통합 정합성 요약
+			</div>
+			<div class="mb-2 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+				<div class="rounded border border-amber-200 bg-white p-2 text-center">
+					<div class="font-semibold text-amber-700">
+						{unifiedValidationData.summary.relationUnmatchedCount}
+					</div>
+					<div class="text-amber-600">관계 미매칭</div>
+				</div>
+				<div class="rounded border border-rose-200 bg-white p-2 text-center">
+					<div class="font-semibold text-rose-700">
+						{unifiedValidationData.summary.termFailedCount}
+					</div>
+					<div class="text-rose-600">용어계 실패</div>
+				</div>
+				<div class="rounded border border-green-200 bg-white p-2 text-center">
+					<div class="font-semibold text-green-700">
+						{unifiedValidationData.sections.term.passedCount}
+					</div>
+					<div class="text-green-600">용어계 통과</div>
+				</div>
+				<div class="rounded border border-gray-200 bg-white p-2 text-center">
+					<div class="font-semibold text-gray-700">{unifiedValidationData.summary.totalIssues}</div>
+					<div class="text-gray-600">통합 이슈</div>
+				</div>
+			</div>
+			<div class="grid grid-cols-2 gap-2 text-[11px] sm:grid-cols-4">
+				<div class="rounded border border-red-200 bg-white p-1 text-center text-red-700">
+					Error {unifiedValidationData.summary.errorCount}
+				</div>
+				<div class="rounded border border-yellow-200 bg-white p-1 text-center text-yellow-700">
+					Auto-fixable {unifiedValidationData.summary.autoFixableCount}
+				</div>
+				<div class="rounded border border-amber-200 bg-white p-1 text-center text-amber-700">
+					Warning {unifiedValidationData.summary.warningCount}
+				</div>
+				<div class="rounded border border-slate-200 bg-white p-1 text-center text-slate-700">
+					Info {unifiedValidationData.summary.infoCount}
+				</div>
+			</div>
 		</div>
 	{/if}
 

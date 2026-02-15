@@ -4,6 +4,7 @@
 	import DomainTable from '$lib/components/DomainTable.svelte';
 	import DomainFileManager from '$lib/components/DomainFileManager.svelte';
 	import DomainEditor from '$lib/components/DomainEditor.svelte';
+	import DomainValidationPanel from '$lib/components/DomainValidationPanel.svelte';
 	import type { DomainEntry, DomainApiResponse } from '$lib/types/domain.js';
 	import { get } from 'svelte/store';
 	import { settingsStore } from '$lib/stores/settings-store';
@@ -37,6 +38,24 @@
 	let showEditor = $state(false);
 	let editorServerError = $state('');
 	let currentEditingEntry = $state<DomainEntry | null>(null);
+	let showValidationPanel = $state(false);
+	let validationLoading = $state(false);
+	let validationResults = $state<{
+		totalCount: number;
+		failedCount: number;
+		passedCount: number;
+		failedEntries: Array<{
+			entry: DomainEntry;
+			errors: Array<{
+				type: string;
+				code: string;
+				message: string;
+				field?: string;
+				priority: number;
+			}>;
+			generatedDomainName?: string;
+		}>;
+	} | null>(null);
 
 	// 이벤트 상세 타입 정의
 	type SearchDetail = { query: string; field: string; exact: boolean };
@@ -330,6 +349,36 @@
 		} else {
 			await loadDomainData();
 		}
+	}
+
+	async function handleValidateAllDomain() {
+		validationLoading = true;
+		showValidationPanel = true;
+		validationResults = null;
+		try {
+			const params = new URLSearchParams({ filename: selectedFilename });
+			const response = await fetch(`/api/domain/validate-all?${params.toString()}`);
+			const result: DomainApiResponse = await response.json();
+			if (result.success && result.data) {
+				validationResults = result.data as NonNullable<typeof validationResults>;
+			} else {
+				throw new Error(result.error || '도메인 유효성 검사에 실패했습니다.');
+			}
+		} catch (error) {
+			console.error('도메인 유효성 검사 오류:', error);
+			errorMessage = error instanceof Error ? error.message : '도메인 유효성 검사 중 오류가 발생했습니다.';
+		} finally {
+			validationLoading = false;
+		}
+	}
+
+	function handleDomainValidationEdit(event: CustomEvent<{ entryId: string }>) {
+		const { entryId } = event.detail;
+		const failedEntry = validationResults?.failedEntries.find((item) => item.entry.id === entryId);
+		if (!failedEntry) return;
+		currentEditingEntry = failedEntry.entry;
+		editorServerError = '';
+		showEditor = true;
 	}
 
 	/**
@@ -798,6 +847,14 @@
 								</svg>
 								<span>{loading ? '로딩 중' : '새로고침'}</span>
 							</button>
+							<button
+								type="button"
+								onclick={handleValidateAllDomain}
+								disabled={loading || validationLoading}
+								class="group inline-flex items-center space-x-2 rounded-xl border border-blue-200/50 bg-blue-50/80 px-6 py-3 text-sm font-medium text-blue-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-blue-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+							>
+								<span>{validationLoading ? '검사 중' : '유효성 검사'}</span>
+							</button>
 						</div>
 					</div>
 				</div>
@@ -812,6 +869,19 @@
 						on:save={handleSave}
 						on:delete={handleDelete}
 						on:cancel={handleCancel}
+					/>
+				{/if}
+
+				{#if showValidationPanel}
+					<DomainValidationPanel
+						results={validationResults?.failedEntries || []}
+						totalCount={validationResults?.totalCount || 0}
+						failedCount={validationResults?.failedCount || 0}
+						passedCount={validationResults?.passedCount || 0}
+						loading={validationLoading}
+						open={showValidationPanel}
+						on:close={() => (showValidationPanel = false)}
+						on:edit={handleDomainValidationEdit}
 					/>
 				{/if}
 

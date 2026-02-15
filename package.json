@@ -12,6 +12,7 @@
 		"format": "prettier --write .",
 		"lint": "prettier --check . && eslint .",
 		"test": "vitest",
+		"test:regression": "pnpm check && pnpm vitest run src/routes/api/alignment/sync/server.test.ts src/routes/api/validation/report/server.test.ts src/routes/api/validation/report/integration-8model.test.ts src/routes/api/term/sync/server.test.ts src/routes/api/vocabulary/sync-domain/server.test.ts src/routes/api/column/sync-term/server.test.ts src/lib/components/DesignRelationPanel.test.ts src/lib/components/TermValidationPanel.test.ts src/lib/components/VocabularyValidationPanel.test.ts src/lib/components/DomainValidationPanel.test.ts",
 		"test:ui": "vitest --ui",
 		"test:e2e": "playwright test"
 	},

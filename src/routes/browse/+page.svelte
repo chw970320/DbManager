@@ -4,6 +4,7 @@
 	import SearchBar from '$lib/components/SearchBar.svelte';
 	import VocabularyTable from '$lib/components/VocabularyTable.svelte';
 	import VocabularyEditor from '$lib/components/VocabularyEditor.svelte';
+	import VocabularyValidationPanel from '$lib/components/VocabularyValidationPanel.svelte';
 	import VocabularyFileManager from '$lib/components/VocabularyFileManager.svelte';
 	import type { VocabularyEntry, ApiResponse } from '$lib/types/vocabulary.js';
 	import { get } from 'svelte/store';
@@ -48,6 +49,23 @@
 	let isFileManagerOpen = $state(false);
 	let sidebarOpen = $state(false);
 	let currentEditingEntry = $state<VocabularyEntry | null>(null);
+	let showValidationPanel = $state(false);
+	let validationLoading = $state(false);
+	let validationResults = $state<{
+		totalCount: number;
+		failedCount: number;
+		passedCount: number;
+		failedEntries: Array<{
+			entry: VocabularyEntry;
+			errors: Array<{
+				type: string;
+				code: string;
+				message: string;
+				field?: string;
+				priority: number;
+			}>;
+		}>;
+	} | null>(null);
 
 	let unsubscribe: () => void;
 
@@ -674,6 +692,35 @@
 			loading = false;
 		}
 	}
+
+	async function handleValidateAllVocabulary() {
+		validationLoading = true;
+		showValidationPanel = true;
+		validationResults = null;
+		try {
+			const params = new URLSearchParams({ filename: selectedFilename });
+			const response = await fetch(`/api/vocabulary/validate-all?${params.toString()}`);
+			const result: ApiResponse = await response.json();
+			if (result.success && result.data) {
+				validationResults = result.data as NonNullable<typeof validationResults>;
+			} else {
+				throw new Error(result.error || '단어집 유효성 검사에 실패했습니다.');
+			}
+		} catch (error) {
+			console.error('단어집 유효성 검사 오류:', error);
+		} finally {
+			validationLoading = false;
+		}
+	}
+
+	function handleVocabularyValidationEdit(event: CustomEvent<{ entryId: string }>) {
+		const { entryId } = event.detail;
+		const failedEntry = validationResults?.failedEntries.find((item) => item.entry.id === entryId);
+		if (!failedEntry) return;
+		currentEditingEntry = failedEntry.entry;
+		editorServerError = '';
+		showEditor = true;
+	}
 </script>
 
 <svelte:head>
@@ -902,6 +949,15 @@
 								<span>{loading ? '준비 중' : 'XLSX 다운로드'}</span>
 							</button>
 
+							<button
+								type="button"
+								onclick={handleValidateAllVocabulary}
+								disabled={loading || validationLoading}
+								class="group inline-flex items-center space-x-2 rounded-xl border border-blue-200/50 bg-blue-50/80 px-6 py-3 text-sm font-medium text-blue-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-blue-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+							>
+								<span>{validationLoading ? '검사 중' : '유효성 검사'}</span>
+							</button>
+
 							<!-- 새로고침 버튼 -->
 							<button
 								type="button"
@@ -944,6 +1000,19 @@
 							editorServerError = '';
 							currentEditingEntry = null;
 						}}
+					/>
+				{/if}
+
+				{#if showValidationPanel}
+					<VocabularyValidationPanel
+						results={validationResults?.failedEntries || []}
+						totalCount={validationResults?.totalCount || 0}
+						failedCount={validationResults?.failedCount || 0}
+						passedCount={validationResults?.passedCount || 0}
+						loading={validationLoading}
+						open={showValidationPanel}
+						on:close={() => (showValidationPanel = false)}
+						on:edit={handleVocabularyValidationEdit}
 					/>
 				{/if}
 

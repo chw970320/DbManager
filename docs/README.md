@@ -9,6 +9,7 @@
 | **PROJECT_DEEP_ANALYSIS.md** | 프로젝트 본질 및 핵심 가치 분석    | 모든 사용자 (필수) |
 | **AI_CONTEXT.md**            | AI 컨텍스트 문서 (프로젝트 이해용) | AI, 개발자         |
 | **CONVENTIONS.md**           | 개발 컨벤션 및 코딩 스타일 가이드  | 개발자             |
+| **FRONTEND_UI_UX_GUIDE.md**  | 프론트엔드 UI/UX 구현 가이드       | 프론트엔드 개발자  |
 | **CHANGELOG.md**             | 코드/아키텍처 변경 이력            | 개발자             |
 | **QUICK_START.md**           | 빠른 시작 가이드                   | 모든 사용자        |
 | **USER_GUIDE.md**            | 사용자 가이드 (상세 매뉴얼)        | 실제 사용자        |
@@ -28,10 +29,11 @@
 
 1. **[프로젝트 본질 분석](./PROJECT_DEEP_ANALYSIS.md)**: 프로젝트의 핵심 개념 및 아키텍처
 2. **[개발 컨벤션](./CONVENTIONS.md)**: 코딩 스타일 및 개발 가이드
-3. **[API 레퍼런스](./specs/api-reference.md)**: API 엔드포인트 상세 정보
-4. **[데이터 모델](./specs/data-model.md)**: 데이터 구조 및 타입 정의
-5. **[AI 컨텍스트](./AI_CONTEXT.md)**: AI가 프로젝트를 이해하기 위한 컨텍스트
-6. **[변경 이력](./CHANGELOG.md)**: 레지스트리/매핑 관련 최신 변경점
+3. **[프론트엔드 UI/UX 가이드](./FRONTEND_UI_UX_GUIDE.md)**: 공통 컴포넌트/디자인 토큰 사용 기준
+4. **[API 레퍼런스](./specs/api-reference.md)**: API 엔드포인트 상세 정보
+5. **[데이터 모델](./specs/data-model.md)**: 데이터 구조 및 타입 정의
+6. **[AI 컨텍스트](./AI_CONTEXT.md)**: AI가 프로젝트를 이해하기 위한 컨텍스트
+7. **[변경 이력](./CHANGELOG.md)**: 레지스트리/매핑/프론트엔드 최신 변경점
 
 ### 문서 관리자
 

@@ -4,6 +4,7 @@
 	import type { DbDesignApiResponse, DbDesignUploadResult } from '$lib/types/database-design';
 	import { tableStore } from '$lib/stores/database-design-store';
 	import { settingsStore } from '$lib/stores/settings-store';
+	import { showConfirm } from '$lib/stores/confirm-store';
 
 	interface Props {
 		isOpen?: boolean;
@@ -262,7 +263,8 @@
 			return;
 		}
 
-		if (!confirm(`정말 "${filename}" 파일을 삭제하시겠습니까?`)) {
+		const confirmed = await showConfirm({ title: '확인', message: `정말 "${filename}" 파일을 삭제하시겠습니까?`, confirmText: '삭제', variant: 'danger' });
+		if (!confirmed) {
 			return;
 		}
 
@@ -486,7 +488,7 @@
 					<h2 class="text-xl font-bold text-gray-900">테이블 정의서 파일 관리</h2>
 					<button
 						onclick={handleClose}
-						class="rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+						class="rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-600"
 						aria-label="닫기"
 					>
 						<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -708,7 +710,7 @@
 												{#if !isSystemFile(file)}
 													<button
 														onclick={() => startRename(file)}
-														class="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+														class="rounded-md p-1.5 text-gray-600 hover:bg-gray-100 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
 														disabled={isSubmitting}
 														aria-label="이름변경"
 													>
@@ -728,7 +730,7 @@
 													</button>
 													<button
 														onclick={() => handleDeleteFile(file)}
-														class="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+														class="rounded-md p-1.5 text-gray-600 hover:bg-gray-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
 														disabled={isSubmitting}
 														aria-label="삭제"
 													>

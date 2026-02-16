@@ -8,6 +8,7 @@
 	import { termStore } from '$lib/stores/term-store';
 	import type { TermEntry } from '$lib/types/term';
 	import { debounce } from '$lib/utils/debounce';
+	import { addToast } from '$lib/stores/toast-store';
 
 	// Props
 	interface Props {
@@ -451,7 +452,7 @@
 			// 에러 팝업 표시
 			if (errorMessages.length > 0) {
 				await tick();
-				alert('입력 오류\n\n' + errorMessages.join('\n'));
+				addToast('입력 오류: ' + errorMessages.join(', '), 'error');
 			}
 			return;
 		}
@@ -498,7 +499,7 @@
 			// validation 에러가 있으면 팝업 표시하고 전송 중단
 			if (validationErrors.length > 0) {
 				await tick();
-				alert('입력 오류\n\n' + validationErrors.join('\n'));
+				addToast('입력 오류: ' + validationErrors.join(', '), 'error');
 				isSubmitting = false;
 				return;
 			}
@@ -586,7 +587,7 @@
 			<h2 class="text-xl font-bold text-gray-900">{isEditMode ? '용어 수정' : '새 용어 추가'}</h2>
 			<button
 				onclick={handleCancel}
-				class="text-gray-400 hover:text-gray-600"
+				class="text-gray-600 hover:text-gray-600"
 				disabled={isSubmitting}
 				aria-label="편집 창 닫기"
 			>

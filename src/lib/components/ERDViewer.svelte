@@ -3,6 +3,7 @@
 	import mermaid from 'mermaid';
 	import type { ERDData } from '../types/erd-mapping.js';
 	import { generateMermaidERD } from '../utils/erd-generator.js';
+	import { addToast } from '$lib/stores/toast-store';
 
 	let { erdData }: { erdData: ERDData } = $props();
 
@@ -172,7 +173,7 @@
 			<button
 				onclick={() => {
 					navigator.clipboard.writeText(mermaidCode);
-					alert('Mermaid 코드가 클립보드에 복사되었습니다.');
+					addToast('Mermaid 코드가 클립보드에 복사되었습니다.', 'success');
 				}}
 				class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
 			>

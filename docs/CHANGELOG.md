@@ -1,5 +1,59 @@
 # 변경 이력
 
+## 2026-02-16
+
+### 요약
+
+- 프론트엔드 디자인 시스템 정비 및 공통 컴포넌트 기반으로 UI가 표준화되었습니다.
+- 네이티브 `alert/confirm` 의존도를 제거하고 전역 `Toast/ConfirmDialog` 패턴으로 통합했습니다.
+- 프론트엔드 검증(`pnpm check`, `pnpm vitest run`)이 모두 통과했습니다.
+
+### 상세 변경
+
+1. 디자인 시스템/토큰 정비
+
+- 대상: `tailwind.config.js`, `src/app.css`
+- 변경:
+  - 시맨틱 색상 토큰(`brand`, `surface`, `content`, `border`, `status`) 확장
+  - 버튼/배지/입력 등 공통 클래스 정리
+
+2. 공통 컴포넌트 추가 및 페이지 재사용 구조 강화
+
+- 신규 컴포넌트:
+  - `src/lib/components/Icon.svelte`
+  - `src/lib/components/Toast.svelte`
+  - `src/lib/components/ConfirmDialog.svelte`
+  - `src/lib/components/ValidationPanelShell.svelte`
+  - `src/lib/components/FormField.svelte`
+  - `src/lib/components/EmptyState.svelte`
+  - `src/lib/components/Skeleton.svelte`
+  - `src/lib/components/Breadcrumb.svelte`
+  - `src/lib/components/BrowsePageLayout.svelte`
+  - `src/lib/components/ActionBar.svelte`
+
+3. 사용자 상호작용 패턴 표준화
+
+- 대상:
+  - `src/lib/stores/toast-store.ts`
+  - `src/lib/stores/confirm-store.ts`
+  - 다수 Editor/FileManager/ERD/Term 화면
+- 변경:
+  - `showConfirm(...)` 기반 삭제/파괴 작업 확인 패턴 적용
+  - `addToast(...)` 기반 성공/실패 피드백 통일
+  - `src/routes/+layout.svelte`에서 `Toast`, `ConfirmDialog` 전역 마운트
+
+4. 검증/테스트 정합성 보강
+
+- 대상:
+  - `src/lib/components/Breadcrumb.svelte`
+  - `src/lib/components/VocabularyEditor.test.ts`
+  - `src/lib/components/DomainEditor.test.ts`
+  - `src/lib/components/EntityEditor.test.ts`
+  - `src/lib/components/ERDViewer.test.ts`
+- 변경:
+  - Svelte 문법 오류(`{@const}` 배치) 수정
+  - Confirm/Toast 스토어 기반 테스트로 전환
+
 ## 2026-02-13
 
 ### 요약

@@ -101,7 +101,7 @@
 		onclick={toggleFilter}
 		class="ml-1 inline-flex items-center rounded p-1 transition-colors hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 {isActive
 			? 'text-blue-600'
-			: 'text-gray-400'}"
+			: 'text-gray-600'}"
 		aria-label="{columnLabel} 필터"
 		title="{columnLabel} 필터"
 	>

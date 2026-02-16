@@ -7,6 +7,8 @@
 	import TermGenerator from '$lib/components/TermGenerator.svelte';
 	import TermValidationPanel from '$lib/components/TermValidationPanel.svelte';
 	import VocabularyEditor from '$lib/components/VocabularyEditor.svelte';
+	import { addToast } from '$lib/stores/toast-store';
+	import { showConfirm } from '$lib/stores/confirm-store';
 	import type {
 		TermEntry,
 		ValidationCheckResult,
@@ -483,8 +485,13 @@
 		try {
 			switch (actionType) {
 				case 'DELETE_TERM': {
-					// TERM_NAME_LENGTH: 삭제 확인 alert → 삭제
-					if (confirm(`용어명 '${result.entry.termName}'을(를) 삭제하시겠습니까?`)) {
+					const confirmed = await showConfirm({
+						title: '용어 삭제',
+						message: `용어명 '${result.entry.termName}'을(를) 삭제하시겠습니까?`,
+						confirmText: '삭제',
+						variant: 'danger'
+					});
+					if (confirmed) {
 						await deleteTerm(entryId);
 						await refreshValidation();
 					}
@@ -567,18 +574,20 @@
 				}
 
 				case 'FIX_COLUMN_NAME': {
-					// COLUMN_NAME_MAPPING: 컬럼명 자동 수정
 					if (suggestions.columnName) {
 						const oldColumnName = result.entry.columnName;
 						const newColumnName = suggestions.columnName;
-						const confirmMessage = `컬럼명을 수정하시겠습니까?\n\n기존: ${oldColumnName}\n수정: ${newColumnName}`;
 
-						if (confirm(confirmMessage)) {
+						const confirmed = await showConfirm({
+							title: '컬럼명 수정',
+							message: `컬럼명을 수정하시겠습니까?\n\n기존: ${oldColumnName}\n수정: ${newColumnName}`,
+							confirmText: '수정'
+						});
+						if (confirmed) {
 							const updatedEntry = {
 								...result.entry,
 								columnName: newColumnName
 							};
-							// 자동 수정 중이므로 형식단어 검증 건너뛰기
 							await updateTerm(updatedEntry, true);
 							await refreshValidation();
 						}
@@ -621,14 +630,14 @@
 						showVocabularyEditor = true;
 					} else {
 						console.error('필수 메타데이터가 없습니다:', metadata);
-						alert('단어 정보가 없습니다.');
+						addToast('단어 정보가 없습니다.', 'error');
 					}
 					break;
 				}
 			}
 		} catch (error) {
 			console.error('자동 수정 중 오류:', error);
-			alert('자동 수정 중 오류가 발생했습니다.');
+			addToast('자동 수정 중 오류가 발생했습니다.', 'error');
 		}
 	}
 
@@ -1251,7 +1260,7 @@
 										<div class="mt-1 text-xs text-gray-500">
 											컬럼명: {entry.columnName} | 도메인명: {entry.domainName}
 										</div>
-										<div class="mt-1 text-xs text-gray-400">ID: {entry.id}</div>
+										<div class="mt-1 text-xs text-gray-600">ID: {entry.id}</div>
 									</button>
 								{/each}
 							</div>
@@ -1374,11 +1383,11 @@
 									// 자동 수정 후 validation 재실행 (검색 조건 유지)
 									await refreshValidation();
 								} else {
-									alert(result.error || '단어 저장에 실패했습니다.');
+									addToast(result.error || '단어 저장에 실패했습니다.', 'error');
 								}
 							} catch (error) {
 								console.error('단어 저장 중 오류:', error);
-								alert('단어 저장 중 오류가 발생했습니다.');
+								addToast('단어 저장 중 오류가 발생했습니다.', 'error');
 							}
 						}}
 						on:cancel={() => {

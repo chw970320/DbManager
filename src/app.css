@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* 기본 스타일 강제 적용 */
+/* 기본 스타일 */
 @layer base {
 	html {
 		font-family:
@@ -15,21 +15,20 @@
 	}
 
 	body {
-		@apply bg-gray-50 font-sans text-gray-900;
+		@apply bg-surface-muted font-sans text-content;
 		margin: 0;
 		padding: 0;
 	}
 
-	/* 모든 요소에 box-sizing 적용 */
 	*,
 	*::before,
 	*::after {
 		box-sizing: border-box;
 	}
 
-	/* 접근성 개선: 포커스 스타일 */
+	/* 접근성: 포커스 스타일 */
 	:focus {
-		@apply outline-none ring-2 ring-blue-600 ring-offset-2;
+		@apply outline-none ring-2 ring-border-focus ring-offset-2;
 	}
 
 	:focus:not(:focus-visible) {
@@ -37,30 +36,35 @@
 	}
 
 	:focus-visible {
-		@apply outline-none ring-2 ring-blue-600 ring-offset-2;
+		@apply outline-none ring-2 ring-border-focus ring-offset-2;
 	}
 }
 
-/* 커스텀 컴포넌트 스타일 */
+/* 컴포넌트 스타일 */
 @layer components {
+	/* 버튼 기본 */
 	.btn {
-		@apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
+		@apply inline-flex items-center justify-center gap-1.5 rounded-md px-4 py-2 text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
 	}
 
 	.btn-primary {
-		@apply bg-blue-700 text-white hover:bg-blue-800 focus:ring-blue-600;
+		@apply bg-brand text-white hover:bg-brand-dark focus:ring-brand;
 	}
 
 	.btn-secondary {
-		@apply border border-gray-300 bg-gray-100 text-gray-900 hover:bg-gray-200 focus:ring-gray-500;
+		@apply border border-border bg-surface-raised text-content hover:bg-gray-200 focus:ring-content-subtle;
 	}
 
 	.btn-outline {
-		@apply border border-gray-400 bg-white text-gray-700 hover:border-gray-500 hover:bg-gray-50 focus:ring-blue-600;
+		@apply border border-border-strong bg-surface text-content-secondary hover:border-content-muted hover:bg-surface-muted focus:ring-brand;
 	}
 
 	.btn-ghost {
-		@apply bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-500;
+		@apply bg-transparent text-content-secondary hover:bg-surface-raised focus:ring-content-subtle;
+	}
+
+	.btn-danger {
+		@apply bg-red-600 text-white hover:bg-red-700 focus:ring-red-500;
 	}
 
 	.btn-sm {
@@ -71,80 +75,95 @@
 		@apply px-6 py-3 text-base;
 	}
 
+	/* 카드 */
 	.card {
-		@apply rounded-lg border border-gray-300 bg-white shadow-sm;
+		@apply rounded-lg border border-border bg-surface shadow-sm;
 	}
 
+	/* 그라데이션 텍스트 */
 	.gradient-text {
-		@apply bg-gradient-to-r from-blue-700 to-purple-700 bg-clip-text text-transparent;
+		@apply bg-gradient-to-r from-brand to-purple-700 bg-clip-text text-transparent;
 	}
 
-	/* 텍스트 색상 개선 */
+	/* 시맨틱 텍스트 색상 */
 	.text-muted {
-		@apply text-gray-700;
+		@apply text-content-muted;
 	}
 
 	.text-secondary {
-		@apply text-gray-800;
+		@apply text-content-secondary;
 	}
 
-	/* 상태별 색상 개선 */
+	/* 상태별 텍스트 */
 	.text-success {
-		@apply text-green-800;
+		@apply text-status-success;
 	}
 
 	.text-error {
-		@apply text-red-800;
+		@apply text-status-error;
 	}
 
 	.text-warning {
-		@apply text-orange-800;
+		@apply text-status-warning;
 	}
 
 	.text-info {
-		@apply text-blue-800;
+		@apply text-status-info;
 	}
 
-	/* 배경 색상 개선 */
+	/* 상태별 배경 */
 	.bg-success {
-		@apply border-green-300 bg-green-100;
+		@apply border-status-success-border bg-status-success-bg;
 	}
 
 	.bg-error {
-		@apply border-red-300 bg-red-100;
+		@apply border-status-error-border bg-status-error-bg;
 	}
 
 	.bg-warning {
-		@apply border-orange-300 bg-orange-100;
+		@apply border-status-warning-border bg-status-warning-bg;
 	}
 
 	.bg-info {
-		@apply border-blue-300 bg-blue-100;
+		@apply border-status-info-border bg-status-info-bg;
 	}
 
-	/* 입력 필드 개선 */
+	/* 배지 */
+	.badge {
+		@apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium;
+	}
+
+	.badge-success {
+		@apply bg-status-success-bg text-status-success;
+	}
+
+	.badge-error {
+		@apply bg-status-error-bg text-status-error;
+	}
+
+	.badge-warning {
+		@apply bg-status-warning-bg text-status-warning;
+	}
+
+	.badge-info {
+		@apply bg-status-info-bg text-status-info;
+	}
+
+	/* 입력 필드 */
 	.input {
-		@apply block w-full rounded-md border border-gray-400 bg-white px-3 py-2 text-gray-900 placeholder-gray-400 focus:border-blue-600 focus:outline-none focus:ring-1 focus:ring-blue-600;
+		@apply block w-full rounded-md border border-border-strong bg-surface px-3 py-2 text-content placeholder-content-subtle focus:border-border-focus focus:outline-none focus:ring-1 focus:ring-border-focus;
 	}
 
 	.input:disabled {
-		@apply cursor-not-allowed bg-gray-100 text-gray-600;
+		@apply cursor-not-allowed bg-surface-raised text-content-muted;
 	}
 
 	.input-error {
 		@apply border-red-500 focus:border-red-600 focus:ring-red-600;
 	}
 
-	/* datalist 화살표 제거 */
-	input[list]::-webkit-calendar-picker-indicator {
-		display: none !important;
-		opacity: 0;
-		pointer-events: none;
-		position: absolute;
-		width: 0;
-		height: 0;
-	}
-
+	/* datalist 화살표 제거 (Chrome/Edge) */
+	input[list]::-webkit-calendar-picker-indicator,
 	input[list]::-webkit-list-button {
 		display: none !important;
 		opacity: 0;
@@ -160,7 +179,6 @@
 		-moz-appearance: textfield !important;
 	}
 
-	/* Chrome/Edge에서 datalist 화살표 제거 */
 	input[list]::-webkit-inner-spin-button,
 	input[list]::-webkit-outer-spin-button {
 		display: none !important;
@@ -168,21 +186,25 @@
 		margin: 0;
 	}
 
-	/* 링크 개선 */
+	/* 링크 */
 	.link {
-		@apply rounded text-blue-700 underline hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-1;
+		@apply rounded text-brand underline hover:text-brand-dark focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-1;
+	}
+
+	/* 구분선 */
+	.divider {
+		@apply my-4 border-t border-border;
 	}
 }
 
-/* 유틸리티 스타일 */
+/* 유틸리티 */
 @layer utilities {
 	.text-shadow {
 		text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 	}
 
-	/* 고대비 유틸리티 */
 	.high-contrast {
-		@apply border-gray-400 bg-white text-gray-900;
+		@apply border-border-strong bg-surface text-content;
 	}
 
 	.high-contrast-reverse {

@@ -181,7 +181,7 @@
 			<button
 				type="button"
 				onclick={handleClose}
-				class="rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-500"
+				class="rounded-md p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-500"
 				aria-label="닫기"
 			>
 				<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -262,7 +262,7 @@
 						{:else}
 							결과를 불러올 수 없습니다.
 							<br />
-							<small class="text-xs text-gray-400">
+							<small class="text-xs text-gray-600">
 								results: {results?.length || 0}, failedCount: {failedCount}, totalCount: {totalCount}
 							</small>
 						{/if}

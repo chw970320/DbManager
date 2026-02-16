@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { debounce } from '$lib/utils/debounce';
 	import { createEventDispatcher } from 'svelte';
+	import { addToast } from '$lib/stores/toast-store';
 
 	// Props
 	interface Props {
@@ -283,7 +284,7 @@
 		}
 
 		// 모든 방법 실패 시 사용자에게 알림
-		alert(`복사 실패: ${text}\n\n수동으로 복사해주세요.`);
+		addToast(`복사 실패: ${text} - 수동으로 복사해주세요.`, 'error');
 		return false;
 	}
 
@@ -645,7 +646,7 @@
 													</button>
 												{:else}
 													<!-- Validation 진행 중: 로딩 표시 -->
-													<div class="rounded p-1 text-gray-400">
+													<div class="rounded p-1 text-gray-600">
 														<svg
 															class="h-5 w-5 animate-spin"
 															xmlns="http://www.w3.org/2000/svg"

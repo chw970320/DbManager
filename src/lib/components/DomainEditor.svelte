@@ -4,6 +4,8 @@
 	import type { DomainEntry } from '$lib/types/domain';
 	import { generateStandardDomainName } from '$lib/utils/validation';
 	import { v4 as uuidv4 } from 'uuid';
+	import { addToast } from '$lib/stores/toast-store';
+	import { showConfirm } from '$lib/stores/confirm-store';
 
 	// Props
 	interface Props {
@@ -144,7 +146,7 @@
 			// 에러 팝업 표시
 			if (errorMessages.length > 0) {
 				await tick();
-				alert('입력 오류\n\n' + errorMessages.join('\n'));
+				addToast('입력 오류: ' + errorMessages.join(', '), 'error');
 			}
 			return;
 		}
@@ -196,7 +198,7 @@
 			// validation 에러가 있으면 팝업 표시하고 전송 중단
 			if (validationErrors.length > 0) {
 				await tick();
-				alert('입력 오류\n\n' + validationErrors.join('\n'));
+				addToast('입력 오류: ' + validationErrors.join(', '), 'error');
 				isSubmitting = false;
 				return;
 			}
@@ -233,12 +235,13 @@
 	}
 
 	// Handle delete
-	function handleDelete() {
+	async function handleDelete() {
 		if (!entry.id) {
 			return;
 		}
 
-		if (confirm('정말로 이 항목을 삭제하시겠습니까?')) {
+		const confirmed = await showConfirm({ title: '삭제 확인', message: '정말로 이 항목을 삭제하시겠습니까?', confirmText: '삭제', variant: 'danger' });
+		if (confirmed) {
 			const entryToDelete: DomainEntry = {
 				id: entry.id,
 				domainGroup: formData.domainGroup.trim() || entry.domainGroup || '',
@@ -291,7 +294,7 @@
 			</h2>
 			<button
 				onclick={handleCancel}
-				class="text-gray-400 hover:text-gray-600"
+				class="text-gray-600 hover:text-gray-600"
 				disabled={isSubmitting}
 				aria-label={isEditMode ? '도메인 수정 닫기' : '새 도메인 추가 닫기'}
 			>

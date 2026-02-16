@@ -2,6 +2,9 @@
 	import '../app.css';
 	import { page } from '$app/stores';
 	import ScrollToTop from '$lib/components/ScrollToTop.svelte';
+	import Toast from '$lib/components/Toast.svelte';
+	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
+	import Icon from '$lib/components/Icon.svelte';
 
 	let { children } = $props();
 
@@ -31,30 +34,6 @@
 		return $page.url.pathname === href;
 	}
 
-	// SVG 아이콘 컴포넌트
-	function getIcon(iconName: string) {
-		const icons = {
-			search: 'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z',
-			upload:
-				'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12',
-			database:
-				'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4',
-			'cloud-upload':
-				'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 12l3-3m0 0l3 3m-3-3v9',
-			tag: 'M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z',
-			server:
-				'M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01',
-			cube: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4',
-			key: 'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z',
-			table:
-				'M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z',
-			columns:
-				'M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2',
-			diagram:
-				'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'
-		};
-		return icons[iconName as keyof typeof icons];
-	}
 </script>
 
 <div class="flex min-h-screen flex-col bg-gradient-to-br from-slate-50 via-white to-blue-50">
@@ -72,19 +51,7 @@
 							<div
 								class="relative flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-r from-blue-500 to-purple-600"
 							>
-								<svg
-									class="h-6 w-6 text-white"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-									></path>
-								</svg>
+								<Icon name="file" size="lg" class="text-white" />
 							</div>
 						</div>
 						<span
@@ -104,14 +71,7 @@
 									? 'bg-blue-50 text-blue-700 shadow-sm'
 									: 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}"
 							>
-								<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d={getIcon(item.icon)}
-									></path>
-								</svg>
+								<Icon name={item.icon} size="sm" />
 								<span>{item.label}</span>
 							</a>
 						{/each}
@@ -128,23 +88,9 @@
 					>
 						<span class="sr-only">메인 메뉴 열기</span>
 						{#if mobileMenuOpen}
-							<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M6 18L18 6M6 6l12 12"
-								/>
-							</svg>
+							<Icon name="x" size="lg" />
 						{:else}
-							<svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M4 6h16M4 12h16m-7 6h7"
-								/>
-							</svg>
+							<Icon name="menu" size="lg" />
 						{/if}
 					</button>
 				</div>
@@ -164,14 +110,7 @@
 								? 'bg-blue-50 text-blue-700'
 								: 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}"
 						>
-							<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d={getIcon(item.icon)}
-								></path>
-							</svg>
+							<Icon name={item.icon} size="md" />
 							<span>{item.label}</span>
 						</a>
 					{/each}
@@ -201,4 +140,6 @@
 	</footer>
 
 	<ScrollToTop />
+	<Toast />
+	<ConfirmDialog />
 </div>

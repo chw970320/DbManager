@@ -11,7 +11,22 @@ DbManager는 SvelteKit 기반의 표준 단어/도메인/용어/DB설계 데이�
 - ERD 생성 API 및 컬럼-용어 동기화 API
 - 다중 파일 운영 및 파일 간 매핑 관리
 
-## 최근 변경 사항 (2026-02-13 반영)
+## 최근 변경 사항
+
+### 2026-02-16 프론트엔드 디자인 개선
+
+- 시맨틱 컬러 토큰 및 공통 UI 클래스 정비(`tailwind.config.js`, `src/app.css`)
+- 공통 UI 컴포넌트 추가
+  - `Icon`, `Toast`, `ConfirmDialog`, `ValidationPanelShell`, `FormField`
+  - `EmptyState`, `Skeleton`, `Breadcrumb`, `BrowsePageLayout`, `ActionBar`
+- 사용자 상호작용 표준화
+  - 브라우저 `alert/confirm` 대신 `addToast`/`showConfirm` 사용
+  - `src/routes/+layout.svelte`에서 `Toast`/`ConfirmDialog` 전역 마운트
+- 검증 상태
+  - `pnpm check` 통과
+  - `pnpm vitest run` 통과 (946 tests)
+
+### 2026-02-13 매핑/레지스트리 개선
 
 - 매핑 해석 로직을 `mapping-registry` 중심으로 통합
   - 3단계 폴백: `registry.json` -> 파일 내 `mapping` -> 기본 파일명

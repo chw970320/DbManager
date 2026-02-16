@@ -3,6 +3,13 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
 import EntityEditor from './EntityEditor.svelte';
 import type { EntityEntry } from '$lib/types/database-design';
 
+const { mockShowConfirm } = vi.hoisted(() => ({
+	mockShowConfirm: vi.fn()
+}));
+vi.mock('$lib/stores/confirm-store', () => ({
+	showConfirm: mockShowConfirm
+}));
+
 // Mock fetch API
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
@@ -13,10 +20,6 @@ Object.defineProperty(global, 'crypto', {
 		randomUUID: vi.fn(() => 'test-uuid-1234')
 	}
 });
-
-// Mock alert and confirm
-global.alert = vi.fn();
-global.confirm = vi.fn(() => true);
 
 // 테스트용 Mock 데이터
 const createMockEntry = (): Partial<EntityEntry> => ({
@@ -35,6 +38,7 @@ const createMockEntry = (): Partial<EntityEntry> => ({
 describe('EntityEditor', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mockShowConfirm.mockResolvedValue(true);
 	});
 
 	describe('Rendering', () => {
@@ -193,7 +197,14 @@ describe('EntityEditor', () => {
 			const deleteButton = screen.getByRole('button', { name: /삭제/ });
 			await fireEvent.click(deleteButton);
 
-			expect(global.confirm).toHaveBeenCalled();
+			expect(mockShowConfirm).toHaveBeenCalledWith(
+				expect.objectContaining({
+					title: '삭제 확인',
+					message: '정말로 이 항목을 삭제하시겠습니까?',
+					confirmText: '삭제',
+					variant: 'danger'
+				})
+			);
 		});
 	});
 });

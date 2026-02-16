@@ -468,7 +468,7 @@
 								{#if column.sortable}
 									{@const colSortDir = getSortDirection(column.key)}
 									<svg
-										class="h-4 w-4 {colSortDir !== null ? 'text-gray-600' : 'text-gray-400'}"
+										class="h-4 w-4 {colSortDir !== null ? 'text-gray-600' : 'text-gray-600'}"
 										fill="none"
 										stroke="currentColor"
 										viewBox="0 0 24 24"
@@ -549,7 +549,7 @@
 						<td colspan={columns.length} class="px-6 py-12 text-center">
 							<div class="flex flex-col items-center space-y-3">
 								<svg
-									class="h-12 w-12 text-gray-400"
+									class="h-12 w-12 text-gray-600"
 									fill="none"
 									stroke="currentColor"
 									viewBox="0 0 24 24"
@@ -638,7 +638,7 @@
 				<button
 					onclick={() => handlePageChange(currentPage - 1)}
 					disabled={currentPage === 1 || loading}
-					class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 transition-colors hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
+					class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-600 ring-1 ring-inset ring-gray-300 transition-colors hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
 				>
 					<span class="sr-only">이전</span>
 					<svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -676,7 +676,7 @@
 				<button
 					onclick={() => handlePageChange(currentPage + 1)}
 					disabled={currentPage === totalPages || loading}
-					class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 transition-colors hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
+					class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-600 ring-1 ring-inset ring-gray-300 transition-colors hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
 				>
 					<span class="sr-only">다음</span>
 					<svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

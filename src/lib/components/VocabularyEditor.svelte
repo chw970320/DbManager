@@ -2,6 +2,8 @@
 	import { createEventDispatcher } from 'svelte';
 	import { tick } from 'svelte';
 	import type { VocabularyEntry } from '$lib/types/vocabulary';
+	import { addToast } from '$lib/stores/toast-store';
+	import { showConfirm } from '$lib/stores/confirm-store';
 
 	interface Props {
 		entry?: Partial<VocabularyEntry>;
@@ -147,7 +149,7 @@
 			// 에러 팝업 표시
 			if (errorMessages.length > 0) {
 				await tick();
-				alert('입력 오류\n\n' + errorMessages.join('\n'));
+				addToast('입력 오류: ' + errorMessages.join(', '), 'error');
 			}
 			return;
 		}
@@ -202,7 +204,7 @@
 			// validation 에러가 있으면 팝업 표시하고 전송 중단
 			if (validationErrors.length > 0) {
 				await tick();
-				alert('입력 오류\n\n' + validationErrors.join('\n'));
+				addToast('입력 오류: ' + validationErrors.join(', '), 'error');
 				isSubmitting = false;
 				return;
 			}
@@ -243,10 +245,11 @@
 		dispatch('cancel');
 	}
 
-	function handleDelete() {
+	async function handleDelete() {
 		if (!entry.id) return;
 
-		if (confirm('정말로 이 항목을 삭제하시겠습니까?')) {
+		const confirmed = await showConfirm({ title: '삭제 확인', message: '정말로 이 항목을 삭제하시겠습니까?', confirmText: '삭제', variant: 'danger' });
+		if (confirmed) {
 			const entryToDelete: VocabularyEntry = {
 				id: entry.id,
 				standardName: formData.standardName.trim() || entry.standardName || '',
@@ -296,7 +299,7 @@
 			</div>
 			<button
 				onclick={handleCancel}
-				class="text-gray-400 hover:text-gray-600"
+				class="text-gray-600 hover:text-gray-600"
 				disabled={isSubmitting}
 				aria-label="닫기"
 			>

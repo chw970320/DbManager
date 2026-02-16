@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import type { DatabaseEntry } from '$lib/types/database-design.js';
+	import { showConfirm } from '$lib/stores/confirm-store';
 
 	// Props
 	let props = $props<{
@@ -112,10 +113,11 @@
 	/**
 	 * 삭제 핸들러
 	 */
-	function handleDelete() {
+	async function handleDelete() {
 		if (!entry.id) return;
 
-		if (confirm('정말로 이 항목을 삭제하시겠습니까?')) {
+		const confirmed = await showConfirm({ title: '삭제 확인', message: '정말로 이 항목을 삭제하시겠습니까?', confirmText: '삭제', variant: 'danger' });
+		if (confirmed) {
 			const entryToDelete: DatabaseEntry = {
 				id: entry.id,
 				organizationName: formData.organizationName.trim() || entry.organizationName || '',
@@ -178,7 +180,7 @@
 			<h2 id="modal-title" class="text-xl font-bold text-gray-900">
 				{isEditMode ? '데이터베이스 정의서 수정' : '새 데이터베이스 정의서'}
 			</h2>
-			<button onclick={handleCancel} class="text-gray-400 hover:text-gray-600" aria-label="닫기">
+			<button onclick={handleCancel} class="text-gray-600 hover:text-gray-600" aria-label="닫기">
 				<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path
 						stroke-linecap="round"

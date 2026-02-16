@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import type { ColumnEntry } from '$lib/types/database-design.js';
+	import { showConfirm } from '$lib/stores/confirm-store';
 
 	let props = $props<{
 		entry?: Partial<ColumnEntry>;
@@ -129,9 +130,10 @@
 		dispatch('save', saveData);
 	}
 
-	function handleDelete() {
+	async function handleDelete() {
 		if (!entry.id) return;
-		if (confirm('정말로 이 항목을 삭제하시겠습니까?')) {
+		const confirmed = await showConfirm({ title: '삭제 확인', message: '정말로 이 항목을 삭제하시겠습니까?', confirmText: '삭제', variant: 'danger' });
+		if (confirmed) {
 			const entryToDelete: ColumnEntry = {
 				id: entry.id,
 				dataLength: formData.dataLength.trim() || entry.dataLength || '',
@@ -191,7 +193,7 @@
 			<h2 id="modal-title" class="text-xl font-bold text-gray-900">
 				{isEditMode ? '컬럼 정의서 수정' : '새 컬럼 정의서'}
 			</h2>
-			<button onclick={handleCancel} class="text-gray-400 hover:text-gray-600" aria-label="닫기"
+			<button onclick={handleCancel} class="text-gray-600 hover:text-gray-600" aria-label="닫기"
 				><svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
 					><path
 						stroke-linecap="round"

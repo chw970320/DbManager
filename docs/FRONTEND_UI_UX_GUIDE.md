@@ -5,6 +5,23 @@ DbManager 프로젝트에서 **새로운 화면/컴포넌트**를 추가할 때 
 
 ---
 
+## 0. 2026-02 적용 기준 (필수)
+
+- **디자인 토큰/공통 클래스 우선**
+  - 색상/간격/타이포는 `tailwind.config.js`의 시맨틱 토큰(`brand`, `surface`, `content`, `border`, `status`)과 `src/app.css` 공통 클래스(`btn`, `card`, `input`)를 우선 사용합니다.
+
+- **공통 컴포넌트 우선**
+  - 레이아웃: `BrowsePageLayout`, `ActionBar`, `Breadcrumb`
+  - 폼/패널: `FormField`, `ValidationPanelShell`
+  - 상태 UI: `EmptyState`, `Skeleton`
+  - 아이콘/피드백: `Icon`, `Toast`, `ConfirmDialog`
+
+- **금지 규칙**
+  - 브라우저 네이티브 `alert()`/`confirm()` 직접 사용 금지
+  - 알림은 `addToast`, 파괴적 동작 확인은 `showConfirm` 사용
+
+---
+
 ## 1. 전반적인 디자인 철학
 
 - **일관성 우선**
@@ -51,7 +68,7 @@ DbManager 프로젝트에서 **새로운 화면/컴포넌트**를 추가할 때 
   - `+layout.svelte`의 메뉴 구성과 스타일을 그대로 사용합니다.
   - 새 메뉴를 추가할 경우:
     - `menuItems` 배열에 `{ href, label, icon }` 객체를 추가합니다.
-    - `icon`은 기존 `getIcon()` 함수에서 사용하는 SVG path 패턴을 재사용하거나, 유사한 단순 아이콘을 추가합니다.
+    - `icon`은 `Icon.svelte`에 정의된 아이콘 키를 사용합니다. 새 아이콘이 필요하면 `Icon.svelte`의 아이콘 맵에 추가합니다.
 
 - **현재 위치 표시**
   - `isCurrentPage(href)`처럼, 라우트와 `href`가 일치하면 **배경색과 텍스트 색을 변경**하여 활성 상태를 명확히 표시합니다.
@@ -68,6 +85,11 @@ DbManager 프로젝트에서 **새로운 화면/컴포넌트**를 추가할 때 
   - 가능한 한 **모든 리스트형 페이지**에서 동일 컴포넌트를 사용합니다.
   - Props/이벤트 네이밍은 기존 패턴(`query`, `field`, `onsearch`)을 그대로 따릅니다.
 
+- **레이아웃 (`BrowsePageLayout.svelte`, `ActionBar.svelte`, `Breadcrumb.svelte`)**
+  - Browse 계열 페이지는 `BrowsePageLayout`을 기본으로 사용합니다.
+  - 페이지 상단/하단의 액션 버튼 영역은 `ActionBar`로 통일합니다.
+  - 페이지 경로 표시는 `Breadcrumb`를 사용하고, 모바일에서는 자동으로 뒤로 링크 형태를 사용합니다.
+
 - **테이블 컴포넌트**
   - 신규 테이블은 `*Table.svelte` 패턴을 따라 만듭니다.
   - 공통 동작:
@@ -78,6 +100,10 @@ DbManager 프로젝트에서 **새로운 화면/컴포넌트**를 추가할 때 
 - **파일 업로드/관리 (`*FileManager.svelte`, `FileUpload.svelte`)**
   - 파일 선택 → 업로드 → 결과 요약 (성공/실패/스킵 건수) 순서를 유지합니다.
   - 업로드 결과는 항상 **표 형식 또는 리스트 형식**으로 제공하여 어느 항목이 실패했는지 명확하게 합니다.
+
+- **검증 패널 (`ValidationPanelShell.svelte`)**
+  - 검증 패널 레이아웃(헤더/통계/필터/결과영역)은 `ValidationPanelShell`을 기본으로 사용합니다.
+  - 도메인/단어집/용어 검증 패널은 동일한 인터랙션 패턴(오류 필터, 검색, 닫기)을 유지합니다.
 
 ---
 
@@ -100,6 +126,7 @@ DbManager 프로젝트에서 **새로운 화면/컴포넌트**를 추가할 때 
   - 저장/업데이트/삭제/업로드 성공 시:
     - 상단 또는 해당 영역에 **짧은 성공 토스트/배지**를 표시합니다.
     - “성공적으로 저장되었습니다.”, “3건이 삭제되었습니다.”처럼 **수량 기반 메시지**를 선호합니다.
+  - 전역 알림은 `Toast.svelte`를 사용하며 레이아웃(`+layout.svelte`)에서 단일 마운트합니다.
 
 ---
 

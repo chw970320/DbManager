@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { ApiResponse, UploadResult } from '$lib/types/vocabulary';
+	import { showConfirm } from '$lib/stores/confirm-store';
 
 	// 컴포넌트 속성
 	let {
@@ -129,37 +130,22 @@
 			return;
 		}
 
-		// 단순 교체 모드일 때 백업 권장 메시지
-		if (selectedMode === 'simple-replace') {
-			const confirmed = confirm(
-				`단순 교체 모드를 선택하셨습니다.\n\n기존 ${contentType}이 완전히 삭제되고 새로운 데이터로 교체됩니다.\n히스토리도 초기화됩니다.\n\n⚠️ 파일 백업을 권장합니다.\n\n정말로 교체하시겠습니까?`
-			);
+		// 모드별 확인 메시지
+		const modeMessages: Record<string, string> = {
+			'simple-replace': `기존 ${contentType}이 완전히 삭제되고 새로운 데이터로 교체됩니다. 히스토리도 초기화됩니다. 파일 백업을 권장합니다.`,
+			'validated-replace': `기존 ${contentType}이 완전히 삭제되고 새로운 데이터로 교체됩니다. 데이터 검증 후 업로드됩니다. 히스토리도 초기화됩니다.`,
+			'validated-sync-replace': `기존 ${contentType}을 완전히 삭제하고 새로운 데이터로 교체합니다. 검증 후 연관 데이터 동기화까지 수행됩니다.`
+		};
 
-			if (!confirmed) {
-				return; // 사용자가 취소한 경우 업로드 중단
-			}
-		}
-
-		// 검증 교체 모드일 때 확인 메시지
-		if (selectedMode === 'validated-replace') {
-			const confirmed = confirm(
-				`검증 교체 모드를 선택하셨습니다.\n\n기존 ${contentType}이 완전히 삭제되고 새로운 데이터로 교체됩니다.\n데이터 검증 후 업로드됩니다.\n히스토리도 초기화됩니다.\n\n정말로 교체하시겠습니까?`
-			);
-
-			if (!confirmed) {
-				return; // 사용자가 취소한 경우 업로드 중단
-			}
-		}
-
-		// 검증+동기화 모드일 때 확인 메시지
-		if (selectedMode === 'validated-sync-replace') {
-			const confirmed = confirm(
-				`검증+동기화 교체 모드를 선택하셨습니다.\n\n기존 ${contentType}을 완전히 삭제하고 새로운 데이터로 교체합니다.\n검증 후 연관 데이터 동기화까지 수행됩니다.\n\n정말로 교체하시겠습니까?`
-			);
-
-			if (!confirmed) {
-				return;
-			}
+		const message = modeMessages[selectedMode];
+		if (message) {
+			const confirmed = await showConfirm({
+				title: '교체 확인',
+				message,
+				confirmText: '교체',
+				variant: 'danger'
+			});
+			if (!confirmed) return;
 		}
 
 		const file = files[0];
@@ -344,7 +330,7 @@
 		<!-- 아이콘 -->
 		<div class="mb-4">
 			<svg
-				class="mx-auto h-12 w-12 text-gray-400"
+				class="mx-auto h-12 w-12 text-gray-600"
 				stroke="currentColor"
 				fill="none"
 				viewBox="0 0 48 48"

@@ -3,6 +3,13 @@ import { render, screen, waitFor } from '@testing-library/svelte';
 import ERDViewer from './ERDViewer.svelte';
 import type { ERDData } from '../types/erd-mapping.js';
 
+const { mockAddToast } = vi.hoisted(() => ({
+	mockAddToast: vi.fn()
+}));
+vi.mock('$lib/stores/toast-store', () => ({
+	addToast: mockAddToast
+}));
+
 // Mock mermaid
 vi.mock('mermaid', () => ({
 	default: {
@@ -18,9 +25,6 @@ Object.defineProperty(navigator, 'clipboard', {
 	},
 	writable: true
 });
-
-// Mock alert
-global.alert = vi.fn();
 
 // 테스트용 Mock ERD 데이터
 function createMockERDData(): ERDData {
@@ -61,6 +65,7 @@ function createMockERDData(): ERDData {
 describe('ERDViewer', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mockAddToast.mockClear();
 	});
 
 	describe('Rendering', () => {
@@ -212,7 +217,7 @@ describe('ERDViewer', () => {
 			});
 
 			expect(navigator.clipboard.writeText).toHaveBeenCalled();
-			expect(global.alert).toHaveBeenCalledWith('Mermaid 코드가 클립보드에 복사되었습니다.');
+			expect(mockAddToast).toHaveBeenCalledWith('Mermaid 코드가 클립보드에 복사되었습니다.', 'success');
 		});
 
 		it('should download Mermaid file', async () => {

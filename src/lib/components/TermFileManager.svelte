@@ -4,6 +4,7 @@
 	import type { ApiResponse, UploadResult } from '$lib/types/vocabulary';
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { filterTermFiles } from '$lib/utils/file-filter';
+	import { showConfirm } from '$lib/stores/confirm-store';
 
 	interface Props {
 		isOpen?: boolean;
@@ -307,7 +308,8 @@
 
 	// Delete file
 	async function handleDelete(file: string) {
-		if (!confirm('파일 삭제 전 백업을 권장합니다. 정말 삭제하시겠습니까?')) {
+		const confirmed = await showConfirm({ title: '확인', message: '파일 삭제 전 백업을 권장합니다. 정말 삭제하시겠습니까?', confirmText: '삭제', variant: 'danger' });
+		if (!confirmed) {
 			return;
 		}
 
@@ -474,7 +476,7 @@
 			<!-- 헤더 -->
 			<div class="flex items-center justify-between border-b px-6 py-4">
 				<h2 class="text-xl font-bold text-gray-900">용어 파일 관리</h2>
-				<button onclick={handleClose} class="text-gray-400 hover:text-gray-600" aria-label="Close">
+				<button onclick={handleClose} class="text-gray-600 hover:text-gray-600" aria-label="Close">
 					<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path
 							stroke-linecap="round"
@@ -679,7 +681,7 @@
 														</button>
 														<button
 															onclick={cancelEditing}
-															class="rounded-md p-1.5 text-gray-400 hover:bg-gray-100"
+															class="rounded-md p-1.5 text-gray-600 hover:bg-gray-100"
 															disabled={isSubmitting}
 															aria-label="Cancel"
 														>
@@ -712,7 +714,7 @@
 														</div>
 														<button
 															onclick={() => startEditing(file)}
-															class="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+															class="rounded-md p-1.5 text-gray-600 hover:bg-gray-100 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
 															disabled={isSystemFile(file)}
 															aria-label="Rename"
 														>
@@ -732,7 +734,7 @@
 														</button>
 														<button
 															onclick={() => handleDelete(file)}
-															class="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+															class="rounded-md p-1.5 text-gray-600 hover:bg-gray-100 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
 															disabled={isSystemFile(file)}
 															aria-label="Delete"
 														>

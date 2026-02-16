@@ -83,6 +83,24 @@ describe('EntityFileManager', () => {
 				);
 			});
 		});
+
+		it('매핑 섹션 렌더링 및 매핑 조회 호출', async () => {
+			render(EntityFileManager, {
+				props: {
+					isOpen: true
+				}
+			});
+
+			await waitFor(() => {
+				expect(screen.getByText('파일 매핑 설정')).toBeInTheDocument();
+			});
+
+			await waitFor(() => {
+				expect(mockFetch).toHaveBeenCalledWith(
+					expect.stringContaining('/api/entity/files/mapping?filename=')
+				);
+			});
+		});
 	});
 
 	describe('File Operations', () => {

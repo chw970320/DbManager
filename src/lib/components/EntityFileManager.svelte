@@ -35,6 +35,14 @@
 	type UploadSuccessDetail = { result: DbDesignUploadResult };
 	type UploadErrorDetail = { error: string };
 
+	// 매핑 관련 상태
+	let databaseFiles = $state<string[]>([]);
+	let attributeFiles = $state<string[]>([]);
+	let selectedDatabaseFile = $state('database.json');
+	let selectedAttributeFile = $state('attribute.json');
+	let isMappingLoading = $state(false);
+	let currentMappingFile = $state<string | null>(null);
+
 	// Settings store 구독
 	$effect(() => {
 		const unsubscribe = settingsStore.subscribe((settings) => {
@@ -88,6 +96,94 @@
 		}
 	}
 
+	async function loadDatabaseFiles() {
+		try {
+			const response = await fetch('/api/database/files');
+			const result: DbDesignApiResponse = await response.json();
+			if (result.success && Array.isArray(result.data)) {
+				databaseFiles = result.data as string[];
+			}
+		} catch (err) {
+			console.error('데이터베이스 파일 목록 로드 실패:', err);
+		}
+	}
+
+	async function loadAttributeFiles() {
+		try {
+			const response = await fetch('/api/attribute/files');
+			const result: DbDesignApiResponse = await response.json();
+			if (result.success && Array.isArray(result.data)) {
+				attributeFiles = result.data as string[];
+			}
+		} catch (err) {
+			console.error('속성 파일 목록 로드 실패:', err);
+		}
+	}
+
+	async function loadMappingInfo(filename: string) {
+		isMappingLoading = true;
+		try {
+			const response = await fetch(
+				`/api/entity/files/mapping?filename=${encodeURIComponent(filename)}`
+			);
+			const result: DbDesignApiResponse = await response.json();
+			const mapping = (result.data as
+				| { mapping?: { database?: string; attribute?: string } }
+				| undefined)?.mapping;
+			if (result.success && mapping) {
+				selectedDatabaseFile = mapping.database || 'database.json';
+				selectedAttributeFile = mapping.attribute || 'attribute.json';
+			} else {
+				selectedDatabaseFile = 'database.json';
+				selectedAttributeFile = 'attribute.json';
+			}
+			currentMappingFile = filename;
+		} catch (err) {
+			console.error('매핑 정보 로드 실패:', err);
+			selectedDatabaseFile = 'database.json';
+			selectedAttributeFile = 'attribute.json';
+			currentMappingFile = filename;
+		} finally {
+			isMappingLoading = false;
+		}
+	}
+
+	async function saveMappingInfo() {
+		if (!currentMappingFile) {
+			error = '매핑할 파일을 선택하세요.';
+			return;
+		}
+
+		isSubmitting = true;
+		error = '';
+		successMessage = '';
+
+		try {
+			const response = await fetch('/api/entity/files/mapping', {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					filename: currentMappingFile,
+					mapping: {
+						database: selectedDatabaseFile,
+						attribute: selectedAttributeFile
+					}
+				})
+			});
+			const result: DbDesignApiResponse = await response.json();
+			if (response.ok && result.success) {
+				successMessage = '매핑 정보가 저장되었습니다.';
+				dispatch('change');
+			} else {
+				error = result.error || '매핑 정보 저장에 실패했습니다.';
+			}
+		} catch (_err) {
+			error = '매핑 정보 저장 중 오류가 발생했습니다.';
+		} finally {
+			isSubmitting = false;
+		}
+	}
+
 	// Toggle system files visibility
 	async function toggleSystemFiles(event: Event) {
 		const target = event.target as HTMLInputElement;
@@ -128,6 +224,8 @@
 				successMessage = `파일 "${filename}"이(가) 생성되었습니다.`;
 				newFilename = '';
 				await loadFiles();
+				selectedUploadFile = filename;
+				await loadMappingInfo(filename);
 				dispatch('change');
 			} else {
 				error = result.error || '파일 생성에 실패했습니다.';
@@ -165,6 +263,11 @@
 			if (result.success) {
 				successMessage = `파일 "${filename}"이(가) 삭제되었습니다.`;
 				await loadFiles();
+				if (currentMappingFile === filename) {
+					const fallback = files[0] || SYSTEM_FILE;
+					selectedUploadFile = fallback;
+					await loadMappingInfo(fallback);
+				}
 				dispatch('change');
 			} else {
 				error = result.error || '파일 삭제에 실패했습니다.';
@@ -225,6 +328,10 @@
 				successMessage = `파일명이 "${newFilenameValue}"(으)로 변경되었습니다.`;
 				cancelRename();
 				await loadFiles();
+				if (currentMappingFile === oldFilename) {
+					selectedUploadFile = newFilenameValue;
+					await loadMappingInfo(newFilenameValue);
+				}
 				dispatch('change');
 			} else {
 				error = result.error || '파일명 변경에 실패했습니다.';
@@ -238,6 +345,8 @@
 
 	// Handle file select
 	function handleFileSelect(filename: string) {
+		selectedUploadFile = filename;
+		void loadMappingInfo(filename);
 		entityStore.update((store) => ({ ...store, selectedFilename: filename }));
 		dispatch('change');
 	}
@@ -297,7 +406,15 @@
 				showSystemFiles = settings.showEntitySystemFiles ?? false;
 				if (!settingsLoaded) {
 					settingsLoaded = true;
-					loadFiles();
+					void (async () => {
+						await loadFiles();
+						await Promise.all([loadDatabaseFiles(), loadAttributeFiles()]);
+						const mappingFilename = files.includes(selectedUploadFile)
+							? selectedUploadFile
+							: files[0] || SYSTEM_FILE;
+						selectedUploadFile = mappingFilename;
+						await loadMappingInfo(mappingFilename);
+					})();
 				} else if (allFiles.length > 0) {
 					filterFiles();
 				}
@@ -309,6 +426,12 @@
 	$effect(() => {
 		if (allFiles.length > 0) {
 			filterFiles();
+		}
+	});
+
+	$effect(() => {
+		if (isOpen && selectedUploadFile && selectedUploadFile !== currentMappingFile) {
+			void loadMappingInfo(selectedUploadFile);
 		}
 	});
 
@@ -396,6 +519,68 @@
 				{/if}
 
 				{#if activeTab === 'files'}
+					<div class="mb-6 rounded-lg border border-gray-200 bg-white/70 p-4">
+						<div class="mb-3 flex items-center justify-between">
+							<div>
+								<h3 class="text-sm font-semibold text-gray-800">파일 매핑 설정</h3>
+								<p class="text-xs text-gray-500">
+									{#if currentMappingFile}
+										현재 파일: {currentMappingFile}
+									{:else}
+										매핑할 파일을 선택하세요
+									{/if}
+								</p>
+							</div>
+							<button
+								onclick={saveMappingInfo}
+								disabled={isSubmitting || isMappingLoading || !currentMappingFile}
+								class="rounded-md bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+							>
+								매핑 저장
+							</button>
+						</div>
+						<div class="grid gap-3 sm:grid-cols-2">
+							<div>
+								<label for="entityDatabaseMapping" class="block text-xs font-medium text-gray-700">
+									데이터베이스 파일
+								</label>
+								<select
+									id="entityDatabaseMapping"
+									bind:value={selectedDatabaseFile}
+									disabled={isMappingLoading || !currentMappingFile}
+									class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+								>
+									{#if databaseFiles.length === 0}
+										<option value="database.json">database.json</option>
+									{:else}
+										{#each databaseFiles as file (file)}
+											<option value={file}>{file}</option>
+										{/each}
+									{/if}
+								</select>
+							</div>
+							<div>
+								<label for="entityAttributeMapping" class="block text-xs font-medium text-gray-700">
+									속성 파일
+								</label>
+								<select
+									id="entityAttributeMapping"
+									bind:value={selectedAttributeFile}
+									disabled={isMappingLoading || !currentMappingFile}
+									class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+								>
+									{#if attributeFiles.length === 0}
+										<option value="attribute.json">attribute.json</option>
+									{:else}
+										{#each attributeFiles as file (file)}
+											<option value={file}>{file}</option>
+										{/each}
+									{/if}
+								</select>
+							</div>
+						</div>
+					</div>
+
 					<!-- 새 파일 생성 -->
 					<div class="mb-6">
 						<h3 class="mb-2 text-sm font-medium text-gray-700">새 파일 생성</h3>

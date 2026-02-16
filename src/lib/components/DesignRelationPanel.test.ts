@@ -148,6 +148,12 @@ describe('DesignRelationPanel', () => {
 
 		await waitFor(() => {
 			expect(screen.getByText('5개 정의서 연관 상태')).toBeInTheDocument();
+			expect(screen.getByText('요약')).toBeInTheDocument();
+			expect(screen.queryByRole('button', { name: '정합성 조회' })).not.toBeInTheDocument();
+		});
+
+		screen.getByRole('button', { name: '펼치기' }).click();
+		await waitFor(() => {
 			expect(screen.getByText('table.json')).toBeInTheDocument();
 			expect(screen.getByText('테이블 -> 컬럼')).toBeInTheDocument();
 			expect(screen.getByText('통합 정합성 요약')).toBeInTheDocument();
@@ -183,6 +189,8 @@ describe('DesignRelationPanel', () => {
 			}
 		});
 
+		const expandButton = await screen.findByRole('button', { name: '펼치기' });
+		expandButton.click();
 		const applyButton = await screen.findByRole('button', { name: '자동 보정 실행' });
 		applyButton.click();
 
@@ -236,6 +244,8 @@ describe('DesignRelationPanel', () => {
 		expect(relationUrl).toContain('tableFile=table-custom.json');
 		expect(relationUrl).toContain('columnFile=column-custom.json');
 
+		const expandButton = await screen.findByRole('button', { name: '펼치기' });
+		expandButton.click();
 		const previewButton = await screen.findByRole('button', { name: '보정 미리보기' });
 		previewButton.click();
 
@@ -258,6 +268,43 @@ describe('DesignRelationPanel', () => {
 			attributeFile: 'attribute-custom.json',
 			tableFile: 'table-custom.json',
 			columnFile: 'column-custom.json'
+		});
+	});
+
+	it('should toggle collapse and expand state', async () => {
+		vi.stubGlobal(
+			'fetch',
+			vi
+				.fn()
+				.mockResolvedValueOnce({
+					json: async () => createRelationsResponse()
+				})
+				.mockResolvedValueOnce({
+					json: async () => createUnifiedResponse()
+				})
+		);
+
+		render(DesignRelationPanel, {
+			props: {
+				currentType: 'table',
+				currentFilename: 'table.json'
+			}
+		});
+
+		await screen.findByRole('button', { name: '펼치기' });
+		expect(screen.queryByRole('button', { name: '정합성 조회' })).not.toBeInTheDocument();
+		screen.getByRole('button', { name: '펼치기' }).click();
+
+		await waitFor(() => {
+			expect(screen.getByRole('button', { name: '정합성 조회' })).toBeInTheDocument();
+			expect(screen.getByRole('button', { name: '접기' })).toBeInTheDocument();
+		});
+
+		screen.getByRole('button', { name: '접기' }).click();
+
+		await waitFor(() => {
+			expect(screen.queryByRole('button', { name: '정합성 조회' })).not.toBeInTheDocument();
+			expect(screen.getByRole('button', { name: '펼치기' })).toBeInTheDocument();
 		});
 	});
 });

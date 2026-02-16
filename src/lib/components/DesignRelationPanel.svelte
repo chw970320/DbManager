@@ -109,6 +109,7 @@
 	let alignmentSyncData = $state<AlignmentSyncPayload | null>(null);
 	let lastLoadedKey = $state('');
 	let showSyncDetails = $state(false);
+	let collapsed = $state(true);
 
 	const definitionLabels: Record<DefinitionType, string> = {
 		database: 'DB',
@@ -363,7 +364,55 @@
 			<h2 class="text-lg font-semibold text-amber-800">5개 정의서 연관 상태</h2>
 			<p class="text-xs text-amber-700">현재 파일 기준으로 연관 파일/정합성/자동보정을 확인합니다.</p>
 		</div>
-		<div class="flex items-center gap-2">
+		<button
+			type="button"
+			onclick={() => (collapsed = !collapsed)}
+			class="rounded-md border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100"
+			aria-expanded={!collapsed}
+		>
+			{collapsed ? '펼치기' : '접기'}
+		</button>
+	</div>
+
+	{#if collapsed}
+		<div class="mb-3 rounded-md border border-amber-200 bg-white/80 px-3 py-2 text-xs text-amber-800">
+			<div class="mb-1 font-semibold text-amber-900">요약</div>
+			{#if validationData}
+				<div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
+					<div class="rounded border border-green-200 bg-white px-2 py-1 text-center text-green-700">
+						매칭 {validationData.validation.totals.matched}
+					</div>
+					<div class="rounded border border-red-200 bg-white px-2 py-1 text-center text-red-700">
+						오류 {validationData.validation.totals.errorCount}
+					</div>
+					<div class="rounded border border-yellow-200 bg-white px-2 py-1 text-center text-yellow-700">
+						경고 {validationData.validation.totals.warningCount}
+					</div>
+					<div class="rounded border border-gray-200 bg-white px-2 py-1 text-center text-gray-700">
+						미매칭 {validationData.validation.totals.unmatched}
+					</div>
+				</div>
+			{:else}
+				<div class="text-amber-700">요약 데이터를 불러오는 중입니다.</div>
+			{/if}
+			{#if unifiedValidationData}
+				<div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+					<div class="rounded border border-indigo-200 bg-white px-2 py-1 text-center text-indigo-700">
+						통합 이슈 {unifiedValidationData.summary.totalIssues}
+					</div>
+					<div class="rounded border border-rose-200 bg-white px-2 py-1 text-center text-rose-700">
+						용어 실패 {unifiedValidationData.summary.termFailedCount}
+					</div>
+					<div class="rounded border border-amber-200 bg-white px-2 py-1 text-center text-amber-700">
+						관계 미매칭 {unifiedValidationData.summary.relationUnmatchedCount}
+					</div>
+				</div>
+			{/if}
+		</div>
+	{/if}
+
+	{#if !collapsed}
+		<div class="flex items-center gap-2 mb-3">
 			<button
 				type="button"
 				onclick={loadAllValidations}
@@ -397,10 +446,40 @@
 				{syncing ? '실행 중...' : '자동 보정 실행'}
 			</button>
 		</div>
-	</div>
-	<div class="mb-3 rounded-md border border-amber-200 bg-white/80 px-3 py-2 text-[11px] text-amber-800">
-		`정합성 조회`: 현재 오류 원인 분석 전용, `표준 순서 실행`: 단어/용어/관계/컬럼 자동 보정 일괄 실행,
-		`보정 미리보기`: 실제 저장 없이 보정 후보 확인, `자동 보정 실행`: 관계 보정 후보를 파일에 반영
+
+	<div class="mb-3 space-y-2 rounded-md border border-amber-200 bg-white/80 px-3 py-2 text-[11px] text-amber-800">
+		<div class="font-semibold text-amber-900">실행 기능 안내</div>
+		<div class="grid grid-cols-1 gap-2 sm:grid-cols-2 mb-3">
+			<div class="rounded border border-amber-100 bg-amber-50/40 px-2 py-1">
+				<div class="font-medium text-amber-900">정합성 조회</div>
+				<div>현재 상태를 다시 계산해 오류/경고/미매칭 원인을 확인합니다. 파일 저장은 하지 않습니다.</div>
+			</div>
+			<div class="rounded border border-amber-100 bg-amber-50/40 px-2 py-1">
+				<div class="font-medium text-amber-900">보정 미리보기</div>
+				<div>관계 보정 후보를 계산해 예상 변경 건수를 보여줍니다. 실제 데이터 반영은 하지 않습니다.</div>
+			</div>
+		</div>
+		<div class="rounded border border-indigo-100 bg-indigo-50/40 px-2 py-1 text-indigo-900">
+			<div class="font-medium text-indigo-800">표준 순서 실행 (통합 정합화)</div>
+			<div>
+				1) 단어집-도메인 동기화, 2) 용어 매핑 동기화, 3) 5개 정의서 관계 보정, 4) 컬럼-용어/도메인 보정,
+				5) 통합 정합성 리포트 재검증 순으로 일괄 실행합니다.
+			</div>
+			<div class="text-indigo-700">
+				반영 범위: 단어집/용어/테이블/컬럼 파일 전체 정합화 결과와 잔여 이슈를 함께 갱신합니다.
+			</div>
+		</div>
+		<div class="rounded border border-blue-100 bg-blue-50/40 px-2 py-1 text-blue-900">
+			<div class="font-medium text-blue-800">자동 보정 실행 (관계 보정 전용)</div>
+			<div>
+				연관관계 필드만 반영합니다. 테이블 `relatedEntityName`, 컬럼
+				`schemaName`/`tableEnglishName`/`relatedEntityName`만 교정 대상입니다.
+			</div>
+			<div class="text-blue-700">단어집/용어 매핑 보정이나 컬럼 표준 필드 보정은 포함되지 않습니다.</div>
+		</div>
+		<div class="rounded border border-rose-100 bg-rose-50/30 px-2 py-1 text-rose-800">
+			주의: 표준 순서 실행은 단계별 저장 후 다음 단계로 진행됩니다. 중간 단계 실패 시 이전 단계 반영값은 유지될 수 있습니다.
+		</div>
 	</div>
 
 	{#if validationData}
@@ -627,5 +706,6 @@
 		<div class="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
 			{error}
 		</div>
+	{/if}
 	{/if}
 </section>

@@ -800,6 +800,28 @@
 								<span>새 도메인 추가</span>
 							</button>
 
+							<button
+								type="button"
+								onclick={handleValidateAllDomain}
+								disabled={loading || validationLoading}
+								class="group inline-flex items-center space-x-2 rounded-xl border border-blue-200/50 bg-blue-50/80 px-6 py-3 text-sm font-medium text-blue-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-blue-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+							>
+								<svg
+									class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+									/>
+								</svg>
+								<span>{validationLoading ? '검사 중' : '유효성 검사'}</span>
+							</button>
+							
 							<!-- XLSX 다운로드 버튼 -->
 							<button
 								type="button"
@@ -823,15 +845,6 @@
 								<span>{loading ? '준비 중' : 'XLSX 다운로드'}</span>
 							</button>
 
-							<button
-								type="button"
-								onclick={handleValidateAllDomain}
-								disabled={loading || validationLoading}
-								class="group inline-flex items-center space-x-2 rounded-xl border border-blue-200/50 bg-blue-50/80 px-6 py-3 text-sm font-medium text-blue-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-blue-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-							>
-								<span>{validationLoading ? '검사 중' : '유효성 검사'}</span>
-							</button>
-							
 							<!-- 새로고침 버튼 -->
 							<button
 								type="button"

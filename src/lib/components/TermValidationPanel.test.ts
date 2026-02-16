@@ -59,7 +59,7 @@ describe('TermValidationPanel', () => {
 			});
 
 			await waitFor(() => {
-				expect(screen.getByText(/전체 유효성 검사 결과/)).toBeInTheDocument();
+				expect(screen.getByText(/유효성 검사 결과/)).toBeInTheDocument();
 			});
 		});
 
@@ -77,7 +77,7 @@ describe('TermValidationPanel', () => {
 
 			await waitFor(() => {
 				// 통계 정보가 표시되는지 확인
-				expect(screen.getByText(/전체 유효성 검사 결과/)).toBeInTheDocument();
+				expect(screen.getByText(/유효성 검사 결과/)).toBeInTheDocument();
 			});
 		});
 	});

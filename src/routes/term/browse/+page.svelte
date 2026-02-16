@@ -51,7 +51,6 @@
 	let showValidationPanel = $state(false);
 	let validationLoading = $state(false);
 	let validationResults = $state<ValidationCheckResult | null>(null);
-	let relationshipSummaryLoading = $state(false);
 	let relationshipSummary = $state<{
 		files: { term: string; vocabulary: string; domain: string };
 		summary: {
@@ -422,7 +421,7 @@
 	}
 
 	/**
-	 * 전체 유효성 검사 실행
+	 * 유효성 검사 실행
 	 */
 	async function handleValidateAll() {
 		validationLoading = true;
@@ -450,7 +449,6 @@
 	}
 
 	async function loadRelationshipSummary() {
-		relationshipSummaryLoading = true;
 		try {
 			const params = new URLSearchParams({ termFilename: selectedFilename });
 			const response = await fetch(`/api/term/relationship-summary?${params.toString()}`);
@@ -463,8 +461,6 @@
 		} catch (error) {
 			console.error('용어계 관계 진단 오류:', error);
 			errorMessage = error instanceof Error ? error.message : '용어계 관계 진단 중 오류가 발생했습니다.';
-		} finally {
-			relationshipSummaryLoading = false;
 		}
 	}
 
@@ -1076,7 +1072,7 @@
 
 						<!-- 액션 버튼들 -->
 						<div class="mb-4 flex items-center space-x-3">
-							<!-- 전체 유효성 검사 버튼 -->
+							<!-- 유효성 검사 버튼 -->
 							<button
 								type="button"
 								onclick={handleValidateAll}
@@ -1096,17 +1092,8 @@
 										d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
 									/>
 								</svg>
-								<span>{validationLoading ? '검사 중...' : '전체 유효성 검사'}</span>
+								<span>{validationLoading ? '검사 중...' : '유효성 검사'}</span>
 							</button>
-							<button
-								type="button"
-								onclick={loadRelationshipSummary}
-								disabled={loading || relationshipSummaryLoading}
-								class="group inline-flex items-center space-x-2 rounded-xl border border-indigo-200/50 bg-indigo-50/80 px-6 py-3 text-sm font-medium text-indigo-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-indigo-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-							>
-								<span>{relationshipSummaryLoading ? '진단 중...' : '용어계 관계 진단'}</span>
-							</button>
-
 							<!-- XLSX 다운로드 버튼 -->
 							<button
 								type="button"

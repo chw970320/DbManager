@@ -171,7 +171,7 @@
 		<div class="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-6 py-4">
 			<div>
 				<h2 id="validation-panel-title" class="text-lg font-semibold text-gray-900">
-					전체 유효성 검사 결과
+					유효성 검사 결과
 				</h2>
 				<p class="mt-1 text-sm text-gray-500">
 					전체 {totalCount.toLocaleString()}개 중 {passedCount.toLocaleString()}개 통과,

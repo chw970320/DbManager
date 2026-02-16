@@ -89,10 +89,12 @@
 	let {
 		currentType,
 		currentFilename,
+		fileMapping,
 		onApplied
 	}: {
 		currentType: DefinitionType;
 		currentFilename: string;
+		fileMapping?: Partial<Record<DefinitionType, string>>;
 		onApplied?: () => void | Promise<void>;
 	} = $props();
 
@@ -112,6 +114,7 @@
 		table: 'Table',
 		column: 'Column'
 	};
+	const definitionTypes = Object.keys(definitionLabels) as DefinitionType[];
 
 	function currentFileParamName(type: DefinitionType): `${DefinitionType}File` {
 		if (type === 'database') return 'databaseFile';
@@ -123,9 +126,26 @@
 
 	function buildFileParams() {
 		const params = new URLSearchParams();
+		const selectedFiles: Partial<Record<DefinitionType, string>> = {};
 		if (currentFilename?.trim()) {
-			params.set(currentFileParamName(currentType), currentFilename.trim());
+			selectedFiles[currentType] = currentFilename.trim();
 		}
+
+		for (const type of definitionTypes) {
+			if (type === currentType) continue;
+			const mappedFile = fileMapping?.[type];
+			if (mappedFile?.trim()) {
+				selectedFiles[type] = mappedFile.trim();
+			}
+		}
+
+		for (const type of definitionTypes) {
+			const filename = selectedFiles[type];
+			if (filename) {
+				params.set(currentFileParamName(type), filename);
+			}
+		}
+
 		return params;
 	}
 
@@ -190,8 +210,13 @@
 		error = null;
 		try {
 			const body: Record<string, string | boolean> = { apply };
-			if (currentFilename?.trim()) {
-				body[currentFileParamName(currentType)] = currentFilename.trim();
+			const params = buildFileParams();
+			for (const type of definitionTypes) {
+				const paramName = currentFileParamName(type);
+				const filename = params.get(paramName);
+				if (filename) {
+					body[paramName] = filename;
+				}
 			}
 
 			const response = await fetch('/api/erd/relations/sync', {
@@ -229,8 +254,13 @@
 		error = null;
 		try {
 			const body: Record<string, string | boolean> = { apply: true };
-			if (currentFilename?.trim()) {
-				body[currentFileParamName(currentType)] = currentFilename.trim();
+			const params = buildFileParams();
+			for (const type of definitionTypes) {
+				const paramName = currentFileParamName(type);
+				const filename = params.get(paramName);
+				if (filename) {
+					body[paramName] = filename;
+				}
 			}
 
 			const response = await fetch('/api/alignment/sync', {
@@ -271,12 +301,14 @@
 	}
 
 	onMount(async () => {
-		lastLoadedKey = `${currentType}:${currentFilename}`;
+		const mappingKey = definitionTypes.map((type) => `${type}:${fileMapping?.[type] || ''}`).join('|');
+		lastLoadedKey = `${currentType}:${currentFilename}:${mappingKey}`;
 		await loadAllValidations();
 	});
 
 	$effect(() => {
-		const nextKey = `${currentType}:${currentFilename}`;
+		const mappingKey = definitionTypes.map((type) => `${type}:${fileMapping?.[type] || ''}`).join('|');
+		const nextKey = `${currentType}:${currentFilename}:${mappingKey}`;
 		if (nextKey === lastLoadedKey) return;
 		lastLoadedKey = nextKey;
 		syncData = null;

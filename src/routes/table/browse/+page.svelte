@@ -15,6 +15,7 @@
 	type SortDetail = { column: string; direction: 'asc' | 'desc' | null };
 	type PageChangeDetail = { page: number };
 	type FilterDetail = { column: string; value: string | null };
+	type DefinitionType = 'database' | 'entity' | 'attribute' | 'table' | 'column';
 
 	let entries = $state<TableEntry[]>([]);
 	let loading = $state(false);
@@ -32,6 +33,7 @@
 	let tableFiles = $state<string[]>([]);
 	let selectedFilename = $state('table.json');
 	let showSystemFiles = $state(false);
+	let relationFileMapping = $state<Partial<Record<DefinitionType, string>>>({});
 	let showEditor = $state(false);
 	let editorServerError = $state('');
 	let isFileManagerOpen = $state(false);
@@ -54,6 +56,7 @@
 		(async () => {
 			await loadFiles();
 			if (browser) {
+				await loadRelationFileMapping(selectedFilename);
 				await loadFilterOptions();
 				await loadData();
 			}
@@ -64,6 +67,7 @@
 				if (browser) {
 					currentPage = 1;
 					searchQuery = '';
+					void loadRelationFileMapping(value.selectedFilename);
 					loadData();
 				}
 			}
@@ -104,6 +108,36 @@
 			console.error('파일 목록 로드 오류:', error);
 		}
 	}
+
+	function toDefinitionFileMapping(
+		mapping?: Record<string, unknown>
+	): Partial<Record<DefinitionType, string>> {
+		const result: Partial<Record<DefinitionType, string>> = {};
+		const types: DefinitionType[] = ['database', 'entity', 'attribute', 'table', 'column'];
+		for (const type of types) {
+			const value = mapping?.[type];
+			if (typeof value === 'string' && value.trim() !== '') {
+				result[type] = value;
+			}
+		}
+		return result;
+	}
+
+	async function loadRelationFileMapping(filename: string) {
+		try {
+			const response = await fetch(
+				`/api/table/files/mapping?filename=${encodeURIComponent(filename)}`
+			);
+			const result: DbDesignApiResponse<{ mapping?: Record<string, unknown> }> =
+				await response.json();
+			relationFileMapping = result.success
+				? toDefinitionFileMapping(result.data?.mapping)
+				: {};
+		} catch (mappingError) {
+			console.error('관계 파일 매핑 로드 오류:', mappingError);
+			relationFileMapping = {};
+		}
+	}
 	async function loadFilterOptions() {
 		try {
 			const params = new URLSearchParams({ filename: selectedFilename });
@@ -122,6 +156,7 @@
 		tableStore.update((store) => ({ ...store, selectedFilename: filename }));
 		currentPage = 1;
 		searchQuery = '';
+		await loadRelationFileMapping(filename);
 		await loadFilterOptions();
 		await loadData();
 	}
@@ -214,6 +249,7 @@
 	}
 	async function refreshData() {
 		await loadFiles();
+		await loadRelationFileMapping(selectedFilename);
 		await loadData();
 	}
 	function handleEntryClick(event: { entry: TableEntry }) {
@@ -531,6 +567,7 @@
 				<DesignRelationPanel
 					currentType="table"
 					currentFilename={selectedFilename}
+					fileMapping={relationFileMapping}
 					onApplied={refreshData}
 				/>
 

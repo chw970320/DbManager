@@ -193,4 +193,71 @@ describe('DesignRelationPanel', () => {
 			expect(onApplied).toHaveBeenCalledTimes(1);
 		});
 	});
+
+	it('should include fileMapping params in validation and sync requests', async () => {
+		const fetchMock = vi
+			.fn()
+			.mockResolvedValueOnce({
+				json: async () => createRelationsResponse()
+			})
+			.mockResolvedValueOnce({
+				json: async () => createUnifiedResponse()
+			})
+			.mockResolvedValueOnce({
+				json: async () => createSyncResponse()
+			});
+		vi.stubGlobal('fetch', fetchMock);
+
+		render(DesignRelationPanel, {
+			props: {
+				currentType: 'database',
+				currentFilename: 'database-custom.json',
+				fileMapping: {
+					entity: 'entity-custom.json',
+					attribute: 'attribute-custom.json',
+					table: 'table-custom.json',
+					column: 'column-custom.json'
+				}
+			}
+		});
+
+		await waitFor(() => {
+			const calls = fetchMock.mock.calls.map((call) => String(call[0]));
+			expect(calls.some((url) => url.startsWith('/api/erd/relations?'))).toBe(true);
+			expect(calls.some((url) => url.startsWith('/api/validation/report?'))).toBe(true);
+		});
+
+		const relationUrl = fetchMock.mock.calls
+			.map((call) => String(call[0]))
+			.find((url) => url.startsWith('/api/erd/relations?'));
+		expect(relationUrl).toContain('databaseFile=database-custom.json');
+		expect(relationUrl).toContain('entityFile=entity-custom.json');
+		expect(relationUrl).toContain('attributeFile=attribute-custom.json');
+		expect(relationUrl).toContain('tableFile=table-custom.json');
+		expect(relationUrl).toContain('columnFile=column-custom.json');
+
+		const previewButton = await screen.findByRole('button', { name: '보정 미리보기' });
+		previewButton.click();
+
+		await waitFor(() => {
+			expect(fetchMock).toHaveBeenCalledWith(
+				'/api/erd/relations/sync',
+				expect.objectContaining({
+					method: 'POST',
+					body: expect.any(String)
+				})
+			);
+		});
+
+		const syncCall = fetchMock.mock.calls.find((call) => call[0] === '/api/erd/relations/sync');
+		const body = JSON.parse((syncCall?.[1] as RequestInit).body as string);
+		expect(body).toMatchObject({
+			apply: false,
+			databaseFile: 'database-custom.json',
+			entityFile: 'entity-custom.json',
+			attributeFile: 'attribute-custom.json',
+			tableFile: 'table-custom.json',
+			columnFile: 'column-custom.json'
+		});
+	});
 });

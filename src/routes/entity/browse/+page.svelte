@@ -15,6 +15,7 @@
 	type SortDetail = { column: string; direction: 'asc' | 'desc' | null };
 	type PageChangeDetail = { page: number };
 	type FilterDetail = { column: string; value: string | null };
+	type DefinitionType = 'database' | 'entity' | 'attribute' | 'table' | 'column';
 
 	let entries = $state<EntityEntry[]>([]);
 	let loading = $state(false);
@@ -33,6 +34,7 @@
 	let entityFiles = $state<string[]>([]);
 	let selectedFilename = $state('entity.json');
 	let showSystemFiles = $state(false);
+	let relationFileMapping = $state<Partial<Record<DefinitionType, string>>>({});
 
 	let showEditor = $state(false);
 	let editorServerError = $state('');
@@ -59,6 +61,7 @@
 		(async () => {
 			await loadFiles();
 			if (browser) {
+				await loadRelationFileMapping(selectedFilename);
 				await loadFilterOptions();
 				await loadData();
 			}
@@ -69,6 +72,7 @@
 				if (browser) {
 					currentPage = 1;
 					searchQuery = '';
+					void loadRelationFileMapping(value.selectedFilename);
 					loadData();
 				}
 			}
@@ -110,6 +114,36 @@
 		}
 	}
 
+	function toDefinitionFileMapping(
+		mapping?: Record<string, unknown>
+	): Partial<Record<DefinitionType, string>> {
+		const result: Partial<Record<DefinitionType, string>> = {};
+		const types: DefinitionType[] = ['database', 'entity', 'attribute', 'table', 'column'];
+		for (const type of types) {
+			const value = mapping?.[type];
+			if (typeof value === 'string' && value.trim() !== '') {
+				result[type] = value;
+			}
+		}
+		return result;
+	}
+
+	async function loadRelationFileMapping(filename: string) {
+		try {
+			const response = await fetch(
+				`/api/entity/files/mapping?filename=${encodeURIComponent(filename)}`
+			);
+			const result: DbDesignApiResponse<{ mapping?: Record<string, unknown> }> =
+				await response.json();
+			relationFileMapping = result.success
+				? toDefinitionFileMapping(result.data?.mapping)
+				: {};
+		} catch (mappingError) {
+			console.error('관계 파일 매핑 로드 오류:', mappingError);
+			relationFileMapping = {};
+		}
+	}
+
 	async function loadFilterOptions() {
 		try {
 			const params = new URLSearchParams({ filename: selectedFilename });
@@ -129,6 +163,7 @@
 		entityStore.update((store) => ({ ...store, selectedFilename: filename }));
 		currentPage = 1;
 		searchQuery = '';
+		await loadRelationFileMapping(filename);
 		await loadFilterOptions();
 		await loadData();
 	}
@@ -222,6 +257,7 @@
 	}
 	async function refreshData() {
 		await loadFiles();
+		await loadRelationFileMapping(selectedFilename);
 		await loadData();
 	}
 	function handleEntryClick(event: { entry: EntityEntry }) {
@@ -545,6 +581,7 @@
 				<DesignRelationPanel
 					currentType="entity"
 					currentFilename={selectedFilename}
+					fileMapping={relationFileMapping}
 					onApplied={refreshData}
 				/>
 

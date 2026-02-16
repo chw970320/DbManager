@@ -78,6 +78,8 @@
 			validation?: { data?: UnifiedValidationPayload };
 		};
 		summary: {
+			appliedVocabularyUpdates?: number;
+			appliedTermUpdates?: number;
 			appliedRelationUpdates: number;
 			appliedColumnUpdates: number;
 			remainingTermFailed: number;
@@ -104,6 +106,7 @@
 	let validationData = $state<RelationValidationPayload | null>(null);
 	let unifiedValidationData = $state<UnifiedValidationPayload | null>(null);
 	let syncData = $state<RelationSyncPayload | null>(null);
+	let alignmentSyncData = $state<AlignmentSyncPayload | null>(null);
 	let lastLoadedKey = $state('');
 	let showSyncDetails = $state(false);
 
@@ -115,6 +118,40 @@
 		column: 'Column'
 	};
 	const definitionTypes = Object.keys(definitionLabels) as DefinitionType[];
+	type RelationId = DesignRelationValidationResult['summaries'][number]['relationId'];
+	const relationGuides: Record<RelationId, { problem: string; fix: string }> = {
+		DB_ENTITY: {
+			problem: '엔터티의 logicalDbName이 DB 정의서와 연결되지 않음',
+			fix: 'DB logicalDbName 또는 엔터티 logicalDbName을 동일 값으로 정규화'
+		},
+		DB_TABLE: {
+			problem: '테이블의 physicalDbName이 DB 정의서와 연결되지 않음',
+			fix: 'DB physicalDbName과 테이블 physicalDbName을 1:1 기준으로 통일'
+		},
+		ENTITY_ATTRIBUTE: {
+			problem: '속성의 schema/entity 조합이 엔터티와 불일치',
+			fix: '속성 schemaName, entityName을 엔터티 기준 값으로 교정'
+		},
+		ENTITY_TABLE: {
+			problem: '테이블 relatedEntityName이 엔터티명(또는 테이블한글명)과 불일치',
+			fix: 'relatedEntityName을 엔터티 entityName 기준으로 교정'
+		},
+		TABLE_COLUMN: {
+			problem: '컬럼 schema/tableEnglishName이 테이블과 불일치',
+			fix: '컬럼 schemaName, tableEnglishName을 테이블 기준으로 교정'
+		},
+		ATTRIBUTE_COLUMN: {
+			problem: '속성-컬럼 논리/물리 연결 후보를 찾지 못함(보조 경고)',
+			fix: 'attributeName과 columnKoreanName 네이밍 룰을 맞추고 연관엔터티명 점검'
+		}
+	};
+
+	function getUnmatchedSummaries(validation: DesignRelationValidationResult | null) {
+		if (!validation) return [];
+		return [...validation.summaries]
+			.filter((summary) => summary.unmatched > 0)
+			.sort((a, b) => b.unmatched - a.unmatched);
+	}
 
 	function currentFileParamName(type: DefinitionType): `${DefinitionType}File` {
 		if (type === 'database') return 'databaseFile';
@@ -209,6 +246,7 @@
 		syncing = true;
 		error = null;
 		try {
+			alignmentSyncData = null;
 			const body: Record<string, string | boolean> = { apply };
 			const params = buildFileParams();
 			for (const type of definitionTypes) {
@@ -273,6 +311,7 @@
 				error = result.error || '표준 순서 실행에 실패했습니다.';
 				return;
 			}
+			alignmentSyncData = result.data;
 
 			if (result.data.steps.relation?.data) {
 				syncData = result.data.steps.relation.data;
@@ -312,6 +351,7 @@
 		if (nextKey === lastLoadedKey) return;
 		lastLoadedKey = nextKey;
 		syncData = null;
+		alignmentSyncData = null;
 		showSyncDetails = false;
 		void loadAllValidations();
 	});
@@ -358,6 +398,10 @@
 			</button>
 		</div>
 	</div>
+	<div class="mb-3 rounded-md border border-amber-200 bg-white/80 px-3 py-2 text-[11px] text-amber-800">
+		`정합성 조회`: 현재 오류 원인 분석 전용, `표준 순서 실행`: 단어/용어/관계/컬럼 자동 보정 일괄 실행,
+		`보정 미리보기`: 실제 저장 없이 보정 후보 확인, `자동 보정 실행`: 관계 보정 후보를 파일에 반영
+	</div>
 
 	{#if validationData}
 		<div class="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
@@ -402,6 +446,25 @@
 				</div>
 			{/each}
 		</div>
+
+		{#if getUnmatchedSummaries(validationData.validation).length > 0}
+			<div class="mt-3 rounded-lg border border-red-200 bg-red-50/60 p-3 text-xs">
+				<div class="mb-2 font-semibold text-red-800">무엇이 문제인지 / 어떻게 고칠지</div>
+				<div class="space-y-2">
+					{#each getUnmatchedSummaries(validationData.validation).slice(0, 4) as summary (summary.relationId)}
+						<div class="rounded border border-red-100 bg-white px-2 py-1">
+							<div class="font-medium text-red-700">
+								{summary.relationName} · 미매칭 {summary.unmatched}건
+							</div>
+							<div class="text-gray-700">
+								원인: {summary.issues[0]?.reason || relationGuides[summary.relationId].problem}
+							</div>
+							<div class="text-gray-700">해결: {relationGuides[summary.relationId].fix}</div>
+						</div>
+					{/each}
+				</div>
+			</div>
+		{/if}
 	{/if}
 
 	{#if unifiedValidationData}
@@ -450,6 +513,27 @@
 		</div>
 	{/if}
 
+	{#if alignmentSyncData}
+		<div class="mt-3 rounded-lg border border-indigo-200 bg-indigo-50/80 p-3 text-xs">
+			<div class="mb-1 font-semibold text-indigo-800">표준 순서 실행 결과 해석</div>
+			<div class="grid grid-cols-2 gap-1 text-indigo-900 sm:grid-cols-4">
+				<div>단어집 보정: {alignmentSyncData.summary.appliedVocabularyUpdates || 0}</div>
+				<div>용어 보정: {alignmentSyncData.summary.appliedTermUpdates || 0}</div>
+				<div>관계 보정: {alignmentSyncData.summary.appliedRelationUpdates}</div>
+				<div>컬럼 보정: {alignmentSyncData.summary.appliedColumnUpdates}</div>
+			</div>
+			<div class="mt-1 text-indigo-900">
+				잔여 이슈: 관계 미매칭 {alignmentSyncData.summary.relationUnmatchedCount}건, 용어 실패 {alignmentSyncData.summary.remainingTermFailed}건, 총 {alignmentSyncData.summary.totalIssues}건
+			</div>
+			{#if alignmentSyncData.summary.totalIssues > 0}
+				<div class="mt-2 rounded border border-indigo-200 bg-white px-2 py-1 text-[11px] text-gray-700">
+					자동 보정 대상이 아닌 값 불일치(마스터 누락, 명칭 표기 차이, 다중 후보 충돌)는 수동 정리가 필요합니다.
+					우선 `TABLE_COLUMN`, `ENTITY_TABLE`, `ENTITY_ATTRIBUTE` 순으로 정리하세요.
+				</div>
+			{/if}
+		</div>
+	{/if}
+
 	{#if syncData}
 		<div class="mt-3 rounded-lg border border-blue-200 bg-white p-3 text-xs">
 			<div class="mb-1 flex items-center justify-between">
@@ -473,6 +557,25 @@
 			<div class="mt-1 text-gray-600">
 				정합성 변화: {syncData.validationBefore.totals.unmatched} -> {syncData.validationAfter.totals.unmatched}
 			</div>
+			{#if syncData.validationAfter.totals.unmatched > 0}
+				<div class="mt-2 rounded border border-blue-100 bg-blue-50/40 px-2 py-1 text-[11px] text-blue-900">
+					{syncData.mode === 'preview'
+						? '미리보기 기준으로도 미매칭이 남습니다. 자동 보정 후보가 없는 항목은 수동 교정이 필요합니다.'
+						: '자동 보정 후에도 미매칭이 남습니다. 아래 미해결 원인에서 수동 조치 항목을 확인하세요.'}
+				</div>
+			{/if}
+
+			{#if getUnmatchedSummaries(syncData.validationAfter).length > 0}
+				<div class="mt-2 space-y-1 rounded border border-blue-100 bg-blue-50/20 p-2">
+					<div class="font-semibold text-blue-800">미해결 원인(상위 3개)</div>
+					{#each getUnmatchedSummaries(syncData.validationAfter).slice(0, 3) as summary (summary.relationId)}
+						<div class="rounded border border-blue-100 bg-white px-2 py-1 text-[11px] text-gray-700">
+							<div class="font-medium text-blue-700">{summary.relationName} · {summary.unmatched}건</div>
+							<div>해결: {relationGuides[summary.relationId].fix}</div>
+						</div>
+					{/each}
+				</div>
+			{/if}
 
 			{#if showSyncDetails}
 				<div class="mt-2 grid grid-cols-1 gap-2 lg:grid-cols-2">

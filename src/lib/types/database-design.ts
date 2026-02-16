@@ -51,6 +51,10 @@ export interface DatabaseData {
 	entries: DatabaseEntry[];
 	lastUpdated: string;
 	totalCount: number;
+	mapping?: {
+		entity: string;
+		table: string;
+	};
 }
 
 // ============================================================================
@@ -83,6 +87,10 @@ export interface EntityData {
 	entries: EntityEntry[];
 	lastUpdated: string;
 	totalCount: number;
+	mapping?: {
+		database: string;
+		attribute: string;
+	};
 }
 
 // ============================================================================
@@ -117,6 +125,10 @@ export interface AttributeData {
 	entries: AttributeEntry[];
 	lastUpdated: string;
 	totalCount: number;
+	mapping?: {
+		entity: string;
+		column: string;
+	};
 }
 
 // ============================================================================
@@ -158,6 +170,11 @@ export interface TableData {
 	entries: TableEntry[];
 	lastUpdated: string;
 	totalCount: number;
+	mapping?: {
+		database: string;
+		column: string;
+		entity: string;
+	};
 }
 
 // ============================================================================
@@ -206,6 +223,11 @@ export interface ColumnData {
 	entries: ColumnEntry[];
 	lastUpdated: string;
 	totalCount: number;
+	mapping?: {
+		table: string;
+		term: string;
+		domain: string;
+	};
 }
 
 // ============================================================================

@@ -101,7 +101,8 @@ const TYPE_CONFIGS: { [K in DataType]: DataTypeConfig<K> } = {
 			({
 				entries: [],
 				lastUpdated: new Date().toISOString(),
-				totalCount: 0
+				totalCount: 0,
+				mapping: { entity: 'entity.json', table: 'table.json' }
 			}) as DataTypeMap['database']
 	},
 	entity: {
@@ -112,7 +113,8 @@ const TYPE_CONFIGS: { [K in DataType]: DataTypeConfig<K> } = {
 			({
 				entries: [],
 				lastUpdated: new Date().toISOString(),
-				totalCount: 0
+				totalCount: 0,
+				mapping: { database: 'database.json', attribute: 'attribute.json' }
 			}) as DataTypeMap['entity']
 	},
 	attribute: {
@@ -123,7 +125,8 @@ const TYPE_CONFIGS: { [K in DataType]: DataTypeConfig<K> } = {
 			({
 				entries: [],
 				lastUpdated: new Date().toISOString(),
-				totalCount: 0
+				totalCount: 0,
+				mapping: { entity: 'entity.json', column: 'column.json' }
 			}) as DataTypeMap['attribute']
 	},
 	table: {
@@ -134,7 +137,8 @@ const TYPE_CONFIGS: { [K in DataType]: DataTypeConfig<K> } = {
 			({
 				entries: [],
 				lastUpdated: new Date().toISOString(),
-				totalCount: 0
+				totalCount: 0,
+				mapping: { database: 'database.json', column: 'column.json', entity: 'entity.json' }
 			}) as DataTypeMap['table']
 	},
 	column: {
@@ -145,7 +149,8 @@ const TYPE_CONFIGS: { [K in DataType]: DataTypeConfig<K> } = {
 			({
 				entries: [],
 				lastUpdated: new Date().toISOString(),
-				totalCount: 0
+				totalCount: 0,
+				mapping: { table: 'table.json', term: 'term.json', domain: 'domain.json' }
 			}) as DataTypeMap['column']
 	}
 };

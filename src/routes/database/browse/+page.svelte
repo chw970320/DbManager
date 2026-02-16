@@ -48,6 +48,7 @@
 
 	let unsubscribe: () => void;
 	let settingsUnsubscribe: () => void;
+	let pageDataRequestSeq = 0;
 
 	// 스토어 구독 및 초기 데이터 로드
 	onMount(() => {
@@ -68,9 +69,7 @@
 		(async () => {
 			await loadDatabaseFiles();
 			if (browser) {
-				await loadRelationFileMapping(selectedFilename);
-				await loadFilterOptions();
-				await loadDatabaseData();
+				await loadPageData(selectedFilename);
 			}
 		})();
 
@@ -80,8 +79,7 @@
 				if (browser) {
 					currentPage = 1;
 					searchQuery = '';
-					void loadRelationFileMapping(value.selectedFilename);
-					loadDatabaseData();
+					void loadPageData(value.selectedFilename);
 				}
 			}
 		});
@@ -151,18 +149,24 @@
 		return result;
 	}
 
-	async function loadRelationFileMapping(filename: string) {
+	async function loadRelationFileMapping(filename: string, requestSeq?: number) {
 		try {
 			const response = await fetch(
 				`/api/database/files/mapping?filename=${encodeURIComponent(filename)}`
 			);
 			const result: DbDesignApiResponse<{ mapping?: Record<string, unknown> }> =
 				await response.json();
+			if (requestSeq !== undefined && requestSeq !== pageDataRequestSeq) {
+				return;
+			}
 			relationFileMapping = result.success
 				? toDefinitionFileMapping(result.data?.mapping)
 				: {};
 		} catch (mappingError) {
 			console.error('관계 파일 매핑 로드 오류:', mappingError);
+			if (requestSeq !== undefined && requestSeq !== pageDataRequestSeq) {
+				return;
+			}
 			relationFileMapping = {};
 		}
 	}
@@ -170,14 +174,17 @@
 	/**
 	 * 필터 옵션 로드 (전체 데이터 기준)
 	 */
-	async function loadFilterOptions() {
+	async function loadFilterOptions(filename = selectedFilename, requestSeq?: number) {
 		try {
 			const params = new URLSearchParams({
-				filename: selectedFilename
+				filename
 			});
 
 			const response = await fetch(`/api/database/filter-options?${params}`);
 			const result: DbDesignApiResponse = await response.json();
+			if (requestSeq !== undefined && requestSeq !== pageDataRequestSeq) {
+				return;
+			}
 
 			if (result.success && result.data && typeof result.data === 'object') {
 				filterOptions = result.data as Record<string, string[]>;
@@ -185,6 +192,19 @@
 		} catch (error) {
 			console.error('필터 옵션 로드 오류:', error);
 		}
+	}
+
+	async function loadPageData(filename: string) {
+		const requestSeq = ++pageDataRequestSeq;
+		selectedFilename = filename;
+		await loadDatabaseData(filename, requestSeq);
+		if (requestSeq !== pageDataRequestSeq) {
+			return;
+		}
+		void Promise.allSettled([
+			loadRelationFileMapping(filename, requestSeq),
+			loadFilterOptions(filename, requestSeq)
+		]);
 	}
 
 	/**
@@ -196,22 +216,20 @@
 		databaseStore.update((store) => ({ ...store, selectedFilename: filename }));
 		currentPage = 1;
 		searchQuery = '';
-		await loadRelationFileMapping(filename);
-		await loadFilterOptions();
-		await loadDatabaseData();
+		await loadPageData(filename);
 	}
 
 	/**
 	 * 데이터 로드
 	 */
-	async function loadDatabaseData() {
+	async function loadDatabaseData(filename = selectedFilename, requestSeq?: number) {
 		loading = true;
 
 		try {
 			const params = new URLSearchParams({
 				page: currentPage.toString(),
 				limit: pageSize.toString(),
-				filename: selectedFilename
+				filename
 			});
 
 			// 다중 정렬 파라미터 추가
@@ -238,6 +256,9 @@
 
 			const response = await fetch(`/api/database?${params}`);
 			const result: DbDesignApiResponse = await response.json();
+			if (requestSeq !== undefined && requestSeq !== pageDataRequestSeq) {
+				return;
+			}
 
 			if (result.success && result.data) {
 				const data = result.data as {
@@ -255,8 +276,14 @@
 			}
 		} catch (error) {
 			console.error('데이터 로드 오류:', error);
+			if (requestSeq !== undefined && requestSeq !== pageDataRequestSeq) {
+				return;
+			}
 			entries = [];
 		} finally {
+			if (requestSeq !== undefined && requestSeq !== pageDataRequestSeq) {
+				return;
+			}
 			loading = false;
 		}
 	}
@@ -342,8 +369,7 @@
 	 */
 	async function refreshData() {
 		await loadDatabaseFiles();
-		await loadRelationFileMapping(selectedFilename);
-		await loadDatabaseData();
+		await loadPageData(selectedFilename);
 	}
 
 	/**
@@ -759,7 +785,7 @@
 					on:close={() => (isFileManagerOpen = false)}
 					on:change={async () => {
 						await loadDatabaseFiles();
-						await loadDatabaseData();
+						await loadPageData(selectedFilename);
 					}}
 				/>
 

@@ -44,6 +44,7 @@
 
 	let unsubscribe: () => void;
 	let settingsUnsubscribe: () => void;
+	let pageDataRequestSeq = 0;
 
 	onMount(() => {
 		settingsUnsubscribe = settingsStore.subscribe((settings) => {
@@ -61,9 +62,7 @@
 		(async () => {
 			await loadFiles();
 			if (browser) {
-				await loadRelationFileMapping(selectedFilename);
-				await loadFilterOptions();
-				await loadData();
+				await loadPageData(selectedFilename);
 			}
 		})();
 		unsubscribe = entityStore.subscribe((value) => {
@@ -72,8 +71,7 @@
 				if (browser) {
 					currentPage = 1;
 					searchQuery = '';
-					void loadRelationFileMapping(value.selectedFilename);
-					loadData();
+					void loadPageData(value.selectedFilename);
 				}
 			}
 		});
@@ -128,27 +126,36 @@
 		return result;
 	}
 
-	async function loadRelationFileMapping(filename: string) {
+	async function loadRelationFileMapping(filename: string, requestSeq?: number) {
 		try {
 			const response = await fetch(
 				`/api/entity/files/mapping?filename=${encodeURIComponent(filename)}`
 			);
 			const result: DbDesignApiResponse<{ mapping?: Record<string, unknown> }> =
 				await response.json();
+			if (requestSeq !== undefined && requestSeq !== pageDataRequestSeq) {
+				return;
+			}
 			relationFileMapping = result.success
 				? toDefinitionFileMapping(result.data?.mapping)
 				: {};
 		} catch (mappingError) {
 			console.error('관계 파일 매핑 로드 오류:', mappingError);
+			if (requestSeq !== undefined && requestSeq !== pageDataRequestSeq) {
+				return;
+			}
 			relationFileMapping = {};
 		}
 	}
 
-	async function loadFilterOptions() {
+	async function loadFilterOptions(filename = selectedFilename, requestSeq?: number) {
 		try {
-			const params = new URLSearchParams({ filename: selectedFilename });
+			const params = new URLSearchParams({ filename });
 			const response = await fetch(`/api/entity/filter-options?${params}`);
 			const result: DbDesignApiResponse = await response.json();
+			if (requestSeq !== undefined && requestSeq !== pageDataRequestSeq) {
+				return;
+			}
 			if (result.success && result.data && typeof result.data === 'object') {
 				filterOptions = result.data as Record<string, string[]>;
 			}
@@ -157,24 +164,35 @@
 		}
 	}
 
+	async function loadPageData(filename: string) {
+		const requestSeq = ++pageDataRequestSeq;
+		selectedFilename = filename;
+		await loadData(filename, requestSeq);
+		if (requestSeq !== pageDataRequestSeq) {
+			return;
+		}
+		void Promise.allSettled([
+			loadRelationFileMapping(filename, requestSeq),
+			loadFilterOptions(filename, requestSeq)
+		]);
+	}
+
 	async function handleFileSelect(filename: string) {
 		if (selectedFilename === filename) return;
 		selectedFilename = filename;
 		entityStore.update((store) => ({ ...store, selectedFilename: filename }));
 		currentPage = 1;
 		searchQuery = '';
-		await loadRelationFileMapping(filename);
-		await loadFilterOptions();
-		await loadData();
+		await loadPageData(filename);
 	}
 
-	async function loadData() {
+	async function loadData(filename = selectedFilename, requestSeq?: number) {
 		loading = true;
 		try {
 			const params = new URLSearchParams({
 				page: currentPage.toString(),
 				limit: pageSize.toString(),
-				filename: selectedFilename
+				filename
 			});
 			Object.entries(sortConfig).forEach(([column, direction]) => {
 				if (direction !== null) {
@@ -193,6 +211,9 @@
 
 			const response = await fetch(`/api/entity?${params}`);
 			const result: DbDesignApiResponse = await response.json();
+			if (requestSeq !== undefined && requestSeq !== pageDataRequestSeq) {
+				return;
+			}
 			if (result.success && result.data) {
 				const data = result.data as {
 					entries: EntityEntry[];
@@ -209,8 +230,14 @@
 			}
 		} catch (error) {
 			console.error('데이터 로드 오류:', error);
+			if (requestSeq !== undefined && requestSeq !== pageDataRequestSeq) {
+				return;
+			}
 			entries = [];
 		} finally {
+			if (requestSeq !== undefined && requestSeq !== pageDataRequestSeq) {
+				return;
+			}
 			loading = false;
 		}
 	}
@@ -257,8 +284,7 @@
 	}
 	async function refreshData() {
 		await loadFiles();
-		await loadRelationFileMapping(selectedFilename);
-		await loadData();
+		await loadPageData(selectedFilename);
 	}
 	function handleEntryClick(event: { entry: EntityEntry }) {
 		currentEditingEntry = event.entry;
@@ -603,7 +629,7 @@
 					on:close={() => (isFileManagerOpen = false)}
 					on:change={async () => {
 						await loadFiles();
-						await loadData();
+						await loadPageData(selectedFilename);
 					}}
 				/>
 

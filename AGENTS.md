@@ -33,3 +33,4 @@
 - For DB, Entity, Attribute, Table, and Column features, align overlapping UX and behavior with the existing Vocabulary, Domain, and Term flows unless the user asks for a deliberate change.
 - Any change to behavior, API, UX, workflow, validation, or data model must include updates to the relevant files under `docs/` in the same task.
 - When a change materially affects repository-level guidance, contributors' first-run understanding, or feature summaries, update `README.md` in the same task.
+- Commit messages for this repository must always be written in Korean.

@@ -2,6 +2,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import { tick } from 'svelte';
 	import type { DomainEntry } from '$lib/types/domain';
+	import type { DomainDataTypeMappingLike } from '$lib/utils/domain-name';
 	import { generateStandardDomainName } from '$lib/utils/validation';
 	import { v4 as uuidv4 } from 'uuid';
 	import { addToast } from '$lib/stores/toast-store';
@@ -13,13 +14,15 @@
 		isEditMode?: boolean;
 		serverError?: string;
 		filename?: string; // 현재 선택된 도메인 파일명
+		dataTypeMappings?: DomainDataTypeMappingLike[];
 	}
 
 	let {
 		entry = {},
 		isEditMode = false,
 		serverError = '',
-		filename = 'domain.json'
+		filename = 'domain.json',
+		dataTypeMappings = []
 	}: Props = $props();
 
 	// Event dispatcher
@@ -50,7 +53,8 @@
 			formData.domainCategory,
 			formData.physicalDataType,
 			formData.dataLength,
-			formData.decimalPlaces
+			formData.decimalPlaces,
+			dataTypeMappings
 		)
 	);
 
@@ -419,7 +423,7 @@
 							{#if isEditMode}
 								표준 도메인명은 validation 처리되는 값으로 수정할 수 없습니다.
 							{:else}
-								도메인분류명, 물리데이터타입, 데이터길이, 소수점자리수로 자동 생성됩니다.
+								도메인분류명, 데이터타입 매핑약어, 데이터길이, 소수점자리수로 자동 생성됩니다.
 							{/if}
 						</p>
 					</div>
@@ -449,6 +453,10 @@
 						{#if isEditMode}
 							<p class="mt-1 text-xs text-gray-500">
 								물리 데이터타입은 validation 처리되는 값으로 수정할 수 없습니다.
+							</p>
+						{:else}
+							<p class="mt-1 text-xs text-gray-500">
+								데이터타입별 약어는 도메인 목록의 "데이터타입 매핑" 팝업에서 관리합니다.
 							</p>
 						{/if}
 					</div>

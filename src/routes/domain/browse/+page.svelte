@@ -4,8 +4,11 @@
 	import DomainTable from '$lib/components/DomainTable.svelte';
 	import DomainFileManager from '$lib/components/DomainFileManager.svelte';
 	import DomainEditor from '$lib/components/DomainEditor.svelte';
+	import DomainDataTypeMappingModal from '$lib/components/DomainDataTypeMappingModal.svelte';
 	import DomainValidationPanel from '$lib/components/DomainValidationPanel.svelte';
 	import type { DomainEntry, DomainApiResponse } from '$lib/types/domain.js';
+	import type { DomainDataTypeMappingLike } from '$lib/utils/domain-name';
+	import { DEFAULT_DOMAIN_DATA_TYPE_MAPPINGS } from '$lib/utils/domain-name';
 	import { get } from 'svelte/store';
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { domainStore } from '$lib/stores/domain-store';
@@ -30,9 +33,11 @@
 
 	// 파일 관리 상태
 	let isFileManagerOpen = $state(false);
+	let isDataTypeMappingOpen = $state(false);
 	let selectedFilename = $state('domain.json');
 	let fileList = $state<string[]>([]);
 	let sidebarOpen = $state(false);
+	let dataTypeMappings = $state<DomainDataTypeMappingLike[]>([...DEFAULT_DOMAIN_DATA_TYPE_MAPPINGS]);
 
 	// 편집기 상태
 	let showEditor = $state(false);
@@ -67,6 +72,7 @@
 	 * 컴포넌트 마운트 시 초기 데이터 로드
 	 */
 	onMount(async () => {
+		await loadDataTypeMappings();
 		await loadFileList();
 		// 파일 목록 로드 후 데이터 로드
 		if (fileList.length > 0) {
@@ -79,6 +85,18 @@
 			await loadDomainData();
 		}
 	});
+
+	async function loadDataTypeMappings() {
+		try {
+			const response = await fetch('/api/domain/type-mappings');
+			const result = await response.json();
+			if (result.success && result.data && Array.isArray(result.data.entries)) {
+				dataTypeMappings = result.data.entries;
+			}
+		} catch (mappingError) {
+			console.error('데이터타입 매핑 목록 로드 오류:', mappingError);
+		}
+	}
 
 	async function loadFileList() {
 		try {
@@ -338,6 +356,7 @@
 	 * 데이터 새로고침
 	 */
 	async function handleRefresh() {
+		await loadDataTypeMappings();
 		await loadFileList();
 		// 파일 목록 로드 후 selectedFilename 확인
 		if (fileList.length > 0 && !fileList.includes(selectedFilename)) {
@@ -349,6 +368,10 @@
 		} else {
 			await loadDomainData();
 		}
+	}
+
+	async function handleDataTypeMappingChange() {
+		await handleRefresh();
 	}
 
 	async function handleValidateAllDomain() {
@@ -776,6 +799,28 @@
 							<!-- 새 도메인 추가 버튼 -->
 							<button
 								type="button"
+								onclick={() => (isDataTypeMappingOpen = true)}
+								disabled={loading}
+								class="group inline-flex items-center space-x-2 rounded-xl border border-amber-200/50 bg-amber-50/80 px-6 py-3 text-sm font-medium text-amber-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-amber-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+							>
+								<svg
+									class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M4 7h16M4 12h16M4 17h16"
+									/>
+								</svg>
+								<span>데이터타입 매핑</span>
+							</button>
+
+							<button
+								type="button"
 								onclick={() => {
 									currentEditingEntry = null;
 									editorServerError = '';
@@ -880,11 +925,18 @@
 						isEditMode={!!currentEditingEntry}
 						serverError={editorServerError}
 						filename={selectedFilename}
+						{dataTypeMappings}
 						on:save={handleSave}
 						on:delete={handleDelete}
 						on:cancel={handleCancel}
 					/>
 				{/if}
+
+				<DomainDataTypeMappingModal
+					isOpen={isDataTypeMappingOpen}
+					on:close={() => (isDataTypeMappingOpen = false)}
+					on:change={handleDataTypeMappingChange}
+				/>
 
 				{#if showValidationPanel}
 					<DomainValidationPanel
@@ -902,6 +954,7 @@
 				<!-- DomainFileManager 모달 -->
 				<DomainFileManager
 					isOpen={isFileManagerOpen}
+					currentFilename={selectedFilename}
 					on:close={() => (isFileManagerOpen = false)}
 					on:change={handleFileChange}
 				/>
@@ -954,7 +1007,6 @@
 							bind:field={searchField}
 							bind:exact={searchExact}
 							onsearch={handleSearch}
-					currentFilename={selectedFilename}
 							onclear={handleSearchClear}
 						/>
 					</div>

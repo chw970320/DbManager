@@ -34,3 +34,5 @@
 - Any change to behavior, API, UX, workflow, validation, or data model must include updates to the relevant files under `docs/` in the same task.
 - When a change materially affects repository-level guidance, contributors' first-run understanding, or feature summaries, update `README.md` in the same task.
 - Commit messages for this repository must always be written in Korean.
+- Immediately before every commit, re-check the repository commit-message rule and ensure the actual commit subject/body are written in Korean.
+- If feature work is done on a separate branch, do not stop at implementation only. Before closing the task, make the branch merge-ready for `main` by reflecting the latest `main` baseline into the working branch when possible, resolving conflicts, and rerunning the relevant validation/test commands. If that cannot be completed, report the blocker explicitly.

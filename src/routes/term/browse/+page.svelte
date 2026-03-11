@@ -1217,7 +1217,7 @@
 				<!-- TermFileManager 모달 -->
 				<TermFileManager
 					isOpen={isFileManagerOpen}
-					{selectedFilename}
+					currentFilename={selectedFilename}
 					on:close={() => (isFileManagerOpen = false)}
 					on:change={handleFileChange}
 				/>

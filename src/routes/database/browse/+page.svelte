@@ -782,6 +782,7 @@
 				<!-- FileManager 모달 -->
 				<DatabaseFileManager
 					isOpen={isFileManagerOpen}
+					currentFilename={selectedFilename}
 					on:close={() => (isFileManagerOpen = false)}
 					on:change={async () => {
 						await loadDatabaseFiles();

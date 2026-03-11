@@ -199,7 +199,7 @@ describe('TermFileManager', () => {
 			render(TermFileManager, {
 				props: {
 					isOpen: true,
-					selectedFilename: 'term.json'
+					currentFilename: 'term.json'
 				}
 			});
 

@@ -13,8 +13,8 @@
 | `domain/download/server.test.ts`       | 6개       | 완료 |
 | `domain/filter-options/server.test.ts` | 8개       | 완료 |
 | `DomainEditor.test.ts`                 | 15개      | 완료 |
-| `DomainFileManager.test.ts`            | 8개       | 완료 |
-| **합계**                               | **79개**  |      |
+| `DomainFileManager.test.ts`            | 9개       | 완료 |
+| **합계**                               | **80개**  |      |
 
 ---
 
@@ -226,7 +226,7 @@
 
 ---
 
-## 8. DomainFileManager.test.ts (8개)
+## 8. DomainFileManager.test.ts (9개)
 
 **파일 경로**: `src/lib/components/DomainFileManager.test.ts`
 
@@ -247,12 +247,13 @@
 | 파일 이름 변경 기능    | 파일 이름 변경 | PUT 요청 처리          |
 | 파일 삭제 기능         | 파일 삭제      | DELETE 요청 처리       |
 
-### Selected File (2개)
+### Selected File (3개)
 
 | 테스트명                        | 설명                | 검증 내용             |
 | ------------------------------- | ------------------- | --------------------- |
 | 선택된 파일 강조 표시           | 선택된 파일 UI 강조 | 선택된 파일 강조 표시 |
 | 파일 선택 시 change 이벤트 발생 | 파일 선택 이벤트    | 파일 목록 로드 확인   |
+| 업로드 대상 파일 현재 선택 반영 | 업로드 기본값 안전화 | 대상 파일 select가 현재 파일과 동일하게 초기화 |
 
 ### Upload Tab (1개)
 
@@ -289,3 +290,4 @@ pnpm test domain --watch
 | ---------- | ---------------------------------------------------- |
 | 2025-01-09 | 초기 문서 작성 (71개 테스트)                         |
 | 2025-01-09 | DomainFileManager 컴포넌트 테스트 추가 (79개 테스트) |
+| 2026-03-11 | 업로드 대상 파일 기본 선택 동기화 테스트 추가 (80개 테스트) |

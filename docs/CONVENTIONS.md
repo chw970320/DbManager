@@ -484,6 +484,11 @@ function handleSort(column: string) {
 모든 FileManager 컴포넌트는 다음 패턴을 따라야 합니다:
 
 ```typescript
+interface Props {
+	isOpen?: boolean;
+	currentFilename?: string;
+}
+
 // 필수 상태 변수
 let files = $state<string[]>([]);
 let allFiles = $state<string[]>([]);
@@ -508,6 +513,12 @@ async function toggleSystemFiles(event: Event) {
 	filterFiles();
 }
 ```
+
+**업로드 대상 파일 기본 선택 규칙**:
+
+- Browse 페이지에서 FileManager를 열 때는 반드시 `currentFilename={selectedFilename}`를 전달합니다.
+- 업로드 탭의 `selectedUploadFile`은 모달이 열릴 때와 바깥 현재 파일이 바뀔 때 `currentFilename`과 동일하게 맞춥니다.
+- 현재 파일이 목록에 없을 때만 기존 선택값 또는 첫 번째 파일로 폴백합니다.
 
 **시스템 파일 표시 체크박스 필수**:
 
@@ -555,6 +566,11 @@ async function toggleSystemFiles(event: Event) {
 
 FileUpload 컴포넌트는 **검증 교체 모드**와 **단순 교체 모드**만 지원합니다.
 (병합 모드와 덮어쓰기 모드는 삭제되었습니다)
+
+**업로드 대상 파일 선택 주의사항**:
+
+- FileManager 업로드 탭에서는 `filename={selectedUploadFile}`에 현재 browse 페이지의 선택 파일이 반영되어야 합니다.
+- 대상 파일 select box가 첫 번째 파일로 고정되면 오업로드 위험이 있으므로, `currentFilename` 우선 선택 로직을 유지하세요.
 
 **올바른 사용법**:
 
@@ -929,6 +945,17 @@ async function loadFiles() {
 		}
 	}
 }
+```
+
+**FileManager 모달 호출도 동일한 기준을 따라야 합니다**:
+
+```svelte
+<XxxFileManager
+	isOpen={isFileManagerOpen}
+	currentFilename={selectedFilename}
+	on:close={() => (isFileManagerOpen = false)}
+	on:change={handleFileChange}
+/>
 ```
 
 **⚠️ 중요**: 파일 삭제, 이름 변경, 시스템 파일 표시 토글 후에는 항상 현재 선택된 파일이 유효한지 확인해야 합니다.

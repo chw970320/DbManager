@@ -16,8 +16,8 @@
 | `database/filter-options/server.test.ts` | 3              | 8              | 완료                      |
 | `DatabaseEditor.test.ts`                 | 4              | 13             | 작성완료 (일부 수정 필요) |
 | `DatabaseTable.test.ts`                  | 4              | 8              | 작성완료                  |
-| `DatabaseFileManager.test.ts`            | 3              | 5              | 작성완료 (환경 설정 필요) |
-| **합계**                                 | **29**         | **81**         |                           |
+| `DatabaseFileManager.test.ts`            | 4              | 10             | 작성완료 (환경 설정 필요) |
+| **합계**                                 | **30**         | **82**         |                           |
 
 > **중요**: 데이터베이스 관련 모든 API/컴포넌트는 **현재 선택된 database 파일(`filename`)을 기준으로만** 동작해야 합니다.
 >
@@ -197,6 +197,7 @@
   - 각 버튼 액션이 올바른 API 호출 및 상위 컴포넌트 이벤트로 이어지는지 확인
 - 선택된 파일 상태 반영
   - 현재 선택된 database 파일 강조 표시 및 변경 시 이벤트 발생
+  - 업로드 탭 대상 파일 select가 현재 browse 선택 파일과 동일하게 초기화되는지 확인
 
 ---
 
@@ -248,11 +249,12 @@
 - Row Click: entryclick 이벤트 (일부 수정 필요)
 - Filtering: 필터 옵션 UI, 필터 적용
 
-⚠️ **`DatabaseFileManager.test.ts`** (5개 테스트)
+⚠️ **`DatabaseFileManager.test.ts`** (10개 테스트)
 
 - Rendering: 모달 열기, 파일 목록 표시
 - File Operations: 새 파일 생성, 파일 이름 변경, 파일 삭제
 - Selected File: 선택된 파일 강조, change 이벤트
+- Selected File: 업로드 대상 파일 기본값이 현재 선택 파일과 동기화되는지 확인
 - Upload Tab: 업로드 탭 표시
 
 > **참고**: 컴포넌트 테스트는 작성되었으나, 일부는 실제 컴포넌트 구조에 맞게 수정이 필요합니다. 특히 DatabaseFileManager는 `$app/environment` import 문제로 테스트 환경 설정이 필요합니다.

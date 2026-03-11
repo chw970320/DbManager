@@ -954,6 +954,7 @@
 							bind:field={searchField}
 							bind:exact={searchExact}
 							onsearch={handleSearch}
+					currentFilename={selectedFilename}
 							onclear={handleSearchClear}
 						/>
 					</div>

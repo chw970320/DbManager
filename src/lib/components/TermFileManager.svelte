@@ -1,24 +1,25 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, untrack } from 'svelte';
 	import FileUpload from './FileUpload.svelte';
 	import type { ApiResponse, UploadResult } from '$lib/types/vocabulary';
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { filterTermFiles } from '$lib/utils/file-filter';
+	import { resolvePreferredFilename } from '$lib/utils/file-selection';
 	import { showConfirm } from '$lib/stores/confirm-store';
 
 	interface Props {
 		isOpen?: boolean;
-		selectedFilename?: string;
+		currentFilename?: string;
 	}
 
-	let { isOpen = false, selectedFilename = 'term.json' }: Props = $props();
+	const SYSTEM_FILE = 'term.json';
+
+	let { isOpen = false, currentFilename = SYSTEM_FILE }: Props = $props();
 
 	const dispatch = createEventDispatcher<{
 		close: void;
 		change: void;
 	}>();
-
-	const SYSTEM_FILE = 'term.json';
 
 	let files = $state<string[]>([]);
 	let allFiles = $state<string[]>([]);
@@ -34,7 +35,7 @@
 	let activeTab = $state<'files' | 'upload'>('files');
 
 	// 업로드 관련 상태
-	let selectedUploadFile = $state(selectedFilename);
+	let selectedUploadFile = $state(currentFilename);
 	let uploadMode = $state<'validated-replace' | 'simple-replace'>('validated-replace');
 	type UploadSuccessDetail = { result: UploadResult };
 	type UploadErrorDetail = { error: string };
@@ -361,7 +362,11 @@
 		successMessage = '';
 		newFilename = '';
 		editingFile = null;
-		selectedUploadFile = files.length > 0 ? files[0] : 'term.json';
+		selectedUploadFile = resolvePreferredFilename({
+			files,
+			preferredFilename: currentFilename,
+			fallbackFilename: SYSTEM_FILE
+		});
 		dispatch('close');
 	}
 
@@ -389,12 +394,22 @@
 		// 업로드 완료 후 처리 (필요시)
 	}
 
-	// 파일 목록이 변경되면 업로드 대상 파일도 업데이트
+	// 현재 browse 페이지에서 선택한 파일을 업로드 대상 기본값으로 유지
 	$effect(() => {
-		if (files.length > 0 && !files.includes(selectedUploadFile)) {
-			selectedUploadFile = files[0];
-		} else if (files.length === 0) {
-			selectedUploadFile = 'term.json';
+		if (!isOpen) {
+			return;
+		}
+
+		const currentUploadFile = untrack(() => selectedUploadFile);
+		const nextUploadFile = resolvePreferredFilename({
+			files,
+			preferredFilename: currentFilename,
+			currentSelection: currentUploadFile,
+			fallbackFilename: SYSTEM_FILE
+		});
+
+		if (currentUploadFile !== nextUploadFile) {
+			selectedUploadFile = nextUploadFile;
 		}
 	});
 
@@ -411,9 +426,7 @@
 					loadVocabularyFiles();
 					loadDomainFiles();
 					// 선택된 파일의 매핑 정보 로드
-					if (selectedFilename) {
-						loadMappingInfo(selectedFilename);
-					}
+					loadMappingInfo(currentFilename);
 				} else if (allFiles.length > 0) {
 					// 설정 변경 시 필터링만 재실행
 					filterFiles();
@@ -423,10 +436,10 @@
 		}
 	});
 
-	// selectedFilename 변경 시 매핑 정보 로드
+	// browse 페이지의 현재 선택 파일이 바뀌면 매핑 정보도 동일하게 갱신
 	$effect(() => {
-		if (isOpen && selectedFilename) {
-			loadMappingInfo(selectedFilename);
+		if (isOpen && currentFilename) {
+			loadMappingInfo(currentFilename);
 		}
 	});
 

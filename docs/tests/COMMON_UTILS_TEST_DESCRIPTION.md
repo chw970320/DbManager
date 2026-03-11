@@ -10,8 +10,9 @@
 | `xlsx-parser.test.ts` | 10개      | 완료 |
 | `cache.test.ts`       | 13개      | 완료 |
 | `file-filter.test.ts` | 29개      | 완료 |
+| `file-selection.test.ts` | 4개    | 완료 |
 | `debounce.test.ts`    | 8개       | 완료 |
-| **합계**              | **82개**  |      |
+| **합계**              | **86개**  |      |
 
 **참고**: `file-handler.test.ts`와 `database-design-handler.test.ts`는 복잡한 파일 시스템 의존성으로 인해 API 테스트에서 간접적으로 검증됩니다.
 
@@ -135,7 +136,22 @@ XLSX 파일 파싱 로직을 테스트합니다.
 
 ---
 
-## 3. cache.test.ts (13개)
+## 3. file-selection.test.ts (4개)
+
+**파일 경로**: `src/lib/utils/file-selection.test.ts`
+
+파일 업로드 관리 모달에서 대상 파일 select box 기본값을 결정하는 공통 로직을 테스트합니다.
+
+| 테스트명                                                   | 설명                          | 검증 내용                                              |
+| ---------------------------------------------------------- | ----------------------------- | ------------------------------------------------------ |
+| 선호 파일이 목록에 있으면 우선 선택한다                    | 현재 browse 파일 우선 적용    | `preferredFilename`이 존재하면 해당 파일을 반환        |
+| 선호 파일이 없으면 현재 선택을 유지한다                    | 사용자가 고른 업로드 대상 유지 | 유효한 `currentSelection`이 있으면 그대로 반환         |
+| 선호 파일과 현재 선택이 모두 없으면 첫 번째 파일을 선택한다 | 파일 목록 기본 폴백           | 목록 첫 번째 파일을 반환                               |
+| 파일이 없으면 fallback 파일을 선택한다                     | 빈 목록 처리                  | 시스템 기본 파일명 같은 `fallbackFilename`을 반환      |
+
+---
+
+## 4. cache.test.ts (13개)
 
 **파일 경로**: `src/lib/utils/cache.test.ts`
 
@@ -186,7 +202,7 @@ XLSX 파일 파싱 로직을 테스트합니다.
 
 ---
 
-## 4. file-filter.test.ts (29개)
+## 5. file-filter.test.ts (29개)
 
 **파일 경로**: `src/lib/utils/file-filter.test.ts`
 
@@ -303,7 +319,7 @@ XLSX 파일 파싱 로직을 테스트합니다.
 
 ---
 
-## 5. debounce.test.ts (8개)
+## 6. debounce.test.ts (8개)
 
 **파일 경로**: `src/lib/utils/debounce.test.ts`
 

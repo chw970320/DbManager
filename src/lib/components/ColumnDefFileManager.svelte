@@ -1,23 +1,25 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, untrack } from 'svelte';
 	import FileUpload from './FileUpload.svelte';
 	import type { DbDesignApiResponse, DbDesignUploadResult } from '$lib/types/database-design';
 	import { columnStore } from '$lib/stores/database-design-store';
 	import { settingsStore } from '$lib/stores/settings-store';
+	import { resolvePreferredFilename } from '$lib/utils/file-selection';
 	import { showConfirm } from '$lib/stores/confirm-store';
 
 	interface Props {
 		isOpen?: boolean;
+		currentFilename?: string;
 	}
 
-	let { isOpen = false }: Props = $props();
+	const SYSTEM_FILE = 'column.json';
+
+	let { isOpen = false, currentFilename = SYSTEM_FILE }: Props = $props();
 
 	const dispatch = createEventDispatcher<{
 		close: void;
 		change: void;
 	}>();
-
-	const SYSTEM_FILE = 'column.json';
 
 	let files = $state<string[]>([]);
 	let allFiles = $state<string[]>([]);
@@ -32,7 +34,7 @@
 	let activeTab = $state<'files' | 'upload'>('files');
 
 	// 업로드 관련 상태
-	let selectedUploadFile = $state('column.json');
+	let selectedUploadFile = $state(currentFilename);
 	type UploadSuccessDetail = { result: DbDesignUploadResult };
 	type UploadErrorDetail = { error: string };
 
@@ -284,7 +286,11 @@
 				successMessage = `파일 "${filename}"이(가) 삭제되었습니다.`;
 				await loadFiles();
 				if (currentMappingFile === filename) {
-					const fallback = files[0] || SYSTEM_FILE;
+					const fallback = resolvePreferredFilename({
+						files,
+						preferredFilename: currentFilename,
+						fallbackFilename: SYSTEM_FILE
+					});
 					selectedUploadFile = fallback;
 					await loadMappingInfo(fallback);
 				}
@@ -399,7 +405,11 @@
 		successMessage = '';
 		newFilename = '';
 		editingFile = null;
-		selectedUploadFile = files.length > 0 ? files[0] : 'column.json';
+		selectedUploadFile = resolvePreferredFilename({
+			files,
+			preferredFilename: currentFilename,
+			fallbackFilename: SYSTEM_FILE
+		});
 		dispatch('close');
 	}
 
@@ -410,12 +420,22 @@
 		}
 	}
 
-	// 파일 목록이 변경되면 업로드 대상 파일도 업데이트
+	// 현재 browse 페이지에서 선택한 파일을 업로드 대상 기본값으로 유지
 	$effect(() => {
-		if (files.length > 0 && !files.includes(selectedUploadFile)) {
-			selectedUploadFile = files[0];
-		} else if (files.length === 0) {
-			selectedUploadFile = 'column.json';
+		if (!isOpen) {
+			return;
+		}
+
+		const currentUploadFile = untrack(() => selectedUploadFile);
+		const nextUploadFile = resolvePreferredFilename({
+			files,
+			preferredFilename: currentFilename,
+			currentSelection: currentUploadFile,
+			fallbackFilename: SYSTEM_FILE
+		});
+
+		if (currentUploadFile !== nextUploadFile) {
+			selectedUploadFile = nextUploadFile;
 		}
 	});
 
@@ -429,9 +449,12 @@
 					void (async () => {
 						await loadFiles();
 						await Promise.all([loadTableFiles(), loadTermFiles(), loadDomainFiles()]);
-						const mappingFilename = files.includes(selectedUploadFile)
-							? selectedUploadFile
-							: files[0] || SYSTEM_FILE;
+						const mappingFilename = resolvePreferredFilename({
+							files,
+							preferredFilename: currentFilename,
+							currentSelection: selectedUploadFile,
+							fallbackFilename: SYSTEM_FILE
+						});
 						selectedUploadFile = mappingFilename;
 						await loadMappingInfo(mappingFilename);
 					})();

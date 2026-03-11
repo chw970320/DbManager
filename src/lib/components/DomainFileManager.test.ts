@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import DomainFileManager from './DomainFileManager.svelte';
 
 // Mock fetch API
@@ -203,6 +203,40 @@ describe('DomainFileManager', () => {
 					expect.stringContaining('/api/domain/files'),
 					expect.any(Object)
 				);
+			});
+		});
+
+		it('업로드 대상 파일이 현재 선택 파일로 기본 설정된다', async () => {
+			mockFetch.mockImplementation((url: string) => {
+				if (url.includes('/api/domain/files')) {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({
+								success: true,
+								data: ['domain.json', 'alpha-domain.json', 'beta-domain.json']
+							})
+					});
+				}
+
+				return Promise.resolve({
+					ok: false,
+					json: () => Promise.resolve({ success: false })
+				});
+			});
+
+			render(DomainFileManager, {
+				props: {
+					isOpen: true,
+					currentFilename: 'beta-domain.json'
+				}
+			});
+
+			await fireEvent.click(screen.getByRole('button', { name: '파일 업로드' }));
+
+			await waitFor(() => {
+				const select = screen.getByLabelText(/대상 파일 선택/) as HTMLSelectElement;
+				expect(select.value).toBe('beta-domain.json');
 			});
 		});
 	});

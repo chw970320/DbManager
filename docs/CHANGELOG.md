@@ -1,5 +1,53 @@
 # 변경 이력
 
+## 2026-03-11
+
+### 요약
+
+- 파일 업로드 관리 모달의 대상 파일 select 기본값이 browse 페이지의 현재 선택 파일과 일치하도록 정렬되었습니다.
+- 첫 번째 파일로 고정되던 기본 선택값을 공통 유틸리티 기반으로 정리해 잘못된 덮어쓰기 위험을 줄였습니다.
+
+### 상세 변경
+
+1. 업로드 대상 파일 기본 선택 동기화
+
+- 대상:
+  - `src/lib/components/VocabularyFileManager.svelte`
+  - `src/lib/components/DomainFileManager.svelte`
+  - `src/lib/components/TermFileManager.svelte`
+  - `src/lib/components/DatabaseFileManager.svelte`
+  - `src/lib/components/EntityFileManager.svelte`
+  - `src/lib/components/AttributeFileManager.svelte`
+  - `src/lib/components/TableDefFileManager.svelte`
+  - `src/lib/components/ColumnDefFileManager.svelte`
+- 변경:
+  - `currentFilename` prop을 받아 업로드 대상 select 기본값을 바깥 현재 파일과 맞춤
+  - 파일 목록 재로딩 시에도 현재 파일 우선 선택 규칙을 유지
+
+2. 공통 선택 로직 유틸리티 추가
+
+- 대상:
+  - `src/lib/utils/file-selection.ts`
+  - `src/lib/utils/file-selection.test.ts`
+- 변경:
+  - 선호 파일, 현재 선택, 첫 번째 파일, fallback 순서를 공통 함수로 정리
+  - 업로드 대상 파일 기본 선택 회귀를 유틸리티 테스트로 고정
+
+3. Browse 페이지 FileManager 연결 정리
+
+- 대상:
+  - `src/routes/browse/+page.svelte`
+  - `src/routes/domain/browse/+page.svelte`
+  - `src/routes/term/browse/+page.svelte`
+  - `src/routes/database/browse/+page.svelte`
+  - `src/routes/entity/browse/+page.svelte`
+  - `src/routes/attribute/browse/+page.svelte`
+  - `src/routes/table/browse/+page.svelte`
+  - `src/routes/column/browse/+page.svelte`
+- 변경:
+  - 각 browse 페이지가 현재 선택 파일명을 FileManager 모달에 명시적으로 전달
+  - 업로드 탭 기본 선택과 좌측/상단 현재 파일 표시가 동일 기준으로 동작
+
 ## 2026-02-16
 
 ### 요약

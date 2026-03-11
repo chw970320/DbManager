@@ -1,25 +1,27 @@
 <script lang="ts">
-	import { createEventDispatcher } from 'svelte';
+	import { createEventDispatcher, untrack } from 'svelte';
 	import { get } from 'svelte/store';
 	import FileUpload from './FileUpload.svelte';
 	import type { ApiResponse, UploadResult } from '$lib/types/vocabulary';
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { filterVocabularyFiles } from '$lib/utils/file-filter';
+	import { resolvePreferredFilename } from '$lib/utils/file-selection';
 	import { vocabularyStore } from '$lib/stores/vocabulary-store';
 	import { showConfirm } from '$lib/stores/confirm-store';
 
 	interface Props {
 		isOpen?: boolean;
+		currentFilename?: string;
 	}
 
-	let { isOpen = false }: Props = $props();
+	const SYSTEM_FILE = 'vocabulary.json';
+
+	let { isOpen = false, currentFilename = SYSTEM_FILE }: Props = $props();
 
 	const dispatch = createEventDispatcher<{
 		close: void;
 		change: void;
 	}>();
-
-	const SYSTEM_FILE = 'vocabulary.json';
 
 	let files = $state<string[]>([]);
 	let allFiles = $state<string[]>([]);
@@ -42,7 +44,7 @@
 	let isMappingLoading = $state(false);
 
 	// 업로드 관련 상태
-	let selectedUploadFile = $state('vocabulary.json');
+	let selectedUploadFile = $state(currentFilename);
 	let uploadMode = $state<'validated-replace' | 'simple-replace'>('validated-replace');
 	type UploadSuccessDetail = { result: UploadResult };
 	type UploadErrorDetail = { error: string };
@@ -354,7 +356,11 @@
 		successMessage = '';
 		newFilename = '';
 		editingFile = null;
-		selectedUploadFile = files.length > 0 ? files[0] : 'vocabulary.json';
+		selectedUploadFile = resolvePreferredFilename({
+			files,
+			preferredFilename: currentFilename,
+			fallbackFilename: SYSTEM_FILE
+		});
 		dispatch('close');
 	}
 
@@ -382,12 +388,22 @@
 		// 업로드 완료 후 처리 (필요시)
 	}
 
-	// 파일 목록이 변경되면 업로드 대상 파일도 업데이트
+	// 현재 browse 페이지에서 선택한 파일을 업로드 대상 기본값으로 유지
 	$effect(() => {
-		if (files.length > 0 && !files.includes(selectedUploadFile)) {
-			selectedUploadFile = files[0];
-		} else if (files.length === 0) {
-			selectedUploadFile = 'vocabulary.json';
+		if (!isOpen) {
+			return;
+		}
+
+		const currentUploadFile = untrack(() => selectedUploadFile);
+		const nextUploadFile = resolvePreferredFilename({
+			files,
+			preferredFilename: currentFilename,
+			currentSelection: currentUploadFile,
+			fallbackFilename: SYSTEM_FILE
+		});
+
+		if (currentUploadFile !== nextUploadFile) {
+			selectedUploadFile = nextUploadFile;
 		}
 	});
 
@@ -404,7 +420,8 @@
 					selectedDomainFile = state.selectedDomainFilename;
 				}
 				// 선택된 단어집 파일의 매핑 정보 로드
-				const vocabFile = state.selectedFilename || selectedUploadFile || 'vocabulary.json';
+				const vocabFile =
+					currentFilename || state.selectedFilename || selectedUploadFile || SYSTEM_FILE;
 				if (vocabFile && vocabFile !== currentMappingFile) {
 					loadMappingInfo(vocabFile);
 				}
@@ -412,11 +429,7 @@
 			loadDomainFiles();
 			// 초기 매핑 정보 로드
 			const { selectedFilename } = get(vocabularyStore);
-			if (selectedFilename) {
-				loadMappingInfo(selectedFilename);
-			} else if (selectedUploadFile) {
-				loadMappingInfo(selectedUploadFile);
-			}
+			loadMappingInfo(currentFilename || selectedFilename || selectedUploadFile || SYSTEM_FILE);
 			return () => {
 				unsubscribe();
 				unsubscribeDomain();

@@ -394,7 +394,10 @@ const isValid =
 
 4. **`standardDomainName`**
    - 필수 필드
-   - 계산된 값 (일반적으로 `domainGroup` + `domainCategory` 조합)
+   - 계산된 값
+   - 생성 규칙: `domainCategory + dataTypeAbbreviation + dataLength + "," + decimalPlaces`
+   - `dataTypeAbbreviation`은 `DomainDataTypeMappingEntry`에서 조회
+   - 매핑이 없으면 하위 호환성을 위해 `physicalDataType` 첫 글자를 사용
    - 용어 매핑의 기준
 
 5. **`physicalDataType`**
@@ -414,7 +417,7 @@ const isValid =
 	"id": "660e8400-e29b-41d4-a716-446655440001",
 	"domainGroup": "공통표준도메인그룹",
 	"domainCategory": "사용자분류",
-	"standardDomainName": "공통표준도메인그룹_사용자분류",
+	"standardDomainName": "사용자분류V50",
 	"physicalDataType": "VARCHAR",
 	"dataLength": "50",
 	"decimalPlaces": null,
@@ -446,9 +449,12 @@ const isValid =
 
 - **POST** `/api/domain`
   - 새 도메인 추가
+  - `standardDomainName`은 데이터타입 매핑 기준으로 서버에서 자동 생성
 
 - **PUT** `/api/domain`
   - 도메인 수정
+  - `domainCategory`, `physicalDataType`, `dataLength`, `decimalPlaces` 변경 시
+    `standardDomainName` 자동 재생성
 
 - **DELETE** `/api/domain`
   - 도메인 삭제
@@ -463,6 +469,10 @@ const isValid =
 
 - **POST** `/api/domain/upload`
   - 도메인 데이터 업로드 (XLSX)
+
+- **GET, POST, PUT, DELETE** `/api/domain/type-mappings`
+  - 도메인 데이터타입 매핑 조회 및 관리
+  - 매핑 변경 시 관련 도메인/용어/컬럼의 `domainName` 참조 자동 동기화
 
 ---
 
@@ -491,8 +501,9 @@ const isValid =
 			"id": "660e8400-e29b-41d4-a716-446655440001",
 			"domainGroup": "공통표준도메인그룹",
 			"domainCategory": "사용자분류",
-			"standardDomainName": "공통표준도메인그룹_사용자분류",
+			"standardDomainName": "사용자분류V50",
 			"physicalDataType": "VARCHAR",
+			"dataLength": "50",
 			"createdAt": "2024-01-15T10:30:00.000Z",
 			"updatedAt": "2024-01-15T10:30:00.000Z"
 		}
@@ -557,6 +568,7 @@ const isValid =
    - 필수 필드
    - `DomainEntry.standardDomainName`과 정확히 일치해야 매핑 성공
    - 대소문자 구분
+   - 데이터타입 매핑 변경으로 도메인명이 바뀌면 관련 용어의 `domainName`도 자동 동기화됨
 
 5. **매핑 검증 로직**
 
@@ -594,7 +606,7 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 	"id": "770e8400-e29b-41d4-a716-446655440002",
 	"termName": "사용자_이름",
 	"columnName": "USER_NAME",
-	"domainName": "공통표준도메인그룹_사용자분류",
+	"domainName": "사용자분류V50",
 	"isMappedTerm": true,
 	"isMappedColumn": true,
 	"isMappedDomain": true,
@@ -618,7 +630,7 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
     	"entry": {
     		"termName": "사용자_이름",
     		"columnName": "USER_NAME",
-    		"domainName": "공통표준도메인그룹_사용자분류"
+    		"domainName": "사용자분류V50"
     	},
     	"filename": "term.json"
     }
@@ -700,7 +712,7 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 			"id": "770e8400-e29b-41d4-a716-446655440002",
 			"termName": "사용자_이름",
 			"columnName": "USER_NAME",
-			"domainName": "공통표준도메인그룹_사용자분류",
+			"domainName": "사용자분류V50",
 			"isMappedTerm": true,
 			"isMappedColumn": true,
 			"isMappedDomain": true,
@@ -716,6 +728,90 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 	}
 }
 ```
+
+---
+
+## 7. DomainDataTypeMappingEntry / DomainDataTypeMappingData (도메인 데이터타입 매핑)
+
+### 개요
+
+도메인 표준명 생성 시 `physicalDataType`을 어떤 약어로 치환할지 관리하는 설정 모델입니다.
+기본 저장 파일은 `static/data/settings/domain-data-type-mappings.json`이며, 매핑이 바뀌면
+도메인/용어/컬럼 참조가 함께 재동기화됩니다.
+
+**파일 위치:** `src/lib/types/domain-data-type-mapping.ts`
+
+### 필드 상세
+
+#### DomainDataTypeMappingEntry
+
+| 필드명         | 타입     | 필수 | 기본값 | 설명                 |
+| -------------- | -------- | ---- | ------ | -------------------- |
+| `id`           | `string` | ✅   | -      | 매핑 식별자          |
+| `dataType`     | `string` | ✅   | -      | 물리 데이터타입 키   |
+| `abbreviation` | `string` | ✅   | -      | 도메인명 생성용 약어 |
+| `createdAt`    | `string` | ✅   | -      | 생성일시             |
+| `updatedAt`    | `string` | ✅   | -      | 수정일시             |
+
+#### DomainDataTypeMappingData
+
+| 필드명        | 타입                           | 필수 | 기본값 | 설명            |
+| ------------- | ------------------------------ | ---- | ------ | --------------- |
+| `entries`     | `DomainDataTypeMappingEntry[]` | ✅   | `[]`   | 매핑 목록       |
+| `lastUpdated` | `string`                       | ✅   | -      | 마지막 수정시각 |
+| `totalCount`  | `number`                       | ✅   | `0`    | 매핑 수         |
+
+#### DomainDataTypeMappingSyncResult
+
+| 필드명               | 타입     | 설명                              |
+| -------------------- | -------- | --------------------------------- |
+| `domainFilesUpdated` | `number` | 재저장된 도메인 파일 수           |
+| `domainsUpdated`     | `number` | 이름이 재생성된 도메인 수         |
+| `termFilesUpdated`   | `number` | 재저장된 용어 파일 수             |
+| `termsUpdated`       | `number` | `domainName`이 갱신된 용어 수     |
+| `columnFilesUpdated` | `number` | 재저장된 컬럼 파일 수             |
+| `columnsUpdated`     | `number` | `domainName`이 갱신된 컬럼 수     |
+
+### Validation 규칙
+
+1. `dataType`
+   - trim 후 빈 문자열 불가
+   - 대소문자/연속 공백을 정규화하여 중복 검사
+2. `abbreviation`
+   - trim 후 빈 문자열 불가
+   - 공백 제거 및 대문자 정규화 후 중복 검사
+3. 매핑 변경 후 연쇄 동기화
+   - 모든 `DomainEntry.standardDomainName` 재생성
+   - 관련 `TermEntry.domainName`, `ColumnEntry.domainName` 자동 갱신
+
+### 예시 데이터
+
+```json
+{
+	"entries": [
+		{
+			"id": "datatype-varchar",
+			"dataType": "VARCHAR",
+			"abbreviation": "V",
+			"createdAt": "2026-03-11T00:00:00.000Z",
+			"updatedAt": "2026-03-11T00:00:00.000Z"
+		},
+		{
+			"id": "datatype-timestamp",
+			"dataType": "TIMESTAMP",
+			"abbreviation": "TS",
+			"createdAt": "2026-03-11T00:00:00.000Z",
+			"updatedAt": "2026-03-11T00:00:00.000Z"
+		}
+	],
+	"lastUpdated": "2026-03-11T00:00:00.000Z",
+	"totalCount": 2
+}
+```
+
+### 관련 API 엔드포인트
+
+- **GET, POST, PUT, DELETE** `/api/domain/type-mappings`
 
 ---
 

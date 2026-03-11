@@ -6,19 +6,22 @@
 
 | 테스트 파일                            | 테스트 수 | 상태 |
 | -------------------------------------- | --------- | ---- |
-| `domain/server.test.ts`                | 18개      | 완료 |
+| `domain/server.test.ts`                | 21개      | 완료 |
 | `domain/validate/server.test.ts`       | 7개       | 완료 |
+| `domain/validate-all/server.test.ts`   | 2개       | 완료 |
 | `domain/files/server.test.ts`          | 12개      | 완료 |
 | `domain/upload/server.test.ts`         | 5개       | 완료 |
 | `domain/download/server.test.ts`       | 6개       | 완료 |
 | `domain/filter-options/server.test.ts` | 8개       | 완료 |
-| `DomainEditor.test.ts`                 | 15개      | 완료 |
+| `DomainEditor.test.ts`                 | 16개      | 완료 |
 | `DomainFileManager.test.ts`            | 9개       | 완료 |
-| **합계**                               | **80개**  |      |
+| `domain/type-mappings/server.test.ts`  | 6개       | 완료 |
+| `DomainDataTypeMappingModal.test.ts`   | 4개       | 완료 |
+| **합계**                               | **96개**  |      |
 
 ---
 
-## 1. domain/server.test.ts (18개)
+## 1. domain/server.test.ts (21개)
 
 **파일 경로**: `src/routes/api/domain/server.test.ts`
 
@@ -54,11 +57,13 @@
 | should return 404 when entry not found       | 존재하지 않는 항목   | 없는 id로 수정 시도 시 404 에러          |
 | should use specified filename parameter      | 파일명 파라미터 사용 | filename 쿼리 파라미터 적용 및 저장 확인 |
 
-### DELETE (4개)
+### DELETE (6개)
 
 | 테스트명                                     | 설명                 | 검증 내용                                |
 | -------------------------------------------- | -------------------- | ---------------------------------------- |
 | should delete an existing entry successfully | 도메인 삭제 성공     | 200 응답, 삭제 완료 메시지               |
+| should include warnings when references exist and force is false | 참조 경고 수집 | 삭제는 진행하되 warnings 배열 반환       |
+| should skip reference check when force=true  | 강제 삭제 시 참조 생략 | `checkEntryReferences` 호출 없이 삭제    |
 | should return 400 when id is missing         | ID 누락              | id 파라미터 없이 요청 시 400 에러        |
 | should return 404 when entry not found       | 존재하지 않는 항목   | 없는 id로 삭제 시도 시 404 에러          |
 | should use specified filename parameter      | 파일명 파라미터 사용 | filename 쿼리 파라미터 적용 및 저장 확인 |
@@ -83,7 +88,20 @@
 
 ---
 
-## 3. domain/files/server.test.ts (12개)
+## 3. domain/validate-all/server.test.ts (2개)
+
+**파일 경로**: `src/routes/api/domain/validate-all/server.test.ts`
+
+도메인 전체 유효성 검사 API를 테스트합니다.
+
+| 테스트명                          | 설명                    | 검증 내용                                |
+| --------------------------------- | ----------------------- | ---------------------------------------- |
+| should return validation summary  | 전체 검사 요약 반환     | totalCount, failedCount 등 집계 확인     |
+| should return 500 on error        | 로딩 오류 처리          | 도메인 데이터 로드 실패 시 500 에러      |
+
+---
+
+## 4. domain/files/server.test.ts (12개)
 
 **파일 경로**: `src/routes/api/domain/files/server.test.ts`
 
@@ -123,7 +141,7 @@
 
 ---
 
-## 4. domain/upload/server.test.ts (5개)
+## 5. domain/upload/server.test.ts (5개)
 
 **파일 경로**: `src/routes/api/domain/upload/server.test.ts`
 
@@ -146,7 +164,7 @@
 
 ---
 
-## 5. domain/download/server.test.ts (6개)
+## 6. domain/download/server.test.ts (6개)
 
 **파일 경로**: `src/routes/api/domain/download/server.test.ts`
 
@@ -163,7 +181,7 @@
 
 ---
 
-## 6. domain/filter-options/server.test.ts (8개)
+## 7. domain/filter-options/server.test.ts (8개)
 
 **파일 경로**: `src/routes/api/domain/filter-options/server.test.ts`
 
@@ -182,7 +200,7 @@
 
 ---
 
-## 7. DomainEditor.test.ts (15개)
+## 8. DomainEditor.test.ts (16개)
 
 **파일 경로**: `src/lib/components/DomainEditor.test.ts`
 
@@ -226,7 +244,7 @@
 
 ---
 
-## 8. DomainFileManager.test.ts (9개)
+## 9. DomainFileManager.test.ts (9개)
 
 **파일 경로**: `src/lib/components/DomainFileManager.test.ts`
 
@@ -265,6 +283,40 @@
 
 ---
 
+## 10. domain/type-mappings/server.test.ts (6개)
+
+**파일 경로**: `src/routes/api/domain/type-mappings/server.test.ts`
+
+도메인 데이터타입 매핑 CRUD API를 테스트합니다.
+
+| 테스트명                                    | 설명                 | 검증 내용                                        |
+| ------------------------------------------- | -------------------- | ------------------------------------------------ |
+| GET should return mapping list              | 매핑 목록 조회 성공  | 200 응답, entries 반환                           |
+| POST should create mapping                  | 매핑 등록 성공       | 201 응답, registry create 호출, sync 결과 반환   |
+| POST should reject missing fields           | 필수 필드 검증       | dataType 또는 abbreviation 누락 시 400           |
+| PUT should update mapping                   | 매핑 수정 성공       | 200 응답, registry update 호출                   |
+| PUT should return 404 when mapping is missing | 없는 매핑 수정      | 대상 매핑이 없으면 404                           |
+| DELETE should remove mapping                | 매핑 삭제 성공       | 200 응답, registry delete 호출, totalCount 감소  |
+
+---
+
+## 11. DomainDataTypeMappingModal.test.ts (4개)
+
+**파일 경로**: `src/lib/components/DomainDataTypeMappingModal.test.ts`
+
+도메인 데이터타입 매핑 관리 팝업 컴포넌트를 테스트합니다.
+
+| 테스트명                                      | 설명                  | 검증 내용                                  |
+| --------------------------------------------- | --------------------- | ------------------------------------------ |
+| should load and render mapping rows when opened | 초기 목록 렌더링     | GET 호출 후 데이터타입/약어 행 표시        |
+| should create a new mapping and emit change event | 매핑 등록 UI        | POST 호출, toast 호출, 신규 행 반영        |
+| should switch to edit mode and submit update  | 수정 모드 전환/저장   | 수정 버튼 클릭 후 PUT 호출                 |
+| should confirm and delete mapping             | 삭제 확인 및 삭제     | confirm 호출 후 DELETE 요청 전송           |
+
+> **참고**: Svelte 5에서는 `component.$on()` 직접 검증 대신 fetch/toast/UI 상태 변화를 기준으로 동작을 확인했습니다.
+
+---
+
 ## 실행 명령어
 
 ```bash
@@ -273,10 +325,13 @@ pnpm test domain
 
 # 특정 API 테스트
 pnpm test src/routes/api/domain/server.test.ts
+pnpm test src/routes/api/domain/validate-all/server.test.ts
 
 # 컴포넌트 테스트
 pnpm test src/lib/components/DomainEditor.test.ts
 pnpm test src/lib/components/DomainFileManager.test.ts
+pnpm test src/routes/api/domain/type-mappings/server.test.ts
+pnpm test src/lib/components/DomainDataTypeMappingModal.test.ts
 
 # 감시 모드
 pnpm test domain --watch
@@ -291,3 +346,4 @@ pnpm test domain --watch
 | 2025-01-09 | 초기 문서 작성 (71개 테스트)                         |
 | 2025-01-09 | DomainFileManager 컴포넌트 테스트 추가 (79개 테스트) |
 | 2026-03-11 | 업로드 대상 파일 기본 선택 동기화 테스트 추가 (80개 테스트) |
+| 2026-03-11 | 데이터타입 매핑 및 도메인 검증 테스트 정리 (96개 테스트) |

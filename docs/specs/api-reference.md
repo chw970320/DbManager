@@ -82,6 +82,18 @@ http://localhost:5173/api
 
 ---
 
+## 최근 변경 사항 (2026-03-11)
+
+- 도메인 표준명 생성 규칙이 `도메인분류명 + 데이터타입 매핑약어 + 데이터길이 + 데이터소수점길이`로 변경되었습니다.
+- 데이터타입 매핑은 `static/data/settings/domain-data-type-mappings.json`으로 관리되며, 등록되지 않은 데이터타입은 하위 호환성을 위해 첫 글자를 사용합니다.
+- `GET/POST/PUT/DELETE /api/domain/type-mappings`
+  - 도메인 데이터타입 매핑 목록 조회 및 CRUD를 제공합니다.
+  - 매핑 변경 후 도메인명 재생성과 함께 관련 `term.domainName`, `column.domainName` 참조를 자동 동기화합니다.
+- `POST /api/domain`, `PUT /api/domain`, `POST /api/domain/validate`, `GET /api/domain/validate-all`, `POST /api/domain/upload`
+  - 도메인명 생성/검증 시 공통 데이터타입 매핑을 사용합니다.
+
+---
+
 ## Vocabulary API
 
 ### GET /api/vocabulary
@@ -752,6 +764,8 @@ const data = await response.json();
 #### 설명
 
 새로운 도메인을 생성합니다. 필수 필드 검증 및 중복 검사를 수행합니다.
+`standardDomainName`은 서버에서 `도메인분류명 + 데이터타입 매핑약어 + 데이터길이 + 데이터소수점길이`
+규칙으로 자동 생성됩니다.
 
 #### 요청 바디
 
@@ -759,9 +773,9 @@ const data = await response.json();
 {
   domainGroup: string;          // 필수
   domainCategory: string;       // 필수
-  standardDomainName: string;   // 필수
   physicalDataType: string;     // 필수
-  logicalDataType?: string;
+  dataLength?: string;
+  decimalPlaces?: string;
   description?: string;
   revision?: string;
   filename?: string;            // 기본값: 'domain.json'
@@ -778,8 +792,8 @@ curl -X POST "http://localhost:5173/api/domain" \
   -d '{
     "domainGroup": "사용자",
     "domainCategory": "사용자관리",
-    "standardDomainName": "사용자명",
-    "physicalDataType": "VARCHAR(100)"
+    "physicalDataType": "VARCHAR",
+    "dataLength": "100"
   }'
 ```
 
@@ -794,8 +808,8 @@ const response = await fetch('http://localhost:5173/api/domain', {
 	body: JSON.stringify({
 		domainGroup: '사용자',
 		domainCategory: '사용자관리',
-		standardDomainName: '사용자명',
-		physicalDataType: 'VARCHAR(100)'
+		physicalDataType: 'VARCHAR',
+		dataLength: '100'
 	})
 });
 const data = await response.json();
@@ -812,8 +826,9 @@ const data = await response.json();
 		"id": "550e8400-e29b-41d4-a716-446655440000",
 		"domainGroup": "사용자",
 		"domainCategory": "사용자관리",
-		"standardDomainName": "사용자명",
-		"physicalDataType": "VARCHAR(100)",
+		"standardDomainName": "사용자관리V100",
+		"physicalDataType": "VARCHAR",
+		"dataLength": "100",
 		"createdAt": "2024-01-01T00:00:00.000Z",
 		"updatedAt": "2024-01-01T00:00:00.000Z"
 	},
@@ -850,6 +865,8 @@ const data = await response.json();
 #### 설명
 
 기존 도메인의 정보를 수정합니다.
+`domainCategory`, `physicalDataType`, `dataLength`, `decimalPlaces`가 변경되면
+`standardDomainName`도 동일 규칙으로 자동 재생성됩니다.
 
 #### 요청 바디
 
@@ -858,9 +875,9 @@ const data = await response.json();
   id: string;                // 필수
   domainGroup?: string;
   domainCategory?: string;
-  standardDomainName?: string;
-  logicalDataType?: string;
   physicalDataType?: string;
+  dataLength?: string;
+  decimalPlaces?: string;
   // ... 기타 필드
   filename?: string;         // 기본값: 'domain.json'
 }
@@ -875,7 +892,8 @@ curl -X PUT "http://localhost:5173/api/domain" \
   -H "Content-Type: application/json" \
   -d '{
     "id": "550e8400-e29b-41d4-a716-446655440000",
-    "physicalDataType": "VARCHAR(100)"
+    "physicalDataType": "TIMESTAMP",
+    "dataLength": "14"
   }'
 ```
 
@@ -889,7 +907,8 @@ const response = await fetch('http://localhost:5173/api/domain', {
 	},
 	body: JSON.stringify({
 		id: '550e8400-e29b-41d4-a716-446655440000',
-		physicalDataType: 'VARCHAR(100)'
+		physicalDataType: 'TIMESTAMP',
+		dataLength: '14'
 	})
 });
 const data = await response.json();
@@ -906,9 +925,9 @@ const data = await response.json();
 		"id": "550e8400-e29b-41d4-a716-446655440000",
 		"domainGroup": "사용자",
 		"domainCategory": "사용자관리",
-		"standardDomainName": "사용자ID",
-		"logicalDataType": "식별자",
-		"physicalDataType": "VARCHAR(100)",
+		"standardDomainName": "사용자관리TS14",
+		"physicalDataType": "TIMESTAMP",
+		"dataLength": "14",
 		"updatedAt": "2024-01-01T01:00:00.000Z"
 	},
 	"message": "도메인 수정 완료"
@@ -987,6 +1006,149 @@ const data = await response.json();
 
 - `400`: ID 누락
 - `404`: 도메인을 찾을 수 없음
+- `500`: 서버 오류
+
+---
+
+### GET /api/domain/type-mappings
+
+도메인 데이터타입 매핑 목록을 조회합니다.
+
+#### 설명
+
+도메인 표준명 생성 시 사용하는 데이터타입별 약어 목록을 반환합니다.
+
+#### 응답 예시
+
+**성공 (200):**
+
+```json
+{
+	"success": true,
+	"data": {
+		"entries": [
+			{
+				"id": "datatype-varchar",
+				"dataType": "VARCHAR",
+				"abbreviation": "V",
+				"createdAt": "2026-03-11T00:00:00.000Z",
+				"updatedAt": "2026-03-11T00:00:00.000Z"
+			}
+		],
+		"lastUpdated": "2026-03-11T00:00:00.000Z",
+		"totalCount": 1
+	},
+	"message": "데이터타입 매핑 목록을 조회했습니다."
+}
+```
+
+---
+
+### POST /api/domain/type-mappings
+
+도메인 데이터타입 매핑을 등록합니다.
+
+#### 요청 바디
+
+```typescript
+{
+  dataType: string;      // 필수
+  abbreviation: string;  // 필수
+}
+```
+
+#### 설명
+
+등록 후 전체 도메인 파일의 `standardDomainName`을 재계산하고, 변경된 이름을 참조하는
+용어와 컬럼의 `domainName`도 함께 동기화합니다.
+
+#### 응답 예시
+
+**성공 (201):**
+
+```json
+{
+	"success": true,
+	"data": {
+		"entry": {
+			"id": "map-1",
+			"dataType": "TIMESTAMP",
+			"abbreviation": "TS",
+			"createdAt": "2026-03-11T00:00:00.000Z",
+			"updatedAt": "2026-03-11T00:00:00.000Z"
+		},
+		"data": {
+			"entries": [],
+			"lastUpdated": "2026-03-11T00:00:00.000Z",
+			"totalCount": 1
+		},
+		"sync": {
+			"domainFilesUpdated": 1,
+			"domainsUpdated": 3,
+			"termFilesUpdated": 1,
+			"termsUpdated": 2,
+			"columnFilesUpdated": 1,
+			"columnsUpdated": 2
+		}
+	},
+	"message": "데이터타입 매핑이 등록되었습니다."
+}
+```
+
+#### 에러 코드
+
+- `400`: 필수 필드 누락, 중복 데이터타입, 중복 약어
+- `500`: 서버 오류
+
+---
+
+### PUT /api/domain/type-mappings
+
+도메인 데이터타입 매핑을 수정합니다.
+
+#### 요청 바디
+
+```typescript
+{
+  id: string;            // 필수
+  dataType: string;      // 필수
+  abbreviation: string;  // 필수
+}
+```
+
+#### 설명
+
+수정 후 전체 도메인명과 관련 용어/컬럼의 도메인 참조를 다시 동기화합니다.
+
+#### 에러 코드
+
+- `400`: 필수 필드 누락, 중복 데이터타입, 중복 약어
+- `404`: 수정할 매핑을 찾을 수 없음
+- `500`: 서버 오류
+
+---
+
+### DELETE /api/domain/type-mappings
+
+도메인 데이터타입 매핑을 삭제합니다.
+
+#### 요청 바디
+
+```typescript
+{
+  id: string;  // 필수
+}
+```
+
+#### 설명
+
+삭제 후 남아 있는 매핑 기준으로 전체 도메인명을 재계산합니다. 매핑이 없는 데이터타입은 첫
+글자 규칙으로 fallback 되며, 관련 용어/컬럼의 도메인 참조도 함께 동기화됩니다.
+
+#### 에러 코드
+
+- `400`: ID 누락
+- `404`: 삭제할 매핑을 찾을 수 없음
 - `500`: 서버 오류
 
 ---

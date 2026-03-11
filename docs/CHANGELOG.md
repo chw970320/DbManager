@@ -6,6 +6,8 @@
 
 - 파일 업로드 관리 모달의 대상 파일 select 기본값이 browse 페이지의 현재 선택 파일과 일치하도록 정렬되었습니다.
 - 첫 번째 파일로 고정되던 기본 선택값을 공통 유틸리티 기반으로 정리해 잘못된 덮어쓰기 위험을 줄였습니다.
+- 도메인 표준명 생성이 데이터타입 첫 글자 대신 관리형 매핑약어 기반으로 바뀌었습니다.
+- 도메인 목록 우상단에 데이터타입 매핑 관리 팝업이 추가되었고, 매핑 변경 시 관련 용어/컬럼 참조도 함께 동기화됩니다.
 
 ### 상세 변경
 
@@ -47,6 +49,35 @@
 - 변경:
   - 각 browse 페이지가 현재 선택 파일명을 FileManager 모달에 명시적으로 전달
   - 업로드 탭 기본 선택과 좌측/상단 현재 파일 표시가 동일 기준으로 동작
+
+4. 도메인 데이터타입 매핑 관리 추가
+
+- 대상:
+  - `src/lib/utils/domain-name.ts`
+  - `src/lib/registry/domain-data-type-mapping-registry.ts`
+  - `src/routes/api/domain/type-mappings/+server.ts`
+  - `src/lib/components/DomainDataTypeMappingModal.svelte`
+  - `src/routes/domain/browse/+page.svelte`
+  - `src/lib/components/DomainEditor.svelte`
+  - `static/data/settings/domain-data-type-mappings.json`
+- 변경:
+  - 도메인명 생성 규칙을 `도메인분류명 + 데이터타입 매핑약어 + 데이터길이 + 데이터소수점길이`로 변경
+  - 기본 데이터타입 약어 매핑 세트를 설정 파일로 분리
+  - 도메인 목록 우상단에서 매핑 목록 조회/등록/수정/삭제 가능한 팝업 추가
+  - 매핑 변경 후 도메인명 재계산과 함께 용어/컬럼의 `domainName` 참조 자동 동기화
+
+5. 도메인 검증/업로드/샘플 데이터 동기화
+
+- 대상:
+  - `src/routes/api/domain/+server.ts`
+  - `src/routes/api/domain/validate/+server.ts`
+  - `src/routes/api/domain/validate-all/+server.ts`
+  - `src/routes/api/domain/upload/+server.ts`
+  - `static/data/domain/*.json`
+  - `static/data/term/*.json`
+- 변경:
+  - 도메인 생성/검증/일괄검사/XLSX 업로드가 공통 데이터타입 매핑 기준으로 표준 도메인명을 생성
+  - 샘플 도메인/용어 데이터도 새 생성 규칙에 맞춰 정리
 
 ## 2026-02-16
 

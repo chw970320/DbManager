@@ -6,19 +6,19 @@
 
 | 테스트 파일           | 테스트 수 | 상태 |
 | --------------------- | --------- | ---- |
-| `validation.test.ts`  | 22개      | 완료 |
+| `validation.test.ts`  | 34개      | 완료 |
 | `xlsx-parser.test.ts` | 10개      | 완료 |
 | `cache.test.ts`       | 13개      | 완료 |
 | `file-filter.test.ts` | 29개      | 완료 |
 | `file-selection.test.ts` | 4개    | 완료 |
 | `debounce.test.ts`    | 8개       | 완료 |
-| **합계**              | **86개**  |      |
+| **합계**              | **98개**  |      |
 
 **참고**: `file-handler.test.ts`와 `database-design-handler.test.ts`는 복잡한 파일 시스템 의존성으로 인해 API 테스트에서 간접적으로 검증됩니다.
 
 ---
 
-## 1. validation.test.ts (22개)
+## 1. validation.test.ts (34개)
 
 **파일 경로**: `src/lib/utils/validation.test.ts`
 
@@ -95,6 +95,30 @@
 | should return valid pagination params        | 유효한 페이지네이션 파라미터 반환 | 정상적인 page/limit 파라미터 처리        |
 | should use default values for invalid params | 무효한 파라미터 기본값 사용       | 잘못된 파라미터 시 기본값(1, 20) 사용    |
 | should clamp values to valid ranges          | 값 범위 제한                      | page는 최소 1, limit은 최대 100으로 제한 |
+
+---
+
+### validateTermColumnOrderMapping (10개)
+
+| 테스트명                                                                  | 설명                         | 검증 내용                                              |
+| ------------------------------------------------------------------------- | ---------------------------- | ------------------------------------------------------ |
+| should pass when term and column order match correctly                    | 정상 순서 매핑               | 오류 없음, mismatch 없음                               |
+| should detect order mismatch when column parts are swapped                | 순서 뒤바뀜 감지            | mismatch 2건, correctedColumnName 생성                 |
+| should detect when a valid abbreviation from vocabulary is in wrong position | 유효 약어의 위치 오류 감지 | 단어집에 있는 약어라도 위치가 다르면 오류 반환        |
+| should skip validation when term and column part counts differ            | 파트 수 불일치 스킵         | 검증 생략, 오류 없음                                   |
+| should skip validation when termName is empty                             | 빈 용어명 스킵              | 검증 생략                                              |
+| should skip validation when columnName is empty                           | 빈 컬럼명 스킵              | 검증 생략                                              |
+| should not report mismatch when column part is not in vocabulary (handled by COLUMN_NAME_MAPPING) | 미등록 컬럼 파트 예외 | 별도 매핑 검증에 위임                                  |
+| should not report mismatch when term part is not in vocabulary (handled by TERM_NAME_MAPPING) | 미등록 용어 파트 예외 | 별도 매핑 검증에 위임                                  |
+| should handle case-insensitive comparison                                 | 대소문자 무시 비교          | 소문자 컬럼명도 정상 처리                              |
+| should detect partial order mismatch (only some positions swapped)        | 부분 순서 오류 감지         | 잘못된 위치만 mismatch로 수집                          |
+
+### generateStandardDomainName (2개)
+
+| 테스트명                                                      | 설명                     | 검증 내용                                         |
+| ------------------------------------------------------------- | ------------------------ | ------------------------------------------------- |
+| should use mapped abbreviation for registered data types      | 등록된 매핑약어 사용     | `TIMESTAMP -> TS`, `DOUBLE PRECISION -> DP` 생성  |
+| should fall back to the first character for unmapped data types | 미등록 타입 fallback   | 매핑이 없으면 첫 글자 규칙 유지                   |
 
 ---
 
@@ -352,6 +376,7 @@ pnpm test src/lib/utils --watch
 | 날짜       | 변경 내용                    |
 | ---------- | ---------------------------- |
 | 2025-01-09 | 초기 문서 작성 (82개 테스트) |
+| 2026-03-11 | validation 유틸리티 테스트 확장 (98개 테스트) |
 
 ---
 

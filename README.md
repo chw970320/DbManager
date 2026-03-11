@@ -102,15 +102,23 @@ docker-compose up --build
 - `pnpm run format`
 - `pnpm run test`
 - `pnpm run test:e2e`
+- `pnpm run finalize:branch -- <branch-name>`
+  - 예외적으로 사용한 기능 브랜치를 `main` 기준 반영, 검증, `main` fast-forward 병합, 브랜치 삭제 순서로 정리합니다.
+  - 현재 브랜치가 곧 정리 대상이면 `<branch-name>`은 생략할 수 있습니다.
+  - 추가 테스트가 필요하면 `pnpm run finalize:branch -- <branch-name> -AdditionalTestCommand "pnpm vitest run ..."` 형태로 실행합니다.
 
 ## 개발 워크플로
 
 - 이 저장소의 커밋 메시지는 항상 한글로 작성합니다.
   - `feat`, `fix`, `docs` 같은 타입 접두사는 유지해도 되지만, 제목과 본문 설명은 한글로 작성합니다.
-- 기능 개발을 위해 별도 브랜치를 사용했다면, 작업 완료 전에 해당 브랜치가 `main`에 병합 가능한 상태인지 확인합니다.
+- 기본 작업 브랜치는 `main`입니다.
+  - Codex를 포함한 자동화 도구는 사용자가 명시적으로 요청하지 않는 한 기능 브랜치를 임의로 생성하지 않습니다.
+- 예외적으로 별도 브랜치를 사용했다면, 작업 완료 기준은 구현 완료가 아니라 `main` 병합 및 브랜치 정리 완료입니다.
   - 최신 `main` 기준을 현재 브랜치에 반영합니다.
   - 충돌이 있으면 현재 브랜치에서 해결합니다.
   - 반영 후 `pnpm check`와 변경 범위 테스트를 다시 실행합니다.
+  - 검증이 끝나면 `main`으로 fast-forward 병합하고 브랜치를 삭제합니다.
+  - 가능하면 `pnpm run finalize:branch`로 이 절차를 한 번에 수행합니다.
   - 이 과정을 완료하지 못하면 차단 사유를 명시적으로 남깁니다.
 
 ## 문서

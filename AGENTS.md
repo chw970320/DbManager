@@ -35,4 +35,5 @@
 - When a change materially affects repository-level guidance, contributors' first-run understanding, or feature summaries, update `README.md` in the same task.
 - Commit messages for this repository must always be written in Korean.
 - Immediately before every commit, re-check the repository commit-message rule and ensure the actual commit subject/body are written in Korean.
-- If feature work is done on a separate branch, do not stop at implementation only. Before closing the task, make the branch merge-ready for `main` by reflecting the latest `main` baseline into the working branch when possible, resolving conflicts, and rerunning the relevant validation/test commands. If that cannot be completed, report the blocker explicitly.
+- Default to working directly on `main`. Do not create a separate branch unless the user explicitly asks for it or the work clearly requires temporary isolation.
+- If feature work is done on a separate branch, do not stop at implementation only. Before closing the task, make the branch merge-ready for `main` by reflecting the latest `main` baseline into the working branch when possible, resolving conflicts, rerunning the relevant validation/test commands, merging the branch back into `main`, and deleting the branch when possible. If that cannot be completed, report the blocker explicitly.

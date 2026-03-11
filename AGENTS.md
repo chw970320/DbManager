@@ -4,6 +4,7 @@
 
 - Use the smallest relevant set of project documents before changing code.
 - Keep code changes and documentation updates in the same task when behavior changes.
+- Check whether `README.md` should also change when work affects user-facing behavior, setup, workflow, supported features, or repository-level guidance.
 
 ## Document Routing
 
@@ -21,6 +22,8 @@
   Also inspect `references/`.
 - Tasks continuing from a repository prompt template:
   Read the specific file under `prompts/` that matches the task.
+- Work that changes repository summary, onboarding, setup, or user-visible capabilities:
+  Also review `README.md`.
 
 ## Working Rules
 
@@ -29,3 +32,4 @@
 - When a shared behavior already exists in another menu or component, inspect the analogous implementation before editing.
 - For DB, Entity, Attribute, Table, and Column features, align overlapping UX and behavior with the existing Vocabulary, Domain, and Term flows unless the user asks for a deliberate change.
 - Any change to behavior, API, UX, workflow, validation, or data model must include updates to the relevant files under `docs/` in the same task.
+- When a change materially affects repository-level guidance, contributors' first-run understanding, or feature summaries, update `README.md` in the same task.

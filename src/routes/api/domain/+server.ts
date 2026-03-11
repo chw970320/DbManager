@@ -75,6 +75,7 @@ import {
 	invalidateAllCaches
 } from '$lib/registry/cache-registry';
 import { checkEntryReferences } from '$lib/registry/mapping-registry';
+import { loadDomainDataTypeMappingData } from '$lib/registry/domain-data-type-mapping-registry';
 import { safeMerge } from '$lib/utils/type-guards.js';
 
 import { generateStandardDomainName, validateDomainNameUniqueness } from '$lib/utils/validation.js';
@@ -469,11 +470,13 @@ export async function POST({ request, url }: RequestEvent) {
 		}
 
 		// 도메인명 자동 생성
+		const dataTypeMappingData = await loadDomainDataTypeMappingData();
 		const generatedDomainName = generateStandardDomainName(
 			entryData.domainCategory,
 			entryData.physicalDataType,
 			entryData.dataLength,
-			entryData.decimalPlaces
+			entryData.decimalPlaces,
+			dataTypeMappingData.entries
 		);
 
 		// 기존 데이터 로드 (선택된 파일 기준)
@@ -601,11 +604,13 @@ export async function PUT({ request, url }: RequestEvent) {
 		const finalDataLength = updateFields.dataLength ?? existingEntry.dataLength;
 		const finalDecimalPlaces = updateFields.decimalPlaces ?? existingEntry.decimalPlaces;
 
+		const dataTypeMappingData = await loadDomainDataTypeMappingData();
 		const generatedDomainName = generateStandardDomainName(
 			finalDomainCategory,
 			finalPhysicalDataType,
 			finalDataLength,
-			finalDecimalPlaces
+			finalDecimalPlaces,
+			dataTypeMappingData.entries
 		);
 
 		// 도메인명이 변경되는 경우 유일성 validation (선택된 파일 기준)

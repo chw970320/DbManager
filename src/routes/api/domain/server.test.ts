@@ -18,6 +18,10 @@ vi.mock('$lib/registry/cache-registry', () => ({
 	invalidateCache: vi.fn()
 }));
 
+vi.mock('$lib/registry/domain-data-type-mapping-registry', () => ({
+	loadDomainDataTypeMappingData: vi.fn()
+}));
+
 vi.mock('$lib/utils/validation.js', () => ({
 	generateStandardDomainName: vi.fn((category, type, length, decimal) => {
 		return `${category}_${type}${length ? `(${length})` : ''}${decimal ? `.${decimal}` : ''}`;
@@ -35,6 +39,7 @@ import {
 	saveDomainData,
 	listDomainFiles
 } from '$lib/registry/data-registry';
+import { loadDomainDataTypeMappingData } from '$lib/registry/domain-data-type-mapping-registry';
 import { checkEntryReferences } from '$lib/registry/mapping-registry';
 import { generateStandardDomainName, validateDomainNameUniqueness } from '$lib/utils/validation.js';
 
@@ -112,6 +117,11 @@ describe('Domain API: /api/domain', () => {
 		vi.mocked(loadDomainData).mockResolvedValue(createMockDomainData());
 		vi.mocked(saveDomainData).mockResolvedValue(undefined);
 		vi.mocked(listDomainFiles).mockResolvedValue(['domain.json']);
+		vi.mocked(loadDomainDataTypeMappingData).mockResolvedValue({
+			entries: [{ id: 'map-1', dataType: 'VARCHAR', abbreviation: 'V', createdAt: '', updatedAt: '' }],
+			lastUpdated: '2024-01-02T00:00:00.000Z',
+			totalCount: 1
+		});
 		vi.mocked(checkEntryReferences).mockResolvedValue({ canDelete: true, references: [] });
 		vi.mocked(validateDomainNameUniqueness).mockReturnValue(null);
 	});

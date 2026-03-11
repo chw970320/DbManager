@@ -10,6 +10,10 @@ vi.mock('$lib/registry/data-registry', () => ({
 	listDomainFiles: vi.fn()
 }));
 
+vi.mock('$lib/registry/domain-data-type-mapping-registry', () => ({
+	loadDomainDataTypeMappingData: vi.fn()
+}));
+
 vi.mock('$lib/utils/validation.js', () => ({
 	validateXlsxFile: vi.fn(),
 	generateStandardDomainName: vi.fn((category, type, length, decimal) => {
@@ -41,6 +45,7 @@ vi.mock('$lib/utils/type-guards.js', () => ({
 }));
 
 import { loadDomainData, mergeDomainData, listDomainFiles } from '$lib/registry/data-registry';
+import { loadDomainDataTypeMappingData } from '$lib/registry/domain-data-type-mapping-registry';
 import { validateXlsxFile, validateDomainNameUniqueness } from '$lib/utils/validation.js';
 import { parseDomainXlsxToJson } from '$lib/utils/xlsx-parser.js';
 import { getRequiredFile } from '$lib/utils/type-guards.js';
@@ -106,6 +111,11 @@ describe('Domain Upload API: /api/domain/upload', () => {
 		vi.clearAllMocks();
 		vi.mocked(loadDomainData).mockResolvedValue(createMockDomainData());
 		vi.mocked(listDomainFiles).mockResolvedValue(['domain.json']);
+		vi.mocked(loadDomainDataTypeMappingData).mockResolvedValue({
+			entries: [{ id: 'map-1', dataType: 'VARCHAR', abbreviation: 'V', createdAt: '', updatedAt: '' }],
+			lastUpdated: '2024-01-01T00:00:00.000Z',
+			totalCount: 1
+		});
 		vi.mocked(validateDomainNameUniqueness).mockReturnValue(null);
 	});
 

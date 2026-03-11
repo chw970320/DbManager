@@ -11,7 +11,8 @@ import {
 	validateTermEntryStrict,
 	validateIdParam,
 	validatePagination,
-	validateTermColumnOrderMapping
+	validateTermColumnOrderMapping,
+	generateStandardDomainName
 } from './validation';
 import type { VocabularyEntry } from '$lib/types/vocabulary';
 import type { DomainEntry } from '$lib/types/domain';
@@ -359,6 +360,19 @@ describe('validation', () => {
 			expect(result.mismatches[1].expectedAbbreviation).toBe('USER');
 			expect(result.mismatches[1].actualColumnPart).toBe('VSTR');
 			expect(result.correctedColumnName).toBe('VSTR_USER_CNT');
+		});
+	});
+
+	describe('generateStandardDomainName', () => {
+		it('should use mapped abbreviation for registered data types', () => {
+			expect(generateStandardDomainName('사용자분류', 'TIMESTAMP', '14')).toBe('사용자분류TS14');
+			expect(generateStandardDomainName('금액', 'DOUBLE PRECISION', '22', '2')).toBe(
+				'금액DP22,2'
+			);
+		});
+
+		it('should fall back to the first character for unmapped data types', () => {
+			expect(generateStandardDomainName('공간', 'JSONB', '10')).toBe('공간J10');
 		});
 	});
 });

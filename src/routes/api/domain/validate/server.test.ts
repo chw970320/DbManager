@@ -9,6 +9,10 @@ vi.mock('$lib/registry/data-registry', () => ({
 	listDomainFiles: vi.fn()
 }));
 
+vi.mock('$lib/registry/domain-data-type-mapping-registry', () => ({
+	loadDomainDataTypeMappingData: vi.fn()
+}));
+
 vi.mock('$lib/utils/validation.js', () => ({
 	generateStandardDomainName: vi.fn((category, type, length, decimal) => {
 		return `${category}_${type}${length ? `(${length})` : ''}${decimal ? `.${decimal}` : ''}`;
@@ -18,6 +22,7 @@ vi.mock('$lib/utils/validation.js', () => ({
 
 // Mock import
 import { loadDomainData, listDomainFiles } from '$lib/registry/data-registry';
+import { loadDomainDataTypeMappingData } from '$lib/registry/domain-data-type-mapping-registry';
 import { validateDomainNameUniqueness } from '$lib/utils/validation.js';
 
 // RequestEvent Mock 생성 헬퍼
@@ -91,6 +96,11 @@ describe('Domain Validate API: /api/domain/validate', () => {
 			entries: mockDomainData.entries,
 			lastUpdated: '2024-01-02T00:00:00.000Z',
 			totalCount: 2
+		});
+		vi.mocked(loadDomainDataTypeMappingData).mockResolvedValue({
+			entries: [{ id: 'map-1', dataType: 'VARCHAR', abbreviation: 'V', createdAt: '', updatedAt: '' }],
+			lastUpdated: '2024-01-02T00:00:00.000Z',
+			totalCount: 1
 		});
 		vi.mocked(listDomainFiles).mockResolvedValue(['domain.json']);
 		vi.mocked(validateDomainNameUniqueness).mockReturnValue(null);

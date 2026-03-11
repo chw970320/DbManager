@@ -1,3 +1,6 @@
+import type { DomainDataTypeMappingLike } from '$lib/utils/domain-name.js';
+import { buildStandardDomainName } from '$lib/utils/domain-name.js';
+
 // ============================================================================
 // 형식 검증 함수
 // ============================================================================
@@ -393,37 +396,16 @@ export function generateStandardDomainName(
 	domainCategory: string,
 	physicalDataType: string,
 	dataLength?: string | number,
-	decimalPlaces?: string | number
+	decimalPlaces?: string | number,
+	mappings?: DomainDataTypeMappingLike[]
 ): string {
-	const category = (domainCategory || '').trim();
-	const dataType = (physicalDataType || '').trim();
-
-	// 물리데이터타입의 첫 글자 추출
-	const dataTypeFirstChar = dataType.length > 0 ? dataType[0].toUpperCase() : '';
-
-	// 데이터길이 처리
-	const length =
-		dataLength !== undefined && dataLength !== null && dataLength !== ''
-			? String(dataLength).trim()
-			: '';
-
-	// 소수점자리수 처리
-	const decimal =
-		decimalPlaces !== undefined && decimalPlaces !== null && decimalPlaces !== ''
-			? String(decimalPlaces).trim()
-			: '';
-
-	// 도메인명 생성
-	let domainName = category + dataTypeFirstChar;
-
-	if (length) {
-		domainName += length;
-		if (decimal) {
-			domainName += ',' + decimal;
-		}
-	}
-
-	return domainName;
+	return buildStandardDomainName(
+		domainCategory,
+		physicalDataType,
+		dataLength,
+		decimalPlaces,
+		mappings
+	);
 }
 
 /**

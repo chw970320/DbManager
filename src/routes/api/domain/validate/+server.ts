@@ -75,6 +75,7 @@ import {
 	invalidateAllCaches
 } from '$lib/registry/cache-registry';
 
+import { loadDomainDataTypeMappingData } from '$lib/registry/domain-data-type-mapping-registry';
 import { generateStandardDomainName, validateDomainNameUniqueness } from '$lib/utils/validation.js';
 
 type ValidationIssue = {
@@ -160,11 +161,13 @@ export async function POST({ request, url }: RequestEvent) {
 		}
 
 		// 도메인명 자동 생성
+		const dataTypeMappingData = await loadDomainDataTypeMappingData();
 		const generatedDomainName = generateStandardDomainName(
 			domainCategory,
 			physicalDataType,
 			dataLength,
-			decimalPlaces
+			decimalPlaces,
+			dataTypeMappingData.entries
 		);
 
 		// 도메인명 유일성 검사 (선택된 파일 기준)

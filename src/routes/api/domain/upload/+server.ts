@@ -74,6 +74,7 @@ import {
 	invalidateDataCache,
 	invalidateAllCaches
 } from '$lib/registry/cache-registry';
+import { loadDomainDataTypeMappingData } from '$lib/registry/domain-data-type-mapping-registry';
 
 import {
 	validateXlsxFile,
@@ -211,6 +212,7 @@ export async function POST({ request, fetch }: RequestEvent) {
 		}
 
 		// 검증 교체 모드일 때만 validation 수행
+		const dataTypeMappingData = await loadDomainDataTypeMappingData();
 		if (performValidation) {
 			// 도메인명 자동 생성 및 validation (선택된 파일 기준)
 			try {
@@ -226,7 +228,8 @@ export async function POST({ request, fetch }: RequestEvent) {
 						entry.domainCategory,
 						entry.physicalDataType,
 						entry.dataLength,
-						entry.decimalPlaces
+						entry.decimalPlaces,
+						dataTypeMappingData.entries
 					);
 					entry.standardDomainName = generatedDomainName;
 
@@ -257,7 +260,8 @@ export async function POST({ request, fetch }: RequestEvent) {
 					entry.domainCategory,
 					entry.physicalDataType,
 					entry.dataLength,
-					entry.decimalPlaces
+					entry.decimalPlaces,
+					dataTypeMappingData.entries
 				);
 			}
 		}

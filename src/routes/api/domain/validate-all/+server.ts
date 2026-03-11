@@ -1,5 +1,6 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import { loadDomainData } from '$lib/registry/data-registry';
+import { loadDomainDataTypeMappingData } from '$lib/registry/domain-data-type-mapping-registry';
 import type { DomainApiResponse, DomainEntry } from '$lib/types/domain';
 import { generateStandardDomainName } from '$lib/utils/validation';
 
@@ -31,6 +32,7 @@ export async function GET({ url }: RequestEvent) {
 	try {
 		const filename = url.searchParams.get('filename') || 'domain.json';
 		const domainData = await loadDomainData(filename);
+		const dataTypeMappingData = await loadDomainDataTypeMappingData();
 		const entries = domainData.entries;
 
 		const generatedNameCount = new Map<string, number>();
@@ -41,7 +43,8 @@ export async function GET({ url }: RequestEvent) {
 				entry.domainCategory,
 				entry.physicalDataType,
 				entry.dataLength,
-				entry.decimalPlaces
+				entry.decimalPlaces,
+				dataTypeMappingData.entries
 			);
 			generatedById.set(entry.id, generated);
 			generatedNameCount.set(generated, (generatedNameCount.get(generated) || 0) + 1);

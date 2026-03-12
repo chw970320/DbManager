@@ -4,6 +4,55 @@
 
 ### 요약
 
+- 저장된 PostgreSQL 데이터 소스를 재사용하는 `프로파일링` 메뉴와 API가 추가되었습니다.
+- 사용자 테이블 목록 조회와 컬럼 단위 실데이터 프로파일링을 즉시 실행할 수 있습니다.
+
+### 상세 변경
+
+1. PostgreSQL 프로파일링 타입/유틸리티 추가
+
+- 대상:
+  - `src/lib/types/data-profiling.ts`
+  - `src/lib/utils/data-source-profiling.ts`
+  - `src/lib/utils/data-source-connection.ts`
+- 변경:
+  - 프로파일링 대상/결과 타입 추가
+  - 저장된 PostgreSQL 연결을 재사용해 사용자 스키마/테이블을 조회하는 유틸리티 추가
+  - 단일 테이블에 대해 `rowCount`, `nullCount/nullRatio`, `distinctCount/distinctRatio`, `minLength/maxLength`를 계산하는 로직 추가
+
+2. 프로파일링 API/화면 추가
+
+- 대상:
+  - `src/routes/api/data-sources/profile/targets/+server.ts`
+  - `src/routes/api/data-sources/profile/run/+server.ts`
+  - `src/routes/profiling/browse/+page.svelte`
+  - `src/routes/+layout.svelte`
+  - `src/lib/components/Icon.svelte`
+- 변경:
+  - 저장된 데이터 소스 ID 기반 프로파일링 대상 조회 API 추가
+  - 선택한 스키마/테이블 기준 프로파일링 실행 API 추가
+  - 상단 네비게이션에 `프로파일링` 메뉴 추가
+  - 화면에서 데이터 소스 선택, 스키마/테이블 필터링, 결과 확인 흐름 제공
+
+3. 테스트/문서 동기화
+
+- 대상:
+  - `src/routes/api/data-sources/profile/targets/server.test.ts`
+  - `src/routes/api/data-sources/profile/run/server.test.ts`
+  - `src/routes/profiling/browse/page.test.ts`
+  - `docs/tests/DATA_PROFILING_TEST_DESCRIPTION.md`
+  - `docs/specs/api-reference.md`
+  - `docs/specs/data-model.md`
+  - `docs/USER_GUIDE.md`
+  - `README.md`
+- 변경:
+  - 프로파일링 대상 조회/실행 API와 browse 화면 흐름을 테스트로 고정
+  - 저장소 문서와 사용자 가이드에 새 메뉴 및 프로파일링 모델을 반영
+
+## 2026-03-12
+
+### 요약
+
 - 내부 관리자용 PostgreSQL 데이터 소스 관리 기능이 추가되었습니다.
 - 저장 가능한 연결 정의와 저장 전/저장 후 연결 테스트 흐름이 새 메뉴로 분리되었습니다.
 

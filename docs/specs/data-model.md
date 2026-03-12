@@ -563,6 +563,15 @@ const isValid =
 - **POST** `/api/domain/upload`
   - 도메인 데이터 업로드 (XLSX)
 
+- **POST** `/api/domain/impact-preview`
+  - 도메인 editor 저장/삭제 전 영향도 미리보기
+  - 런타임 모델:
+    - `summary.vocabularyReferenceCount`
+    - `summary.termReferenceCount`
+    - `summary.columnReferenceCount`
+    - `summary.downstreamBreakCount`
+    - `summary.affectedColumnSyncCount`
+
 - **GET, POST, PUT, DELETE** `/api/domain/type-mappings`
   - 도메인 데이터타입 매핑 조회 및 관리
   - 매핑 변경 시 관련 도메인/용어/컬럼의 `domainName` 참조 자동 동기화
@@ -789,6 +798,16 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 - **POST** `/api/term/upload`
   - 용어 데이터 업로드 (XLSX)
   - 자동으로 매핑 검증 수행
+
+- **POST** `/api/term/impact-preview`
+  - 용어 editor 저장 전 영향도 미리보기
+  - 런타임 모델:
+    - `summary.currentLinkedColumnCount`
+    - `summary.nextLinkedColumnCount`
+    - `summary.columnLinksToBeBroken`
+    - `summary.newColumnLinksDetected`
+    - `summary.affectedColumnStandardizationCount`
+    - `summary.proposedDomainExists`
 
 ---
 

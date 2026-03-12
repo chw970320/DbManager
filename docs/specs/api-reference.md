@@ -1081,6 +1081,73 @@ const data = await response.json();
 
 ---
 
+### POST /api/domain/impact-preview
+
+도메인 저장/삭제 전 참조 영향도를 미리 계산합니다.
+
+#### 설명
+
+도메인 editor에서 저장 전에 현재 참조 수와 즉시 파급 범위를 확인할 때 사용합니다.
+`update` 모드에서는 단어/용어/컬럼 참조 수와 컬럼 동기화 영향 가능 건수를,
+`delete` 모드에서는 삭제 시 끊기는 참조 건수를 함께 반환합니다.
+
+#### 요청 바디
+
+```typescript
+{
+  filename?: string; // 기본값: 'domain.json'
+  mode?: 'create' | 'update' | 'delete';
+  currentEntry?: {
+    id?: string;
+    domainCategory?: string;
+    standardDomainName?: string;
+    physicalDataType?: string;
+    dataLength?: string;
+    decimalPlaces?: string;
+  };
+  proposedEntry?: {
+    id?: string;
+    domainCategory?: string;
+    standardDomainName?: string;
+    physicalDataType?: string;
+    dataLength?: string;
+    decimalPlaces?: string;
+  };
+}
+```
+
+#### 응답 예시
+
+```json
+{
+  "success": true,
+  "data": {
+    "files": {
+      "domain": "domain.json",
+      "vocabulary": "vocabulary.json",
+      "term": "term.json",
+      "column": "column.json"
+    },
+    "mode": "delete",
+    "summary": {
+      "vocabularyReferenceCount": 1,
+      "termReferenceCount": 2,
+      "columnReferenceCount": 3,
+      "totalReferenceCount": 6,
+      "downstreamBreakCount": 6,
+      "affectedColumnSyncCount": 0
+    },
+    "guidance": [
+      "현재 이 도메인은 단어 1건, 용어 2건, 컬럼 3건에서 참조되고 있습니다.",
+      "삭제 시 총 6건이 미참조 또는 매핑 누락 상태가 될 수 있습니다."
+    ]
+  },
+  "message": "도메인 변경 영향도 미리보기를 생성했습니다."
+}
+```
+
+---
+
 ### GET /api/domain/type-mappings
 
 도메인 데이터타입 매핑 목록을 조회합니다.
@@ -1387,6 +1454,67 @@ const data = await response.json();
 		"updatedAt": "2024-01-01T00:00:00.000Z"
 	},
 	"message": "용어가 성공적으로 추가되었습니다."
+}
+```
+
+---
+
+### POST /api/term/impact-preview
+
+용어 저장 전 컬럼 연결 영향도를 미리 계산합니다.
+
+#### 설명
+
+용어 editor에서 입력값이 바뀔 때 호출하며, 현재 연결 컬럼 수와 저장 후 연결될 컬럼 수를 비교합니다.
+`columnName`이 바뀌면 끊기는 연결과 새 연결 후보를, `termName`/`domainName`이 바뀌면
+같은 연결을 유지한 상태에서 표준화 결과가 달라지는 컬럼 수를 반환합니다.
+
+#### 요청 바디
+
+```typescript
+{
+  filename?: string; // 기본값: 'term.json'
+  currentEntry?: {
+    id?: string;
+    termName?: string;
+    columnName?: string;
+    domainName?: string;
+  };
+  proposedEntry: {
+    id?: string;
+    termName: string;
+    columnName: string;
+    domainName: string;
+  };
+}
+```
+
+#### 응답 예시
+
+```json
+{
+  "success": true,
+  "data": {
+    "files": {
+      "term": "term.json",
+      "domain": "domain.json",
+      "column": "column.json"
+    },
+    "mode": "update",
+    "summary": {
+      "currentLinkedColumnCount": 2,
+      "nextLinkedColumnCount": 1,
+      "columnLinksToBeBroken": 2,
+      "newColumnLinksDetected": 1,
+      "affectedColumnStandardizationCount": 0,
+      "proposedDomainExists": true
+    },
+    "guidance": [
+      "기존 columnName과 연결된 2개 컬럼은 저장 후 이 용어 기준에서 벗어납니다.",
+      "새 columnName과 일치하는 1개 컬럼이 이후 동기화 대상이 됩니다."
+    ]
+  },
+  "message": "용어 변경 영향도 미리보기를 생성했습니다."
 }
 ```
 

@@ -7,6 +7,10 @@
 	import TermGenerator from '$lib/components/TermGenerator.svelte';
 	import TermValidationPanel from '$lib/components/TermValidationPanel.svelte';
 	import VocabularyEditor from '$lib/components/VocabularyEditor.svelte';
+	import BrowsePageLayout from '$lib/components/BrowsePageLayout.svelte';
+	import ActionBar from '$lib/components/ActionBar.svelte';
+	import BentoGrid from '$lib/components/BentoGrid.svelte';
+	import BentoCard from '$lib/components/BentoCard.svelte';
 	import { addToast } from '$lib/stores/toast-store';
 	import { showConfirm } from '$lib/stores/confirm-store';
 	import type {
@@ -43,7 +47,6 @@
 	let isFileManagerOpen = $state(false);
 	let selectedFilename = $state(get(termStore).selectedFilename);
 	let fileList = $state<string[]>([]);
-	let sidebarOpen = $state(false);
 	let unsubscribe: (() => void) | undefined;
 
 	// 편집기 상태
@@ -938,607 +941,401 @@
 	<meta name="description" content="용어를 관리하고 검색하세요." />
 </svelte:head>
 
-<div
-	class="relative min-h-screen overflow-x-hidden bg-gradient-to-br from-slate-50 via-white to-blue-50 py-8"
->
-	<div class="mx-auto w-full px-4 sm:px-6 lg:px-8">
-		<div class="gap-8 lg:grid lg:grid-cols-[16rem_1fr] lg:items-start">
-			<!-- 좌측 고정 사이드바 (데스크탑) -->
-			<aside class="hidden h-full w-64 lg:block">
-				<div
-					class="sticky top-20 rounded-2xl border border-gray-200/50 bg-white/95 p-4 shadow-xl backdrop-blur-md"
+{#snippet sidebar()}
+	<div>
+		<div class="mb-4 flex items-center justify-between">
+			<h2 class="text-lg font-bold text-gray-900">용어 파일</h2>
+			<button
+				type="button"
+				onclick={() => (isFileManagerOpen = true)}
+				class="text-gray-500 hover:text-blue-600"
+				title="파일 관리"
+				aria-label="파일 관리"
+			>
+				<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+					/>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+					/>
+				</svg>
+			</button>
+		</div>
+		<div class="space-y-2">
+			{#each fileList as file (file)}
+				<button
+					type="button"
+					onclick={() => handleFileSelect(file)}
+					class="w-full rounded-lg px-4 py-2 text-left text-sm font-medium transition-colors duration-200 {selectedFilename ===
+					file
+						? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+						: 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}"
 				>
-					<div class="mb-4 flex items-center justify-between">
-						<h2 class="text-lg font-bold text-gray-900">용어 파일</h2>
-						<button
-							onclick={() => (isFileManagerOpen = true)}
-							class="text-gray-500 hover:text-blue-600"
-							title="파일 관리"
-							aria-label="파일 관리"
-						>
-							<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-								/>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-								/>
-							</svg>
-						</button>
-					</div>
-					<div class="space-y-2">
-						{#each fileList as file (file)}
-							<button
-								type="button"
-								onclick={() => handleFileSelect(file)}
-								class="w-full rounded-lg px-4 py-2 text-left text-sm font-medium transition-colors duration-200 {selectedFilename ===
-								file
-									? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
-									: 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}"
-							>
-								{file}
-							</button>
-						{/each}
-						{#if fileList.length === 0}
-							<div class="px-4 py-2 text-sm text-gray-500">파일이 없습니다.</div>
-						{/if}
-					</div>
-				</div>
-			</aside>
-
-			<!-- 모바일 드로어 사이드바 -->
-			{#if sidebarOpen}
-				<div class="fixed inset-0 z-40 flex lg:hidden">
-					<div
-						class="w-64 transform bg-white p-4 pt-20 shadow-2xl transition-transform duration-300"
-						role="dialog"
-						aria-modal="true"
-						tabindex="-1"
-					>
-						<div class="mb-4 flex items-center justify-between">
-							<h2 class="text-lg font-bold text-gray-900">용어 파일</h2>
-							<div class="flex items-center space-x-2">
-								<button
-									onclick={() => (isFileManagerOpen = true)}
-									class="text-gray-500 hover:text-blue-600"
-									title="파일 관리"
-									aria-label="파일 관리"
-								>
-									<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-										/>
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-										/>
-									</svg>
-								</button>
-								<button
-									onclick={() => (sidebarOpen = false)}
-									class="text-gray-500 hover:text-gray-700"
-									title="사이드바 닫기"
-									aria-label="사이드바 닫기"
-								>
-									<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-										<path
-											stroke-linecap="round"
-											stroke-linejoin="round"
-											stroke-width="2"
-											d="M6 18L18 6M6 6l12 12"
-										/>
-									</svg>
-								</button>
-							</div>
-						</div>
-						<div class="space-y-2">
-							{#each fileList as file (file)}
-								<button
-									type="button"
-									onclick={() => {
-										handleFileSelect(file);
-										sidebarOpen = false;
-									}}
-									class="w-full rounded-lg px-4 py-2 text-left text-sm font-medium transition-colors duration-200 {selectedFilename ===
-									file
-										? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
-										: 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}"
-								>
-									{file}
-								</button>
-							{/each}
-							{#if fileList.length === 0}
-								<div class="px-4 py-2 text-sm text-gray-500">파일이 없습니다.</div>
-							{/if}
-						</div>
-					</div>
-					<button
-						type="button"
-						class="flex-1 bg-black/30 backdrop-blur-sm"
-						onclick={() => (sidebarOpen = false)}
-						aria-label="사이드바 닫기"
-					></button>
-				</div>
+					{file}
+				</button>
+			{/each}
+			{#if fileList.length === 0}
+				<div class="px-4 py-2 text-sm text-gray-500">파일이 없습니다.</div>
 			{/if}
-
-			<!-- 메인 컨텐츠 -->
-			<main class="w-full overflow-x-hidden">
-				<!-- 페이지 헤더 -->
-				<div class="mb-10">
-					<div
-						class="flex flex-col space-y-4 sm:flex-row sm:items-center sm:justify-between sm:space-y-0"
-					>
-						<div class="flex items-center space-x-4">
-							<!-- 모바일 사이드바 토글 버튼 -->
-							<button
-								onclick={() => (sidebarOpen = true)}
-								class="rounded-lg p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700 lg:hidden"
-								title="사이드바 열기"
-								aria-label="사이드바 열기"
-							>
-								<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M4 6h16M4 12h16M4 18h16"
-									/>
-								</svg>
-							</button>
-							<div>
-								<h1
-									class="bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-4xl font-bold text-transparent"
-								>
-									용어
-								</h1>
-								<p class="mt-2 text-sm text-gray-500">
-									현재 파일: <span class="font-medium text-gray-900">{selectedFilename}</span>
-								</p>
-							</div>
-						</div>
-
-						<!-- 액션 버튼들 -->
-						<div class="mb-4 flex items-center space-x-3">
-							<!-- 유효성 검사 버튼 -->
-							<button
-								type="button"
-								onclick={handleValidateAll}
-								disabled={loading || validationLoading}
-								class="group inline-flex items-center space-x-2 rounded-xl border border-blue-200/50 bg-blue-50/80 px-6 py-3 text-sm font-medium text-blue-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-blue-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-							>
-								<svg
-									class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-									/>
-								</svg>
-								<span>{validationLoading ? '검사 중...' : '유효성 검사'}</span>
-							</button>
-							<!-- XLSX 다운로드 버튼 -->
-							<button
-								type="button"
-								onclick={handleTermDownload}
-								disabled={loading}
-								class="group inline-flex items-center space-x-2 rounded-xl border border-green-200/50 bg-green-50/80 px-6 py-3 text-sm font-medium text-green-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-green-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-							>
-								<svg
-									class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-									/>
-								</svg>
-								<span>{loading ? '준비 중' : 'XLSX 다운로드'}</span>
-							</button>
-
-							<!-- 새로고침 버튼 -->
-							<button
-								type="button"
-								onclick={handleRefresh}
-								disabled={loading}
-								class="btn btn-secondary group space-x-2 rounded-xl px-6 py-3 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50"
-							>
-								<svg
-									class="h-5 w-5 transition-transform duration-200 {loading
-										? 'animate-spin'
-										: 'group-hover:rotate-180'}"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-									/>
-								</svg>
-								<span>{loading ? '로딩 중' : '새로고침'}</span>
-							</button>
-						</div>
-					</div>
-				</div>
-
-				{#if relationshipSummary}
-					<div class="mb-8 rounded-2xl border border-indigo-200/60 bg-indigo-50/80 p-4 shadow-sm backdrop-blur-sm">
-						<div class="mb-2 flex items-center justify-between">
-							<h2 class="text-sm font-semibold text-indigo-800">용어계 관계 진단 요약</h2>
-							<div class="text-xs text-indigo-700">
-								term: {relationshipSummary.files.term}, vocabulary: {relationshipSummary.files.vocabulary}, domain: {relationshipSummary.files.domain}
-							</div>
-						</div>
-						<div class="grid grid-cols-2 gap-2 text-xs sm:grid-cols-5">
-							<div class="rounded border border-green-200 bg-white p-2 text-center">
-								<div class="font-semibold text-green-700">{relationshipSummary.summary.termNameMappedCount}</div>
-								<div class="text-green-600">용어명 매핑</div>
-							</div>
-							<div class="rounded border border-blue-200 bg-white p-2 text-center">
-								<div class="font-semibold text-blue-700">{relationshipSummary.summary.columnNameMappedCount}</div>
-								<div class="text-blue-600">컬럼명 매핑</div>
-							</div>
-							<div class="rounded border border-purple-200 bg-white p-2 text-center">
-								<div class="font-semibold text-purple-700">{relationshipSummary.summary.termDomainMappedCount}</div>
-								<div class="text-purple-600">도메인 매핑</div>
-							</div>
-							<div class="rounded border border-rose-200 bg-white p-2 text-center">
-								<div class="font-semibold text-rose-700">{relationshipSummary.summary.missingDomainCount}</div>
-								<div class="text-rose-600">미매핑 도메인</div>
-							</div>
-							<div class="rounded border border-amber-200 bg-white p-2 text-center">
-								<div class="font-semibold text-amber-700">{relationshipSummary.summary.orphanDomainCount}</div>
-								<div class="text-amber-600">미참조 도메인</div>
-							</div>
-						</div>
-					</div>
-				{/if}
-
-				<!-- TermEditor 모달 -->
-				{#if showEditor}
-					<TermEditor
-						entry={initialEntry}
-						serverError={editorServerError}
-						filename={selectedFilename}
-						isEditMode={!!initialEntry.id}
-						on:save={handleSave}
-						on:cancel={handleCancel}
-					/>
-				{/if}
-
-				<!-- Validation 패널 -->
-				{#if showValidationPanel}
-					<TermValidationPanel
-						results={validationResults?.failedEntries || []}
-						totalCount={validationResults?.totalCount || 0}
-						failedCount={validationResults?.failedCount || 0}
-						passedCount={validationResults?.passedCount || 0}
-						loading={validationLoading}
-						open={showValidationPanel}
-						on:close={() => (showValidationPanel = false)}
-						on:edit={handleValidationEdit}
-						on:autofix={handleValidationAutoFix}
-					/>
-				{/if}
-
-				<!-- TermFileManager 모달 -->
-				<TermFileManager
-					isOpen={isFileManagerOpen}
-					currentFilename={selectedFilename}
-					on:close={() => (isFileManagerOpen = false)}
-					on:change={handleFileChange}
-				/>
-
-				<!-- 중복 선택 팝업 -->
-				{#if showDuplicateSelection}
-					<div
-						class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-						role="dialog"
-						aria-modal="true"
-						tabindex="-1"
-						onclick={(e) => {
-							if (e.target === e.currentTarget) {
-								showDuplicateSelection = false;
-								duplicateSelectionCallback = null;
-							}
-						}}
-						onkeydown={(e) => {
-							if (e.key === 'Escape' && e.target === e.currentTarget) {
-								showDuplicateSelection = false;
-								duplicateSelectionCallback = null;
-							}
-						}}
-					>
-						<div class="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl">
-							<h2 class="mb-4 text-xl font-bold text-gray-900">중복된 용어 선택</h2>
-							<p class="mb-4 text-sm text-gray-600">다음 중 삭제할 용어를 선택해주세요:</p>
-							<div class="mb-4 max-h-96 space-y-2 overflow-y-auto">
-								{#each duplicateEntries as entry (entry.id)}
-									<button
-										type="button"
-										onclick={async () => {
-											if (duplicateSelectionCallback) {
-												await duplicateSelectionCallback(entry.id);
-											}
-										}}
-										class="w-full rounded-lg border border-gray-200 bg-white p-4 text-left transition-colors hover:bg-gray-50"
-									>
-										<div class="font-medium text-gray-900">{entry.termName}</div>
-										<div class="mt-1 text-xs text-gray-500">
-											컬럼명: {entry.columnName} | 도메인명: {entry.domainName}
-										</div>
-										<div class="mt-1 text-xs text-gray-600">ID: {entry.id}</div>
-									</button>
-								{/each}
-							</div>
-							<div class="flex justify-end">
-								<button
-									type="button"
-									onclick={() => {
-										showDuplicateSelection = false;
-										duplicateSelectionCallback = null;
-									}}
-									class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-								>
-									취소
-								</button>
-							</div>
-						</div>
-					</div>
-				{/if}
-
-				<!-- 동음이의어 선택 팝업 -->
-				{#if showSynonymSelection && synonymSelectionData}
-					<div
-						class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-						role="dialog"
-						aria-modal="true"
-						tabindex="-1"
-						onclick={(e) => {
-							if (e.target === e.currentTarget) {
-								showSynonymSelection = false;
-								synonymSelectionData = null;
-							}
-						}}
-						onkeydown={(e) => {
-							if (e.key === 'Escape' && e.target === e.currentTarget) {
-								showSynonymSelection = false;
-								synonymSelectionData = null;
-							}
-						}}
-					>
-						<div class="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl">
-							<h2 class="mb-4 text-xl font-bold text-gray-900">동음이의어 선택</h2>
-							{#if synonymSelectionData}
-								<p class="mb-4 text-sm text-gray-600">
-									용어명의 '{synonymSelectionData.part}'에 해당하는 표준단어명을 선택해주세요:
-								</p>
-								<div class="mb-4 max-h-96 space-y-2 overflow-y-auto">
-									{#each synonymSelectionData.recommendations as recommendation (recommendation)}
-										<button
-											type="button"
-											onclick={async () => {
-												const data = synonymSelectionData;
-												if (!data) return;
-												// 용어명 수정
-												const termParts = data.entry.termName.split('_');
-												const partIndex = termParts.findIndex(
-													(p: string) => p.trim().toLowerCase() === data.part.toLowerCase()
-												);
-												if (partIndex >= 0) {
-													termParts[partIndex] = recommendation;
-													const updatedEntry = {
-														...data.entry,
-														termName: termParts.join('_')
-													};
-													await updateTerm(updatedEntry);
-													await refreshValidation();
-												}
-												showSynonymSelection = false;
-												synonymSelectionData = null;
-											}}
-											class="w-full rounded-lg border border-gray-200 bg-white p-4 text-left transition-colors hover:bg-gray-50"
-										>
-											<div class="font-medium text-gray-900">{recommendation}</div>
-										</button>
-									{/each}
-								</div>
-							{/if}
-							<div class="flex justify-end">
-								<button
-									type="button"
-									onclick={() => {
-										showSynonymSelection = false;
-										synonymSelectionData = null;
-									}}
-									class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-								>
-									취소
-								</button>
-							</div>
-						</div>
-					</div>
-				{/if}
-
-				<!-- VocabularyEditor 모달 -->
-				{#if showVocabularyEditor}
-					<VocabularyEditor
-						entry={vocabularyEditorEntry}
-						isEditMode={vocabularyEditorMode === 'edit'}
-						filename={vocabularyEditorFilename}
-						allowEditFormalWordAndDomain={vocabularyEditorMode === 'edit' &&
-							(currentAutoFixActionType === 'FIX_VOCABULARY_SUFFIX' ||
-								currentAutoFixActionType === 'FIX_VOCABULARY_DOMAIN')}
-						on:save={async (e) => {
-							const vocabularyEntry = e.detail;
-							try {
-								const params = new URLSearchParams({ filename: vocabularyEditorFilename });
-								const method = vocabularyEditorMode === 'edit' ? 'PUT' : 'POST';
-								const response = await fetch(`/api/vocabulary?${params}`, {
-									method,
-									headers: { 'Content-Type': 'application/json' },
-									body: JSON.stringify(vocabularyEntry)
-								});
-
-								const result: ApiResponse = await response.json();
-								if (result.success) {
-									showVocabularyEditor = false;
-									vocabularyEditorEntry = {};
-									const wasAutoFix = currentAutoFixActionType === 'FIX_VOCABULARY_SUFFIX';
-									currentAutoFixActionType = undefined;
-
-									// 자동 수정 후 validation 재실행 (검색 조건 유지)
-									await refreshValidation();
-								} else {
-									addToast(result.error || '단어 저장에 실패했습니다.', 'error');
-								}
-							} catch (error) {
-								console.error('단어 저장 중 오류:', error);
-								addToast('단어 저장 중 오류가 발생했습니다.', 'error');
-							}
-						}}
-						on:cancel={() => {
-							showVocabularyEditor = false;
-							vocabularyEditorEntry = {};
-						}}
-					/>
-				{/if}
-
-				<!-- 용어 변환기 -->
-				<div class="mb-8">
-					<TermGenerator filename={selectedFilename} on:addTerm={handleAddTermFromGenerator} />
-				</div>
-
-				<!-- 에러 메시지 -->
-				{#if errorMessage}
-					<div
-						class="mb-8 rounded-2xl border border-red-200/50 bg-gradient-to-r from-red-50 to-pink-50 p-6 shadow-lg backdrop-blur-sm"
-					>
-						<div class="flex items-start">
-							<div class="rounded-full bg-red-100 p-2">
-								<svg class="h-6 w-6 text-red-600" fill="currentColor" viewBox="0 0 20 20">
-									<path
-										fill-rule="evenodd"
-										d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-										clip-rule="evenodd"
-									/>
-								</svg>
-							</div>
-							<div class="ml-4">
-								<h4 class="text-lg font-semibold text-red-800">오류 발생</h4>
-								<p class="text-red-700">{errorMessage}</p>
-							</div>
-						</div>
-					</div>
-				{/if}
-
-				<!-- 검색 영역 -->
-				<div
-					class="mb-8 rounded-2xl border border-gray-200/50 bg-white/80 p-4 shadow-sm backdrop-blur-sm"
-				>
-					<div class="mb-6">
-						<h2 class="text-2xl font-bold text-gray-900">통합검색</h2>
-						<p class="mt-2 text-gray-600">용어명, 컬럼명, 도메인으로 검색하세요</p>
-					</div>
-
-					<div class="mb-6">
-						<SearchBar
-							placeholder="용어명, 컬럼명, 도메인으로 검색하세요..."
-							searchFields={[
-								{ value: 'all', label: '전체' },
-								{ value: 'termName', label: '용어명' },
-								{ value: 'columnName', label: '컬럼명' },
-								{ value: 'domainName', label: '도메인' }
-							]}
-							bind:query={searchQuery}
-							bind:field={searchField}
-							bind:exact={searchExact}
-							onsearch={handleSearch}
-							onclear={handleSearchClear}
-						/>
-					</div>
-				</div>
-
-				<!-- 결과 테이블 영역 -->
-				<div
-					class="min-w-0 rounded-2xl border border-gray-200/50 bg-white/80 p-8 shadow-sm backdrop-blur-sm"
-				>
-					<div class="mb-6 flex items-center justify-between">
-						<div>
-							<h2 class="text-2xl font-bold text-gray-900">검색 결과</h2>
-							<p class="mt-1 text-gray-600">
-								{#if searchQuery}
-									"{searchQuery}"에 대한 검색 결과 {totalCount.toLocaleString()}건
-								{:else}
-									전체 용어 {totalCount.toLocaleString()}건
-								{/if}
-							</p>
-						</div>
-
-						{#if entries.length > 0}
-							<div class="flex items-center space-x-2 text-sm text-gray-500">
-								<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-									/>
-								</svg>
-								<span>페이지 {currentPage} / {totalPages}</span>
-							</div>
-						{/if}
-					</div>
-
-					<div class="rounded-xl border border-gray-200">
-						<div>
-							<TermTable
-								{entries}
-								{loading}
-								{searchQuery}
-								{totalCount}
-								{currentPage}
-								{totalPages}
-								{pageSize}
-								{sortConfig}
-								{searchField}
-								_selectedFilename={selectedFilename}
-								activeFilters={columnFilters}
-								{filterOptions}
-								onsort={handleSort}
-								onpagechange={handlePageChange}
-								onfilter={handleFilter}
-								onClearAllFilters={handleClearAllFilters}
-							/>
-						</div>
-					</div>
-				</div>
-			</main>
 		</div>
 	</div>
-</div>
+{/snippet}
+
+{#snippet actions()}
+	<ActionBar alignment="right">
+		<button
+			type="button"
+			onclick={handleValidateAll}
+			disabled={loading || validationLoading}
+			class="btn btn-outline rounded-xl px-6 py-3"
+		>
+			{validationLoading ? '검사 중...' : '유효성 검사'}
+		</button>
+		<button
+			type="button"
+			onclick={handleTermDownload}
+			disabled={loading}
+			class="btn btn-outline rounded-xl px-6 py-3"
+		>
+			{loading ? '준비 중' : 'XLSX 다운로드'}
+		</button>
+		<button
+			type="button"
+			onclick={handleRefresh}
+			disabled={loading}
+			class="btn btn-secondary rounded-xl px-6 py-3"
+		>
+			{loading ? '로딩 중' : '새로고침'}
+		</button>
+	</ActionBar>
+{/snippet}
+
+<BrowsePageLayout title="용어" description={`현재 파일: ${selectedFilename}`} {sidebar} {actions}>
+	<!-- TermEditor 모달 -->
+	{#if showEditor}
+		<TermEditor
+			entry={initialEntry}
+			serverError={editorServerError}
+			filename={selectedFilename}
+			isEditMode={!!initialEntry.id}
+			on:save={handleSave}
+			on:cancel={handleCancel}
+		/>
+	{/if}
+
+	<!-- Validation 패널 -->
+	{#if showValidationPanel}
+		<TermValidationPanel
+			results={validationResults?.failedEntries || []}
+			totalCount={validationResults?.totalCount || 0}
+			failedCount={validationResults?.failedCount || 0}
+			passedCount={validationResults?.passedCount || 0}
+			loading={validationLoading}
+			open={showValidationPanel}
+			on:close={() => (showValidationPanel = false)}
+			on:edit={handleValidationEdit}
+			on:autofix={handleValidationAutoFix}
+		/>
+	{/if}
+
+	<!-- TermFileManager 모달 -->
+	<TermFileManager
+		isOpen={isFileManagerOpen}
+		currentFilename={selectedFilename}
+		on:close={() => (isFileManagerOpen = false)}
+		on:change={handleFileChange}
+	/>
+
+	<!-- 중복 선택 팝업 -->
+	{#if showDuplicateSelection}
+		<div
+			class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+			role="dialog"
+			aria-modal="true"
+			tabindex="-1"
+			onclick={(e) => {
+				if (e.target === e.currentTarget) {
+					showDuplicateSelection = false;
+					duplicateSelectionCallback = null;
+				}
+			}}
+			onkeydown={(e) => {
+				if (e.key === 'Escape' && e.target === e.currentTarget) {
+					showDuplicateSelection = false;
+					duplicateSelectionCallback = null;
+				}
+			}}
+		>
+			<div class="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl">
+				<h2 class="mb-4 text-xl font-bold text-gray-900">중복된 용어 선택</h2>
+				<p class="mb-4 text-sm text-gray-600">다음 중 삭제할 용어를 선택해주세요:</p>
+				<div class="mb-4 max-h-96 space-y-2 overflow-y-auto">
+					{#each duplicateEntries as entry (entry.id)}
+						<button
+							type="button"
+							onclick={async () => {
+								if (duplicateSelectionCallback) {
+									await duplicateSelectionCallback(entry.id);
+								}
+							}}
+							class="w-full rounded-lg border border-gray-200 bg-white p-4 text-left transition-colors hover:bg-gray-50"
+						>
+							<div class="font-medium text-gray-900">{entry.termName}</div>
+							<div class="mt-1 text-xs text-gray-500">
+								컬럼명: {entry.columnName} | 도메인명: {entry.domainName}
+							</div>
+							<div class="mt-1 text-xs text-gray-600">ID: {entry.id}</div>
+						</button>
+					{/each}
+				</div>
+				<div class="flex justify-end">
+					<button
+						type="button"
+						onclick={() => {
+							showDuplicateSelection = false;
+							duplicateSelectionCallback = null;
+						}}
+						class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+					>
+						취소
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<!-- 동음이의어 선택 팝업 -->
+	{#if showSynonymSelection && synonymSelectionData}
+		<div
+			class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
+			role="dialog"
+			aria-modal="true"
+			tabindex="-1"
+			onclick={(e) => {
+				if (e.target === e.currentTarget) {
+					showSynonymSelection = false;
+					synonymSelectionData = null;
+				}
+			}}
+			onkeydown={(e) => {
+				if (e.key === 'Escape' && e.target === e.currentTarget) {
+					showSynonymSelection = false;
+					synonymSelectionData = null;
+				}
+			}}
+		>
+			<div class="w-full max-w-2xl rounded-lg bg-white p-6 shadow-xl">
+				<h2 class="mb-4 text-xl font-bold text-gray-900">동음이의어 선택</h2>
+				{#if synonymSelectionData}
+					<p class="mb-4 text-sm text-gray-600">
+						용어명의 '{synonymSelectionData.part}'에 해당하는 표준단어명을 선택해주세요:
+					</p>
+					<div class="mb-4 max-h-96 space-y-2 overflow-y-auto">
+						{#each synonymSelectionData.recommendations as recommendation (recommendation)}
+							<button
+								type="button"
+								onclick={async () => {
+									const data = synonymSelectionData;
+									if (!data) return;
+									const termParts = data.entry.termName.split('_');
+									const partIndex = termParts.findIndex(
+										(p: string) => p.trim().toLowerCase() === data.part.toLowerCase()
+									);
+									if (partIndex >= 0) {
+										termParts[partIndex] = recommendation;
+										const updatedEntry = {
+											...data.entry,
+											termName: termParts.join('_')
+										};
+										await updateTerm(updatedEntry);
+										await refreshValidation();
+									}
+									showSynonymSelection = false;
+									synonymSelectionData = null;
+								}}
+								class="w-full rounded-lg border border-gray-200 bg-white p-4 text-left transition-colors hover:bg-gray-50"
+							>
+								<div class="font-medium text-gray-900">{recommendation}</div>
+							</button>
+						{/each}
+					</div>
+				{/if}
+				<div class="flex justify-end">
+					<button
+						type="button"
+						onclick={() => {
+							showSynonymSelection = false;
+							synonymSelectionData = null;
+						}}
+						class="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+					>
+						취소
+					</button>
+				</div>
+			</div>
+		</div>
+	{/if}
+
+	<!-- VocabularyEditor 모달 -->
+	{#if showVocabularyEditor}
+		<VocabularyEditor
+			entry={vocabularyEditorEntry}
+			isEditMode={vocabularyEditorMode === 'edit'}
+			filename={vocabularyEditorFilename}
+			allowEditFormalWordAndDomain={vocabularyEditorMode === 'edit' &&
+				(currentAutoFixActionType === 'FIX_VOCABULARY_SUFFIX' ||
+					currentAutoFixActionType === 'FIX_VOCABULARY_DOMAIN')}
+			on:save={async (e) => {
+				const vocabularyEntry = e.detail;
+				try {
+					const params = new URLSearchParams({ filename: vocabularyEditorFilename });
+					const method = vocabularyEditorMode === 'edit' ? 'PUT' : 'POST';
+					const response = await fetch(`/api/vocabulary?${params}`, {
+						method,
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify(vocabularyEntry)
+					});
+
+					const result: ApiResponse = await response.json();
+					if (result.success) {
+						showVocabularyEditor = false;
+						vocabularyEditorEntry = {};
+						currentAutoFixActionType = undefined;
+						await refreshValidation();
+					} else {
+						addToast(result.error || '단어 저장에 실패했습니다.', 'error');
+					}
+				} catch (error) {
+					console.error('단어 저장 중 오류:', error);
+					addToast('단어 저장 중 오류가 발생했습니다.', 'error');
+				}
+			}}
+			on:cancel={() => {
+				showVocabularyEditor = false;
+				vocabularyEditorEntry = {};
+			}}
+		/>
+	{/if}
+
+	<BentoGrid>
+		{#if relationshipSummary}
+			<div class="col-span-12">
+				<BentoCard title="용어계 관계 진단 요약" subtitle="용어/단어/도메인 매핑 상태를 빠르게 확인합니다.">
+					<div class="mb-3 text-xs text-content-secondary">
+						term: {relationshipSummary.files.term}, vocabulary: {relationshipSummary.files.vocabulary},
+						domain: {relationshipSummary.files.domain}
+					</div>
+					<div class="grid grid-cols-2 gap-2 text-xs sm:grid-cols-5">
+						<div class="rounded border border-green-200 bg-white p-2 text-center">
+							<div class="font-semibold text-green-700">{relationshipSummary.summary.termNameMappedCount}</div>
+							<div class="text-green-600">용어명 매핑</div>
+						</div>
+						<div class="rounded border border-blue-200 bg-white p-2 text-center">
+							<div class="font-semibold text-blue-700">{relationshipSummary.summary.columnNameMappedCount}</div>
+							<div class="text-blue-600">컬럼명 매핑</div>
+						</div>
+						<div class="rounded border border-purple-200 bg-white p-2 text-center">
+							<div class="font-semibold text-purple-700">{relationshipSummary.summary.termDomainMappedCount}</div>
+							<div class="text-purple-600">도메인 매핑</div>
+						</div>
+						<div class="rounded border border-rose-200 bg-white p-2 text-center">
+							<div class="font-semibold text-rose-700">{relationshipSummary.summary.missingDomainCount}</div>
+							<div class="text-rose-600">미매핑 도메인</div>
+						</div>
+						<div class="rounded border border-amber-200 bg-white p-2 text-center">
+							<div class="font-semibold text-amber-700">{relationshipSummary.summary.orphanDomainCount}</div>
+							<div class="text-amber-600">미참조 도메인</div>
+						</div>
+					</div>
+				</BentoCard>
+			</div>
+		{/if}
+
+		<div class="col-span-12">
+			<BentoCard title="용어 변환기" subtitle="컬럼명/용어명 변환 후 바로 추가할 수 있어요.">
+				<TermGenerator filename={selectedFilename} on:addTerm={handleAddTermFromGenerator} />
+			</BentoCard>
+		</div>
+
+		{#if errorMessage}
+			<div class="col-span-12">
+				<BentoCard title="오류 발생" class="border-red-200/60 bg-red-50/70">
+					<p class="text-sm text-red-700">{errorMessage}</p>
+				</BentoCard>
+			</div>
+		{/if}
+
+		<div class="col-span-12 lg:col-span-7">
+			<BentoCard title="통합검색" subtitle="용어명, 컬럼명, 도메인으로 검색하세요">
+				<SearchBar
+					placeholder="용어명, 컬럼명, 도메인으로 검색하세요..."
+					searchFields={[
+						{ value: 'all', label: '전체' },
+						{ value: 'termName', label: '용어명' },
+						{ value: 'columnName', label: '컬럼명' },
+						{ value: 'domainName', label: '도메인' }
+					]}
+					bind:query={searchQuery}
+					bind:field={searchField}
+					bind:exact={searchExact}
+					onsearch={handleSearch}
+					onclear={handleSearchClear}
+				/>
+			</BentoCard>
+		</div>
+
+		<div class="col-span-12 lg:col-span-5">
+			<BentoCard title="요약" subtitle="현재 조건의 결과를 확인하세요.">
+				<div class="grid grid-cols-2 gap-3 text-sm">
+					<div class="rounded-lg bg-surface-muted p-3">
+						<p class="text-xs text-content-muted">총 건수</p>
+						<p class="mt-1 text-lg font-semibold text-content">{totalCount.toLocaleString()}</p>
+					</div>
+					<div class="rounded-lg bg-surface-muted p-3">
+						<p class="text-xs text-content-muted">페이지</p>
+						<p class="mt-1 text-lg font-semibold text-content">{currentPage} / {totalPages}</p>
+					</div>
+					<div class="col-span-2 rounded-lg bg-surface-muted p-3">
+						<p class="text-xs text-content-muted">검색어</p>
+						<p class="mt-1 truncate text-content-secondary">{searchQuery ? searchQuery : '전체'}</p>
+					</div>
+				</div>
+			</BentoCard>
+		</div>
+
+		<div class="col-span-12">
+			<BentoCard title="검색 결과" subtitle={searchQuery ? `\"${searchQuery}\" 검색 결과` : '전체 용어'}>
+				<div class="overflow-x-auto rounded-xl border border-gray-200">
+					<TermTable
+						{entries}
+						{loading}
+						{searchQuery}
+						{totalCount}
+						{currentPage}
+						{totalPages}
+						{pageSize}
+						{sortConfig}
+						{searchField}
+						_selectedFilename={selectedFilename}
+						activeFilters={columnFilters}
+						{filterOptions}
+						onsort={handleSort}
+						onpagechange={handlePageChange}
+						onfilter={handleFilter}
+						onClearAllFilters={handleClearAllFilters}
+					/>
+				</div>
+			</BentoCard>
+		</div>
+	</BentoGrid>
+</BrowsePageLayout>
 
 <style>
 	@keyframes fade-in {

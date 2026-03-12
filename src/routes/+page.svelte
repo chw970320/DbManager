@@ -1,4 +1,6 @@
 <script lang="ts">
+	import BentoGrid from '$lib/components/BentoGrid.svelte';
+	import BentoCard from '$lib/components/BentoCard.svelte';
 </script>
 
 <!-- 페이지 헤드 설정 -->
@@ -46,202 +48,120 @@
 				</p>
 			</div>
 
-			<!-- 모듈 구성 요소 카드 -->
-			<div class="mt-16 grid gap-8 md:grid-cols-3">
-				<!-- 단어집 카드 -->
+			<BentoGrid gapClass="mt-16 gap-6">
+				<div class="col-span-12 lg:col-span-5">
+					<BentoCard
+						eyebrow="빠른 시작"
+						title="표준화 3대 메뉴"
+						subtitle="단어집 → 도메인 → 용어 순으로 정리하면 매핑 검증/자동 생성 흐름이 자연스럽습니다."
+						class="h-full bg-gradient-to-br from-blue-50 via-white to-indigo-50"
+					>
+						<div class="mt-1 flex flex-wrap gap-2 text-xs text-content-secondary">
+							<span class="badge badge-info">통합검색</span>
+							<span class="badge badge-info">정렬/필터</span>
+							<span class="badge badge-info">유효성 검사</span>
+							<span class="badge badge-info">XLSX 업/다운</span>
+						</div>
+					</BentoCard>
+				</div>
+
 				<a
 					href="/browse"
-					class="animate-fade-in-up delay-400 group relative overflow-hidden rounded-2xl border border-gray-200/50 bg-white p-8 opacity-0 shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-xl"
+					class="animate-fade-in-up delay-400 card group relative col-span-12 overflow-hidden p-6 opacity-0 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg sm:p-8 lg:col-span-7"
 				>
-					<div
-						class="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-50 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-					></div>
+					<div class="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-50 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
 					<div class="relative">
-						<div
-							class="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-blue-600 transition-all duration-300 group-hover:bg-blue-600 group-hover:text-white"
-						>
+						<div class="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-blue-600 transition-all duration-300 group-hover:bg-blue-600 group-hover:text-white">
 							<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-								/>
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
 							</svg>
 						</div>
 						<h3 class="mt-4 text-lg font-semibold text-gray-900">단어집 (Vocabulary)</h3>
 						<p class="mt-2 text-sm text-gray-600">
-							한국어 표준 용어와 그에 대응하는 영문 약어/전체명을 관리하는 사전입니다. 표준 용어의
-							중앙 집중식 관리로 용어 일관성을 보장하고 재사용을 촉진합니다.
+							한국어 표준 용어와 영문 약어/전체명을 관리합니다. 표준 용어의 일관성을 보장하고 재사용을 촉진합니다.
 						</p>
-						<div class="mt-4 flex items-center text-sm font-medium text-blue-600">
+						<div class="mt-4 inline-flex items-center text-sm font-medium text-blue-600">
 							<span>자세히 보기</span>
-							<svg
-								class="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M9 5l7 7-7 7"
-								/>
+							<svg class="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
 							</svg>
 						</div>
 					</div>
 				</a>
 
-				<!-- 도메인 카드 -->
 				<a
 					href="/domain/browse"
-					class="animate-fade-in-up delay-600 group relative overflow-hidden rounded-2xl border border-gray-200/50 bg-white p-8 opacity-0 shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-xl"
+					class="animate-fade-in-up delay-600 card group relative col-span-12 overflow-hidden p-6 opacity-0 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg sm:p-8 lg:col-span-6"
 				>
-					<div
-						class="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-50 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-					></div>
+					<div class="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-50 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
 					<div class="relative">
-						<div
-							class="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-green-100 text-green-600 transition-all duration-300 group-hover:bg-green-600 group-hover:text-white"
-						>
+						<div class="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-green-100 text-green-600 transition-all duration-300 group-hover:bg-green-600 group-hover:text-white">
 							<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"
-								/>
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
 							</svg>
 						</div>
 						<h3 class="mt-4 text-lg font-semibold text-gray-900">도메인 (Domain)</h3>
 						<p class="mt-2 text-sm text-gray-600">
-							공통표준도메인 정보를 관리하는 표준 도메인 사전입니다. 도메인 표준의 중앙 관리와
-							단어집과의 자동 동기화를 통해 데이터 타입 표준화를 지원합니다.
+							공통표준도메인 정보를 관리하고 단어집과 자동 동기화합니다. 데이터 타입 표준화를 지원합니다.
 						</p>
-						<div class="mt-4 flex items-center text-sm font-medium text-green-600">
+						<div class="mt-4 inline-flex items-center text-sm font-medium text-green-600">
 							<span>자세히 보기</span>
-							<svg
-								class="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M9 5l7 7-7 7"
-								/>
+							<svg class="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
 							</svg>
 						</div>
 					</div>
 				</a>
 
-				<!-- 용어 카드 -->
 				<a
 					href="/term/browse"
-					class="animate-fade-in-up group relative overflow-hidden rounded-2xl border border-gray-200/50 bg-white p-8 opacity-0 shadow-sm transition-all delay-700 duration-300 hover:scale-105 hover:shadow-xl"
+					class="animate-fade-in-up delay-700 card group relative col-span-12 overflow-hidden p-6 opacity-0 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg sm:p-8 lg:col-span-6"
 				>
-					<div
-						class="absolute inset-0 bg-gradient-to-br from-purple-50 to-pink-50 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-					></div>
+					<div class="absolute inset-0 bg-gradient-to-br from-purple-50 to-pink-50 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
 					<div class="relative">
-						<div
-							class="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100 text-purple-600 transition-all duration-300 group-hover:bg-purple-600 group-hover:text-white"
-						>
+						<div class="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100 text-purple-600 transition-all duration-300 group-hover:bg-purple-600 group-hover:text-white">
 							<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
-								/>
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
 							</svg>
 						</div>
 						<h3 class="mt-4 text-lg font-semibold text-gray-900">용어 (Term)</h3>
 						<p class="mt-2 text-sm text-gray-600">
-							단어집과 도메인을 조합한 최종 용어를 관리합니다. 실제 데이터베이스에서 사용할 용어명,
-							컬럼명, 도메인명을 생성하고 표준 용어 기반으로 자동 검증합니다.
+							단어집과 도메인을 조합해 최종 용어를 관리합니다. 컬럼명/도메인명을 생성하고 표준 기반으로 검증합니다.
 						</p>
-						<div class="mt-4 flex items-center text-sm font-medium text-purple-600">
+						<div class="mt-4 inline-flex items-center text-sm font-medium text-purple-600">
 							<span>자세히 보기</span>
-							<svg
-								class="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M9 5l7 7-7 7"
-								/>
+							<svg class="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
 							</svg>
 						</div>
 					</div>
 				</a>
-			</div>
 
-			<!-- 주요 기능 설명 -->
-			<div class="animate-fade-in-up delay-800 mt-12 opacity-0">
-				<div class="rounded-2xl bg-blue-50/50 p-8">
-					<h3 class="text-lg font-semibold text-gray-900">주요 기능</h3>
-					<ul class="mt-4 space-y-2 text-sm text-gray-600">
-						<li class="flex items-start">
-							<svg
-								class="mr-2 h-5 w-5 flex-shrink-0 text-blue-600"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M5 13l4 4L19 7"
-								/>
-							</svg>
-							<span
-								>용어 자동 생성: 한국어 용어를 입력하면 표준 용어 기반으로 가능한 조합을 자동 생성</span
-							>
-						</li>
-						<li class="flex items-start">
-							<svg
-								class="mr-2 h-5 w-5 flex-shrink-0 text-blue-600"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M5 13l4 4L19 7"
-								/>
-							</svg>
-							<span>매핑 검증: 단어집과 도메인 간의 매핑 관계를 자동으로 검증하고 일관성 보장</span>
-						</li>
-						<li class="flex items-start">
-							<svg
-								class="mr-2 h-5 w-5 flex-shrink-0 text-blue-600"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M5 13l4 4L19 7"
-								/>
-							</svg>
-							<span>동기화: 단어집과 도메인 간의 자동 동기화로 데이터 일관성 유지</span>
-						</li>
-					</ul>
+				<div class="animate-fade-in-up delay-800 col-span-12 opacity-0">
+					<BentoCard title="주요 기능" subtitle="표준화 모듈에서 자주 쓰는 흐름을 빠르게 확인하세요.">
+						<ul class="mt-1 space-y-2 text-sm text-gray-600">
+							<li class="flex items-start">
+								<svg class="mr-2 h-5 w-5 shrink-0 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+								</svg>
+								<span>용어 자동 생성: 한국어 용어 입력 → 가능한 조합 자동 생성</span>
+							</li>
+							<li class="flex items-start">
+								<svg class="mr-2 h-5 w-5 shrink-0 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+								</svg>
+								<span>매핑 검증: 단어집/도메인 기반 매핑 자동 검증</span>
+							</li>
+							<li class="flex items-start">
+								<svg class="mr-2 h-5 w-5 shrink-0 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+								</svg>
+								<span>동기화: 단어집 ↔ 도메인 자동 동기화로 일관성 유지</span>
+							</li>
+						</ul>
+					</BentoCard>
 				</div>
-			</div>
+			</BentoGrid>
 		</div>
 	</section>
 

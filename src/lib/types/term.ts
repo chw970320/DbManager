@@ -2,6 +2,7 @@
  * 용어 관리 타입 정의
  */
 import type { VocabularyEntry } from './vocabulary.js';
+import type { SharedDataFileMapping } from './base.js';
 
 export interface TermEntry {
 	id: string;
@@ -21,10 +22,7 @@ export interface TermData {
 	entries: TermEntry[];
 	lastUpdated: string;
 	totalCount: number;
-	mapping?: {
-		vocabulary: string; // 매핑된 단어집 파일명
-		domain: string; // 매핑된 도메인 파일명
-	};
+	mapping?: SharedDataFileMapping;
 }
 
 /**

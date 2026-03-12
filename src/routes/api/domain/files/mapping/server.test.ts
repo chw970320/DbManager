@@ -34,7 +34,7 @@ function createMockRequestEvent(options: {
 	body?: unknown;
 	searchParams?: Record<string, string>;
 }): RequestEvent {
-	const url = new URL('http://localhost/api/term/files/mapping');
+	const url = new URL('http://localhost/api/domain/files/mapping');
 	if (options.searchParams) {
 		for (const [key, value] of Object.entries(options.searchParams)) {
 			url.searchParams.set(key, value);
@@ -49,13 +49,13 @@ function createMockRequestEvent(options: {
 	return { url, request } as RequestEvent;
 }
 
-describe('Term Mapping API: /api/term/files/mapping', () => {
+describe('Domain Mapping API: /api/domain/files/mapping', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		vi.mocked(resolveDbDesignFileMappingBundle).mockResolvedValue({ ...FULL_BUNDLE });
 		vi.mocked(saveDbDesignFileMappingBundle).mockResolvedValue({
 			bundle: { ...FULL_BUNDLE },
-			currentMapping: createCurrentMapping('term')
+			currentMapping: createCurrentMapping('domain')
 		});
 	});
 
@@ -65,13 +65,13 @@ describe('Term Mapping API: /api/term/files/mapping', () => {
 
 		expect(response.status).toBe(200);
 		expect(result.success).toBe(true);
-		expect(result.data.mapping).toEqual(createCurrentMapping('term'));
+		expect(result.data.mapping).toEqual(createCurrentMapping('domain'));
 	});
 
 	it('PUT should save the shared mapping bundle', async () => {
 		const mapping = {
 			vocabulary: 'vocabulary-b.json',
-			domain: 'domain-b.json',
+			term: 'term-b.json',
 			database: 'database-b.json',
 			entity: 'entity-b.json',
 			attribute: 'attribute-b.json',
@@ -82,7 +82,7 @@ describe('Term Mapping API: /api/term/files/mapping', () => {
 			createMockRequestEvent({
 				method: 'PUT',
 				body: {
-					filename: 'term.json',
+					filename: 'domain.json',
 					mapping
 				}
 			})
@@ -92,8 +92,8 @@ describe('Term Mapping API: /api/term/files/mapping', () => {
 		expect(response.status).toBe(200);
 		expect(result.success).toBe(true);
 		expect(saveDbDesignFileMappingBundle).toHaveBeenCalledWith({
-			currentType: 'term',
-			currentFilename: 'term.json',
+			currentType: 'domain',
+			currentFilename: 'domain.json',
 			mapping
 		});
 	});
@@ -103,10 +103,9 @@ describe('Term Mapping API: /api/term/files/mapping', () => {
 			createMockRequestEvent({
 				method: 'PUT',
 				body: {
-					filename: 'term.json',
+					filename: 'domain.json',
 					mapping: {
-						vocabulary: 'vocabulary-only.json',
-						domain: 'domain-only.json'
+						vocabulary: 'vocabulary-only.json'
 					}
 				}
 			})

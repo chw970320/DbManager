@@ -11,6 +11,12 @@ import type { DataType, DataTypeMap, EntryTypeMap } from '$lib/types/base';
 import { DEFAULT_FILENAMES } from '$lib/types/base';
 import { safeWriteFile, safeReadFile, FileReadError } from '$lib/utils/file-lock';
 import { isValidUUID, isValidISODate } from '$lib/utils/validation';
+import {
+	buildDbDesignStoredMapping,
+	extractDbDesignRelatedMapping,
+	mergeDbDesignRelatedMapping
+} from '$lib/utils/db-design-file-mapping';
+import { resolveSharedFileMappingBundle } from '$lib/registry/shared-file-mapping-registry';
 
 // ============================================================================
 // 디렉토리 설정
@@ -58,8 +64,7 @@ const TYPE_CONFIGS: { [K in DataType]: DataTypeConfig<K> } = {
 			({
 				entries: [],
 				lastUpdated: new Date().toISOString(),
-				totalCount: 0,
-				mapping: { domain: 'domain.json' }
+				totalCount: 0
 			}) as DataTypeMap['vocabulary']
 	},
 	domain: {
@@ -89,8 +94,7 @@ const TYPE_CONFIGS: { [K in DataType]: DataTypeConfig<K> } = {
 			({
 				entries: [],
 				lastUpdated: new Date().toISOString(),
-				totalCount: 0,
-				mapping: { vocabulary: 'vocabulary.json', domain: 'domain.json' }
+				totalCount: 0
 			}) as DataTypeMap['term']
 	},
 	database: {
@@ -101,8 +105,7 @@ const TYPE_CONFIGS: { [K in DataType]: DataTypeConfig<K> } = {
 			({
 				entries: [],
 				lastUpdated: new Date().toISOString(),
-				totalCount: 0,
-				mapping: { entity: 'entity.json', table: 'table.json' }
+				totalCount: 0
 			}) as DataTypeMap['database']
 	},
 	entity: {
@@ -113,8 +116,7 @@ const TYPE_CONFIGS: { [K in DataType]: DataTypeConfig<K> } = {
 			({
 				entries: [],
 				lastUpdated: new Date().toISOString(),
-				totalCount: 0,
-				mapping: { database: 'database.json', attribute: 'attribute.json' }
+				totalCount: 0
 			}) as DataTypeMap['entity']
 	},
 	attribute: {
@@ -125,8 +127,7 @@ const TYPE_CONFIGS: { [K in DataType]: DataTypeConfig<K> } = {
 			({
 				entries: [],
 				lastUpdated: new Date().toISOString(),
-				totalCount: 0,
-				mapping: { entity: 'entity.json', column: 'column.json' }
+				totalCount: 0
 			}) as DataTypeMap['attribute']
 	},
 	table: {
@@ -137,8 +138,7 @@ const TYPE_CONFIGS: { [K in DataType]: DataTypeConfig<K> } = {
 			({
 				entries: [],
 				lastUpdated: new Date().toISOString(),
-				totalCount: 0,
-				mapping: { database: 'database.json', column: 'column.json', entity: 'entity.json' }
+				totalCount: 0
 			}) as DataTypeMap['table']
 	},
 	column: {
@@ -149,11 +149,29 @@ const TYPE_CONFIGS: { [K in DataType]: DataTypeConfig<K> } = {
 			({
 				entries: [],
 				lastUpdated: new Date().toISOString(),
-				totalCount: 0,
-				mapping: { table: 'table.json', term: 'term.json', domain: 'domain.json' }
+				totalCount: 0
 			}) as DataTypeMap['column']
 	}
 };
+
+async function applyRuntimeFileMapping<T extends DataType>(
+	type: T,
+	filename: string,
+	data: DataTypeMap[T]
+): Promise<DataTypeMap[T]> {
+	const sharedBundle = await resolveSharedFileMappingBundle(type, filename);
+	const rawMapping = extractDbDesignRelatedMapping(
+		(data as { mapping?: Record<string, unknown> }).mapping
+	);
+	const mapping = sharedBundle
+		? buildDbDesignStoredMapping(type, sharedBundle)
+		: mergeDbDesignRelatedMapping(type, rawMapping);
+
+	return {
+		...(data as object),
+		mapping
+	} as DataTypeMap[T];
+}
 
 // ============================================================================
 // 공통 유틸리티
@@ -260,16 +278,16 @@ export async function loadData<T extends DataType>(
 			if (file === DEFAULT_FILENAMES[type]) {
 				await saveData(type, defaultData, file);
 			}
-			return defaultData;
+			return applyRuntimeFileMapping(type, file, defaultData);
 		}
 
 		const data = JSON.parse(fileContent) as DataTypeMap[T];
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const entries = (data as any).entries;
-		return {
+		return applyRuntimeFileMapping(type, file, {
 			...data,
 			totalCount: entries?.length || 0
-		};
+		});
 	} catch (error) {
 		const label = type;
 		console.error(`${label} 데이터 로드 실패:`, error);
@@ -331,7 +349,7 @@ export async function saveData<T extends DataType>(
 
 		const now = new Date().toISOString();
 
-		// 타입별 특수 필드 보존 (mapping 등)
+		// 런타임 주입 필드는 저장 시 제거한다 (예: mapping)
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const finalData: any = {
 			...data,
@@ -339,6 +357,7 @@ export async function saveData<T extends DataType>(
 			lastUpdated: now,
 			totalCount: validEntries.length
 		};
+		delete finalData.mapping;
 
 		const dataPath = getDataPath(file, type);
 		const jsonData = JSON.stringify(finalData, null, 2);
@@ -439,9 +458,15 @@ export async function listFiles(type: DataType): Promise<string[]> {
 export async function createFile(type: DataType, filename: string): Promise<void> {
 	const config = getTypeConfig(type);
 	await ensureDirectories([type]);
+	const { validateFilenameForOps } = await import('$lib/utils/file-operations');
+	validateFilenameForOps(filename);
+	const dataPath = getDataPath(filename, type);
 
-	const { createDataFile } = await import('$lib/utils/file-operations');
-	await createDataFile(type, filename, config.createDefault as () => unknown);
+	if (existsSync(dataPath)) {
+		throw new Error('이미 존재하는 파일명입니다.');
+	}
+
+	await saveData(type, config.createDefault(), filename);
 }
 
 /**
@@ -463,6 +488,14 @@ export async function renameFile(
 
 	// 매핑 레지스트리 자동 동기화
 	try {
+		const { syncSharedFileMappingsOnRename } = await import('./shared-file-mapping-registry');
+		const updatedSharedCount = await syncSharedFileMappingsOnRename(type, oldFilename, newFilename);
+		if (updatedSharedCount > 0) {
+			console.log(
+				`[공통 파일 매핑] ${type} 파일 이름 변경 시 ${updatedSharedCount}개의 공통 매핑 번들이 업데이트되었습니다.`
+			);
+		}
+
 		const { syncMappingsOnRename } = await import('./mapping-registry');
 		const updatedCount = await syncMappingsOnRename(type, oldFilename, newFilename);
 		if (updatedCount > 0) {
@@ -491,6 +524,14 @@ export async function deleteFile(type: DataType, filename: string): Promise<void
 
 	// 매핑 레지스트리 자동 정리 (삭제된 파일 → 기본 파일명으로 대체)
 	try {
+		const { syncSharedFileMappingsOnDelete } = await import('./shared-file-mapping-registry');
+		const updatedSharedCount = await syncSharedFileMappingsOnDelete(type, filename);
+		if (updatedSharedCount > 0) {
+			console.log(
+				`[공통 파일 매핑] ${type} 파일 삭제 시 ${updatedSharedCount}개의 공통 매핑 번들이 기본 파일로 대체되었습니다.`
+			);
+		}
+
 		const { cleanMappingsOnDelete } = await import('./mapping-registry');
 		const updatedCount = await cleanMappingsOnDelete(type, filename);
 		if (updatedCount > 0) {

@@ -12,10 +12,14 @@
  */
 export type DbDesignActionType = 'add' | 'update' | 'delete' | 'UPLOAD_MERGE';
 
+import type { SharedDataFileMapping } from './base';
+
 /**
  * 데이터베이스 설계 엔터티 타입
  */
 export type DbDesignEntityType = 'database' | 'entity' | 'attribute' | 'table' | 'column';
+
+export type DbDesignSharedFileMapping = SharedDataFileMapping;
 
 // ============================================================================
 // 데이터베이스 정의서 (Database)
@@ -51,10 +55,7 @@ export interface DatabaseData {
 	entries: DatabaseEntry[];
 	lastUpdated: string;
 	totalCount: number;
-	mapping?: {
-		entity: string;
-		table: string;
-	};
+	mapping?: DbDesignSharedFileMapping;
 }
 
 // ============================================================================
@@ -87,10 +88,7 @@ export interface EntityData {
 	entries: EntityEntry[];
 	lastUpdated: string;
 	totalCount: number;
-	mapping?: {
-		database: string;
-		attribute: string;
-	};
+	mapping?: DbDesignSharedFileMapping;
 }
 
 // ============================================================================
@@ -125,10 +123,7 @@ export interface AttributeData {
 	entries: AttributeEntry[];
 	lastUpdated: string;
 	totalCount: number;
-	mapping?: {
-		entity: string;
-		column: string;
-	};
+	mapping?: DbDesignSharedFileMapping;
 }
 
 // ============================================================================
@@ -170,11 +165,7 @@ export interface TableData {
 	entries: TableEntry[];
 	lastUpdated: string;
 	totalCount: number;
-	mapping?: {
-		database: string;
-		column: string;
-		entity: string;
-	};
+	mapping?: DbDesignSharedFileMapping;
 }
 
 // ============================================================================
@@ -223,11 +214,7 @@ export interface ColumnData {
 	entries: ColumnEntry[];
 	lastUpdated: string;
 	totalCount: number;
-	mapping?: {
-		table: string;
-		term: string;
-		domain: string;
-	};
+	mapping?: DbDesignSharedFileMapping;
 }
 
 // ============================================================================

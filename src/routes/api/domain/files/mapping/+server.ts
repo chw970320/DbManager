@@ -1,5 +1,5 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import type { DbDesignApiResponse } from '$lib/types/database-design';
+import type { DomainApiResponse } from '$lib/types/domain';
 import {
 	buildDbDesignStoredMapping,
 	extractDbDesignRelatedMapping,
@@ -14,28 +14,28 @@ function isValidMapping(mapping: unknown): mapping is Record<string, string> {
 	if (!mapping || typeof mapping !== 'object') return false;
 	const candidate = mapping as Record<string, unknown>;
 
-	return getDbDesignSelectableTypes('database').every(
+	return getDbDesignSelectableTypes('domain').every(
 		(type) => typeof candidate[type] === 'string' && candidate[type].trim() !== ''
 	);
 }
 
 function requiredTypesMessage() {
-	return getDbDesignSelectableTypes('database').join(', ');
+	return getDbDesignSelectableTypes('domain').join(', ');
 }
 
 export async function GET({ url }: RequestEvent) {
 	try {
-		const filename = url.searchParams.get('filename') || 'database.json';
-		const bundle = await resolveDbDesignFileMappingBundle('database', filename);
+		const filename = url.searchParams.get('filename') || 'domain.json';
+		const bundle = await resolveDbDesignFileMappingBundle('domain', filename);
 
 		return json(
 			{
 				success: true,
 				data: {
-					mapping: buildDbDesignStoredMapping('database', bundle)
+					mapping: buildDbDesignStoredMapping('domain', bundle)
 				},
-				message: 'Database mapping retrieved successfully'
-			} satisfies DbDesignApiResponse,
+				message: 'Domain mapping retrieved successfully'
+			} satisfies DomainApiResponse,
 			{ status: 200 }
 		);
 	} catch (error) {
@@ -43,8 +43,8 @@ export async function GET({ url }: RequestEvent) {
 			{
 				success: false,
 				error: error instanceof Error ? error.message : '매핑 정보 조회 중 오류가 발생했습니다.',
-				message: 'Failed to retrieve database mapping'
-			} satisfies DbDesignApiResponse,
+				message: 'Failed to retrieve domain mapping'
+			} satisfies DomainApiResponse,
 			{ status: 500 }
 		);
 	}
@@ -64,7 +64,7 @@ export async function PUT({ request }: RequestEvent) {
 					success: false,
 					error: '파일명이 제공되지 않았습니다.',
 					message: 'Filename is required'
-				} satisfies DbDesignApiResponse,
+				} satisfies DomainApiResponse,
 				{ status: 400 }
 			);
 		}
@@ -75,13 +75,13 @@ export async function PUT({ request }: RequestEvent) {
 					success: false,
 					error: `매핑 정보가 올바르지 않습니다. ${requiredTypesMessage()}이 필요합니다.`,
 					message: 'Invalid mapping data'
-				} satisfies DbDesignApiResponse,
+				} satisfies DomainApiResponse,
 				{ status: 400 }
 			);
 		}
 
 		const result = await saveDbDesignFileMappingBundle({
-			currentType: 'database',
+			currentType: 'domain',
 			currentFilename: filename,
 			mapping: extractDbDesignRelatedMapping(mapping)
 		});
@@ -92,8 +92,8 @@ export async function PUT({ request }: RequestEvent) {
 				data: {
 					mapping: result.currentMapping
 				},
-				message: 'Database mapping saved successfully'
-			} satisfies DbDesignApiResponse,
+				message: 'Domain mapping saved successfully'
+			} satisfies DomainApiResponse,
 			{ status: 200 }
 		);
 	} catch (error) {
@@ -101,8 +101,8 @@ export async function PUT({ request }: RequestEvent) {
 			{
 				success: false,
 				error: error instanceof Error ? error.message : '매핑 정보 저장 중 오류가 발생했습니다.',
-				message: 'Failed to save database mapping'
-			} satisfies DbDesignApiResponse,
+				message: 'Failed to save domain mapping'
+			} satisfies DomainApiResponse,
 			{ status: 500 }
 		);
 	}

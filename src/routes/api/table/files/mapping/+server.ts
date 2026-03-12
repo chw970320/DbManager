@@ -1,64 +1,38 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import { loadData, saveData } from '$lib/registry/data-registry';
+import type { DbDesignApiResponse } from '$lib/types/database-design';
 import {
-	resolveRelatedFilenames,
-	getMappingsFor,
-	updateMapping,
-	addMapping
-} from '$lib/registry/mapping-registry';
-import type { DataType } from '$lib/types/base';
-import type { TableData, DbDesignApiResponse } from '$lib/types/database-design';
+	buildDbDesignStoredMapping,
+	extractDbDesignRelatedMapping,
+	getDbDesignSelectableTypes
+} from '$lib/utils/db-design-file-mapping';
+import {
+	resolveDbDesignFileMappingBundle,
+	saveDbDesignFileMappingBundle
+} from '$lib/registry/db-design-file-mapping';
 
-type TableFileMapping = {
-	database: string;
-	column: string;
-	entity: string;
-};
+function isValidMapping(mapping: unknown): mapping is Record<string, string> {
+	if (!mapping || typeof mapping !== 'object') return false;
+	const candidate = mapping as Record<string, unknown>;
 
-type TableDataWithMapping = TableData & {
-	mapping?: Partial<TableFileMapping>;
-};
-
-function readMappingOverride(mapping?: Partial<TableFileMapping>): Partial<Record<DataType, string>> {
-	const override: Partial<Record<DataType, string>> = {};
-	if (mapping?.database) override.database = mapping.database;
-	if (mapping?.column) override.column = mapping.column;
-	if (mapping?.entity) override.entity = mapping.entity;
-	return override;
+	return getDbDesignSelectableTypes('table').every(
+		(type) => typeof candidate[type] === 'string' && candidate[type].trim() !== ''
+	);
 }
 
-function isValidMapping(mapping: unknown): mapping is TableFileMapping {
-	if (!mapping || typeof mapping !== 'object') return false;
-	const candidate = mapping as Partial<TableFileMapping>;
-	return (
-		typeof candidate.database === 'string' &&
-		candidate.database.trim() !== '' &&
-		typeof candidate.column === 'string' &&
-		candidate.column.trim() !== '' &&
-		typeof candidate.entity === 'string' &&
-		candidate.entity.trim() !== ''
-	);
+function requiredTypesMessage() {
+	return getDbDesignSelectableTypes('table').join(', ');
 }
 
 export async function GET({ url }: RequestEvent) {
 	try {
 		const filename = url.searchParams.get('filename') || 'table.json';
-		const tableData = (await loadData('table', filename)) as TableDataWithMapping;
-		const relatedFiles = await resolveRelatedFilenames(
-			'table',
-			filename,
-			readMappingOverride(tableData.mapping)
-		);
+		const bundle = await resolveDbDesignFileMappingBundle('table', filename);
 
 		return json(
 			{
 				success: true,
 				data: {
-					mapping: {
-						database: relatedFiles.get('database') || 'database.json',
-						column: relatedFiles.get('column') || 'column.json',
-						entity: relatedFiles.get('entity') || 'entity.json'
-					}
+					mapping: buildDbDesignStoredMapping('table', bundle)
 				},
 				message: 'Table mapping retrieved successfully'
 			} satisfies DbDesignApiResponse,
@@ -99,83 +73,24 @@ export async function PUT({ request }: RequestEvent) {
 			return json(
 				{
 					success: false,
-					error: '매핑 정보가 올바르지 않습니다. database, column, entity가 필요합니다.',
+					error: `매핑 정보가 올바르지 않습니다. ${requiredTypesMessage()}이 필요합니다.`,
 					message: 'Invalid mapping data'
 				} satisfies DbDesignApiResponse,
 				{ status: 400 }
 			);
 		}
 
-		const tableData = (await loadData('table', filename)) as TableDataWithMapping;
-		tableData.mapping = {
-			database: mapping.database.trim(),
-			column: mapping.column.trim(),
-			entity: mapping.entity.trim()
-		};
-		await saveData('table', tableData as TableData, filename);
-
-		try {
-			const existingMappings = await getMappingsFor('table', filename);
-			const targets: Array<{
-				targetType: 'database' | 'column' | 'entity';
-				targetFilename: string;
-				mappingKey: string;
-				cardinality: 'N:1' | '1:N';
-				description: string;
-			}> = [
-				{
-					targetType: 'database',
-					targetFilename: mapping.database.trim(),
-					mappingKey: 'physicalDbName',
-					cardinality: 'N:1',
-					description: '테이블 → DB 매핑'
-				},
-				{
-					targetType: 'column',
-					targetFilename: mapping.column.trim(),
-					mappingKey: 'schemaName+tableEnglishName',
-					cardinality: '1:N',
-					description: '테이블 → 컬럼 매핑'
-				},
-				{
-					targetType: 'entity',
-					targetFilename: mapping.entity.trim(),
-					mappingKey: 'relatedEntityName→entityName',
-					cardinality: 'N:1',
-					description: '테이블 → 엔터티 매핑'
-				}
-			];
-
-			for (const target of targets) {
-				const existing = existingMappings.find((candidate) => candidate.relatedType === target.targetType);
-				if (existing) {
-					if (existing.role === 'source') {
-						await updateMapping(existing.relation.id, { targetFilename: target.targetFilename });
-					} else {
-						await updateMapping(existing.relation.id, { sourceFilename: target.targetFilename });
-					}
-					continue;
-				}
-
-				await addMapping({
-					sourceType: 'table',
-					sourceFilename: filename,
-					targetType: target.targetType,
-					targetFilename: target.targetFilename,
-					mappingKey: target.mappingKey,
-					cardinality: target.cardinality,
-					description: target.description
-				});
-			}
-		} catch (registryError) {
-			console.warn('[듀얼 라이트] 레지스트리 갱신 실패 (파일 저장은 완료):', registryError);
-		}
+		const result = await saveDbDesignFileMappingBundle({
+			currentType: 'table',
+			currentFilename: filename,
+			mapping: extractDbDesignRelatedMapping(mapping)
+		});
 
 		return json(
 			{
 				success: true,
 				data: {
-					mapping: tableData.mapping
+					mapping: result.currentMapping
 				},
 				message: 'Table mapping saved successfully'
 			} satisfies DbDesignApiResponse,

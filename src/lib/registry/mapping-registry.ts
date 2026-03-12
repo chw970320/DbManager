@@ -5,7 +5,6 @@
  * 참조 무결성 검사, 관련 데이터 조회, 파일 이름변경/삭제 시 매핑 동기화를 담당합니다.
  */
 
-import { existsSync } from 'fs';
 import { join, resolve } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import type { DataType, ReferenceCheckResult } from '$lib/types/base';
@@ -139,20 +138,15 @@ function createDefaultRegistry(): MappingRegistryData {
 /**
  * 특정 데이터 타입에 관련된 모든 매핑 조회
  */
-export async function getMappingsFor(
-	type: DataType,
-	filename?: string
-): Promise<RelatedMapping[]> {
+export async function getMappingsFor(type: DataType, filename?: string): Promise<RelatedMapping[]> {
 	const registry = await loadRegistry();
 	const result: RelatedMapping[] = [];
 
 	for (const relation of registry.relations) {
 		const matchSource =
-			relation.sourceType === type &&
-			(!filename || relation.sourceFilename === filename);
+			relation.sourceType === type && (!filename || relation.sourceFilename === filename);
 		const matchTarget =
-			relation.targetType === type &&
-			(!filename || relation.targetFilename === filename);
+			relation.targetType === type && (!filename || relation.targetFilename === filename);
 
 		if (matchSource) {
 			result.push({
@@ -194,10 +188,7 @@ export async function getMappingBetween(
 /**
  * 매핑 관계 그래프 조회 (1-hop, 2-hop)
  */
-export async function getMappingGraph(
-	type: DataType,
-	filename: string
-): Promise<MappingGraph> {
+export async function getMappingGraph(type: DataType, filename: string): Promise<MappingGraph> {
 	const directMappings = await getMappingsFor(type, filename);
 
 	// 2-hop: 직접 연결된 타입들의 매핑도 조회
@@ -213,10 +204,7 @@ export async function getMappingGraph(
 		for (const sm of secondHop) {
 			const key = `${sm.relatedType}:${sm.relatedFilename}`;
 			// 자기 자신이나 이미 직접 연결된 것은 제외
-			if (
-				sm.relatedType !== type &&
-				!directTypes.has(key)
-			) {
+			if (sm.relatedType !== type && !directTypes.has(key)) {
 				indirectMappings.push(sm);
 			}
 		}
@@ -505,7 +493,10 @@ interface EntryReferenceChecker {
 	) => { count: number; entries: Array<{ id: string; name: string }> };
 }
 
-function toRefEntry(entry: { id?: string; name?: string; label?: string }): { id: string; name: string } {
+function toRefEntry(entry: { id?: string; name?: string; label?: string }): {
+	id: string;
+	name: string;
+} {
 	return {
 		id: entry.id || '(unknown)',
 		name: entry.name || entry.label || entry.id || '(unknown)'
@@ -558,8 +549,7 @@ const ENTRY_REFERENCE_CHECKERS: EntryReferenceChecker[] = [
 
 			const refs = vocabEntries.filter(
 				(vocab) =>
-					vocab.isDomainCategoryMapped &&
-					normalizeKey(vocab.domainCategory) === domainCategoryLower
+					vocab.isDomainCategoryMapped && normalizeKey(vocab.domainCategory) === domainCategoryLower
 			);
 
 			return {
@@ -582,9 +572,7 @@ const ENTRY_REFERENCE_CHECKERS: EntryReferenceChecker[] = [
 				return { count: 0, entries: [] };
 			}
 
-			const refs = termEntries.filter(
-				(term) => normalizeKey(term.domainName) === domainNameLower
-			);
+			const refs = termEntries.filter((term) => normalizeKey(term.domainName) === domainNameLower);
 
 			return {
 				count: refs.length,
@@ -612,9 +600,11 @@ const ENTRY_REFERENCE_CHECKERS: EntryReferenceChecker[] = [
 
 			return {
 				count: refs.length,
-				entries: refs.slice(0, 5).map((c: { id?: string; columnEnglishName?: string }) =>
-					toRefEntry({ id: c.id, name: c.columnEnglishName })
-				)
+				entries: refs
+					.slice(0, 5)
+					.map((c: { id?: string; columnEnglishName?: string }) =>
+						toRefEntry({ id: c.id, name: c.columnEnglishName })
+					)
 			};
 		}
 	},
@@ -634,9 +624,11 @@ const ENTRY_REFERENCE_CHECKERS: EntryReferenceChecker[] = [
 
 			return {
 				count: refs.length,
-				entries: refs.slice(0, 5).map((c: { id?: string; columnEnglishName?: string }) =>
-					toRefEntry({ id: c.id, name: c.columnEnglishName })
-				)
+				entries: refs
+					.slice(0, 5)
+					.map((c: { id?: string; columnEnglishName?: string }) =>
+						toRefEntry({ id: c.id, name: c.columnEnglishName })
+					)
 			};
 		}
 	},
@@ -656,9 +648,11 @@ const ENTRY_REFERENCE_CHECKERS: EntryReferenceChecker[] = [
 
 			return {
 				count: refs.length,
-				entries: refs.slice(0, 5).map((entity: { id?: string; entityName?: string }) =>
-					toRefEntry({ id: entity.id, name: entity.entityName })
-				)
+				entries: refs
+					.slice(0, 5)
+					.map((entity: { id?: string; entityName?: string }) =>
+						toRefEntry({ id: entity.id, name: entity.entityName })
+					)
 			};
 		}
 	},
@@ -678,9 +672,11 @@ const ENTRY_REFERENCE_CHECKERS: EntryReferenceChecker[] = [
 
 			return {
 				count: refs.length,
-				entries: refs.slice(0, 5).map((table: { id?: string; tableEnglishName?: string }) =>
-					toRefEntry({ id: table.id, name: table.tableEnglishName })
-				)
+				entries: refs
+					.slice(0, 5)
+					.map((table: { id?: string; tableEnglishName?: string }) =>
+						toRefEntry({ id: table.id, name: table.tableEnglishName })
+					)
 			};
 		}
 	},
@@ -695,15 +691,16 @@ const ENTRY_REFERENCE_CHECKERS: EntryReferenceChecker[] = [
 			}
 
 			const refs = attributeEntries.filter(
-				(attribute) =>
-					buildCompositeKey([attribute.schemaName, attribute.entityName]) === entityKey
+				(attribute) => buildCompositeKey([attribute.schemaName, attribute.entityName]) === entityKey
 			);
 
 			return {
 				count: refs.length,
-				entries: refs.slice(0, 5).map((attr: { id?: string; attributeName?: string }) =>
-					toRefEntry({ id: attr.id, name: attr.attributeName })
-				)
+				entries: refs
+					.slice(0, 5)
+					.map((attr: { id?: string; attributeName?: string }) =>
+						toRefEntry({ id: attr.id, name: attr.attributeName })
+					)
 			};
 		}
 	},
@@ -728,9 +725,11 @@ const ENTRY_REFERENCE_CHECKERS: EntryReferenceChecker[] = [
 
 			return {
 				count: refs.length,
-				entries: refs.slice(0, 5).map((table: { id?: string; tableEnglishName?: string }) =>
-					toRefEntry({ id: table.id, name: table.tableEnglishName })
-				)
+				entries: refs
+					.slice(0, 5)
+					.map((table: { id?: string; tableEnglishName?: string }) =>
+						toRefEntry({ id: table.id, name: table.tableEnglishName })
+					)
 			};
 		}
 	},
@@ -759,9 +758,11 @@ const ENTRY_REFERENCE_CHECKERS: EntryReferenceChecker[] = [
 
 			return {
 				count: refs.length,
-				entries: refs.slice(0, 5).map((column: { id?: string; columnEnglishName?: string }) =>
-					toRefEntry({ id: column.id, name: column.columnEnglishName })
-				)
+				entries: refs
+					.slice(0, 5)
+					.map((column: { id?: string; columnEnglishName?: string }) =>
+						toRefEntry({ id: column.id, name: column.columnEnglishName })
+					)
 			};
 		}
 	},
@@ -781,9 +782,11 @@ const ENTRY_REFERENCE_CHECKERS: EntryReferenceChecker[] = [
 
 			return {
 				count: refs.length,
-				entries: refs.slice(0, 5).map((column: { id?: string; columnEnglishName?: string }) =>
-					toRefEntry({ id: column.id, name: column.columnEnglishName })
-				)
+				entries: refs
+					.slice(0, 5)
+					.map((column: { id?: string; columnEnglishName?: string }) =>
+						toRefEntry({ id: column.id, name: column.columnEnglishName })
+					)
 			};
 		}
 	},
@@ -803,14 +806,17 @@ const ENTRY_REFERENCE_CHECKERS: EntryReferenceChecker[] = [
 
 			const refs = attributeEntries.filter(
 				(attr) =>
-					buildCompositeKey([attr.schemaName, attr.entityName, attr.attributeName]) === columnLogicalKey
+					buildCompositeKey([attr.schemaName, attr.entityName, attr.attributeName]) ===
+					columnLogicalKey
 			);
 
 			return {
 				count: refs.length,
-				entries: refs.slice(0, 5).map((attr: { id?: string; attributeName?: string }) =>
-					toRefEntry({ id: attr.id, name: attr.attributeName })
-				)
+				entries: refs
+					.slice(0, 5)
+					.map((attr: { id?: string; attributeName?: string }) =>
+						toRefEntry({ id: attr.id, name: attr.attributeName })
+					)
 			};
 		}
 	},
@@ -828,9 +834,11 @@ const ENTRY_REFERENCE_CHECKERS: EntryReferenceChecker[] = [
 
 			return {
 				count: refs.length,
-				entries: refs.slice(0, 5).map((term: { id?: string; termName?: string }) =>
-					toRefEntry({ id: term.id, name: term.termName })
-				)
+				entries: refs
+					.slice(0, 5)
+					.map((term: { id?: string; termName?: string }) =>
+						toRefEntry({ id: term.id, name: term.termName })
+					)
 			};
 		}
 	}
@@ -856,15 +864,13 @@ export async function checkEntryReferences(
 	}
 
 	// 관련 파일명 해석
-	const relatedFilenames = await resolveRelatedFilenames(
-		type,
-		filename || DEFAULT_FILENAMES[type]
-	);
+	const relatedFilenames = await resolveRelatedFilenames(type, filename || DEFAULT_FILENAMES[type]);
 
 	const references: ReferenceCheckResult['references'] = [];
 
 	for (const checker of checkers) {
-		const targetFilename = relatedFilenames.get(checker.targetType) || DEFAULT_FILENAMES[checker.targetType];
+		const targetFilename =
+			relatedFilenames.get(checker.targetType) || DEFAULT_FILENAMES[checker.targetType];
 
 		try {
 			const targetData = await loadData(checker.targetType, targetFilename);
@@ -881,10 +887,7 @@ export async function checkEntryReferences(
 				});
 			}
 		} catch (error) {
-			console.warn(
-				`[참조 검사] ${DATA_TYPE_LABELS[checker.targetType]} 데이터 로드 실패:`,
-				error
-			);
+			console.warn(`[참조 검사] ${DATA_TYPE_LABELS[checker.targetType]} 데이터 로드 실패:`, error);
 		}
 	}
 

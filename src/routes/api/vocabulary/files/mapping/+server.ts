@@ -1,109 +1,38 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
+import type { ApiResponse } from '$lib/types/vocabulary';
 import {
-	loadData,
-	saveData,
-	mergeData,
-	listFiles,
-	createFile,
-	renameFile,
-	deleteFile,
-	loadVocabularyData,
-	saveVocabularyData,
-	mergeVocabularyData,
-	listVocabularyFiles,
-	createVocabularyFile,
-	renameVocabularyFile,
-	deleteVocabularyFile,
-	loadDomainData,
-	saveDomainData,
-	mergeDomainData,
-	listDomainFiles,
-	createDomainFile,
-	renameDomainFile,
-	deleteDomainFile,
-	loadTermData,
-	saveTermData,
-	mergeTermData,
-	listTermFiles,
-	createTermFile,
-	renameTermFile,
-	deleteTermFile,
-	loadDatabaseData,
-	saveDatabaseData,
-	mergeDatabaseData,
-	listDatabaseFiles,
-	createDatabaseFile,
-	renameDatabaseFile,
-	deleteDatabaseFile,
-	loadEntityData,
-	saveEntityData,
-	mergeEntityData,
-	listEntityFiles,
-	createEntityFile,
-	renameEntityFile,
-	deleteEntityFile,
-	loadAttributeData,
-	saveAttributeData,
-	mergeAttributeData,
-	listAttributeFiles,
-	createAttributeFile,
-	renameAttributeFile,
-	deleteAttributeFile,
-	loadTableData,
-	saveTableData,
-	mergeTableData,
-	listTableFiles,
-	createTableFile,
-	renameTableFile,
-	deleteTableFile,
-	loadColumnData,
-	saveColumnData,
-	mergeColumnData,
-	listColumnFiles,
-	createColumnFile,
-	renameColumnFile,
-	deleteColumnFile,
-	loadForbiddenWords
-} from '$lib/registry/data-registry';
+	buildDbDesignStoredMapping,
+	extractDbDesignRelatedMapping,
+	getDbDesignSelectableTypes
+} from '$lib/utils/db-design-file-mapping';
 import {
-	getCachedData,
-	getCachedVocabularyData,
-	getCachedDomainData,
-	getCachedTermData,
-	invalidateCache,
-	invalidateDataCache,
-	invalidateAllCaches
-} from '$lib/registry/cache-registry';
+	resolveDbDesignFileMappingBundle,
+	saveDbDesignFileMappingBundle
+} from '$lib/registry/db-design-file-mapping';
 
-import {
-	resolveRelatedFilenames,
-	getMappingsFor,
-	updateMapping,
-	addMapping
-} from '$lib/registry/mapping-registry';
-import type { DataType } from '$lib/types/base';
+function isValidMapping(mapping: unknown): mapping is Record<string, string> {
+	if (!mapping || typeof mapping !== 'object') return false;
+	const candidate = mapping as Record<string, unknown>;
 
-/**
- * 단어집 파일 매핑 정보 조회 API
- * GET /api/vocabulary/files/mapping?filename=vocabulary.json
- */
+	return getDbDesignSelectableTypes('vocabulary').every(
+		(type) => typeof candidate[type] === 'string' && candidate[type].trim() !== ''
+	);
+}
+
+function requiredTypesMessage() {
+	return getDbDesignSelectableTypes('vocabulary').join(', ');
+}
+
 export async function GET({ url }: RequestEvent) {
 	try {
 		const filename = url.searchParams.get('filename') || 'vocabulary.json';
-
-		// 3단계 폴백으로 매핑 해석 (레지스트리 우선, 파일 폴백)
-		const vocabularyData = await loadData('vocabulary', filename);
-		const fileMappingOverride: Partial<Record<DataType, string>> = {};
-		if (vocabularyData.mapping?.domain) fileMappingOverride.domain = vocabularyData.mapping.domain;
-		const relatedFiles = await resolveRelatedFilenames('vocabulary', filename, fileMappingOverride);
+		const bundle = await resolveDbDesignFileMappingBundle('vocabulary', filename);
 
 		return json(
 			{
 				success: true,
 				data: {
-					mapping: {
-						domain: relatedFiles.get('domain') || 'domain.json'
-					}
+					mapping: buildDbDesignStoredMapping('vocabulary', bundle)
 				},
 				message: 'Vocabulary mapping retrieved successfully'
 			} as ApiResponse,
@@ -121,18 +50,15 @@ export async function GET({ url }: RequestEvent) {
 	}
 }
 
-/**
- * 단어집 파일 매핑 정보 저장 API
- * PUT /api/vocabulary/files/mapping
- *
- * 듀얼 라이트: 파일 내 mapping 필드 + 레지스트리 동시 갱신
- */
 export async function PUT({ request }: RequestEvent) {
 	try {
-		const body = await request.json();
+		const body = (await request.json()) as {
+			filename?: string;
+			mapping?: unknown;
+		};
 		const { filename, mapping } = body;
 
-		if (!filename) {
+		if (!filename || filename.trim() === '') {
 			return json(
 				{
 					success: false,
@@ -143,53 +69,28 @@ export async function PUT({ request }: RequestEvent) {
 			);
 		}
 
-		if (!mapping || !mapping.domain) {
+		if (!isValidMapping(mapping)) {
 			return json(
 				{
 					success: false,
-					error: '매핑 정보가 올바르지 않습니다. domain이 필요합니다.',
+					error: `매핑 정보가 올바르지 않습니다. ${requiredTypesMessage()}이 필요합니다.`,
 					message: 'Invalid mapping data'
 				} as ApiResponse,
 				{ status: 400 }
 			);
 		}
 
-		// 1. 파일 내 mapping 필드 업데이트
-		const vocabularyData = await loadData('vocabulary', filename);
-		vocabularyData.mapping = {
-			domain: mapping.domain
-		};
-		await saveData('vocabulary', vocabularyData, filename);
-
-		// 2. 레지스트리 듀얼 라이트 (best-effort)
-		try {
-			const existingMappings = await getMappingsFor('vocabulary', filename);
-			const domainMapping = existingMappings.find((m) => m.relatedType === 'domain');
-
-			if (domainMapping) {
-				await updateMapping(domainMapping.relation.id, {
-					targetFilename: mapping.domain
-				});
-			} else {
-				await addMapping({
-					sourceType: 'vocabulary',
-					sourceFilename: filename,
-					targetType: 'domain',
-					targetFilename: mapping.domain,
-					mappingKey: 'domainCategory',
-					cardinality: 'N:1',
-					description: '단어집 → 도메인 분류 매핑'
-				});
-			}
-		} catch (registryError) {
-			console.warn('[듀얼 라이트] 레지스트리 갱신 실패 (파일 저장은 완료):', registryError);
-		}
+		const result = await saveDbDesignFileMappingBundle({
+			currentType: 'vocabulary',
+			currentFilename: filename,
+			mapping: extractDbDesignRelatedMapping(mapping)
+		});
 
 		return json(
 			{
 				success: true,
 				data: {
-					mapping: vocabularyData.mapping
+					mapping: result.currentMapping
 				},
 				message: 'Vocabulary mapping saved successfully'
 			} as ApiResponse,
@@ -206,4 +107,3 @@ export async function PUT({ request }: RequestEvent) {
 		);
 	}
 }
-

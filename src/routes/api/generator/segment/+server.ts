@@ -341,7 +341,7 @@ export async function POST({ request, url }: RequestEvent) {
 				vocabulary: 'vocabulary.json',
 				domain: 'domain.json'
 			};
-			vocabularyFilename = mapping.vocabulary;
+			vocabularyFilename = mapping.vocabulary || 'vocabulary.json';
 		} catch (error) {
 			console.warn(`용어 파일 ${filename} 로드 실패, 기본값 사용:`, error);
 		}

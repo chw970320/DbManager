@@ -1,31 +1,33 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RequestEvent } from '@sveltejs/kit';
 import { GET, PUT } from './+server';
-import type { ColumnData } from '$lib/types/database-design';
 
-vi.mock('$lib/registry/data-registry', () => ({
-	loadData: vi.fn(),
-	saveData: vi.fn()
+vi.mock('$lib/registry/db-design-file-mapping', () => ({
+	resolveDbDesignFileMappingBundle: vi.fn(),
+	saveDbDesignFileMappingBundle: vi.fn()
 }));
 
-vi.mock('$lib/registry/mapping-registry', () => ({
-	resolveRelatedFilenames: vi.fn(),
-	getMappingsFor: vi.fn(),
-	updateMapping: vi.fn(),
-	addMapping: vi.fn()
-}));
+import {
+	resolveDbDesignFileMappingBundle,
+	saveDbDesignFileMappingBundle
+} from '$lib/registry/db-design-file-mapping';
 
-import { loadData, saveData } from '$lib/registry/data-registry';
-import { resolveRelatedFilenames, getMappingsFor, addMapping } from '$lib/registry/mapping-registry';
+const FULL_BUNDLE = {
+	vocabulary: 'vocabulary.json',
+	domain: 'domain.json',
+	term: 'term.json',
+	database: 'database.json',
+	entity: 'entity.json',
+	attribute: 'attribute.json',
+	table: 'table.json',
+	column: 'column.json'
+} as const;
 
-const createMockData = (
-	mapping?: { table: string; term: string; domain: string }
-): ColumnData => ({
-	entries: [],
-	lastUpdated: '2024-01-01T00:00:00.000Z',
-	totalCount: 0,
-	mapping
-});
+function createCurrentMapping(excludedType: keyof typeof FULL_BUNDLE) {
+	return Object.fromEntries(
+		Object.entries(FULL_BUNDLE).filter(([type]) => type !== excludedType)
+	) as Record<string, string>;
+}
 
 function createMockRequestEvent(options: {
 	method?: string;
@@ -50,27 +52,24 @@ function createMockRequestEvent(options: {
 describe('Column Mapping API: /api/column/files/mapping', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		vi.mocked(resolveRelatedFilenames).mockResolvedValue(
-			new Map([
-				['table', 'table.json'],
-				['term', 'term.json'],
-				['domain', 'domain.json']
-			])
-		);
-		vi.mocked(getMappingsFor).mockResolvedValue([]);
+		vi.mocked(resolveDbDesignFileMappingBundle).mockResolvedValue({ ...FULL_BUNDLE });
+		vi.mocked(saveDbDesignFileMappingBundle).mockResolvedValue({
+			bundle: { ...FULL_BUNDLE },
+			currentMapping: createCurrentMapping('column')
+		});
 	});
 
-	it('GET should return mapping data', async () => {
-		vi.mocked(loadData).mockResolvedValue(
-			createMockData({ table: 'table-a.json', term: 'term-a.json', domain: 'domain-a.json' })
-		);
-		vi.mocked(resolveRelatedFilenames).mockResolvedValue(
-			new Map([
-				['table', 'table-a.json'],
-				['term', 'term-a.json'],
-				['domain', 'domain-a.json']
-			])
-		);
+	it('GET should return the shared mapping bundle for the other seven files', async () => {
+		vi.mocked(resolveDbDesignFileMappingBundle).mockResolvedValue({
+			...FULL_BUNDLE,
+			vocabulary: 'vocabulary-a.json',
+			domain: 'domain-a.json',
+			term: 'term-a.json',
+			database: 'database-a.json',
+			entity: 'entity-a.json',
+			attribute: 'attribute-a.json',
+			table: 'table-a.json'
+		});
 
 		const response = await GET(createMockRequestEvent({}));
 		const result = await response.json();
@@ -78,25 +77,32 @@ describe('Column Mapping API: /api/column/files/mapping', () => {
 		expect(response.status).toBe(200);
 		expect(result.success).toBe(true);
 		expect(result.data.mapping).toEqual({
-			table: 'table-a.json',
+			vocabulary: 'vocabulary-a.json',
+			domain: 'domain-a.json',
 			term: 'term-a.json',
-			domain: 'domain-a.json'
+			database: 'database-a.json',
+			entity: 'entity-a.json',
+			attribute: 'attribute-a.json',
+			table: 'table-a.json'
 		});
 	});
 
-	it('PUT should save mapping and dual-write registry', async () => {
-		vi.mocked(loadData).mockResolvedValue(createMockData());
-
+	it('PUT should save the shared bundle', async () => {
+		const mapping = {
+			vocabulary: 'vocabulary-b.json',
+			domain: 'domain-b.json',
+			term: 'term-b.json',
+			database: 'database-b.json',
+			entity: 'entity-b.json',
+			attribute: 'attribute-b.json',
+			table: 'table-b.json'
+		};
 		const response = await PUT(
 			createMockRequestEvent({
 				method: 'PUT',
 				body: {
 					filename: 'column.json',
-					mapping: {
-						table: 'table-b.json',
-						term: 'term-b.json',
-						domain: 'domain-b.json'
-					}
+					mapping
 				}
 			})
 		);
@@ -104,18 +110,11 @@ describe('Column Mapping API: /api/column/files/mapping', () => {
 
 		expect(response.status).toBe(200);
 		expect(result.success).toBe(true);
-		expect(saveData).toHaveBeenCalledWith(
-			'column',
-			expect.objectContaining({
-				mapping: {
-					table: 'table-b.json',
-					term: 'term-b.json',
-					domain: 'domain-b.json'
-				}
-			}),
-			'column.json'
-		);
-		expect(addMapping).toHaveBeenCalledTimes(3);
+		expect(saveDbDesignFileMappingBundle).toHaveBeenCalledWith({
+			currentType: 'column',
+			currentFilename: 'column.json',
+			mapping
+		});
 	});
 
 	it('PUT should return 400 on invalid mapping', async () => {
@@ -124,7 +123,10 @@ describe('Column Mapping API: /api/column/files/mapping', () => {
 				method: 'PUT',
 				body: {
 					filename: 'column.json',
-					mapping: { table: 'table-only.json', term: 'term-only.json' }
+					mapping: {
+						table: 'table-only.json',
+						term: 'term-only.json'
+					}
 				}
 			})
 		);
@@ -132,29 +134,6 @@ describe('Column Mapping API: /api/column/files/mapping', () => {
 
 		expect(response.status).toBe(400);
 		expect(result.success).toBe(false);
-	});
-
-	it('PUT should keep success when registry update fails', async () => {
-		vi.mocked(loadData).mockResolvedValue(createMockData());
-		vi.mocked(getMappingsFor).mockRejectedValue(new Error('registry failed'));
-
-		const response = await PUT(
-			createMockRequestEvent({
-				method: 'PUT',
-				body: {
-					filename: 'column.json',
-					mapping: {
-						table: 'table-x.json',
-						term: 'term-x.json',
-						domain: 'domain-x.json'
-					}
-				}
-			})
-		);
-		const result = await response.json();
-
-		expect(response.status).toBe(200);
-		expect(result.success).toBe(true);
-		expect(saveData).toHaveBeenCalled();
+		expect(saveDbDesignFileMappingBundle).not.toHaveBeenCalled();
 	});
 });

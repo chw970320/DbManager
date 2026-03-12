@@ -1,6 +1,7 @@
 /**
  * 데이터 관리 시스템을 위한 TypeScript 타입 정의
  */
+import type { SharedDataFileMapping } from './base.js';
 
 // 개별 단어 엔트리 인터페이스
 export interface VocabularyEntry {
@@ -30,10 +31,8 @@ export interface VocabularyData {
 	entries: VocabularyEntry[];
 	lastUpdated: string; // ISO 8601 날짜 문자열
 	totalCount: number;
-	/** 매핑 정보 (표준 필드) */
-	mapping?: {
-		domain: string; // 매핑된 도메인 파일명
-	};
+	/** 런타임 주입 매핑 정보 (정본은 shared-file-mappings.json) */
+	mapping?: SharedDataFileMapping;
 }
 
 // 금칙어 엔트리 인터페이스

@@ -1,64 +1,38 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import { loadData, saveData } from '$lib/registry/data-registry';
+import type { DbDesignApiResponse } from '$lib/types/database-design';
 import {
-	resolveRelatedFilenames,
-	getMappingsFor,
-	updateMapping,
-	addMapping
-} from '$lib/registry/mapping-registry';
-import type { DataType } from '$lib/types/base';
-import type { ColumnData, DbDesignApiResponse } from '$lib/types/database-design';
+	buildDbDesignStoredMapping,
+	extractDbDesignRelatedMapping,
+	getDbDesignSelectableTypes
+} from '$lib/utils/db-design-file-mapping';
+import {
+	resolveDbDesignFileMappingBundle,
+	saveDbDesignFileMappingBundle
+} from '$lib/registry/db-design-file-mapping';
 
-type ColumnFileMapping = {
-	table: string;
-	term: string;
-	domain: string;
-};
+function isValidMapping(mapping: unknown): mapping is Record<string, string> {
+	if (!mapping || typeof mapping !== 'object') return false;
+	const candidate = mapping as Record<string, unknown>;
 
-type ColumnDataWithMapping = ColumnData & {
-	mapping?: Partial<ColumnFileMapping>;
-};
-
-function readMappingOverride(mapping?: Partial<ColumnFileMapping>): Partial<Record<DataType, string>> {
-	const override: Partial<Record<DataType, string>> = {};
-	if (mapping?.table) override.table = mapping.table;
-	if (mapping?.term) override.term = mapping.term;
-	if (mapping?.domain) override.domain = mapping.domain;
-	return override;
+	return getDbDesignSelectableTypes('column').every(
+		(type) => typeof candidate[type] === 'string' && candidate[type].trim() !== ''
+	);
 }
 
-function isValidMapping(mapping: unknown): mapping is ColumnFileMapping {
-	if (!mapping || typeof mapping !== 'object') return false;
-	const candidate = mapping as Partial<ColumnFileMapping>;
-	return (
-		typeof candidate.table === 'string' &&
-		candidate.table.trim() !== '' &&
-		typeof candidate.term === 'string' &&
-		candidate.term.trim() !== '' &&
-		typeof candidate.domain === 'string' &&
-		candidate.domain.trim() !== ''
-	);
+function requiredTypesMessage() {
+	return getDbDesignSelectableTypes('column').join(', ');
 }
 
 export async function GET({ url }: RequestEvent) {
 	try {
 		const filename = url.searchParams.get('filename') || 'column.json';
-		const columnData = (await loadData('column', filename)) as ColumnDataWithMapping;
-		const relatedFiles = await resolveRelatedFilenames(
-			'column',
-			filename,
-			readMappingOverride(columnData.mapping)
-		);
+		const bundle = await resolveDbDesignFileMappingBundle('column', filename);
 
 		return json(
 			{
 				success: true,
 				data: {
-					mapping: {
-						table: relatedFiles.get('table') || 'table.json',
-						term: relatedFiles.get('term') || 'term.json',
-						domain: relatedFiles.get('domain') || 'domain.json'
-					}
+					mapping: buildDbDesignStoredMapping('column', bundle)
 				},
 				message: 'Column mapping retrieved successfully'
 			} satisfies DbDesignApiResponse,
@@ -99,83 +73,24 @@ export async function PUT({ request }: RequestEvent) {
 			return json(
 				{
 					success: false,
-					error: '매핑 정보가 올바르지 않습니다. table, term, domain이 필요합니다.',
+					error: `매핑 정보가 올바르지 않습니다. ${requiredTypesMessage()}이 필요합니다.`,
 					message: 'Invalid mapping data'
 				} satisfies DbDesignApiResponse,
 				{ status: 400 }
 			);
 		}
 
-		const columnData = (await loadData('column', filename)) as ColumnDataWithMapping;
-		columnData.mapping = {
-			table: mapping.table.trim(),
-			term: mapping.term.trim(),
-			domain: mapping.domain.trim()
-		};
-		await saveData('column', columnData as ColumnData, filename);
-
-		try {
-			const existingMappings = await getMappingsFor('column', filename);
-			const targets: Array<{
-				targetType: 'table' | 'term' | 'domain';
-				targetFilename: string;
-				mappingKey: string;
-				cardinality: 'N:1';
-				description: string;
-			}> = [
-				{
-					targetType: 'table',
-					targetFilename: mapping.table.trim(),
-					mappingKey: 'schemaName+tableEnglishName',
-					cardinality: 'N:1',
-					description: '컬럼 → 테이블 매핑'
-				},
-				{
-					targetType: 'term',
-					targetFilename: mapping.term.trim(),
-					mappingKey: 'columnEnglishName→columnName',
-					cardinality: 'N:1',
-					description: '컬럼 → 용어 매핑'
-				},
-				{
-					targetType: 'domain',
-					targetFilename: mapping.domain.trim(),
-					mappingKey: 'domainName→standardDomainName',
-					cardinality: 'N:1',
-					description: '컬럼 → 도메인 매핑'
-				}
-			];
-
-			for (const target of targets) {
-				const existing = existingMappings.find((candidate) => candidate.relatedType === target.targetType);
-				if (existing) {
-					if (existing.role === 'source') {
-						await updateMapping(existing.relation.id, { targetFilename: target.targetFilename });
-					} else {
-						await updateMapping(existing.relation.id, { sourceFilename: target.targetFilename });
-					}
-					continue;
-				}
-
-				await addMapping({
-					sourceType: 'column',
-					sourceFilename: filename,
-					targetType: target.targetType,
-					targetFilename: target.targetFilename,
-					mappingKey: target.mappingKey,
-					cardinality: target.cardinality,
-					description: target.description
-				});
-			}
-		} catch (registryError) {
-			console.warn('[듀얼 라이트] 레지스트리 갱신 실패 (파일 저장은 완료):', registryError);
-		}
+		const result = await saveDbDesignFileMappingBundle({
+			currentType: 'column',
+			currentFilename: filename,
+			mapping: extractDbDesignRelatedMapping(mapping)
+		});
 
 		return json(
 			{
 				success: true,
 				data: {
-					mapping: columnData.mapping
+					mapping: result.currentMapping
 				},
 				message: 'Column mapping saved successfully'
 			} satisfies DbDesignApiResponse,

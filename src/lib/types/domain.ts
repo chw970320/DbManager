@@ -1,6 +1,7 @@
 /**
  * 도메인 관리 시스템을 위한 TypeScript 타입 정의
  */
+import type { SharedDataFileMapping } from './base.js';
 
 // 개별 도메인 엔트리 인터페이스
 export interface DomainEntry {
@@ -29,6 +30,7 @@ export interface DomainData {
 	entries: DomainEntry[];
 	lastUpdated: string; // ISO 8601 날짜 문자열
 	totalCount: number;
+	mapping?: SharedDataFileMapping;
 }
 
 // 파일 업로드 관련 타입

@@ -104,6 +104,12 @@ export type DataTypeMap = {
 	column: ColumnData;
 };
 
+/**
+ * 런타임/API 응답용 공통 매핑 뷰
+ * 정본은 static/data/settings/shared-file-mappings.json에 저장된다.
+ */
+export type SharedDataFileMapping = Partial<Record<DataType, string>>;
+
 // ============================================================================
 // 타입별 기본 파일명
 // ============================================================================

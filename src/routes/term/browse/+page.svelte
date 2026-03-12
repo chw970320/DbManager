@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, onDestroy } from 'svelte';
+	import { onMount } from 'svelte';
 	import SearchBar from '$lib/components/SearchBar.svelte';
 	import TermTable from '$lib/components/TermTable.svelte';
 	import TermFileManager from '$lib/components/TermFileManager.svelte';
@@ -16,9 +16,10 @@
 		AutoFixSuggestion
 	} from '$lib/types/term.js';
 	import type { ApiResponse, VocabularyEntry } from '$lib/types/vocabulary.js';
+	import { resolvePreferredFilename } from '$lib/utils/file-selection';
 	import { get } from 'svelte/store';
 	import { settingsStore } from '$lib/stores/settings-store';
-	import { termStore } from '$lib/stores/term-store';
+	import { termDataStore as termStore } from '$lib/stores/unified-store';
 	import { filterTermFiles, isSystemTermFile } from '$lib/utils/file-filter';
 
 	// 상태 변수
@@ -40,9 +41,10 @@
 
 	// 파일 관리 상태
 	let isFileManagerOpen = $state(false);
-	let selectedFilename = $state('term.json');
+	let selectedFilename = $state(get(termStore).selectedFilename);
 	let fileList = $state<string[]>([]);
 	let sidebarOpen = $state(false);
+	let unsubscribe: (() => void) | undefined;
 
 	// 편집기 상태
 	let showEditor = $state(false);
@@ -94,6 +96,22 @@
 	type SortDetail = { column: string; direction: 'asc' | 'desc' | null };
 	type PageChangeDetail = { page: number };
 	type FilterDetail = { column: string; value: string | null };
+
+	function syncSelectedFilename(filename: string) {
+		selectedFilename = filename;
+		if (get(termStore).selectedFilename !== filename) {
+			termStore.set({ selectedFilename: filename });
+		}
+	}
+
+	function reconcileSelectedFilename(files: string[]) {
+		const resolvedFilename = resolvePreferredFilename({
+			files,
+			currentSelection: selectedFilename,
+			fallbackFilename: 'term.json'
+		});
+		syncSelectedFilename(resolvedFilename);
+	}
 
 	async function loadFileList() {
 		try {
@@ -161,19 +179,32 @@
 	/**
 	 * 컴포넌트 마운트 시 초기 데이터 로드
 	 */
-	onMount(async () => {
-		await loadFileList();
-		// 파일 목록 로드 후 데이터 로드
-		if (fileList.length > 0) {
-			// selectedFilename이 파일 목록에 없으면 첫 번째 파일 선택
-			if (!fileList.includes(selectedFilename)) {
-				selectedFilename = fileList[0];
+	onMount(() => {
+		void (async () => {
+			await loadFileList();
+			// 파일 목록 로드 후 데이터 로드
+			if (fileList.length > 0) {
+				reconcileSelectedFilename(fileList);
+				await loadFilterOptions();
+				await loadTermData();
+				await loadRelationshipSummary();
 			}
-			termStore.set({ selectedFilename });
-			await loadFilterOptions();
-			await loadTermData();
-			await loadRelationshipSummary();
-		}
+		})();
+
+		unsubscribe = termStore.subscribe((value) => {
+			if (selectedFilename !== value.selectedFilename) {
+				selectedFilename = value.selectedFilename;
+				currentPage = 1;
+				searchQuery = '';
+				void loadFilterOptions();
+				void loadTermData();
+				void loadRelationshipSummary();
+			}
+		});
+
+		return () => {
+			if (unsubscribe) unsubscribe();
+		};
 	});
 
 	/**
@@ -797,8 +828,7 @@
 	 */
 	async function handleFileSelect(filename: string) {
 		if (selectedFilename === filename) return;
-		selectedFilename = filename;
-		termStore.set({ selectedFilename: filename });
+		syncSelectedFilename(filename);
 		currentPage = 1;
 		searchQuery = '';
 		await loadFilterOptions();
@@ -810,9 +840,8 @@
 		// 파일 변경 시 파일 목록 다시 로드 후 데이터 새로고침
 		await loadFileList();
 		// 파일 목록 로드 후 selectedFilename 확인
-		if (fileList.length > 0 && !fileList.includes(selectedFilename)) {
-			selectedFilename = fileList[0];
-			termStore.set({ selectedFilename: fileList[0] });
+		if (fileList.length > 0) {
+			reconcileSelectedFilename(fileList);
 		}
 		await handleRefresh();
 	}

@@ -4,6 +4,36 @@
 
 ### 요약
 
+- 테스트용 전체 데이터 초기화 스크립트가 추가되었습니다.
+- 단어집/도메인/용어집/5개 정의서 JSON과 8종 공통 파일 매핑, 매핑 레지스트리를 기본 상태로 되돌릴 수 있습니다.
+
+### 상세 변경
+
+1. 테스트 데이터 초기화 스크립트 추가
+
+- 대상:
+  - `src/lib/utils/test-data-reset.js`
+  - `scripts/reset-test-data.mjs`
+  - `package.json`
+  - `README.md`
+- 변경:
+  - 8개 데이터 디렉터리의 `.json` 파일을 모두 정리한 뒤 시스템 기본 파일만 빈 데이터로 재생성
+  - `static/data/registry.json`을 기본 매핑 관계 기준으로 재생성
+  - `static/data/settings/shared-file-mappings.json`을 기본 8종 파일 번들로 재생성
+  - `static/data/settings/domain-data-type-mappings.json` 같은 비대상 설정 파일은 유지
+
+2. 회귀 테스트 보강
+
+- 대상:
+  - `src/lib/utils/test-data-reset.test.ts`
+  - `docs/tests/COMMON_UTILS_TEST_DESCRIPTION.md`
+- 변경:
+  - 사용자 JSON 삭제, 기본 파일 재생성, 레지스트리 초기화, 공통 파일 매핑 초기화, 비대상 설정 유지 동작을 임시 디렉터리 기반으로 검증
+
+## 2026-03-12
+
+### 요약
+
 - 단어집/도메인/용어/DB/엔터티/속성/테이블/컬럼 8종 파일 매핑 정본이 `static/data/settings/shared-file-mappings.json`으로 분리되었습니다.
 - 어느 파일 관리 화면에서 저장하더라도 같은 8종 연결 상태가 공유되며, DB 연관 상태 상세/정렬 화면도 동일한 파일 조합을 사용합니다.
 

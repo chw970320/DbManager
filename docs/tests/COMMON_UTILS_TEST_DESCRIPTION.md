@@ -4,15 +4,16 @@
 
 ## 테스트 현황 요약
 
-| 테스트 파일           | 테스트 수 | 상태 |
-| --------------------- | --------- | ---- |
-| `validation.test.ts`  | 34개      | 완료 |
-| `xlsx-parser.test.ts` | 10개      | 완료 |
-| `cache.test.ts`       | 13개      | 완료 |
-| `file-filter.test.ts` | 29개      | 완료 |
-| `file-selection.test.ts` | 6개    | 완료 |
-| `debounce.test.ts`    | 8개       | 완료 |
-| **합계**              | **100개** |      |
+| 테스트 파일               | 테스트 수 | 상태 |
+| ------------------------- | --------- | ---- |
+| `validation.test.ts`      | 34개      | 완료 |
+| `xlsx-parser.test.ts`     | 10개      | 완료 |
+| `cache.test.ts`           | 13개      | 완료 |
+| `file-filter.test.ts`     | 29개      | 완료 |
+| `file-selection.test.ts`  | 6개       | 완료 |
+| `test-data-reset.test.ts` | 2개       | 완료 |
+| `debounce.test.ts`        | 8개       | 완료 |
+| **합계**                  | **102개** |      |
 
 **참고**: `file-handler.test.ts`와 `database-design-handler.test.ts`는 복잡한 파일 시스템 의존성으로 인해 API 테스트에서 간접적으로 검증됩니다.
 
@@ -100,25 +101,25 @@
 
 ### validateTermColumnOrderMapping (10개)
 
-| 테스트명                                                                  | 설명                         | 검증 내용                                              |
-| ------------------------------------------------------------------------- | ---------------------------- | ------------------------------------------------------ |
-| should pass when term and column order match correctly                    | 정상 순서 매핑               | 오류 없음, mismatch 없음                               |
-| should detect order mismatch when column parts are swapped                | 순서 뒤바뀜 감지            | mismatch 2건, correctedColumnName 생성                 |
-| should detect when a valid abbreviation from vocabulary is in wrong position | 유효 약어의 위치 오류 감지 | 단어집에 있는 약어라도 위치가 다르면 오류 반환        |
-| should skip validation when term and column part counts differ            | 파트 수 불일치 스킵         | 검증 생략, 오류 없음                                   |
-| should skip validation when termName is empty                             | 빈 용어명 스킵              | 검증 생략                                              |
-| should skip validation when columnName is empty                           | 빈 컬럼명 스킵              | 검증 생략                                              |
-| should not report mismatch when column part is not in vocabulary (handled by COLUMN_NAME_MAPPING) | 미등록 컬럼 파트 예외 | 별도 매핑 검증에 위임                                  |
-| should not report mismatch when term part is not in vocabulary (handled by TERM_NAME_MAPPING) | 미등록 용어 파트 예외 | 별도 매핑 검증에 위임                                  |
-| should handle case-insensitive comparison                                 | 대소문자 무시 비교          | 소문자 컬럼명도 정상 처리                              |
-| should detect partial order mismatch (only some positions swapped)        | 부분 순서 오류 감지         | 잘못된 위치만 mismatch로 수집                          |
+| 테스트명                                                                                          | 설명                       | 검증 내용                                      |
+| ------------------------------------------------------------------------------------------------- | -------------------------- | ---------------------------------------------- |
+| should pass when term and column order match correctly                                            | 정상 순서 매핑             | 오류 없음, mismatch 없음                       |
+| should detect order mismatch when column parts are swapped                                        | 순서 뒤바뀜 감지           | mismatch 2건, correctedColumnName 생성         |
+| should detect when a valid abbreviation from vocabulary is in wrong position                      | 유효 약어의 위치 오류 감지 | 단어집에 있는 약어라도 위치가 다르면 오류 반환 |
+| should skip validation when term and column part counts differ                                    | 파트 수 불일치 스킵        | 검증 생략, 오류 없음                           |
+| should skip validation when termName is empty                                                     | 빈 용어명 스킵             | 검증 생략                                      |
+| should skip validation when columnName is empty                                                   | 빈 컬럼명 스킵             | 검증 생략                                      |
+| should not report mismatch when column part is not in vocabulary (handled by COLUMN_NAME_MAPPING) | 미등록 컬럼 파트 예외      | 별도 매핑 검증에 위임                          |
+| should not report mismatch when term part is not in vocabulary (handled by TERM_NAME_MAPPING)     | 미등록 용어 파트 예외      | 별도 매핑 검증에 위임                          |
+| should handle case-insensitive comparison                                                         | 대소문자 무시 비교         | 소문자 컬럼명도 정상 처리                      |
+| should detect partial order mismatch (only some positions swapped)                                | 부분 순서 오류 감지        | 잘못된 위치만 mismatch로 수집                  |
 
 ### generateStandardDomainName (2개)
 
-| 테스트명                                                      | 설명                     | 검증 내용                                         |
-| ------------------------------------------------------------- | ------------------------ | ------------------------------------------------- |
-| should use mapped abbreviation for registered data types      | 등록된 매핑약어 사용     | `TIMESTAMP -> TS`, `DOUBLE PRECISION -> DP` 생성  |
-| should fall back to the first character for unmapped data types | 미등록 타입 fallback   | 매핑이 없으면 첫 글자 규칙 유지                   |
+| 테스트명                                                        | 설명                 | 검증 내용                                        |
+| --------------------------------------------------------------- | -------------------- | ------------------------------------------------ |
+| should use mapped abbreviation for registered data types        | 등록된 매핑약어 사용 | `TIMESTAMP -> TS`, `DOUBLE PRECISION -> DP` 생성 |
+| should fall back to the first character for unmapped data types | 미등록 타입 fallback | 매핑이 없으면 첫 글자 규칙 유지                  |
 
 ---
 
@@ -166,14 +167,14 @@ XLSX 파일 파싱 로직을 테스트합니다.
 
 파일 업로드 관리 모달에서 대상 파일 select box 기본값을 결정하는 공통 로직을 테스트합니다.
 
-| 테스트명                                                   | 설명                          | 검증 내용                                              |
-| ---------------------------------------------------------- | ----------------------------- | ------------------------------------------------------ |
-| 선호 파일이 목록에 있으면 우선 선택한다                    | 현재 browse 파일 우선 적용    | `preferredFilename`이 존재하면 해당 파일을 반환        |
-| 선호 파일이 없으면 현재 선택을 유지한다                    | 사용자가 고른 업로드 대상 유지 | 유효한 `currentSelection`이 있으면 그대로 반환         |
-| 선호 파일과 현재 선택이 모두 없으면 첫 번째 파일을 선택한다 | 파일 목록 기본 폴백           | 목록 첫 번째 파일을 반환                               |
-| 파일이 없으면 fallback 파일을 선택한다                     | 빈 목록 처리                  | 시스템 기본 파일명 같은 `fallbackFilename`을 반환      |
-| 저장된 browse 선택 파일이 있으면 첫 번째 bksp 파일보다 우선 복원한다 | 탭 이동 후 파일 복원 회귀 방지 | 저장된 파일명이 목록에 있으면 첫 번째 `bksp.json`보다 우선 반환 |
-| 저장된 browse 선택 파일이 사라졌으면 현재 목록의 첫 번째 파일로 폴백한다 | 삭제/필터링 이후 복구         | 저장된 파일이 없을 때 현재 목록 첫 번째 파일을 반환    |
+| 테스트명                                                                 | 설명                           | 검증 내용                                                       |
+| ------------------------------------------------------------------------ | ------------------------------ | --------------------------------------------------------------- |
+| 선호 파일이 목록에 있으면 우선 선택한다                                  | 현재 browse 파일 우선 적용     | `preferredFilename`이 존재하면 해당 파일을 반환                 |
+| 선호 파일이 없으면 현재 선택을 유지한다                                  | 사용자가 고른 업로드 대상 유지 | 유효한 `currentSelection`이 있으면 그대로 반환                  |
+| 선호 파일과 현재 선택이 모두 없으면 첫 번째 파일을 선택한다              | 파일 목록 기본 폴백            | 목록 첫 번째 파일을 반환                                        |
+| 파일이 없으면 fallback 파일을 선택한다                                   | 빈 목록 처리                   | 시스템 기본 파일명 같은 `fallbackFilename`을 반환               |
+| 저장된 browse 선택 파일이 있으면 첫 번째 bksp 파일보다 우선 복원한다     | 탭 이동 후 파일 복원 회귀 방지 | 저장된 파일명이 목록에 있으면 첫 번째 `bksp.json`보다 우선 반환 |
+| 저장된 browse 선택 파일이 사라졌으면 현재 목록의 첫 번째 파일로 폴백한다 | 삭제/필터링 이후 복구          | 저장된 파일이 없을 때 현재 목록 첫 번째 파일을 반환             |
 
 ---
 
@@ -353,6 +354,19 @@ XLSX 파일 파싱 로직을 테스트합니다.
 
 ---
 
+## 7. test-data-reset.test.ts (2개)
+
+**파일 경로**: `src/lib/utils/test-data-reset.test.ts`
+
+테스트용 전체 데이터 초기화 스크립트의 기준 상태 복원 동작을 테스트합니다.
+
+| 테스트명                                                                   | 설명                      | 검증 내용                                                                                      |
+| -------------------------------------------------------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------- |
+| should remove user json files and recreate the default empty files         | 기존 데이터 초기화        | 사용자 JSON 삭제, 기본 파일 빈 데이터 재생성, registry/shared mapping 초기화, 비대상 설정 유지 |
+| should create the reset baseline even when the data directory starts empty | 빈 데이터 디렉터리 초기화 | 디렉터리가 비어 있어도 8개 기본 파일과 registry/shared mapping 기준 상태 생성                  |
+
+---
+
 ## 실행 명령어
 
 ```bash
@@ -366,6 +380,7 @@ pnpm test src/lib/utils/validation.test.ts
 pnpm test src/lib/utils/xlsx-parser.test.ts
 pnpm test src/lib/utils/cache.test.ts
 pnpm test src/lib/utils/file-filter.test.ts
+pnpm test src/lib/utils/test-data-reset.test.ts
 
 # 감시 모드
 pnpm test src/lib/utils --watch
@@ -375,11 +390,12 @@ pnpm test src/lib/utils --watch
 
 ## 변경 이력
 
-| 날짜       | 변경 내용                    |
-| ---------- | ---------------------------- |
-| 2025-01-09 | 초기 문서 작성 (82개 테스트) |
-| 2026-03-11 | validation 유틸리티 테스트 확장 (98개 테스트) |
+| 날짜       | 변경 내용                                           |
+| ---------- | --------------------------------------------------- |
+| 2025-01-09 | 초기 문서 작성 (82개 테스트)                        |
+| 2026-03-11 | validation 유틸리티 테스트 확장 (98개 테스트)       |
 | 2026-03-12 | file-selection 복원 회귀 테스트 추가 (100개 테스트) |
+| 2026-03-12 | test-data-reset 초기화 테스트 추가 (102개 테스트)   |
 
 ---
 

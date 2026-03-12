@@ -7,17 +7,17 @@
 	import DatabaseEditor from '$lib/components/DatabaseEditor.svelte';
 	import DatabaseFileManager from '$lib/components/DatabaseFileManager.svelte';
 	import type { DatabaseEntry, DbDesignApiResponse } from '$lib/types/database-design.js';
+	import type { DataType } from '$lib/types/base';
 	import { databaseDataStore as databaseStore } from '$lib/stores/unified-store';
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { filterDatabaseFiles } from '$lib/utils/file-filter';
+	import { extractDbDesignRelatedMapping } from '$lib/utils/db-design-file-mapping';
 
 	// 이벤트 상세 타입 정의
 	type SearchDetail = { query: string; field: string; exact: boolean };
 	type SortDetail = { column: string; direction: 'asc' | 'desc' | null };
 	type PageChangeDetail = { page: number };
 	type FilterDetail = { column: string; value: string | null };
-	type DefinitionType = 'database' | 'entity' | 'attribute' | 'table' | 'column';
-
 	// 상태 변수
 	let entries = $state<DatabaseEntry[]>([]);
 	let loading = $state(false);
@@ -37,7 +37,7 @@
 	let databaseFiles = $state<string[]>([]);
 	let selectedFilename = $state('database.json');
 	let showSystemFiles = $state(false);
-	let relationFileMapping = $state<Partial<Record<DefinitionType, string>>>({});
+	let relationFileMapping = $state<Partial<Record<DataType, string>>>({});
 
 	// UI 상태
 	let showEditor = $state(false);
@@ -135,18 +135,8 @@
 		}
 	}
 
-	function toDefinitionFileMapping(
-		mapping?: Record<string, unknown>
-	): Partial<Record<DefinitionType, string>> {
-		const result: Partial<Record<DefinitionType, string>> = {};
-		const types: DefinitionType[] = ['database', 'entity', 'attribute', 'table', 'column'];
-		for (const type of types) {
-			const value = mapping?.[type];
-			if (typeof value === 'string' && value.trim() !== '') {
-				result[type] = value;
-			}
-		}
-		return result;
+	function toDefinitionFileMapping(mapping?: Record<string, unknown>): Partial<Record<DataType, string>> {
+		return extractDbDesignRelatedMapping(mapping);
 	}
 
 	async function loadRelationFileMapping(filename: string, requestSeq?: number) {

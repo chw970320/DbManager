@@ -1,11 +1,19 @@
 <script lang="ts">
 	import { createEventDispatcher, untrack } from 'svelte';
 	import FileUpload from './FileUpload.svelte';
+	import DbDesignFileMappingFields from './DbDesignFileMappingFields.svelte';
 	import type { DbDesignApiResponse, DbDesignUploadResult } from '$lib/types/database-design';
 	import { columnDataStore as columnStore } from '$lib/stores/unified-store';
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { resolvePreferredFilename } from '$lib/utils/file-selection';
 	import { showConfirm } from '$lib/stores/confirm-store';
+	import {
+		createDbDesignRelatedMapping,
+		createEmptyDbDesignFileOptions,
+		getDbDesignSelectableTypes,
+		mergeDbDesignRelatedMapping,
+		type DbDesignDefinitionType
+	} from '$lib/utils/db-design-file-mapping';
 
 	interface Props {
 		isOpen?: boolean;
@@ -39,12 +47,9 @@
 	type UploadErrorDetail = { error: string };
 
 	// 매핑 관련 상태
-	let tableFiles = $state<string[]>([]);
-	let termFiles = $state<string[]>([]);
-	let domainFiles = $state<string[]>([]);
-	let selectedTableFile = $state('table.json');
-	let selectedTermFile = $state('term.json');
-	let selectedDomainFile = $state('domain.json');
+	const currentType: DbDesignDefinitionType = 'column';
+	let dbDesignFileOptions = $state(createEmptyDbDesignFileOptions(currentType));
+	let selectedDbDesignMapping = $state(createDbDesignRelatedMapping(currentType));
 	let isMappingLoading = $state(false);
 	let currentMappingFile = $state<string | null>(null);
 
@@ -101,40 +106,24 @@
 		}
 	}
 
-	async function loadTableFiles() {
-		try {
-			const response = await fetch('/api/table/files');
-			const result: DbDesignApiResponse = await response.json();
-			if (result.success && Array.isArray(result.data)) {
-				tableFiles = result.data as string[];
-			}
-		} catch (err) {
-			console.error('테이블 파일 목록 로드 실패:', err);
-		}
-	}
+	async function loadDbDesignFileOptions() {
+		const nextOptions = createEmptyDbDesignFileOptions(currentType);
 
-	async function loadTermFiles() {
-		try {
-			const response = await fetch('/api/term/files');
-			const result: DbDesignApiResponse = await response.json();
-			if (result.success && Array.isArray(result.data)) {
-				termFiles = result.data as string[];
-			}
-		} catch (err) {
-			console.error('용어 파일 목록 로드 실패:', err);
-		}
-	}
+		await Promise.all(
+			getDbDesignSelectableTypes(currentType).map(async (type) => {
+				try {
+					const response = await fetch(`/api/${type}/files`);
+					const result: DbDesignApiResponse = await response.json();
+					if (result.success && Array.isArray(result.data)) {
+						nextOptions[type] = result.data as string[];
+					}
+				} catch (err) {
+					console.error(`${type} 파일 목록 로드 실패:`, err);
+				}
+			})
+		);
 
-	async function loadDomainFiles() {
-		try {
-			const response = await fetch('/api/domain/files');
-			const result: DbDesignApiResponse = await response.json();
-			if (result.success && Array.isArray(result.data)) {
-				domainFiles = result.data as string[];
-			}
-		} catch (err) {
-			console.error('도메인 파일 목록 로드 실패:', err);
-		}
+		dbDesignFileOptions = nextOptions;
 	}
 
 	async function loadMappingInfo(filename: string) {
@@ -144,24 +133,16 @@
 				`/api/column/files/mapping?filename=${encodeURIComponent(filename)}`
 			);
 			const result: DbDesignApiResponse = await response.json();
-			const mapping = (result.data as
-				| { mapping?: { table?: string; term?: string; domain?: string } }
-				| undefined)?.mapping;
+			const mapping = (result.data as { mapping?: Record<string, unknown> } | undefined)?.mapping;
 			if (result.success && mapping) {
-				selectedTableFile = mapping.table || 'table.json';
-				selectedTermFile = mapping.term || 'term.json';
-				selectedDomainFile = mapping.domain || 'domain.json';
+				selectedDbDesignMapping = mergeDbDesignRelatedMapping(currentType, mapping);
 			} else {
-				selectedTableFile = 'table.json';
-				selectedTermFile = 'term.json';
-				selectedDomainFile = 'domain.json';
+				selectedDbDesignMapping = createDbDesignRelatedMapping(currentType);
 			}
 			currentMappingFile = filename;
 		} catch (err) {
 			console.error('매핑 정보 로드 실패:', err);
-			selectedTableFile = 'table.json';
-			selectedTermFile = 'term.json';
-			selectedDomainFile = 'domain.json';
+			selectedDbDesignMapping = createDbDesignRelatedMapping(currentType);
 			currentMappingFile = filename;
 		} finally {
 			isMappingLoading = false;
@@ -184,11 +165,7 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					filename: currentMappingFile,
-					mapping: {
-						table: selectedTableFile,
-						term: selectedTermFile,
-						domain: selectedDomainFile
-					}
+					mapping: selectedDbDesignMapping
 				})
 			});
 			const result: DbDesignApiResponse = await response.json();
@@ -448,7 +425,7 @@
 					settingsLoaded = true;
 					void (async () => {
 						await loadFiles();
-						await Promise.all([loadTableFiles(), loadTermFiles(), loadDomainFiles()]);
+						await loadDbDesignFileOptions();
 						const mappingFilename = resolvePreferredFilename({
 							files,
 							preferredFilename: currentFilename,
@@ -582,65 +559,12 @@
 								매핑 저장
 							</button>
 						</div>
-						<div class="grid gap-3 sm:grid-cols-3">
-							<div>
-								<label for="columnTableMapping" class="block text-xs font-medium text-gray-700">
-									테이블 파일
-								</label>
-								<select
-									id="columnTableMapping"
-									bind:value={selectedTableFile}
-									disabled={isMappingLoading || !currentMappingFile}
-									class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-								>
-									{#if tableFiles.length === 0}
-										<option value="table.json">table.json</option>
-									{:else}
-										{#each tableFiles as file (file)}
-											<option value={file}>{file}</option>
-										{/each}
-									{/if}
-								</select>
-							</div>
-							<div>
-								<label for="columnTermMapping" class="block text-xs font-medium text-gray-700">
-									용어 파일
-								</label>
-								<select
-									id="columnTermMapping"
-									bind:value={selectedTermFile}
-									disabled={isMappingLoading || !currentMappingFile}
-									class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-								>
-									{#if termFiles.length === 0}
-										<option value="term.json">term.json</option>
-									{:else}
-										{#each termFiles as file (file)}
-											<option value={file}>{file}</option>
-										{/each}
-									{/if}
-								</select>
-							</div>
-							<div>
-								<label for="columnDomainMapping" class="block text-xs font-medium text-gray-700">
-									도메인 파일
-								</label>
-								<select
-									id="columnDomainMapping"
-									bind:value={selectedDomainFile}
-									disabled={isMappingLoading || !currentMappingFile}
-									class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-								>
-									{#if domainFiles.length === 0}
-										<option value="domain.json">domain.json</option>
-									{:else}
-										{#each domainFiles as file (file)}
-											<option value={file}>{file}</option>
-										{/each}
-									{/if}
-								</select>
-							</div>
-						</div>
+						<DbDesignFileMappingFields
+							{currentType}
+							bind:mapping={selectedDbDesignMapping}
+							fileOptions={dbDesignFileOptions}
+							disabled={isMappingLoading || !currentMappingFile}
+						/>
 					</div>
 
 					<!-- 새 파일 생성 -->

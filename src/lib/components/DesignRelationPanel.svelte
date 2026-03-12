@@ -1,9 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { DEFAULT_FILENAMES, type DataType } from '$lib/types/base';
 	import type { DbDesignApiResponse } from '$lib/types/database-design.js';
 	import type { DesignRelationValidationResult } from '$lib/types/design-relation.js';
 
 	type DefinitionType = 'database' | 'entity' | 'attribute' | 'table' | 'column';
+	type SharedFileType = DataType;
+	type SystemFileType = 'vocabulary' | 'term' | 'domain';
 
 	type RelationValidationPayload = {
 		files: Record<DefinitionType, string | null>;
@@ -96,7 +99,7 @@
 	}: {
 		currentType: DefinitionType;
 		currentFilename: string;
-		fileMapping?: Partial<Record<DefinitionType, string>>;
+		fileMapping?: Partial<Record<SharedFileType, string>>;
 		onApplied?: () => void | Promise<void>;
 	} = $props();
 
@@ -118,7 +121,31 @@
 		table: 'Table',
 		column: 'Column'
 	};
+	const systemFileLabels: Record<SystemFileType, string> = {
+		vocabulary: '단어집',
+		term: '용어집',
+		domain: '도메인'
+	};
+	const sharedFileLabels: Record<SharedFileType, string> = {
+		...definitionLabels,
+		...systemFileLabels
+	};
 	const definitionTypes = Object.keys(definitionLabels) as DefinitionType[];
+	const sharedFileTypes: SharedFileType[] = [
+		'database',
+		'entity',
+		'attribute',
+		'table',
+		'column',
+		'vocabulary',
+		'term',
+		'domain'
+	];
+	const systemParamNames: Record<SystemFileType, 'vocabularyFilename' | 'termFilename' | 'domainFilename'> = {
+		vocabulary: 'vocabularyFilename',
+		term: 'termFilename',
+		domain: 'domainFilename'
+	};
 	type RelationId = DesignRelationValidationResult['summaries'][number]['relationId'];
 	const relationGuides: Record<RelationId, { problem: string; fix: string }> = {
 		DB_ENTITY: {
@@ -184,7 +211,30 @@
 			}
 		}
 
+		for (const type of Object.keys(systemParamNames) as SystemFileType[]) {
+			const filename = fileMapping?.[type];
+			if (filename?.trim()) {
+				params.set(systemParamNames[type], filename.trim());
+			}
+		}
+
 		return params;
+	}
+
+	function resolveDisplayFilename(type: SharedFileType): string {
+		if (type === currentType && currentFilename?.trim()) {
+			return currentFilename.trim();
+		}
+
+		if (type === 'term') {
+			return unifiedValidationData?.files.term || fileMapping?.term || DEFAULT_FILENAMES.term;
+		}
+
+		if (type === 'vocabulary' || type === 'domain') {
+			return fileMapping?.[type] || DEFAULT_FILENAMES[type];
+		}
+
+		return validationData?.files[type as DefinitionType] || fileMapping?.[type] || DEFAULT_FILENAMES[type];
 	}
 
 	async function loadValidation() {
@@ -301,6 +351,13 @@
 					body[paramName] = filename;
 				}
 			}
+			for (const type of Object.keys(systemParamNames) as SystemFileType[]) {
+				const paramName = systemParamNames[type];
+				const filename = params.get(paramName);
+				if (filename) {
+					body[paramName] = filename;
+				}
+			}
 
 			const response = await fetch('/api/alignment/sync', {
 				method: 'POST',
@@ -341,13 +398,13 @@
 	}
 
 	onMount(async () => {
-		const mappingKey = definitionTypes.map((type) => `${type}:${fileMapping?.[type] || ''}`).join('|');
+		const mappingKey = sharedFileTypes.map((type) => `${type}:${fileMapping?.[type] || ''}`).join('|');
 		lastLoadedKey = `${currentType}:${currentFilename}:${mappingKey}`;
 		await loadAllValidations();
 	});
 
 	$effect(() => {
-		const mappingKey = definitionTypes.map((type) => `${type}:${fileMapping?.[type] || ''}`).join('|');
+		const mappingKey = sharedFileTypes.map((type) => `${type}:${fileMapping?.[type] || ''}`).join('|');
 		const nextKey = `${currentType}:${currentFilename}:${mappingKey}`;
 		if (nextKey === lastLoadedKey) return;
 		lastLoadedKey = nextKey;
@@ -361,8 +418,10 @@
 <section class="mb-8 rounded-2xl border border-amber-200/70 bg-amber-50/90 p-4 shadow-sm backdrop-blur-sm">
 	<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
 		<div>
-			<h2 class="text-lg font-semibold text-amber-800">5개 정의서 연관 상태</h2>
-			<p class="text-xs text-amber-700">현재 파일 기준으로 연관 파일/정합성/자동보정을 확인합니다.</p>
+			<h2 class="text-lg font-semibold text-amber-800">8종 공통 연관 상태</h2>
+			<p class="text-xs text-amber-700">
+				현재 파일 기준으로 8종 파일 번들, 정합성, 자동보정 상태를 함께 확인합니다.
+			</p>
 		</div>
 		<button
 			type="button"
@@ -483,14 +542,17 @@
 	</div>
 
 	{#if validationData}
-		<div class="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
-			{#each (Object.keys(definitionLabels) as DefinitionType[]) as type (type)}
+		<div class="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+			{#each sharedFileTypes as type (type)}
 				<div class="rounded border border-amber-200 bg-white px-2 py-1">
 					<div class="text-[11px] font-semibold {type === currentType ? 'text-blue-700' : 'text-amber-700'}">
-						{definitionLabels[type]}
+						{sharedFileLabels[type]}
 					</div>
-					<div class="truncate text-[11px] text-gray-700" title={validationData.files[type] || '-'}>
-						{validationData.files[type] || '-'}
+					<div
+						class="truncate text-[11px] text-gray-700"
+						title={resolveDisplayFilename(type)}
+					>
+						{resolveDisplayFilename(type)}
 					</div>
 				</div>
 			{/each}

@@ -1,11 +1,21 @@
 <script lang="ts">
 	import { createEventDispatcher, untrack } from 'svelte';
+	import { get } from 'svelte/store';
 	import FileUpload from './FileUpload.svelte';
+	import DbDesignFileMappingFields from './DbDesignFileMappingFields.svelte';
 	import type { ApiResponse, UploadResult } from '$lib/types/vocabulary';
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { filterTermFiles } from '$lib/utils/file-filter';
 	import { resolvePreferredFilename } from '$lib/utils/file-selection';
 	import { showConfirm } from '$lib/stores/confirm-store';
+	import { termDataStore } from '$lib/stores/unified-store';
+	import {
+		createDbDesignRelatedMapping,
+		createEmptyDbDesignFileOptions,
+		mergeDbDesignRelatedMapping,
+		getDbDesignSelectableTypes,
+		type DbDesignDefinitionType
+	} from '$lib/utils/db-design-file-mapping';
 
 	interface Props {
 		isOpen?: boolean;
@@ -34,22 +44,16 @@
 	let showSystemFiles = $state(true);
 	let activeTab = $state<'files' | 'upload'>('files');
 
-	// 업로드 관련 상태
 	let selectedUploadFile = $state(currentFilename);
-	let uploadMode = $state<'validated-replace' | 'simple-replace'>('validated-replace');
 	type UploadSuccessDetail = { result: UploadResult };
 	type UploadErrorDetail = { error: string };
 
-	// 매핑 관련 상태
-	let vocabularyFiles = $state<string[]>([]);
-	let domainFiles = $state<string[]>([]);
-	let selectedVocabularyFile = $state('vocabulary.json');
-	let selectedDomainFile = $state('domain.json');
-	let isMappingLoading = $state(false);
+	const currentType: DbDesignDefinitionType = 'term';
+	let dbDesignFileOptions = $state(createEmptyDbDesignFileOptions(currentType));
+	let selectedDbDesignMapping = $state(createDbDesignRelatedMapping(currentType));
 	let currentMappingFile = $state<string | null>(null);
-	let syncMessage = $state('');
+	let isMappingLoading = $state(false);
 
-	// Settings store 구독
 	$effect(() => {
 		const unsubscribe = settingsStore.subscribe((settings) => {
 			showSystemFiles = settings.showTermSystemFiles;
@@ -60,7 +64,6 @@
 		return unsubscribe;
 	});
 
-	// Save settings
 	async function saveSettings(value: boolean) {
 		settingsStore.update((settings) => ({
 			...settings,
@@ -68,21 +71,17 @@
 		}));
 	}
 
-	// Check if file is system file
 	function isSystemFile(file: string): boolean {
 		return file === SYSTEM_FILE || file === 'history.json';
 	}
 
-	// Filter files based on settings
 	function filterFiles() {
 		files = filterTermFiles(allFiles, showSystemFiles);
 	}
 
-	// Load files
 	async function loadFiles() {
 		isLoading = true;
 		try {
-			// 캐시를 무시하여 최신 파일 목록을 가져옴
 			const response = await fetch('/api/term/files', {
 				cache: 'no-store',
 				headers: {
@@ -101,109 +100,116 @@
 		}
 	}
 
-	// Toggle system files visibility
-	async function toggleSystemFiles(event: Event) {
-		const target = event.target as HTMLInputElement;
-		showSystemFiles = target.checked;
-		await saveSettings(showSystemFiles);
-		filterFiles();
+	async function loadDbDesignFileOptions() {
+		const nextOptions = createEmptyDbDesignFileOptions(currentType);
+
+		await Promise.all(
+			getDbDesignSelectableTypes(currentType).map(async (type) => {
+				try {
+					const response = await fetch(`/api/${type}/files`);
+					const result: ApiResponse = await response.json();
+					if (result.success && Array.isArray(result.data)) {
+						nextOptions[type] = result.data as string[];
+					}
+				} catch (loadError) {
+					console.error(`${type} 파일 목록 로드 실패:`, loadError);
+				}
+			})
+		);
+
+		dbDesignFileOptions = nextOptions;
 	}
 
-	// Load vocabulary files for mapping
-	async function loadVocabularyFiles() {
-		try {
-			const response = await fetch('/api/vocabulary/files');
-			const result: ApiResponse = await response.json();
-			if (result.success && Array.isArray(result.data)) {
-				vocabularyFiles = result.data as string[];
-			}
-		} catch (err) {
-			console.error('단어집 파일 목록 로드 실패:', err);
-		}
-	}
-
-	// Load domain files for mapping
-	async function loadDomainFiles() {
-		try {
-			const response = await fetch('/api/domain/files');
-			const result: ApiResponse = await response.json();
-			if (result.success && Array.isArray(result.data)) {
-				domainFiles = result.data as string[];
-			}
-		} catch (err) {
-			console.error('도메인 파일 목록 로드 실패:', err);
-		}
-	}
-
-	// Load mapping info for selected term file
 	async function loadMappingInfo(filename: string) {
 		isMappingLoading = true;
 		try {
-			const response = await fetch(
-				`/api/term/files/mapping?filename=${encodeURIComponent(filename)}`
-			);
+			const response = await fetch(`/api/term/files/mapping?filename=${encodeURIComponent(filename)}`);
 			const result: ApiResponse = await response.json();
-			const data = (result as { data?: { mapping?: { vocabulary?: string; domain?: string } } })
-				.data;
-			const mapping = data?.mapping;
+			const mapping = (result.data as { mapping?: Record<string, unknown> } | undefined)?.mapping;
 			if (result.success && mapping) {
-				selectedVocabularyFile = mapping.vocabulary || 'vocabulary.json';
-				selectedDomainFile = mapping.domain || 'domain.json';
-				currentMappingFile = filename;
+				selectedDbDesignMapping = mergeDbDesignRelatedMapping(currentType, mapping);
 			} else {
-				// 기본값 설정
-				selectedVocabularyFile = 'vocabulary.json';
-				selectedDomainFile = 'domain.json';
-				currentMappingFile = filename;
+				selectedDbDesignMapping = createDbDesignRelatedMapping(currentType);
 			}
-		} catch (err) {
-			console.error('매핑 정보 로드 실패:', err);
-			selectedVocabularyFile = 'vocabulary.json';
-			selectedDomainFile = 'domain.json';
+			currentMappingFile = filename;
+		} catch (loadError) {
+			console.error('매핑 정보 로드 실패:', loadError);
+			selectedDbDesignMapping = createDbDesignRelatedMapping(currentType);
 			currentMappingFile = filename;
 		} finally {
 			isMappingLoading = false;
 		}
 	}
 
-	// Sync term mapping
+	async function saveMappingInfo(
+		filename = currentMappingFile,
+		showSuccess = true
+	): Promise<boolean> {
+		if (!filename) {
+			error = '매핑할 파일을 선택하세요.';
+			return false;
+		}
+
+		isSubmitting = true;
+		error = '';
+		if (showSuccess) {
+			successMessage = '';
+		}
+
+		try {
+			const response = await fetch('/api/term/files/mapping', {
+				method: 'PUT',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					filename,
+					mapping: selectedDbDesignMapping
+				})
+			});
+			const result: ApiResponse = await response.json();
+
+			if (!response.ok || !result.success) {
+				error = result.error || '매핑 정보 저장에 실패했습니다.';
+				return false;
+			}
+
+			currentMappingFile = filename;
+			if (showSuccess) {
+				successMessage = '매핑 정보가 저장되었습니다.';
+				dispatch('change');
+			}
+			return true;
+		} catch (_err) {
+			error = '매핑 정보 저장 중 오류가 발생했습니다.';
+			return false;
+		} finally {
+			isSubmitting = false;
+		}
+	}
+
 	async function handleTermSync() {
-		if (!currentMappingFile) {
-			syncMessage = '동기화할 용어 파일을 선택하세요.';
+		const { selectedFilename } = get(termDataStore);
+		const termFile = currentMappingFile || selectedUploadFile || currentFilename || selectedFilename;
+
+		if (!termFile) {
+			error = '용어 파일을 선택하세요.';
+			return;
+		}
+
+		const saved = await saveMappingInfo(termFile, false);
+		if (!saved) {
 			return;
 		}
 
 		isSubmitting = true;
-		syncMessage = '';
 		error = '';
 		successMessage = '';
 
 		try {
-			// 1) 매핑 저장
-			const saveResponse = await fetch('/api/term/files/mapping', {
-				method: 'PUT',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					filename: currentMappingFile,
-					mapping: {
-						vocabulary: selectedVocabularyFile,
-						domain: selectedDomainFile
-					}
-				})
-			});
-			const saveResult: ApiResponse = await saveResponse.json();
-			if (!saveResponse.ok || !saveResult.success) {
-				error = saveResult.error || '매핑 정보 저장 실패';
-				isSubmitting = false;
-				return;
-			}
-
-			// 2) 동기화 실행
 			const response = await fetch('/api/term/sync', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					filename: currentMappingFile
+					filename: termFile
 				})
 			});
 			const result: ApiResponse = await response.json();
@@ -214,10 +220,9 @@
 					matchedTerm?: number;
 					matchedColumn?: number;
 					matchedDomain?: number;
-					total?: number;
 				};
 				successMessage = `동기화 완료 (업데이트: ${data.updated || 0}, 매칭: 용어명 ${data.matchedTerm || 0}, 컬럼명 ${data.matchedColumn || 0}, 도메인 ${data.matchedDomain || 0})`;
-				syncMessage = '';
+				await loadFiles();
 				dispatch('change');
 			} else {
 				error = result.error || '동기화에 실패했습니다.';
@@ -230,7 +235,13 @@
 		}
 	}
 
-	// Create file
+	async function toggleSystemFiles(event: Event) {
+		const target = event.target as HTMLInputElement;
+		showSystemFiles = target.checked;
+		await saveSettings(showSystemFiles);
+		filterFiles();
+	}
+
 	async function handleCreate() {
 		if (!newFilename.trim()) return;
 
@@ -255,6 +266,9 @@
 				successMessage = '파일이 생성되었습니다.';
 				newFilename = '';
 				await loadFiles();
+				selectedUploadFile = filename;
+				termDataStore.set({ selectedFilename: filename });
+				await loadMappingInfo(filename);
 				dispatch('change');
 			} else {
 				error = result.error || '파일 생성 실패';
@@ -266,7 +280,6 @@
 		}
 	}
 
-	// Rename file
 	async function handleRename() {
 		if (!editingFile || !renameValue.trim()) return;
 
@@ -294,8 +307,14 @@
 
 			if (result.success) {
 				successMessage = '파일 이름이 변경되었습니다.';
+				const wasCurrentFile = currentMappingFile === editingFile || selectedUploadFile === editingFile;
 				editingFile = null;
 				await loadFiles();
+				if (wasCurrentFile) {
+					selectedUploadFile = filename;
+					termDataStore.set({ selectedFilename: filename });
+					await loadMappingInfo(filename);
+				}
 				dispatch('change');
 			} else {
 				error = result.error || '파일 이름 변경 실패';
@@ -307,9 +326,13 @@
 		}
 	}
 
-	// Delete file
 	async function handleDelete(file: string) {
-		const confirmed = await showConfirm({ title: '확인', message: '파일 삭제 전 백업을 권장합니다. 정말 삭제하시겠습니까?', confirmText: '삭제', variant: 'danger' });
+		const confirmed = await showConfirm({
+			title: '확인',
+			message: '파일 삭제 전 백업을 권장합니다. 정말 삭제하시겠습니까?',
+			confirmText: '삭제',
+			variant: 'danger'
+		});
 		if (!confirmed) {
 			return;
 		}
@@ -336,6 +359,18 @@
 					editingFile = null;
 				}
 				await loadFiles();
+
+				if (currentMappingFile === file || selectedUploadFile === file) {
+					const fallback = resolvePreferredFilename({
+						files,
+						preferredFilename: currentFilename,
+						fallbackFilename: SYSTEM_FILE
+					});
+					selectedUploadFile = fallback;
+					termDataStore.set({ selectedFilename: fallback });
+					await loadMappingInfo(fallback);
+				}
+
 				dispatch('change');
 			} else {
 				error = result.error || '파일 삭제 실패';
@@ -357,6 +392,13 @@
 		renameValue = '';
 	}
 
+	function handleFileSelect(file: string) {
+		selectedUploadFile = file;
+		termDataStore.set({ selectedFilename: file });
+		void loadMappingInfo(file);
+		dispatch('change');
+	}
+
 	function handleClose() {
 		error = '';
 		successMessage = '';
@@ -370,7 +412,6 @@
 		dispatch('close');
 	}
 
-	// 업로드 이벤트 핸들러
 	function handleUploadStart() {
 		error = '';
 		successMessage = '';
@@ -379,22 +420,19 @@
 	async function handleUploadSuccess(detail: UploadSuccessDetail) {
 		const { result } = detail;
 		successMessage = result.message || '업로드가 완료되었습니다.';
-		// 파일 목록 새로고침 (약간의 지연을 두어 서버가 파일을 완전히 처리할 시간을 줌)
 		await new Promise((resolve) => setTimeout(resolve, 300));
 		await loadFiles();
 		dispatch('change');
 	}
 
 	function handleUploadError(detail: UploadErrorDetail) {
-		const { error: uploadError } = detail;
-		error = uploadError;
+		error = detail.error;
 	}
 
 	function handleUploadComplete() {
-		// 업로드 완료 후 처리 (필요시)
+		// no-op
 	}
 
-	// 현재 browse 페이지에서 선택한 파일을 업로드 대상 기본값으로 유지
 	$effect(() => {
 		if (!isOpen) {
 			return;
@@ -415,31 +453,28 @@
 
 	$effect(() => {
 		if (isOpen) {
-			// 초기 설정 로드 및 파일 목록 로드
 			let settingsLoaded = false;
 			const unsubscribe = settingsStore.subscribe((settings) => {
 				showSystemFiles = settings.showTermSystemFiles;
-				// 설정이 로드된 후 파일 목록 로드 (한 번만 실행)
 				if (!settingsLoaded) {
 					settingsLoaded = true;
-					loadFiles();
-					loadVocabularyFiles();
-					loadDomainFiles();
-					// 선택된 파일의 매핑 정보 로드
-					loadMappingInfo(currentFilename);
+					void (async () => {
+						await loadFiles();
+						await loadDbDesignFileOptions();
+						const mappingFilename = resolvePreferredFilename({
+							files,
+							preferredFilename: currentFilename || get(termDataStore).selectedFilename,
+							currentSelection: selectedUploadFile,
+							fallbackFilename: SYSTEM_FILE
+						});
+						selectedUploadFile = mappingFilename;
+						await loadMappingInfo(mappingFilename);
+					})();
 				} else if (allFiles.length > 0) {
-					// 설정 변경 시 필터링만 재실행
 					filterFiles();
 				}
 			});
 			return unsubscribe;
-		}
-	});
-
-	// browse 페이지의 현재 선택 파일이 바뀌면 매핑 정보도 동일하게 갱신
-	$effect(() => {
-		if (isOpen && currentFilename) {
-			loadMappingInfo(currentFilename);
 		}
 	});
 
@@ -449,7 +484,12 @@
 		}
 	});
 
-	// Clear messages after 3 seconds
+	$effect(() => {
+		if (isOpen && selectedUploadFile && selectedUploadFile !== currentMappingFile) {
+			void loadMappingInfo(selectedUploadFile);
+		}
+	});
+
 	$effect(() => {
 		if (successMessage) {
 			const timer = setTimeout(() => {
@@ -458,6 +498,7 @@
 			return () => clearTimeout(timer);
 		}
 	});
+
 	$effect(() => {
 		if (warningMessage) {
 			const timer = setTimeout(() => {
@@ -486,7 +527,6 @@
 		tabindex="-1"
 	>
 		<div class="mx-4 flex max-h-[90vh] w-full max-w-3xl flex-col rounded-lg bg-white shadow-xl">
-			<!-- 헤더 -->
 			<div class="flex items-center justify-between border-b px-6 py-4">
 				<h2 class="text-xl font-bold text-gray-900">용어 파일 관리</h2>
 				<button onclick={handleClose} class="text-gray-600 hover:text-gray-600" aria-label="Close">
@@ -501,7 +541,6 @@
 				</button>
 			</div>
 
-			<!-- 탭 네비게이션 -->
 			<div class="flex border-b">
 				<button
 					onclick={() => (activeTab = 'files')}
@@ -521,7 +560,6 @@
 				</button>
 			</div>
 
-			<!-- 메시지 영역 -->
 			{#if successMessage}
 				<div class="mx-6 mt-4 rounded-md bg-green-50 p-3 text-sm text-green-800">
 					{successMessage}
@@ -536,25 +574,29 @@
 				<div class="mx-6 mt-4 rounded-md bg-red-50 p-3 text-sm text-red-800">{error}</div>
 			{/if}
 
-			<!-- 탭 컨텐츠 -->
 			<div class="flex-1 overflow-y-auto px-6 py-4">
 				{#if activeTab === 'files'}
-					<!-- 파일 목록 탭 -->
 					<div class="space-y-6">
-						<!-- 매핑 설정 -->
 						<div class="rounded-lg border border-gray-200 bg-white/70 p-4">
 							<div class="mb-3 flex items-center justify-between">
 								<div>
-									<h3 class="text-sm font-semibold text-gray-800">매핑 설정</h3>
+									<h3 class="text-sm font-semibold text-gray-800">파일 매핑 설정</h3>
 									<p class="text-xs text-gray-500">
 										{#if currentMappingFile}
 											현재 파일: {currentMappingFile}
 										{:else}
-											용어 파일을 선택하세요
+											매핑할 파일을 선택하세요
 										{/if}
 									</p>
 								</div>
 								<div class="flex gap-2">
+									<button
+										onclick={() => saveMappingInfo()}
+										class="rounded-md bg-slate-600 px-3 py-2 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+										disabled={isSubmitting || isMappingLoading || !currentMappingFile}
+									>
+										매핑 저장
+									</button>
 									<button
 										onclick={handleTermSync}
 										class="rounded-md bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
@@ -564,52 +606,14 @@
 									</button>
 								</div>
 							</div>
-							<div class="space-y-3">
-								<div>
-									<label class="block text-xs font-medium text-gray-700" for="vocabularyFileSelect">
-										단어집 파일
-									</label>
-									<select
-										id="vocabularyFileSelect"
-										class="mt-1 w-full rounded-md border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
-										disabled={isMappingLoading || !currentMappingFile}
-										bind:value={selectedVocabularyFile}
-									>
-										{#if vocabularyFiles.length === 0}
-											<option value="vocabulary.json">vocabulary.json</option>
-										{:else}
-											{#each vocabularyFiles as file (file)}
-												<option value={file}>{file}</option>
-											{/each}
-										{/if}
-									</select>
-								</div>
-								<div>
-									<label class="block text-xs font-medium text-gray-700" for="domainFileSelect">
-										도메인 파일
-									</label>
-									<select
-										id="domainFileSelect"
-										class="mt-1 w-full rounded-md border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500"
-										disabled={isMappingLoading || !currentMappingFile}
-										bind:value={selectedDomainFile}
-									>
-										{#if domainFiles.length === 0}
-											<option value="domain.json">domain.json</option>
-										{:else}
-											{#each domainFiles as file (file)}
-												<option value={file}>{file}</option>
-											{/each}
-										{/if}
-									</select>
-								</div>
-								{#if syncMessage}
-									<p class="text-xs text-gray-600">{syncMessage}</p>
-								{/if}
-							</div>
+							<DbDesignFileMappingFields
+								{currentType}
+								bind:mapping={selectedDbDesignMapping}
+								fileOptions={dbDesignFileOptions}
+								disabled={isMappingLoading || !currentMappingFile}
+							/>
 						</div>
 
-						<!-- Create New File -->
 						<div class="rounded-lg bg-gray-50 p-4">
 							<h3 class="mb-3 text-sm font-medium text-gray-700">새 파일 생성</h3>
 							<div class="flex gap-2">
@@ -635,7 +639,6 @@
 							</div>
 						</div>
 
-						<!-- File List -->
 						<div>
 							<div class="mb-3 flex items-center justify-between">
 								<h3 class="text-sm font-medium text-gray-700">파일 목록</h3>
@@ -715,7 +718,11 @@
 													</div>
 												{:else}
 													<div class="flex flex-1 items-center gap-3">
-														<div class="flex flex-1 items-center gap-2">
+														<button
+															type="button"
+															onclick={() => handleFileSelect(file)}
+															class="flex flex-1 items-center gap-2 text-left"
+														>
 															<span class="text-sm font-medium text-gray-700">{file}</span>
 															{#if isSystemFile(file)}
 																<span
@@ -724,7 +731,7 @@
 																	시스템 파일
 																</span>
 															{/if}
-														</div>
+														</button>
 														<button
 															onclick={() => startEditing(file)}
 															class="rounded-md p-1.5 text-gray-600 hover:bg-gray-100 hover:text-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
@@ -775,9 +782,7 @@
 						</div>
 					</div>
 				{:else}
-					<!-- 파일 업로드 탭 -->
 					<div class="space-y-6">
-						<!-- 대상 파일 선택 -->
 						<div>
 							<label for="uploadTargetFile" class="mb-2 block text-sm font-medium text-gray-700">
 								대상 파일 선택
@@ -798,7 +803,6 @@
 							</select>
 						</div>
 
-						<!-- FileUpload 컴포넌트 -->
 						<div class="rounded-lg border border-gray-200 bg-gray-50 p-4">
 							<FileUpload
 								disabled={isSubmitting || files.length === 0}
@@ -816,7 +820,6 @@
 				{/if}
 			</div>
 
-			<!-- 푸터 -->
 			<div class="flex justify-end border-t px-6 py-4">
 				<button
 					onclick={handleClose}

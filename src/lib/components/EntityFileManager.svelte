@@ -1,11 +1,19 @@
 <script lang="ts">
 	import { createEventDispatcher, untrack } from 'svelte';
 	import FileUpload from './FileUpload.svelte';
+	import DbDesignFileMappingFields from './DbDesignFileMappingFields.svelte';
 	import type { DbDesignApiResponse, DbDesignUploadResult } from '$lib/types/database-design';
 	import { entityDataStore as entityStore } from '$lib/stores/unified-store';
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { resolvePreferredFilename } from '$lib/utils/file-selection';
 	import { showConfirm } from '$lib/stores/confirm-store';
+	import {
+		createDbDesignRelatedMapping,
+		createEmptyDbDesignFileOptions,
+		mergeDbDesignRelatedMapping,
+		getDbDesignSelectableTypes,
+		type DbDesignDefinitionType
+	} from '$lib/utils/db-design-file-mapping';
 
 	interface Props {
 		isOpen?: boolean;
@@ -39,10 +47,9 @@
 	type UploadErrorDetail = { error: string };
 
 	// 매핑 관련 상태
-	let databaseFiles = $state<string[]>([]);
-	let attributeFiles = $state<string[]>([]);
-	let selectedDatabaseFile = $state('database.json');
-	let selectedAttributeFile = $state('attribute.json');
+	const currentType: DbDesignDefinitionType = 'entity';
+	let dbDesignFileOptions = $state(createEmptyDbDesignFileOptions(currentType));
+	let selectedDbDesignMapping = $state(createDbDesignRelatedMapping(currentType));
 	let isMappingLoading = $state(false);
 	let currentMappingFile = $state<string | null>(null);
 
@@ -99,28 +106,24 @@
 		}
 	}
 
-	async function loadDatabaseFiles() {
-		try {
-			const response = await fetch('/api/database/files');
-			const result: DbDesignApiResponse = await response.json();
-			if (result.success && Array.isArray(result.data)) {
-				databaseFiles = result.data as string[];
-			}
-		} catch (err) {
-			console.error('데이터베이스 파일 목록 로드 실패:', err);
-		}
-	}
+	async function loadDbDesignFileOptions() {
+		const nextOptions = createEmptyDbDesignFileOptions(currentType);
 
-	async function loadAttributeFiles() {
-		try {
-			const response = await fetch('/api/attribute/files');
-			const result: DbDesignApiResponse = await response.json();
-			if (result.success && Array.isArray(result.data)) {
-				attributeFiles = result.data as string[];
-			}
-		} catch (err) {
-			console.error('속성 파일 목록 로드 실패:', err);
-		}
+		await Promise.all(
+			getDbDesignSelectableTypes(currentType).map(async (type) => {
+				try {
+					const response = await fetch(`/api/${type}/files`);
+					const result: DbDesignApiResponse = await response.json();
+					if (result.success && Array.isArray(result.data)) {
+						nextOptions[type] = result.data as string[];
+					}
+				} catch (err) {
+					console.error(`${type} 파일 목록 로드 실패:`, err);
+				}
+			})
+		);
+
+		dbDesignFileOptions = nextOptions;
 	}
 
 	async function loadMappingInfo(filename: string) {
@@ -130,21 +133,16 @@
 				`/api/entity/files/mapping?filename=${encodeURIComponent(filename)}`
 			);
 			const result: DbDesignApiResponse = await response.json();
-			const mapping = (result.data as
-				| { mapping?: { database?: string; attribute?: string } }
-				| undefined)?.mapping;
+			const mapping = (result.data as { mapping?: Record<string, unknown> } | undefined)?.mapping;
 			if (result.success && mapping) {
-				selectedDatabaseFile = mapping.database || 'database.json';
-				selectedAttributeFile = mapping.attribute || 'attribute.json';
+				selectedDbDesignMapping = mergeDbDesignRelatedMapping(currentType, mapping);
 			} else {
-				selectedDatabaseFile = 'database.json';
-				selectedAttributeFile = 'attribute.json';
+				selectedDbDesignMapping = createDbDesignRelatedMapping(currentType);
 			}
 			currentMappingFile = filename;
 		} catch (err) {
 			console.error('매핑 정보 로드 실패:', err);
-			selectedDatabaseFile = 'database.json';
-			selectedAttributeFile = 'attribute.json';
+			selectedDbDesignMapping = createDbDesignRelatedMapping(currentType);
 			currentMappingFile = filename;
 		} finally {
 			isMappingLoading = false;
@@ -167,10 +165,7 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					filename: currentMappingFile,
-					mapping: {
-						database: selectedDatabaseFile,
-						attribute: selectedAttributeFile
-					}
+					mapping: selectedDbDesignMapping
 				})
 			});
 			const result: DbDesignApiResponse = await response.json();
@@ -430,7 +425,7 @@
 					settingsLoaded = true;
 					void (async () => {
 						await loadFiles();
-						await Promise.all([loadDatabaseFiles(), loadAttributeFiles()]);
+						await loadDbDesignFileOptions();
 						const mappingFilename = resolvePreferredFilename({
 							files,
 							preferredFilename: currentFilename,
@@ -564,46 +559,12 @@
 								매핑 저장
 							</button>
 						</div>
-						<div class="grid gap-3 sm:grid-cols-2">
-							<div>
-								<label for="entityDatabaseMapping" class="block text-xs font-medium text-gray-700">
-									데이터베이스 파일
-								</label>
-								<select
-									id="entityDatabaseMapping"
-									bind:value={selectedDatabaseFile}
-									disabled={isMappingLoading || !currentMappingFile}
-									class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-								>
-									{#if databaseFiles.length === 0}
-										<option value="database.json">database.json</option>
-									{:else}
-										{#each databaseFiles as file (file)}
-											<option value={file}>{file}</option>
-										{/each}
-									{/if}
-								</select>
-							</div>
-							<div>
-								<label for="entityAttributeMapping" class="block text-xs font-medium text-gray-700">
-									속성 파일
-								</label>
-								<select
-									id="entityAttributeMapping"
-									bind:value={selectedAttributeFile}
-									disabled={isMappingLoading || !currentMappingFile}
-									class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-								>
-									{#if attributeFiles.length === 0}
-										<option value="attribute.json">attribute.json</option>
-									{:else}
-										{#each attributeFiles as file (file)}
-											<option value={file}>{file}</option>
-										{/each}
-									{/if}
-								</select>
-							</div>
-						</div>
+						<DbDesignFileMappingFields
+							{currentType}
+							bind:mapping={selectedDbDesignMapping}
+							fileOptions={dbDesignFileOptions}
+							disabled={isMappingLoading || !currentMappingFile}
+						/>
 					</div>
 
 					<!-- 새 파일 생성 -->

@@ -10,9 +10,9 @@
 | `xlsx-parser.test.ts` | 10개      | 완료 |
 | `cache.test.ts`       | 13개      | 완료 |
 | `file-filter.test.ts` | 29개      | 완료 |
-| `file-selection.test.ts` | 4개    | 완료 |
+| `file-selection.test.ts` | 6개    | 완료 |
 | `debounce.test.ts`    | 8개       | 완료 |
-| **합계**              | **98개**  |      |
+| **합계**              | **100개** |      |
 
 **참고**: `file-handler.test.ts`와 `database-design-handler.test.ts`는 복잡한 파일 시스템 의존성으로 인해 API 테스트에서 간접적으로 검증됩니다.
 
@@ -160,7 +160,7 @@ XLSX 파일 파싱 로직을 테스트합니다.
 
 ---
 
-## 3. file-selection.test.ts (4개)
+## 3. file-selection.test.ts (6개)
 
 **파일 경로**: `src/lib/utils/file-selection.test.ts`
 
@@ -172,6 +172,8 @@ XLSX 파일 파싱 로직을 테스트합니다.
 | 선호 파일이 없으면 현재 선택을 유지한다                    | 사용자가 고른 업로드 대상 유지 | 유효한 `currentSelection`이 있으면 그대로 반환         |
 | 선호 파일과 현재 선택이 모두 없으면 첫 번째 파일을 선택한다 | 파일 목록 기본 폴백           | 목록 첫 번째 파일을 반환                               |
 | 파일이 없으면 fallback 파일을 선택한다                     | 빈 목록 처리                  | 시스템 기본 파일명 같은 `fallbackFilename`을 반환      |
+| 저장된 browse 선택 파일이 있으면 첫 번째 bksp 파일보다 우선 복원한다 | 탭 이동 후 파일 복원 회귀 방지 | 저장된 파일명이 목록에 있으면 첫 번째 `bksp.json`보다 우선 반환 |
+| 저장된 browse 선택 파일이 사라졌으면 현재 목록의 첫 번째 파일로 폴백한다 | 삭제/필터링 이후 복구         | 저장된 파일이 없을 때 현재 목록 첫 번째 파일을 반환    |
 
 ---
 
@@ -377,6 +379,7 @@ pnpm test src/lib/utils --watch
 | ---------- | ---------------------------- |
 | 2025-01-09 | 초기 문서 작성 (82개 테스트) |
 | 2026-03-11 | validation 유틸리티 테스트 확장 (98개 테스트) |
+| 2026-03-12 | file-selection 복원 회귀 테스트 추가 (100개 테스트) |
 
 ---
 

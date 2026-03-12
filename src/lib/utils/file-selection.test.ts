@@ -45,4 +45,24 @@ describe('resolvePreferredFilename', () => {
 			})
 		).toBe('default.json');
 	});
+
+	it('저장된 browse 선택 파일이 있으면 첫 번째 bksp 파일보다 우선 복원한다', () => {
+		expect(
+			resolvePreferredFilename({
+				files: ['bksp.json', 'custom-domain.json', 'domain.json'],
+				currentSelection: 'custom-domain.json',
+				fallbackFilename: 'domain.json'
+			})
+		).toBe('custom-domain.json');
+	});
+
+	it('저장된 browse 선택 파일이 사라졌으면 현재 목록의 첫 번째 파일로 폴백한다', () => {
+		expect(
+			resolvePreferredFilename({
+				files: ['bksp.json', 'custom-term.json'],
+				currentSelection: 'missing-term.json',
+				fallbackFilename: 'term.json'
+			})
+		).toBe('bksp.json');
+	});
 });

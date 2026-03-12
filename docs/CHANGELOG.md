@@ -1,5 +1,80 @@
 # 변경 이력
 
+## 2026-03-12
+
+### 요약
+
+- 도메인/용어 browse 페이지가 탭 이동 후에도 마지막으로 선택한 파일을 유지하도록 복원 로직이 정리되었습니다.
+- 저장된 선택 파일이 목록에 남아 있으면 첫 번째 파일(`bksp.json` 등)로 덮어쓰지 않도록 공통 선택 규칙을 다시 적용했습니다.
+
+### 상세 변경
+
+1. 도메인/용어 현재 파일 복원 정리
+
+- 대상:
+  - `src/routes/domain/browse/+page.svelte`
+  - `src/routes/term/browse/+page.svelte`
+- 변경:
+  - 페이지 초기 `selectedFilename`을 각 스토어의 현재 값으로 시작
+  - 마운트 시 파일 목록과 저장된 선택 파일을 reconcile 한 뒤에만 폴백
+  - 스토어 구독을 추가해 재진입 시 마지막 선택 파일이 유지되도록 정리
+
+2. 파일 선택 복원 회귀 테스트 보강
+
+- 대상:
+  - `src/lib/utils/file-selection.test.ts`
+  - `docs/tests/COMMON_UTILS_TEST_DESCRIPTION.md`
+- 변경:
+  - 저장된 선택 파일이 있을 때 `bksp.json`보다 우선 복원되는 케이스 추가
+  - 저장된 파일이 사라졌을 때 현재 목록 기준으로 폴백하는 케이스 추가
+
+## 2026-03-12
+
+### 요약
+
+- 내부에서 더 이상 쓰지 않는 스토어 하위 호환 래퍼를 제거하고 `unified-store`로 정리했습니다.
+- `VocabularyData.mappedDomainFile` 호환 필드를 제거하고 단어집 매핑은 `mapping.domain`만 사용하도록 정리했습니다.
+- 미사용 단일 정렬 테이블 타입/헬퍼와 구 시스템 파일 설정 래퍼를 제거했습니다.
+
+### 상세 변경
+
+1. 스토어 호환 래퍼 제거
+
+- 대상:
+  - `src/lib/stores/database-design-store.ts`
+  - `src/lib/stores/domain-store.ts`
+  - `src/lib/stores/term-store.ts`
+  - `src/lib/stores/vocabulary-store.ts`
+  - 관련 browse 페이지 / FileManager / TermEditor
+- 변경:
+  - 내부 import를 `src/lib/stores/unified-store.ts` 기준으로 교체
+  - 단어집-도메인 선택 동기화는 `vocabularyDataStore`, `domainDataStore` 분리 사용으로 정리
+
+2. 단어집 레거시 매핑 필드 제거
+
+- 대상:
+  - `src/lib/types/vocabulary.ts`
+  - `src/lib/utils/type-guards.ts`
+  - `src/routes/api/vocabulary/files/mapping/+server.ts`
+  - `src/routes/api/vocabulary/sync-domain/+server.ts`
+  - `docs/specs/data-model.md`
+- 변경:
+  - `VocabularyData.mappedDomainFile` 정의 제거
+  - 저장/동기화 로직과 문서를 `mapping.domain` 기준으로 정리
+
+3. 미사용 호환 유틸리티 제거
+
+- 대상:
+  - `src/lib/utils/settings.ts`
+  - `src/lib/components/VocabularyTable.svelte`
+  - `src/lib/components/DomainTable.svelte`
+  - `src/lib/components/TermTable.svelte`
+  - `src/lib/composables/use-data-table.ts`
+  - `src/lib/types/table.ts`
+- 변경:
+  - 더 이상 호출되지 않는 `getShowSystemFiles`, `setShowSystemFiles` 제거
+  - 현재 browse 흐름에서 사용되지 않는 단일 정렬 props/type/helper 제거
+
 ## 2026-03-11
 
 ### 요약

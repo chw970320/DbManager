@@ -4,6 +4,59 @@
 
 /* 기본 스타일 */
 @layer base {
+	:root {
+		--color-brand: 29 78 216; /* #1d4ed8 */
+		--color-brand-light: 59 130 246; /* #3b82f6 */
+		--color-brand-dark: 30 64 175; /* #1e40af */
+		--color-brand-50: 239 246 255; /* #eff6ff */
+		--color-brand-100: 219 234 254; /* #dbeafe */
+
+		--color-surface: 255 255 255; /* #ffffff */
+		--color-surface-muted: 249 250 251; /* #f9fafb */
+		--color-surface-raised: 243 244 246; /* #f3f4f6 */
+
+		--color-content: 17 24 39; /* #111827 */
+		--color-content-secondary: 55 65 81; /* #374151 */
+		--color-content-muted: 75 85 99; /* #4b5563 - 접근성 개선: 명도 대비를 위해 어둡게 변경 (기존 #6b7280) */
+		--color-content-subtle: 156 163 175; /* #9ca3af */
+
+		--color-border: 209 213 219; /* #d1d5db */
+		--color-border-strong: 156 163 175; /* #9ca3af */
+		--color-border-focus: 37 99 235; /* #2563eb */
+
+		--color-status-success: 22 101 52;
+		--color-status-success-bg: 220 252 231;
+		--color-status-success-border: 187 247 208;
+		
+		--color-status-error: 153 27 27;
+		--color-status-error-bg: 254 226 226;
+		--color-status-error-border: 254 202 202;
+		
+		--color-status-warning: 154 52 18;
+		--color-status-warning-bg: 255 237 213;
+		--color-status-warning-border: 254 215 170;
+		
+		--color-status-info: 30 64 175;
+		--color-status-info-bg: 219 234 254;
+		--color-status-info-border: 191 219 254;
+	}
+
+	/* 다크모드 대응 (향후 테마 전환 기능 적용 시 자동 반영) */
+	.dark {
+		--color-surface: 17 24 39;
+		--color-surface-muted: 31 41 55;
+		--color-surface-raised: 55 65 81;
+
+		--color-content: 243 244 246;
+		--color-content-secondary: 209 213 219;
+		--color-content-muted: 156 163 175;
+		--color-content-subtle: 107 114 128;
+
+		--color-border: 55 65 81;
+		--color-border-strong: 75 85 99;
+		--color-border-focus: 59 130 246;
+	}
+
 	html {
 		font-family:
 			'Inter',

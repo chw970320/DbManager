@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 export default {
 	content: ['./src/**/*.{html,js,svelte,ts}', './src/app.html'],
+	darkMode: 'class',
 	safelist: [
 		// 중복 유형별 배경색 클래스
 		'bg-red-100', // 표준단어명 중복
@@ -12,42 +13,52 @@ export default {
 		extend: {
 			colors: {
 				brand: {
-					DEFAULT: '#1d4ed8',
-					light: '#3b82f6',
-					dark: '#1e40af',
-					50: '#eff6ff',
-					100: '#dbeafe'
+					DEFAULT: 'rgb(var(--color-brand) / <alpha-value>)',
+					light: 'rgb(var(--color-brand-light) / <alpha-value>)',
+					dark: 'rgb(var(--color-brand-dark) / <alpha-value>)',
+					50: 'rgb(var(--color-brand-50) / <alpha-value>)',
+					100: 'rgb(var(--color-brand-100) / <alpha-value>)'
 				},
 				surface: {
-					DEFAULT: '#ffffff',
-					muted: '#f9fafb',
-					raised: '#f3f4f6'
+					DEFAULT: 'rgb(var(--color-surface) / <alpha-value>)',
+					muted: 'rgb(var(--color-surface-muted) / <alpha-value>)',
+					raised: 'rgb(var(--color-surface-raised) / <alpha-value>)'
 				},
 				content: {
-					DEFAULT: '#111827',
-					secondary: '#374151',
-					muted: '#6b7280',
-					subtle: '#9ca3af'
+					DEFAULT: 'rgb(var(--color-content) / <alpha-value>)',
+					secondary: 'rgb(var(--color-content-secondary) / <alpha-value>)',
+					muted: 'rgb(var(--color-content-muted) / <alpha-value>)',
+					subtle: 'rgb(var(--color-content-subtle) / <alpha-value>)'
 				},
 				border: {
-					DEFAULT: '#d1d5db',
-					strong: '#9ca3af',
-					focus: '#2563eb'
+					DEFAULT: 'rgb(var(--color-border) / <alpha-value>)',
+					strong: 'rgb(var(--color-border-strong) / <alpha-value>)',
+					focus: 'rgb(var(--color-border-focus) / <alpha-value>)'
 				},
 				status: {
-					success: '#166534',
-					'success-bg': '#dcfce7',
-					'success-border': '#bbf7d0',
-					error: '#991b1b',
-					'error-bg': '#fee2e2',
-					'error-border': '#fecaca',
-					warning: '#9a3412',
-					'warning-bg': '#ffedd5',
-					'warning-border': '#fed7aa',
-					info: '#1e40af',
-					'info-bg': '#dbeafe',
-					'info-border': '#bfdbfe'
+					success: 'rgb(var(--color-status-success) / <alpha-value>)',
+					'success-bg': 'rgb(var(--color-status-success-bg) / <alpha-value>)',
+					'success-border': 'rgb(var(--color-status-success-border) / <alpha-value>)',
+					error: 'rgb(var(--color-status-error) / <alpha-value>)',
+					'error-bg': 'rgb(var(--color-status-error-bg) / <alpha-value>)',
+					'error-border': 'rgb(var(--color-status-error-border) / <alpha-value>)',
+					warning: 'rgb(var(--color-status-warning) / <alpha-value>)',
+					'warning-bg': 'rgb(var(--color-status-warning-bg) / <alpha-value>)',
+					'warning-border': 'rgb(var(--color-status-warning-border) / <alpha-value>)',
+					info: 'rgb(var(--color-status-info) / <alpha-value>)',
+					'info-bg': 'rgb(var(--color-status-info-bg) / <alpha-value>)',
+					'info-border': 'rgb(var(--color-status-info-border) / <alpha-value>)'
 				}
+			},
+			zIndex: {
+				'dropdown': '100',
+				'sticky': '200',
+				'fixed': '300',
+				'modal-backdrop': '400',
+				'modal': '500',
+				'popover': '600',
+				'toast': '700',
+				'tooltip': '800'
 			},
 			keyframes: {
 				'fade-in-up': {

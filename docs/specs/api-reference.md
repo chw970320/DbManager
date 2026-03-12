@@ -13,6 +13,7 @@
 - [Attribute API](#attribute-api)
 - [Table API](#table-api)
 - [Column API](#column-api)
+- [Data Source API](#data-source-api)
 - [ERD API](#erd-api)
 - [Forbidden Words API](#forbidden-words-api)
 - [Search API](#search-api)
@@ -91,6 +92,13 @@ http://localhost:5173/api
 ---
 
 ## 최근 변경 사항 (2026-03-12)
+
+- `GET/POST/PUT/DELETE /api/data-sources`
+  - 내부 관리자용 PostgreSQL 데이터 소스 연결 정의 CRUD를 제공합니다.
+  - 응답 요약에는 비밀번호 원문 대신 `config.hasPassword`만 노출됩니다.
+- `POST /api/data-sources/test`
+  - 저장된 연결 ID 기반 테스트와 저장 전 직접 테스트를 제공합니다.
+  - 편집 중 `id + config`를 함께 보내면, 비밀번호 공란일 때 저장된 비밀번호를 재사용해 테스트할 수 있습니다.
 
 - `GET/PUT /api/vocabulary/files/mapping`
 - `GET/PUT /api/domain/files/mapping`
@@ -1104,8 +1112,8 @@ const data = await response.json();
 
 ```typescript
 {
-  dataType: string;      // 필수
-  abbreviation: string;  // 필수
+	dataType: string; // 필수
+	abbreviation: string; // 필수
 }
 ```
 
@@ -1162,9 +1170,9 @@ const data = await response.json();
 
 ```typescript
 {
-  id: string;            // 필수
-  dataType: string;      // 필수
-  abbreviation: string;  // 필수
+	id: string; // 필수
+	dataType: string; // 필수
+	abbreviation: string; // 필수
 }
 ```
 
@@ -1188,7 +1196,7 @@ const data = await response.json();
 
 ```typescript
 {
-  id: string;  // 필수
+	id: string; // 필수
 }
 ```
 
@@ -1585,6 +1593,136 @@ ID를 기반으로 컬럼 정의를 삭제합니다.
   - `columnFilename`
   - `termFilename`
   - `domainFilename`
+
+---
+
+## Data Source API
+
+내부 관리자용 데이터 소스 연결 정의와 PostgreSQL 연결 테스트를 관리합니다.
+
+### GET /api/data-sources
+
+저장된 데이터 소스 요약 목록을 조회합니다.
+
+- 응답 핵심:
+  - `id`, `name`, `type`, `description`
+  - `config.host`, `config.port`, `config.database`, `config.schema`, `config.username`
+  - `config.ssl`, `config.connectionTimeoutSeconds`, `config.hasPassword`
+- 보안 정책:
+  - 비밀번호 원문은 응답에 포함되지 않습니다.
+
+### POST /api/data-sources
+
+새 PostgreSQL 데이터 소스를 등록합니다.
+
+- 요청 바디:
+
+```json
+{
+	"name": "운영 PostgreSQL",
+	"type": "postgresql",
+	"description": "운영 메타데이터 저장소",
+	"config": {
+		"host": "db.internal",
+		"port": 5432,
+		"database": "metadata",
+		"schema": "public",
+		"username": "dbadmin",
+		"password": "secret",
+		"ssl": false,
+		"connectionTimeoutSeconds": 5
+	}
+}
+```
+
+- 에러 코드:
+  - `400`: 필수 입력 누락, 지원하지 않는 타입, 잘못된 포트/타임아웃
+  - `409`: 동일한 연결 이름 중복
+
+### PUT /api/data-sources
+
+기존 데이터 소스를 수정합니다.
+
+- 요청 바디:
+  - `id` 필수
+  - 나머지 필드는 POST와 동일
+- 비밀번호 정책:
+  - `config.password`가 빈 문자열이면 기존 저장 비밀번호를 유지합니다.
+
+### DELETE /api/data-sources
+
+저장된 데이터 소스를 삭제합니다.
+
+- 요청 바디:
+
+```json
+{
+	"id": "source-uuid"
+}
+```
+
+- 에러 코드:
+  - `400`: `id` 누락
+  - `404`: 대상 없음
+
+### POST /api/data-sources/test
+
+PostgreSQL 연결 테스트를 실행합니다.
+
+#### 1. 저장된 연결 테스트
+
+```json
+{
+	"id": "source-uuid"
+}
+```
+
+#### 2. 저장 전 직접 테스트
+
+```json
+{
+	"type": "postgresql",
+	"config": {
+		"host": "localhost",
+		"port": 5432,
+		"database": "metadata",
+		"schema": "public",
+		"username": "postgres",
+		"password": "secret",
+		"ssl": false,
+		"connectionTimeoutSeconds": 5
+	}
+}
+```
+
+#### 3. 편집 중 테스트
+
+```json
+{
+	"id": "source-uuid",
+	"type": "postgresql",
+	"config": {
+		"host": "db.internal",
+		"port": 5433,
+		"database": "metadata",
+		"schema": "audit",
+		"username": "dbadmin",
+		"password": "",
+		"ssl": true,
+		"connectionTimeoutSeconds": 10
+	}
+}
+```
+
+- 동작:
+  - `id`만 보내면 저장된 연결 그대로 테스트
+  - `id + config`를 함께 보내면 수정 중 값으로 테스트
+  - `password`가 비어 있으면 저장된 비밀번호를 이어받아 테스트
+- 성공 응답 핵심:
+  - `success`
+  - `message`
+  - `details.host`, `details.port`, `details.database`, `details.schema`, `details.serverVersion`
+  - `latencyMs`, `testedAt`
 
 ---
 
@@ -2184,4 +2322,4 @@ const data = await response.json();
 
 ---
 
-**마지막 업데이트**: 2026-02-13
+**마지막 업데이트**: 2026-03-12

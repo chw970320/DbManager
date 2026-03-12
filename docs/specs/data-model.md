@@ -19,6 +19,7 @@
 - 속성: `static/data/attribute/`
 - 테이블: `static/data/table/`
 - 컬럼: `static/data/column/`
+- 설정 파일: `static/data/settings/`
 
 ---
 
@@ -63,6 +64,7 @@
 ## 5개 정의서 관계 정합성/동기화 (2026-02-14)
 
 ### 관계 정합성 진단
+
 - API: `GET /api/erd/relations`
 - 대상: `database/entity/attribute/table/column`
 - 결과:
@@ -71,6 +73,7 @@
   - 이슈 샘플(`targetId`, `expectedKey`, `reason`)
 
 ### 관계 자동보정
+
 - API: `GET/POST /api/erd/relations/sync`
 - 보정 범위:
   - `Entity -> Table`: `relatedEntityName`
@@ -78,6 +81,7 @@
   - `Attribute -> Column`: 자동 수정 없이 추천 후보 제공
 
 ### 충돌 정책
+
 - 관계 동기화와 컬럼 동기화(`POST /api/column/sync-term`)의 필드 소유권/실행 순서는
   `docs/specs/relation-sync-policy.md`를 따른다.
 
@@ -349,12 +353,12 @@ const isValid =
 
 ### 필드 상세
 
-| 필드명             | 타입                | 필수 | 기본값 | 설명                               | 용도                     |
-| ------------------ | ------------------- | ---- | ------ | ---------------------------------- | ------------------------ |
-| `entries`          | `VocabularyEntry[]` | ✅   | `[]`   | 단어집 엔트리 배열                 | 실제 데이터              |
-| `lastUpdated`      | `string`            | ✅   | -      | 마지막 업데이트 시간 (ISO 8601)    | 메타데이터               |
-| `totalCount`       | `number`            | ✅   | `0`    | 전체 엔트리 수                     | 성능 최적화용            |
-| `mapping`          | `SharedDataFileMapping?` | ❌   | -      | 런타임 주입 공통 파일 매핑 정보    | 정본은 `shared-file-mappings.json`, 현재 파일을 제외한 나머지 7개 파일명 |
+| 필드명        | 타입                     | 필수 | 기본값 | 설명                            | 용도                                                                     |
+| ------------- | ------------------------ | ---- | ------ | ------------------------------- | ------------------------------------------------------------------------ |
+| `entries`     | `VocabularyEntry[]`      | ✅   | `[]`   | 단어집 엔트리 배열              | 실제 데이터                                                              |
+| `lastUpdated` | `string`                 | ✅   | -      | 마지막 업데이트 시간 (ISO 8601) | 메타데이터                                                               |
+| `totalCount`  | `number`                 | ✅   | `0`    | 전체 엔트리 수                  | 성능 최적화용                                                            |
+| `mapping`     | `SharedDataFileMapping?` | ❌   | -      | 런타임 주입 공통 파일 매핑 정보 | 정본은 `shared-file-mappings.json`, 현재 파일을 제외한 나머지 7개 파일명 |
 
 ### Validation 규칙
 
@@ -575,11 +579,11 @@ const isValid =
 
 ### 필드 상세
 
-| 필드명        | 타입            | 필수 | 기본값 | 설명                            | 용도          |
-| ------------- | --------------- | ---- | ------ | ------------------------------- | ------------- |
-| `entries`     | `DomainEntry[]`         | ✅   | `[]`   | 도메인 엔트리 배열              | 실제 데이터                    |
-| `lastUpdated` | `string`                | ✅   | -      | 마지막 업데이트 시간 (ISO 8601) | 메타데이터                     |
-| `totalCount`  | `number`                | ✅   | `0`    | 전체 엔트리 수                  | 성능 최적화용                  |
+| 필드명        | 타입                     | 필수 | 기본값 | 설명                            | 용도                                                                     |
+| ------------- | ------------------------ | ---- | ------ | ------------------------------- | ------------------------------------------------------------------------ |
+| `entries`     | `DomainEntry[]`          | ✅   | `[]`   | 도메인 엔트리 배열              | 실제 데이터                                                              |
+| `lastUpdated` | `string`                 | ✅   | -      | 마지막 업데이트 시간 (ISO 8601) | 메타데이터                                                               |
+| `totalCount`  | `number`                 | ✅   | `0`    | 전체 엔트리 수                  | 성능 최적화용                                                            |
 | `mapping`     | `SharedDataFileMapping?` | ❌   | -      | 런타임 주입 공통 파일 매핑 정보 | 정본은 `shared-file-mappings.json`, 현재 파일을 제외한 나머지 7개 파일명 |
 
 ### 예시 데이터
@@ -798,12 +802,12 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 
 ### 필드 상세
 
-| 필드명               | 타입          | 필수 | 기본값 | 설명                            | 용도                    |
-| -------------------- | ------------- | ---- | ------ | ------------------------------- | ----------------------- |
-| `entries`            | `TermEntry[]` | ✅   | `[]`   | 용어 엔트리 배열                | 실제 데이터             |
-| `lastUpdated`        | `string`      | ✅   | -      | 마지막 업데이트 시간 (ISO 8601) | 메타데이터              |
-| `totalCount`         | `number`      | ✅   | `0`    | 전체 엔트리 수                  | 성능 최적화용           |
-| `mapping`            | `SharedDataFileMapping?` | ❌   | -      | 런타임 주입 공통 파일 매핑 정보 | 정본은 `shared-file-mappings.json`, 현재 파일을 제외한 나머지 7개 파일명 |
+| 필드명        | 타입                     | 필수 | 기본값 | 설명                            | 용도                                                                     |
+| ------------- | ------------------------ | ---- | ------ | ------------------------------- | ------------------------------------------------------------------------ |
+| `entries`     | `TermEntry[]`            | ✅   | `[]`   | 용어 엔트리 배열                | 실제 데이터                                                              |
+| `lastUpdated` | `string`                 | ✅   | -      | 마지막 업데이트 시간 (ISO 8601) | 메타데이터                                                               |
+| `totalCount`  | `number`                 | ✅   | `0`    | 전체 엔트리 수                  | 성능 최적화용                                                            |
+| `mapping`     | `SharedDataFileMapping?` | ❌   | -      | 런타임 주입 공통 파일 매핑 정보 | 정본은 `shared-file-mappings.json`, 현재 파일을 제외한 나머지 7개 파일명 |
 
 ### 예시 데이터
 
@@ -870,14 +874,14 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 
 #### DomainDataTypeMappingSyncResult
 
-| 필드명               | 타입     | 설명                              |
-| -------------------- | -------- | --------------------------------- |
-| `domainFilesUpdated` | `number` | 재저장된 도메인 파일 수           |
-| `domainsUpdated`     | `number` | 이름이 재생성된 도메인 수         |
-| `termFilesUpdated`   | `number` | 재저장된 용어 파일 수             |
-| `termsUpdated`       | `number` | `domainName`이 갱신된 용어 수     |
-| `columnFilesUpdated` | `number` | 재저장된 컬럼 파일 수             |
-| `columnsUpdated`     | `number` | `domainName`이 갱신된 컬럼 수     |
+| 필드명               | 타입     | 설명                          |
+| -------------------- | -------- | ----------------------------- |
+| `domainFilesUpdated` | `number` | 재저장된 도메인 파일 수       |
+| `domainsUpdated`     | `number` | 이름이 재생성된 도메인 수     |
+| `termFilesUpdated`   | `number` | 재저장된 용어 파일 수         |
+| `termsUpdated`       | `number` | `domainName`이 갱신된 용어 수 |
+| `columnFilesUpdated` | `number` | 재저장된 컬럼 파일 수         |
+| `columnsUpdated`     | `number` | `domainName`이 갱신된 컬럼 수 |
 
 ### Validation 규칙
 
@@ -1285,6 +1289,124 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
    - `ColumnEntry.dataType` ← `DomainEntry.physicalDataType`
    - `ColumnEntry.dataLength` ← `DomainEntry.dataLength`
    - `ColumnEntry.dataDecimalLength` ← `DomainEntry.decimalPlaces`
+
+---
+
+## 14. DataSourceEntry / DataSourceData (데이터 소스)
+
+### 개요
+
+내부 관리자용 데이터 소스 연결 정의를 저장하는 설정 모델입니다. 현재는 PostgreSQL 연결만 지원하며,
+향후 다른 DBMS를 추가할 수 있도록 `type` 기반으로 분기합니다.
+
+**파일 위치:** `src/lib/types/data-source.ts`
+
+**저장 파일:** `static/data/settings/data-sources.json`
+
+### DataSourceEntry
+
+| 필드명        | 타입                         | 필수 | 설명                 |
+| ------------- | ---------------------------- | ---- | -------------------- |
+| `id`          | `string`                     | ✅   | 고유 식별자          |
+| `name`        | `string`                     | ✅   | 연결 이름            |
+| `type`        | `'postgresql'`               | ✅   | 데이터 소스 유형     |
+| `description` | `string?`                    | ❌   | 연결 설명            |
+| `config`      | `PostgreSqlConnectionConfig` | ✅   | 실제 접속 설정       |
+| `createdAt`   | `string`                     | ✅   | 생성 시각 (ISO 8601) |
+| `updatedAt`   | `string`                     | ✅   | 수정 시각 (ISO 8601) |
+
+### PostgreSqlConnectionConfig
+
+| 필드명                     | 타입      | 필수 | 설명              |
+| -------------------------- | --------- | ---- | ----------------- |
+| `host`                     | `string`  | ✅   | PostgreSQL 호스트 |
+| `port`                     | `number`  | ✅   | 포트 번호         |
+| `database`                 | `string`  | ✅   | 데이터베이스명    |
+| `schema`                   | `string?` | ❌   | 기본 스키마       |
+| `username`                 | `string`  | ✅   | 사용자명          |
+| `password`                 | `string`  | ✅   | 저장 비밀번호     |
+| `ssl`                      | `boolean` | ✅   | SSL 사용 여부     |
+| `connectionTimeoutSeconds` | `number`  | ✅   | 연결 타임아웃(초) |
+
+### DataSourceSummaryEntry
+
+목록 API 응답에서는 보안을 위해 `password`를 직접 노출하지 않고 아래 요약 타입을 사용합니다.
+
+| 필드명               | 타입      | 설명                                 |
+| -------------------- | --------- | ------------------------------------ |
+| `config.hasPassword` | `boolean` | 비밀번호 저장 여부                   |
+| 기타 `config` 필드   | 동일      | `password`를 제외한 나머지 연결 정보 |
+
+### DataSourceData
+
+| 필드명        | 타입                | 필수 | 설명             |
+| ------------- | ------------------- | ---- | ---------------- |
+| `entries`     | `DataSourceEntry[]` | ✅   | 저장된 연결 목록 |
+| `lastUpdated` | `string`            | ✅   | 마지막 수정 시각 |
+| `totalCount`  | `number`            | ✅   | 저장된 연결 수   |
+
+### DataSourceConnectionTestResult
+
+| 필드명                  | 타입      | 설명                 |
+| ----------------------- | --------- | -------------------- |
+| `success`               | `boolean` | 연결 성공 여부       |
+| `message`               | `string`  | 성공/실패 메시지     |
+| `details.host`          | `string?` | 테스트 대상 호스트   |
+| `details.port`          | `number?` | 테스트 대상 포트     |
+| `details.database`      | `string?` | 대상 DB명            |
+| `details.schema`        | `string?` | 대상 스키마          |
+| `details.serverVersion` | `string?` | PostgreSQL 서버 버전 |
+| `latencyMs`             | `number?` | 연결 지연 시간       |
+| `testedAt`              | `string`  | 테스트 수행 시각     |
+
+### Validation 규칙
+
+1. `type`
+   - 현재는 `'postgresql'`만 허용
+2. `name`
+   - trim 후 빈 문자열 불가
+   - 대소문자 무시 기준으로 중복 불가
+3. `config.host`, `config.database`, `config.username`
+   - trim 후 빈 문자열 불가
+4. `config.port`, `config.connectionTimeoutSeconds`
+   - 1 이상의 정수
+5. `config.password`
+   - 신규 등록 시 필수
+   - 수정 시 빈 문자열이면 기존 저장 비밀번호 유지
+
+### 예시 데이터
+
+```json
+{
+	"entries": [
+		{
+			"id": "source-1",
+			"name": "운영 PostgreSQL",
+			"type": "postgresql",
+			"description": "운영 메타데이터 저장소",
+			"config": {
+				"host": "db.internal",
+				"port": 5432,
+				"database": "metadata",
+				"schema": "public",
+				"username": "dbadmin",
+				"password": "secret",
+				"ssl": false,
+				"connectionTimeoutSeconds": 5
+			},
+			"createdAt": "2026-03-12T00:00:00.000Z",
+			"updatedAt": "2026-03-12T00:00:00.000Z"
+		}
+	],
+	"lastUpdated": "2026-03-12T00:00:00.000Z",
+	"totalCount": 1
+}
+```
+
+### 관련 API 엔드포인트
+
+- **GET, POST, PUT, DELETE** `/api/data-sources`
+- **POST** `/api/data-sources/test`
 
 ---
 

@@ -22,6 +22,7 @@
 		{ href: '/table/browse', label: '테이블', icon: 'table' },
 		{ href: '/column/browse', label: '컬럼', icon: 'columns' },
 		{ href: '/data-source/browse', label: '데이터 소스', icon: 'link' },
+		{ href: '/quality-rule/browse', label: '품질 규칙', icon: 'check-circle' },
 		{ href: '/profiling/browse', label: '프로파일링', icon: 'chart-bar' },
 		{ href: '/erd', label: 'ERD', icon: 'diagram' }
 	];

@@ -164,6 +164,11 @@ describe('DomainDataTypeMappingModal', () => {
 		});
 
 		expect(screen.getByText('V')).toBeInTheDocument();
+		expect(
+			screen.getByText(
+				'현재 선택 파일과 관계없이 모든 도메인 파일의 도메인명 생성 규칙에 공통 적용됩니다.'
+			)
+		).toBeInTheDocument();
 	});
 
 	it('should create a new mapping and emit change event', async () => {

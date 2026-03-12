@@ -38,7 +38,9 @@
 	let selectedFilename = $state(get(domainStore).selectedFilename);
 	let fileList = $state<string[]>([]);
 	let sidebarOpen = $state(false);
-	let dataTypeMappings = $state<DomainDataTypeMappingLike[]>([...DEFAULT_DOMAIN_DATA_TYPE_MAPPINGS]);
+	let dataTypeMappings = $state<DomainDataTypeMappingLike[]>([
+		...DEFAULT_DOMAIN_DATA_TYPE_MAPPINGS
+	]);
 	let unsubscribe: (() => void) | undefined;
 
 	// 편집기 상태
@@ -419,7 +421,8 @@
 			}
 		} catch (error) {
 			console.error('도메인 유효성 검사 오류:', error);
-			errorMessage = error instanceof Error ? error.message : '도메인 유효성 검사 중 오류가 발생했습니다.';
+			errorMessage =
+				error instanceof Error ? error.message : '도메인 유효성 검사 중 오류가 발생했습니다.';
 		} finally {
 			validationLoading = false;
 		}
@@ -822,31 +825,8 @@
 							</div>
 						</div>
 
-						<!-- 액션 버튼들 -->
-						<div class="mb-4 flex items-center space-x-3">
-							<!-- 새 도메인 추가 버튼 -->
-							<button
-								type="button"
-								onclick={() => (isDataTypeMappingOpen = true)}
-								disabled={loading}
-								class="group inline-flex items-center space-x-2 rounded-xl border border-amber-200/50 bg-amber-50/80 px-6 py-3 text-sm font-medium text-amber-700 shadow-sm backdrop-blur-sm transition-all duration-200 hover:scale-105 hover:bg-amber-100 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-							>
-								<svg
-									class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M4 7h16M4 12h16M4 17h16"
-									/>
-								</svg>
-								<span>데이터타입 매핑</span>
-							</button>
-
+						<!-- 현재 파일 기준 액션 버튼들 -->
+						<div role="group" aria-label="현재 파일 작업" class="mb-4 flex items-center space-x-3">
 							<button
 								type="button"
 								onclick={() => {
@@ -894,7 +874,7 @@
 								</svg>
 								<span>{validationLoading ? '검사 중' : '유효성 검사'}</span>
 							</button>
-							
+
 							<!-- XLSX 다운로드 버튼 -->
 							<button
 								type="button"
@@ -944,6 +924,57 @@
 							</button>
 						</div>
 					</div>
+
+					<section
+						aria-label="전역 도메인명 규칙"
+						class="mt-5 rounded-2xl border border-amber-200/60 bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50 p-5 shadow-sm"
+					>
+						<div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+							<div class="flex items-start gap-4">
+								<div class="rounded-2xl bg-white/80 p-3 text-amber-600 ring-1 ring-amber-200">
+									<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M4 7h16M4 12h16M4 17h16"
+										/>
+									</svg>
+								</div>
+								<div>
+									<p class="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
+										전체 파일 공통 규칙
+									</p>
+									<h2 class="mt-1 text-lg font-semibold text-gray-900">데이터타입 매핑 관리</h2>
+									<p class="mt-1 text-sm text-gray-600">
+										현재 선택 파일과 관계없이 모든 도메인 파일의 표준명 생성 규칙에 적용됩니다.
+									</p>
+								</div>
+							</div>
+
+							<button
+								type="button"
+								onclick={() => (isDataTypeMappingOpen = true)}
+								disabled={loading}
+								class="group inline-flex items-center justify-center space-x-2 rounded-xl border border-amber-300/70 bg-white/90 px-5 py-3 text-sm font-medium text-amber-800 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:bg-white hover:shadow-md focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+							>
+								<svg
+									class="h-5 w-5 transition-transform duration-200 group-hover:scale-110"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M11 5h2m-1 0v14m-7-7h14"
+									/>
+								</svg>
+								<span>데이터타입 매핑 관리</span>
+							</button>
+						</div>
+					</section>
 				</div>
 
 				<!-- DomainEditor 모달 -->

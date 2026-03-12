@@ -18,7 +18,8 @@
 | `DomainFileManager.test.ts`            | 9개       | 완료 |
 | `domain/type-mappings/server.test.ts`  | 6개       | 완료 |
 | `DomainDataTypeMappingModal.test.ts`   | 4개       | 완료 |
-| **합계**                               | **99개**  |      |
+| `domain/browse/page.test.ts`           | 1개       | 완료 |
+| **합계**                               | **100개** |      |
 
 ---
 
@@ -64,14 +65,14 @@
 
 ### DELETE (6개)
 
-| 테스트명                                     | 설명                 | 검증 내용                                |
-| -------------------------------------------- | -------------------- | ---------------------------------------- |
-| should delete an existing entry successfully | 도메인 삭제 성공     | 200 응답, 삭제 완료 메시지               |
-| should include warnings when references exist and force is false | 참조 경고 수집 | 삭제는 진행하되 warnings 배열 반환       |
-| should skip reference check when force=true  | 강제 삭제 시 참조 생략 | `checkEntryReferences` 호출 없이 삭제    |
-| should return 400 when id is missing         | ID 누락              | id 파라미터 없이 요청 시 400 에러        |
-| should return 404 when entry not found       | 존재하지 않는 항목   | 없는 id로 삭제 시도 시 404 에러          |
-| should use specified filename parameter      | 파일명 파라미터 사용 | filename 쿼리 파라미터 적용 및 저장 확인 |
+| 테스트명                                                         | 설명                   | 검증 내용                                |
+| ---------------------------------------------------------------- | ---------------------- | ---------------------------------------- |
+| should delete an existing entry successfully                     | 도메인 삭제 성공       | 200 응답, 삭제 완료 메시지               |
+| should include warnings when references exist and force is false | 참조 경고 수집         | 삭제는 진행하되 warnings 배열 반환       |
+| should skip reference check when force=true                      | 강제 삭제 시 참조 생략 | `checkEntryReferences` 호출 없이 삭제    |
+| should return 400 when id is missing                             | ID 누락                | id 파라미터 없이 요청 시 400 에러        |
+| should return 404 when entry not found                           | 존재하지 않는 항목     | 없는 id로 삭제 시도 시 404 에러          |
+| should use specified filename parameter                          | 파일명 파라미터 사용   | filename 쿼리 파라미터 적용 및 저장 확인 |
 
 ---
 
@@ -99,10 +100,10 @@
 
 도메인 전체 유효성 검사 API를 테스트합니다.
 
-| 테스트명                          | 설명                    | 검증 내용                                |
-| --------------------------------- | ----------------------- | ---------------------------------------- |
-| should return validation summary  | 전체 검사 요약 반환     | totalCount, failedCount 등 집계 확인     |
-| should return 500 on error        | 로딩 오류 처리          | 도메인 데이터 로드 실패 시 500 에러      |
+| 테스트명                         | 설명                | 검증 내용                            |
+| -------------------------------- | ------------------- | ------------------------------------ |
+| should return validation summary | 전체 검사 요약 반환 | totalCount, failedCount 등 집계 확인 |
+| should return 500 on error       | 로딩 오류 처리      | 도메인 데이터 로드 실패 시 500 에러  |
 
 ---
 
@@ -282,10 +283,10 @@
 
 ### Selected File (3개)
 
-| 테스트명                        | 설명                | 검증 내용             |
-| ------------------------------- | ------------------- | --------------------- |
-| 선택된 파일 강조 표시           | 선택된 파일 UI 강조 | 선택된 파일 강조 표시 |
-| 파일 선택 시 change 이벤트 발생 | 파일 선택 이벤트    | 파일 목록 로드 확인   |
+| 테스트명                        | 설명                 | 검증 내용                                      |
+| ------------------------------- | -------------------- | ---------------------------------------------- |
+| 선택된 파일 강조 표시           | 선택된 파일 UI 강조  | 선택된 파일 강조 표시                          |
+| 파일 선택 시 change 이벤트 발생 | 파일 선택 이벤트     | 파일 목록 로드 확인                            |
 | 업로드 대상 파일 현재 선택 반영 | 업로드 기본값 안전화 | 대상 파일 select가 현재 파일과 동일하게 초기화 |
 
 ### Upload Tab (1개)
@@ -304,14 +305,14 @@
 
 도메인 데이터타입 매핑 CRUD API를 테스트합니다.
 
-| 테스트명                                    | 설명                 | 검증 내용                                        |
-| ------------------------------------------- | -------------------- | ------------------------------------------------ |
-| GET should return mapping list              | 매핑 목록 조회 성공  | 200 응답, entries 반환                           |
-| POST should create mapping                  | 매핑 등록 성공       | 201 응답, registry create 호출, sync 결과 반환   |
-| POST should reject missing fields           | 필수 필드 검증       | dataType 또는 abbreviation 누락 시 400           |
-| PUT should update mapping                   | 매핑 수정 성공       | 200 응답, registry update 호출                   |
-| PUT should return 404 when mapping is missing | 없는 매핑 수정      | 대상 매핑이 없으면 404                           |
-| DELETE should remove mapping                | 매핑 삭제 성공       | 200 응답, registry delete 호출, totalCount 감소  |
+| 테스트명                                      | 설명                | 검증 내용                                       |
+| --------------------------------------------- | ------------------- | ----------------------------------------------- |
+| GET should return mapping list                | 매핑 목록 조회 성공 | 200 응답, entries 반환                          |
+| POST should create mapping                    | 매핑 등록 성공      | 201 응답, registry create 호출, sync 결과 반환  |
+| POST should reject missing fields             | 필수 필드 검증      | dataType 또는 abbreviation 누락 시 400          |
+| PUT should update mapping                     | 매핑 수정 성공      | 200 응답, registry update 호출                  |
+| PUT should return 404 when mapping is missing | 없는 매핑 수정      | 대상 매핑이 없으면 404                          |
+| DELETE should remove mapping                  | 매핑 삭제 성공      | 200 응답, registry delete 호출, totalCount 감소 |
 
 ---
 
@@ -321,14 +322,26 @@
 
 도메인 데이터타입 매핑 관리 팝업 컴포넌트를 테스트합니다.
 
-| 테스트명                                      | 설명                  | 검증 내용                                  |
-| --------------------------------------------- | --------------------- | ------------------------------------------ |
-| should load and render mapping rows when opened | 초기 목록 렌더링     | GET 호출 후 데이터타입/약어 행 표시        |
-| should create a new mapping and emit change event | 매핑 등록 UI        | POST 호출, toast 호출, 신규 행 반영        |
-| should switch to edit mode and submit update  | 수정 모드 전환/저장   | 수정 버튼 클릭 후 PUT 호출                 |
-| should confirm and delete mapping             | 삭제 확인 및 삭제     | confirm 호출 후 DELETE 요청 전송           |
+| 테스트명                                          | 설명                | 검증 내용                           |
+| ------------------------------------------------- | ------------------- | ----------------------------------- |
+| should load and render mapping rows when opened   | 초기 목록 렌더링    | GET 호출 후 데이터타입/약어 행 표시 |
+| should create a new mapping and emit change event | 매핑 등록 UI        | POST 호출, toast 호출, 신규 행 반영 |
+| should switch to edit mode and submit update      | 수정 모드 전환/저장 | 수정 버튼 클릭 후 PUT 호출          |
+| should confirm and delete mapping                 | 삭제 확인 및 삭제   | confirm 호출 후 DELETE 요청 전송    |
 
 > **참고**: Svelte 5에서는 `component.$on()` 직접 검증 대신 fetch/toast/UI 상태 변화를 기준으로 동작을 확인했습니다.
+
+---
+
+## 12. domain/browse/page.test.ts (1개)
+
+**파일 경로**: `src/routes/domain/browse/page.test.ts`
+
+도메인 browse 페이지의 액션 배치 일관성을 테스트합니다.
+
+| 테스트명                                                                    | 설명                | 검증 내용                                                                             |
+| --------------------------------------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------- |
+| should separate global data type mapping controls from current file actions | 전역 규칙 배치 분리 | 현재 파일 작업 그룹에는 파일 기반 버튼만 남고 데이터타입 매핑은 전역 규칙 섹션에 표시 |
 
 ---
 
@@ -347,6 +360,7 @@ pnpm test src/lib/components/DomainEditor.test.ts
 pnpm test src/lib/components/DomainFileManager.test.ts
 pnpm test src/routes/api/domain/type-mappings/server.test.ts
 pnpm test src/lib/components/DomainDataTypeMappingModal.test.ts
+pnpm test src/routes/domain/browse/page.test.ts
 
 # 감시 모드
 pnpm test domain --watch
@@ -356,9 +370,10 @@ pnpm test domain --watch
 
 ## 변경 이력
 
-| 날짜       | 변경 내용                                            |
-| ---------- | ---------------------------------------------------- |
-| 2025-01-09 | 초기 문서 작성 (71개 테스트)                         |
-| 2025-01-09 | DomainFileManager 컴포넌트 테스트 추가 (79개 테스트) |
-| 2026-03-11 | 업로드 대상 파일 기본 선택 동기화 테스트 추가 (80개 테스트) |
-| 2026-03-11 | 데이터타입 매핑 및 도메인 검증 테스트 정리 (96개 테스트) |
+| 날짜       | 변경 내용                                                          |
+| ---------- | ------------------------------------------------------------------ |
+| 2025-01-09 | 초기 문서 작성 (71개 테스트)                                       |
+| 2025-01-09 | DomainFileManager 컴포넌트 테스트 추가 (79개 테스트)               |
+| 2026-03-11 | 업로드 대상 파일 기본 선택 동기화 테스트 추가 (80개 테스트)        |
+| 2026-03-11 | 데이터타입 매핑 및 도메인 검증 테스트 정리 (96개 테스트)           |
+| 2026-03-12 | 도메인 browse 전역 데이터타입 매핑 배치 테스트 추가 (100개 테스트) |

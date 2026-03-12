@@ -122,9 +122,7 @@
 			);
 		} catch (submitError) {
 			error =
-				submitError instanceof Error
-					? submitError.message
-					: '데이터타입 매핑 저장에 실패했습니다.';
+				submitError instanceof Error ? submitError.message : '데이터타입 매핑 저장에 실패했습니다.';
 		} finally {
 			isSubmitting = false;
 		}
@@ -169,9 +167,7 @@
 			applyMutationResult(result.data as MutationPayload, '데이터타입 매핑을 삭제했습니다.');
 		} catch (deleteError) {
 			error =
-				deleteError instanceof Error
-					? deleteError.message
-					: '데이터타입 매핑 삭제에 실패했습니다.';
+				deleteError instanceof Error ? deleteError.message : '데이터타입 매핑 삭제에 실패했습니다.';
 		} finally {
 			isSubmitting = false;
 		}
@@ -215,7 +211,7 @@
 				<div>
 					<h2 class="text-xl font-bold text-gray-900">데이터타입 매핑 관리</h2>
 					<p class="mt-1 text-sm text-gray-500">
-						도메인명 생성에 사용할 데이터타입 약어를 관리합니다.
+						현재 선택 파일과 관계없이 모든 도메인 파일의 도메인명 생성 규칙에 공통 적용됩니다.
 					</p>
 				</div>
 				<button
@@ -246,8 +242,11 @@
 					</div>
 				{/if}
 
-				<div class="mb-6 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800">
-					등록되지 않은 데이터타입은 하위 호환을 위해 첫 글자로 자동 처리됩니다.
+				<div
+					class="mb-6 rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-800"
+				>
+					등록되지 않은 데이터타입은 하위 호환을 위해 첫 글자로 자동 처리되며, 변경 즉시 관련 용어와
+					컬럼 참조도 함께 동기화됩니다.
 				</div>
 
 				<div class="grid gap-6 lg:grid-cols-[20rem_1fr]">
@@ -331,12 +330,8 @@
 												<th class="px-4 py-3 text-left font-semibold text-gray-700">
 													데이터타입
 												</th>
-												<th class="px-4 py-3 text-left font-semibold text-gray-700">
-													매핑약어
-												</th>
-												<th class="px-4 py-3 text-right font-semibold text-gray-700">
-													관리
-												</th>
+												<th class="px-4 py-3 text-left font-semibold text-gray-700"> 매핑약어 </th>
+												<th class="px-4 py-3 text-right font-semibold text-gray-700"> 관리 </th>
 											</tr>
 										</thead>
 										<tbody class="divide-y divide-gray-100 bg-white">
@@ -399,7 +394,9 @@
 						</div>
 
 						{#if syncSummary}
-							<div class="mt-4 rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+							<div
+								class="mt-4 rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+							>
 								{formatSyncSummary(syncSummary)}
 							</div>
 						{/if}

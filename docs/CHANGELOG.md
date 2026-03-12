@@ -4,6 +4,28 @@
 
 ### 요약
 
+- 도메인 browse 화면에서 데이터타입 매핑 버튼이 현재 파일 기준 액션 줄에서 분리되었습니다.
+- 데이터타입 매핑은 "전체 파일 공통 규칙" 영역으로 이동해 전역 설정임을 명확히 표시합니다.
+
+### 상세 변경
+
+1. 도메인 browse 전역 규칙 배치 정리
+
+- 대상:
+  - `src/routes/domain/browse/+page.svelte`
+  - `src/lib/components/DomainDataTypeMappingModal.svelte`
+  - `src/routes/domain/browse/page.test.ts`
+  - `src/lib/components/DomainDataTypeMappingModal.test.ts`
+  - `docs/tests/DOMAIN_TEST_DESCRIPTION.md`
+- 변경:
+  - `새 도메인 추가`, `유효성 검사`, `XLSX 다운로드`, `새로고침`만 현재 파일 작업 그룹에 남기고 데이터타입 매핑 버튼은 별도 섹션으로 이동
+  - 전역 규칙 섹션과 매핑 모달 설명에 "현재 선택 파일과 무관하게 모든 도메인 파일에 공통 적용"된다는 범위를 명시
+  - browse 페이지 테스트로 파일 작업 그룹과 전역 규칙 섹션의 분리를 고정
+
+## 2026-03-12
+
+### 요약
+
 - 테스트용 전체 데이터 초기화 스크립트가 추가되었습니다.
 - 단어집/도메인/용어집/5개 정의서 JSON과 8종 공통 파일 매핑, 매핑 레지스트리를 기본 상태로 되돌릴 수 있습니다.
 

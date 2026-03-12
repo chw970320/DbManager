@@ -30,8 +30,6 @@
 		currentPage = 1,
 		totalPages = 1,
 		pageSize = 20,
-		sortColumn = '', // 하위 호환성
-		sortDirection = 'asc' as 'asc' | 'desc', // 하위 호환성
 		sortConfig = {} as Record<string, 'asc' | 'desc' | null>,
 		searchField = 'all',
 		_selectedFilename = 'domain.json',
@@ -50,8 +48,6 @@
 		currentPage?: number;
 		totalPages?: number;
 		pageSize?: number;
-		sortColumn?: string; // 하위 호환성
-		sortDirection?: 'asc' | 'desc'; // 하위 호환성
 		sortConfig?: Record<string, 'asc' | 'desc' | null>;
 		searchField?: string;
 		_selectedFilename?: string;

@@ -31,8 +31,6 @@
 		currentPage?: number;
 		totalPages?: number;
 		pageSize?: number;
-		sortColumn?: string; // 하위 호환성
-		sortDirection?: 'asc' | 'desc'; // 하위 호환성
 		sortConfig?: Record<string, 'asc' | 'desc' | null>;
 		searchField?: string;
 		_selectedFilename?: string;
@@ -59,8 +57,6 @@
 	let currentPage = $derived(props.currentPage ?? 1);
 	let totalPages = $derived(props.totalPages ?? 1);
 	let pageSize = $derived(props.pageSize ?? 20);
-	let sortColumn = $derived(props.sortColumn ?? ''); // 하위 호환성
-	let sortDirection = $derived(props.sortDirection ?? 'asc'); // 하위 호환성
 	let sortConfig = $derived(props.sortConfig ?? {});
 	let searchField = $derived(props.searchField ?? 'all');
 	let _selectedFilename = $derived(props._selectedFilename ?? 'vocabulary.json');

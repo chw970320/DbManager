@@ -121,7 +121,6 @@ export function isVocabularyData(value: unknown): value is VocabularyData {
 	if (!value.entries.every(isVocabularyEntry)) return false;
 
 	// 선택적 필드 검증
-	if (value.mappedDomainFile !== undefined && !isString(value.mappedDomainFile)) return false;
 	if (value.mapping !== undefined) {
 		if (!isObject(value.mapping)) return false;
 		if (!isString(value.mapping.domain)) return false;

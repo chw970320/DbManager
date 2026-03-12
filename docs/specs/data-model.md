@@ -51,7 +51,7 @@
 ### 하위 호환성
 
 - 파일 내 `mapping` 필드는 유지됩니다.
-- `VocabularyData.mappedDomainFile`은 deprecated 상태이며 제거 예정입니다.
+- `VocabularyData.mappedDomainFile`은 제거되었으며, 현재 스키마는 `mapping.domain`만 사용합니다.
 
 ---
 
@@ -289,7 +289,6 @@ const isValid =
 | `entries`          | `VocabularyEntry[]` | ✅   | `[]`   | 단어집 엔트리 배열                 | 실제 데이터              |
 | `lastUpdated`      | `string`            | ✅   | -      | 마지막 업데이트 시간 (ISO 8601)    | 메타데이터               |
 | `totalCount`       | `number`            | ✅   | `0`    | 전체 엔트리 수                     | 성능 최적화용            |
-| `mappedDomainFile` | `string?`           | ❌   | -      | 매핑된 도메인 파일명 (하위 호환성) | 레거시 지원              |
 | `mapping`          | `object?`           | ❌   | -      | 매핑 정보                          | 도메인 매핑 정보         |
 | `mapping.domain`   | `string?`           | ❌   | -      | 매핑된 도메인 파일명               | 현재 사용 중인 매핑 정보 |
 
@@ -327,8 +326,7 @@ const isValid =
 	"totalCount": 1,
 	"mapping": {
 		"domain": "domain.json"
-	},
-	"mappedDomainFile": "domain.json"
+	}
 }
 ```
 
@@ -1283,6 +1281,5 @@ interface ApiResponse {
    - TermEntry 저장 시 VocabularyEntry, DomainEntry 존재 확인
    - 매핑 동기화 시 참조 무결성 검증
 
-4. **하위 호환성 필드 제거 계획**
+4. **필드 정리 완료**
    - `VocabularyData.mappedDomainFile` 제거
-   - 마이그레이션 스크립트 제공

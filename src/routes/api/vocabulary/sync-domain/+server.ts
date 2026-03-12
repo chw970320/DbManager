@@ -175,7 +175,7 @@ export async function POST({ request, url }: RequestEvent) {
 			return { ...entry, isDomainCategoryMapped: false };
 		});
 
-		// 적용 모드일 때만 저장 (mapping.domain만 사용, mappedDomainFile은 deprecated)
+		// 적용 모드일 때만 저장
 		if (apply) {
 			const finalData: VocabularyData = {
 				...vocabularyData,

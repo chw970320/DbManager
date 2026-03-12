@@ -154,12 +154,11 @@ export async function PUT({ request }: RequestEvent) {
 			);
 		}
 
-		// 1. 파일 내 mapping 필드 업데이트 (하위 호환)
+		// 1. 파일 내 mapping 필드 업데이트
 		const vocabularyData = await loadData('vocabulary', filename);
 		vocabularyData.mapping = {
 			domain: mapping.domain
 		};
-		delete vocabularyData.mappedDomainFile;
 		await saveData('vocabulary', vocabularyData, filename);
 
 		// 2. 레지스트리 듀얼 라이트 (best-effort)

@@ -225,24 +225,6 @@ export async function setShowColumnSystemFiles(value: boolean): Promise<void> {
 }
 
 /**
- * @deprecated 단어집과 도메인 설정이 분리되었습니다. getShowVocabularySystemFiles 또는 getShowDomainSystemFiles를 사용하세요.
- */
-export async function getShowSystemFiles(): Promise<boolean> {
-	const settings = await loadSettings();
-	return settings.showVocabularySystemFiles ?? false;
-}
-
-/**
- * @deprecated 단어집과 도메인 설정이 분리되었습니다. setShowVocabularySystemFiles 또는 setShowDomainSystemFiles를 사용하세요.
- */
-export async function setShowSystemFiles(value: boolean): Promise<void> {
-	const settings = await loadSettings();
-	settings.showVocabularySystemFiles = value;
-	settings.showDomainSystemFiles = value;
-	await saveSettings(settings);
-}
-
-/**
  * 모든 설정 가져오기
  */
 export async function getAllSettings(): Promise<Settings> {

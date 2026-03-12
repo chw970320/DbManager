@@ -1,4 +1,5 @@
 import type { DataSourceType } from '$lib/types/data-source.js';
+import type { QualityRuleEvaluationResult } from '$lib/types/data-quality-rule.js';
 
 export interface DataSourceProfileTarget {
 	schema: string;
@@ -44,4 +45,5 @@ export interface DataSourceTableProfileResult {
 	rowCount: number;
 	profiledAt: string;
 	columns: DataSourceColumnProfile[];
+	qualityRuleEvaluation?: QualityRuleEvaluationResult;
 }

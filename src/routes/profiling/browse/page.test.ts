@@ -55,10 +55,7 @@ describe('Profiling browse page', () => {
 				);
 			}
 
-			if (
-				url === '/api/data-sources/profile/targets?dataSourceId=source-1' &&
-				method === 'GET'
-			) {
+			if (url === '/api/data-sources/profile/targets?dataSourceId=source-1' && method === 'GET') {
 				return Promise.resolve(
 					createJsonResponse({
 						success: true,
@@ -117,7 +114,36 @@ describe('Profiling browse page', () => {
 									minLength: 12,
 									maxLength: 48
 								}
-							]
+							],
+							qualityRuleEvaluation: {
+								evaluatedAt: '2026-03-12T00:00:00.000Z',
+								summary: {
+									totalRules: 2,
+									matchedRules: 2,
+									passedRules: 1,
+									failedRules: 1,
+									errorCount: 0,
+									warningCount: 1
+								},
+								violations: [
+									{
+										ruleId: 'rule-1',
+										ruleName: '고객 이메일 NULL 비율 5% 이하',
+										severity: 'warning',
+										scope: 'column',
+										target: {
+											schema: 'public',
+											table: 'customers',
+											column: 'email'
+										},
+										metric: 'nullRatio',
+										operator: 'lte',
+										threshold: 0.05,
+										actualValue: 0.01,
+										message: 'email 컬럼의 NULL 비율이 기준값을 초과했습니다.'
+									}
+								]
+							}
 						}
 					})
 				);
@@ -166,6 +192,8 @@ describe('Profiling browse page', () => {
 		expect(screen.getByText('customer_id')).toBeInTheDocument();
 		expect(screen.getByText('character varying(255)')).toBeInTheDocument();
 		expect(screen.getAllByText('1,200').length).toBeGreaterThan(0);
+		expect(screen.getByText('품질 규칙 평가')).toBeInTheDocument();
+		expect(screen.getByText('고객 이메일 NULL 비율 5% 이하')).toBeInTheDocument();
 	});
 
 	it('should show an empty state when there are no saved data sources', async () => {

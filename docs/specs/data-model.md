@@ -1365,58 +1365,59 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 
 프로파일링 대상 목록의 개별 테이블 요약입니다.
 
-| 필드명              | 타입      | 설명                               |
-| ------------------- | --------- | ---------------------------------- |
-| `schema`            | `string`  | PostgreSQL 스키마명                |
-| `table`             | `string`  | 테이블명                           |
-| `tableType`         | `string`  | 현재는 `BASE TABLE`                |
+| 필드명              | 타입      | 설명                                  |
+| ------------------- | --------- | ------------------------------------- |
+| `schema`            | `string`  | PostgreSQL 스키마명                   |
+| `table`             | `string`  | 테이블명                              |
+| `tableType`         | `string`  | 현재는 `BASE TABLE`                   |
 | `estimatedRowCount` | `number?` | `pg_stat_user_tables` 기반 예상 행 수 |
-| `columnCount`       | `number`  | 컬럼 수                            |
+| `columnCount`       | `number`  | 컬럼 수                               |
 
 ### DataSourceProfileTargetsResult
 
 프로파일링 대상 조회 API의 응답 모델입니다.
 
-| 필드명           | 타입                        | 설명                        |
-| ---------------- | --------------------------- | --------------------------- |
-| `dataSourceId`   | `string`                    | 데이터 소스 ID              |
-| `dataSourceName` | `string`                    | 데이터 소스 이름            |
-| `dataSourceType` | `'postgresql'`              | 현재 데이터 소스 유형       |
-| `defaultSchema`  | `string`                    | 화면 기본 스키마            |
+| 필드명           | 타입                        | 설명                           |
+| ---------------- | --------------------------- | ------------------------------ |
+| `dataSourceId`   | `string`                    | 데이터 소스 ID                 |
+| `dataSourceName` | `string`                    | 데이터 소스 이름               |
+| `dataSourceType` | `'postgresql'`              | 현재 데이터 소스 유형          |
+| `defaultSchema`  | `string`                    | 화면 기본 스키마               |
 | `schemas`        | `string[]`                  | 조회 가능한 사용자 스키마 목록 |
-| `tables`         | `DataSourceProfileTarget[]` | 프로파일링 대상 테이블 목록 |
+| `tables`         | `DataSourceProfileTarget[]` | 프로파일링 대상 테이블 목록    |
 
 ### DataSourceColumnProfile
 
 프로파일링 결과의 컬럼별 지표 모델입니다.
 
-| 필드명            | 타입      | 설명                                   |
-| ----------------- | --------- | -------------------------------------- |
-| `columnName`      | `string`  | 컬럼명                                 |
-| `ordinalPosition` | `number`  | 컬럼 순서                              |
-| `dataType`        | `string`  | PostgreSQL 포맷 타입 문자열            |
-| `isNullable`      | `boolean` | NULL 허용 여부                         |
-| `nullCount`       | `number`  | NULL 건수                              |
-| `nullRatio`       | `number`  | 전체 행 대비 NULL 비율                 |
-| `distinctCount`   | `number`  | 고유값 건수                            |
-| `distinctRatio`   | `number`  | 전체 행 대비 고유값 비율               |
-| `minLength`       | `number?` | 값의 텍스트 길이 최소값                |
-| `maxLength`       | `number?` | 값의 텍스트 길이 최대값                |
+| 필드명            | 타입      | 설명                        |
+| ----------------- | --------- | --------------------------- |
+| `columnName`      | `string`  | 컬럼명                      |
+| `ordinalPosition` | `number`  | 컬럼 순서                   |
+| `dataType`        | `string`  | PostgreSQL 포맷 타입 문자열 |
+| `isNullable`      | `boolean` | NULL 허용 여부              |
+| `nullCount`       | `number`  | NULL 건수                   |
+| `nullRatio`       | `number`  | 전체 행 대비 NULL 비율      |
+| `distinctCount`   | `number`  | 고유값 건수                 |
+| `distinctRatio`   | `number`  | 전체 행 대비 고유값 비율    |
+| `minLength`       | `number?` | 값의 텍스트 길이 최소값     |
+| `maxLength`       | `number?` | 값의 텍스트 길이 최대값     |
 
 ### DataSourceTableProfileResult
 
 단일 테이블 프로파일링 실행 결과입니다. 결과는 파일로 저장하지 않고 API 응답으로만 반환합니다.
 
-| 필드명           | 타입                      | 설명                        |
-| ---------------- | ------------------------- | --------------------------- |
-| `dataSourceId`   | `string`                  | 데이터 소스 ID              |
-| `dataSourceName` | `string`                  | 데이터 소스 이름            |
-| `dataSourceType` | `'postgresql'`            | 현재 데이터 소스 유형       |
-| `schema`         | `string`                  | 대상 스키마                 |
-| `table`          | `string`                  | 대상 테이블                 |
-| `rowCount`       | `number`                  | 정확한 `COUNT(*)` 기준 행 수 |
-| `profiledAt`     | `string`                  | 프로파일링 수행 시각        |
-| `columns`        | `DataSourceColumnProfile[]` | 컬럼별 프로파일링 결과    |
+| 필드명                  | 타입                           | 설명                            |
+| ----------------------- | ------------------------------ | ------------------------------- |
+| `dataSourceId`          | `string`                       | 데이터 소스 ID                  |
+| `dataSourceName`        | `string`                       | 데이터 소스 이름                |
+| `dataSourceType`        | `'postgresql'`                 | 현재 데이터 소스 유형           |
+| `schema`                | `string`                       | 대상 스키마                     |
+| `table`                 | `string`                       | 대상 테이블                     |
+| `rowCount`              | `number`                       | 정확한 `COUNT(*)` 기준 행 수    |
+| `profiledAt`            | `string`                       | 프로파일링 수행 시각            |
+| `columns`               | `DataSourceColumnProfile[]`    | 컬럼별 프로파일링 결과          |
+| `qualityRuleEvaluation` | `QualityRuleEvaluationResult?` | 저장된 활성 품질 규칙 평가 결과 |
 
 ### Validation 규칙
 
@@ -1467,6 +1468,134 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 - **GET, POST, PUT, DELETE** `/api/data-sources`
 - **POST** `/api/data-sources/test`
 - **GET** `/api/data-sources/profile/targets`
+- **POST** `/api/data-sources/profile/run`
+
+---
+
+## 15. QualityRuleEntry / QualityRuleData (품질 규칙)
+
+### 개요
+
+프로파일링 결과에 즉시 적용할 최소 품질 기준을 저장하는 설정 모델입니다. 현재는 PostgreSQL 프로파일링에서 계산하는
+지표만 규칙으로 지원합니다.
+
+**파일 위치:** `src/lib/types/data-quality-rule.ts`
+
+**저장 파일:** `static/data/settings/quality-rules.json`
+
+### QualityRuleEntry
+
+| 필드명        | 타입                             | 필수 | 설명        |
+| ------------- | -------------------------------- | ---- | ----------- |
+| `id`          | `string`                         | ✅   | 고유 식별자 |
+| `name`        | `string`                         | ✅   | 규칙 이름   |
+| `description` | `string?`                        | ❌   | 규칙 설명   |
+| `enabled`     | `boolean`                        | ✅   | 활성 여부   |
+| `severity`    | `'error' \| 'warning' \| 'info'` | ✅   | 심각도      |
+| `scope`       | `'table' \| 'column'`            | ✅   | 적용 범위   |
+| `metric`      | `QualityRuleMetric`              | ✅   | 평가 메트릭 |
+| `operator`    | `'gte' \| 'lte' \| 'eq'`         | ✅   | 비교 연산자 |
+| `threshold`   | `number`                         | ✅   | 기준값      |
+| `target`      | `QualityRuleTarget`              | ✅   | 타깃 패턴   |
+| `createdAt`   | `string`                         | ✅   | 생성 시각   |
+| `updatedAt`   | `string`                         | ✅   | 수정 시각   |
+
+### QualityRuleTarget
+
+| 필드명          | 타입      | 필수 | 설명                                |
+| --------------- | --------- | ---- | ----------------------------------- |
+| `schemaPattern` | `string?` | ❌   | 스키마 패턴, `*` 와일드카드 지원    |
+| `tablePattern`  | `string?` | ❌   | 테이블 패턴, `*` 와일드카드 지원    |
+| `columnPattern` | `string?` | ❌   | 컬럼 패턴, `column` 범위에서만 사용 |
+
+### QualityRuleMetric
+
+- `table` 범위:
+  - `rowCount`
+- `column` 범위:
+  - `nullCount`
+  - `nullRatio`
+  - `distinctCount`
+  - `distinctRatio`
+  - `minLength`
+  - `maxLength`
+
+### QualityRuleData
+
+| 필드명        | 타입                 | 필수 | 설명             |
+| ------------- | -------------------- | ---- | ---------------- |
+| `entries`     | `QualityRuleEntry[]` | ✅   | 저장된 규칙 목록 |
+| `lastUpdated` | `string`             | ✅   | 마지막 수정 시각 |
+| `totalCount`  | `number`             | ✅   | 저장된 규칙 수   |
+
+### QualityRuleEvaluationResult
+
+`POST /api/data-sources/profile/run` 응답에 포함되는 런타임 평가 결과입니다.
+
+| 필드명                 | 타입                     | 설명                           |
+| ---------------------- | ------------------------ | ------------------------------ |
+| `evaluatedAt`          | `string`                 | 평가 시각                      |
+| `summary.totalRules`   | `number`                 | 활성 규칙 수                   |
+| `summary.matchedRules` | `number`                 | 대상과 매칭된 규칙 수          |
+| `summary.passedRules`  | `number`                 | 위반 없이 통과한 규칙 수       |
+| `summary.failedRules`  | `number`                 | 1건 이상 위반이 발생한 규칙 수 |
+| `summary.infoCount`    | `number`                 | `info` 위반 건수               |
+| `summary.warningCount` | `number`                 | `warning` 위반 건수            |
+| `summary.errorCount`   | `number`                 | `error` 위반 건수              |
+| `violations`           | `QualityRuleViolation[]` | 위반 상세 목록                 |
+
+### Validation 규칙
+
+1. `name`
+   - trim 후 빈 문자열 불가
+   - 대소문자 무시 기준으로 중복 불가
+2. `severity`
+   - `'error'`, `'warning'`, `'info'` 중 하나만 허용
+3. `scope`
+   - `'table'`, `'column'` 중 하나만 허용
+4. `metric`
+   - `scope`에 허용된 메트릭만 사용 가능
+   - `table` 범위는 현재 `rowCount`만 허용
+5. `operator`
+   - `'gte'`, `'lte'`, `'eq'` 중 하나만 허용
+6. `threshold`
+   - 숫자 필수
+7. `target`
+   - 비워둘 수 있으며, 비우면 해당 축 전체에 적용
+   - `columnPattern`은 `column` 범위에서만 사용
+
+### 예시 데이터
+
+```json
+{
+	"entries": [
+		{
+			"id": "rule-1",
+			"name": "고객 이메일 NULL 비율 1% 이하",
+			"description": "email 컬럼 NULL 비율 상한",
+			"enabled": true,
+			"severity": "warning",
+			"scope": "column",
+			"metric": "nullRatio",
+			"operator": "lte",
+			"threshold": 0.01,
+			"target": {
+				"schemaPattern": "public",
+				"tablePattern": "customers",
+				"columnPattern": "email"
+			},
+			"createdAt": "2026-03-12T00:00:00.000Z",
+			"updatedAt": "2026-03-12T00:00:00.000Z"
+		}
+	],
+	"lastUpdated": "2026-03-12T00:00:00.000Z",
+	"totalCount": 1
+}
+```
+
+### 관련 API 엔드포인트
+
+- **GET, POST, PUT, DELETE** `/api/quality-rules`
 - **POST** `/api/data-sources/profile/run`
 
 ---

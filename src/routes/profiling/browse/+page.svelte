@@ -8,6 +8,7 @@
 	import FormField from '$lib/components/FormField.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import { addToast } from '$lib/stores/toast-store';
+	import type { QualityRuleMetric, QualityRuleViolation } from '$lib/types/data-quality-rule.js';
 	import type { DataSourceSummaryEntry } from '$lib/types/data-source.js';
 	import type {
 		DataSourceProfileTarget,
@@ -56,10 +57,7 @@
 	const schemaOptions = $derived(['all', ...(targetsResult?.schemas ?? [])]);
 	const totalTargets = $derived(targetsResult?.tables.length ?? 0);
 	const totalEstimatedRows = $derived.by(() =>
-		(targetsResult?.tables ?? []).reduce(
-			(sum, target) => sum + (target.estimatedRowCount ?? 0),
-			0
-		)
+		(targetsResult?.tables ?? []).reduce((sum, target) => sum + (target.estimatedRowCount ?? 0), 0)
 	);
 
 	function formatNumber(value: number | undefined | null): string {
@@ -72,6 +70,26 @@
 
 	function formatRatio(value: number): string {
 		return `${(value * 100).toFixed(value > 0 && value < 0.01 ? 2 : 1)}%`;
+	}
+
+	function isRatioMetric(metric: QualityRuleMetric): boolean {
+		return metric === 'nullRatio' || metric === 'distinctRatio';
+	}
+
+	function formatRuleMetricValue(metric: QualityRuleMetric, value: number): string {
+		return isRatioMetric(metric) ? formatRatio(value) : formatNumber(value);
+	}
+
+	function severityBadgeClass(severity: QualityRuleViolation['severity']): string {
+		if (severity === 'error') {
+			return 'badge-danger';
+		}
+
+		if (severity === 'warning') {
+			return 'badge-warning';
+		}
+
+		return 'badge-info';
 	}
 
 	function sortDataSources(entries: DataSourceSummaryEntry[]): DataSourceSummaryEntry[] {
@@ -216,7 +234,12 @@
 
 {#snippet actions()}
 	<ActionBar alignment="right">
-		<button type="button" class="btn btn-secondary" onclick={loadDataSources} disabled={loadingSources}>
+		<button
+			type="button"
+			class="btn btn-secondary"
+			onclick={loadDataSources}
+			disabled={loadingSources}
+		>
 			<Icon name={loadingSources ? 'spinner' : 'refresh'} size="sm" />
 			<span>{loadingSources ? '로딩 중...' : '데이터 소스 새로고침'}</span>
 		</button>
@@ -256,7 +279,9 @@
 					</div>
 					<div class="rounded-lg bg-surface-muted p-4">
 						<p class="font-medium text-content">주의</p>
-						<p class="mt-1">정확한 `COUNT(*)`를 사용하므로 대용량 테이블은 시간이 걸릴 수 있습니다.</p>
+						<p class="mt-1">
+							정확한 `COUNT(*)`를 사용하므로 대용량 테이블은 시간이 걸릴 수 있습니다.
+						</p>
 					</div>
 				</div>
 			</BentoCard>
@@ -275,7 +300,9 @@
 					</div>
 					<div class="rounded-lg bg-surface-muted p-4">
 						<p class="text-xs text-content-muted">예상 행 수 합계</p>
-						<p class="mt-1 text-2xl font-semibold text-content">{formatNumber(totalEstimatedRows)}</p>
+						<p class="mt-1 text-2xl font-semibold text-content">
+							{formatNumber(totalEstimatedRows)}
+						</p>
 					</div>
 				</div>
 			</BentoCard>
@@ -334,7 +361,10 @@
 
 		{#if targetsResult}
 			<div class="col-span-12">
-				<BentoCard title="대상 필터" subtitle="조회된 테이블을 스키마와 이름으로 좁혀볼 수 있습니다.">
+				<BentoCard
+					title="대상 필터"
+					subtitle="조회된 테이블을 스키마와 이름으로 좁혀볼 수 있습니다."
+				>
 					<div class="grid gap-4 md:grid-cols-2">
 						<FormField label="스키마 필터" name="profiling-schema-filter">
 							<select
@@ -403,14 +433,19 @@
 									<th class="px-4 py-3 text-left font-semibold text-content-secondary">스키마</th>
 									<th class="px-4 py-3 text-left font-semibold text-content-secondary">테이블</th>
 									<th class="px-4 py-3 text-left font-semibold text-content-secondary">유형</th>
-									<th class="px-4 py-3 text-left font-semibold text-content-secondary">예상 행 수</th>
+									<th class="px-4 py-3 text-left font-semibold text-content-secondary"
+										>예상 행 수</th
+									>
 									<th class="px-4 py-3 text-left font-semibold text-content-secondary">컬럼 수</th>
 									<th class="px-4 py-3 text-right font-semibold text-content-secondary">실행</th>
 								</tr>
 							</thead>
 							<tbody class="divide-y divide-border bg-surface">
 								{#each filteredTables as target (`${target.schema}.${target.table}`)}
-									<tr class="hover:bg-surface-muted/70" aria-label={`${target.schema}.${target.table}`}>
+									<tr
+										class="hover:bg-surface-muted/70"
+										aria-label={`${target.schema}.${target.table}`}
+									>
 										<td class="px-4 py-3 text-content-secondary">{target.schema}</td>
 										<td class="px-4 py-3">
 											<p class="font-medium text-content">{target.table}</p>
@@ -482,6 +517,119 @@
 							</div>
 						</div>
 
+						{#if profileResult.qualityRuleEvaluation}
+							<div class="mt-5 rounded-xl border border-border bg-surface-muted p-4">
+								<div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+									<div>
+										<h3 class="text-base font-semibold text-content">품질 규칙 평가</h3>
+										<p class="mt-1 text-sm text-content-muted">
+											활성 규칙 {profileResult.qualityRuleEvaluation.summary.totalRules}건 중 매칭
+											{profileResult.qualityRuleEvaluation.summary.matchedRules}건
+										</p>
+									</div>
+									<p class="text-xs text-content-muted">
+										평가 시각: {profileResult.qualityRuleEvaluation.evaluatedAt}
+									</p>
+								</div>
+
+								<div class="mt-4 grid gap-3 text-sm sm:grid-cols-4">
+									<div class="rounded-lg bg-surface p-4">
+										<p class="text-xs text-content-muted">통과 규칙</p>
+										<p class="mt-1 text-2xl font-semibold text-content">
+											{formatNumber(profileResult.qualityRuleEvaluation.summary.passedRules)}
+										</p>
+									</div>
+									<div class="rounded-lg bg-surface p-4">
+										<p class="text-xs text-content-muted">실패 규칙</p>
+										<p class="mt-1 text-2xl font-semibold text-content">
+											{formatNumber(profileResult.qualityRuleEvaluation.summary.failedRules)}
+										</p>
+									</div>
+									<div class="rounded-lg bg-surface p-4">
+										<p class="text-xs text-content-muted">warning 위반</p>
+										<p class="mt-1 text-2xl font-semibold text-content">
+											{formatNumber(profileResult.qualityRuleEvaluation.summary.warningCount)}
+										</p>
+									</div>
+									<div class="rounded-lg bg-surface p-4">
+										<p class="text-xs text-content-muted">error 위반</p>
+										<p class="mt-1 text-2xl font-semibold text-content">
+											{formatNumber(profileResult.qualityRuleEvaluation.summary.errorCount)}
+										</p>
+									</div>
+								</div>
+
+								{#if profileResult.qualityRuleEvaluation.violations.length > 0}
+									<div class="mt-4 overflow-x-auto rounded-xl border border-border bg-surface">
+										<table class="min-w-full divide-y divide-border text-sm">
+											<thead class="bg-surface-muted">
+												<tr>
+													<th class="px-4 py-3 text-left font-semibold text-content-secondary">
+														규칙
+													</th>
+													<th class="px-4 py-3 text-left font-semibold text-content-secondary">
+														대상
+													</th>
+													<th class="px-4 py-3 text-left font-semibold text-content-secondary">
+														심각도
+													</th>
+													<th class="px-4 py-3 text-left font-semibold text-content-secondary">
+														메트릭
+													</th>
+													<th class="px-4 py-3 text-left font-semibold text-content-secondary">
+														실제값 / 기준
+													</th>
+												</tr>
+											</thead>
+											<tbody class="divide-y divide-border bg-surface">
+												{#each profileResult.qualityRuleEvaluation.violations as violation (`${violation.ruleId}:${violation.target.column ?? violation.target.table}`)}
+													<tr>
+														<td class="px-4 py-3 align-top">
+															<p class="font-medium text-content">{violation.ruleName}</p>
+															<p class="mt-1 text-xs text-content-muted">{violation.message}</p>
+														</td>
+														<td class="px-4 py-3 align-top text-content-secondary">
+															{violation.target.schema}.{violation.target.table}
+															{#if violation.target.column}
+																.{violation.target.column}
+															{/if}
+														</td>
+														<td class="px-4 py-3 align-top">
+															<span class={`badge ${severityBadgeClass(violation.severity)}`}>
+																{violation.severity}
+															</span>
+														</td>
+														<td class="px-4 py-3 align-top text-content-secondary">
+															{violation.metric}
+															{violation.operator}
+														</td>
+														<td class="px-4 py-3 align-top text-content-secondary">
+															{formatRuleMetricValue(violation.metric, violation.actualValue)}
+															/
+															{formatRuleMetricValue(violation.metric, violation.threshold)}
+														</td>
+													</tr>
+												{/each}
+											</tbody>
+										</table>
+									</div>
+								{:else if profileResult.qualityRuleEvaluation.summary.totalRules === 0}
+									<div
+										class="mt-4 rounded-lg border border-status-info-border bg-status-info-bg p-4 text-sm text-status-info"
+									>
+										활성 품질 규칙이 없습니다. `품질 규칙` 메뉴에서 규칙을 추가하면 프로파일링
+										결과와 함께 평가됩니다.
+									</div>
+								{:else}
+									<div
+										class="mt-4 rounded-lg border border-status-success-border bg-status-success-bg p-4 text-sm text-status-success"
+									>
+										매칭된 품질 규칙 위반이 없습니다.
+									</div>
+								{/if}
+							</div>
+						{/if}
+
 						<div class="mt-5 overflow-x-auto rounded-xl border border-border">
 							<table class="min-w-full divide-y divide-border text-sm">
 								<thead class="bg-surface-muted">
@@ -489,14 +637,18 @@
 										<th class="px-4 py-3 text-left font-semibold text-content-secondary">컬럼</th>
 										<th class="px-4 py-3 text-left font-semibold text-content-secondary">타입</th>
 										<th class="px-4 py-3 text-left font-semibold text-content-secondary">NULL</th>
-										<th class="px-4 py-3 text-left font-semibold text-content-secondary">NULL 비율</th>
+										<th class="px-4 py-3 text-left font-semibold text-content-secondary"
+											>NULL 비율</th
+										>
 										<th class="px-4 py-3 text-left font-semibold text-content-secondary">
 											Distinct
 										</th>
 										<th class="px-4 py-3 text-left font-semibold text-content-secondary">
 											Distinct 비율
 										</th>
-										<th class="px-4 py-3 text-left font-semibold text-content-secondary">길이 범위</th>
+										<th class="px-4 py-3 text-left font-semibold text-content-secondary"
+											>길이 범위</th
+										>
 									</tr>
 								</thead>
 								<tbody class="divide-y divide-border bg-surface">
@@ -505,7 +657,9 @@
 											<td class="px-4 py-3 align-top">
 												<p class="font-medium text-content">{column.columnName}</p>
 												<p class="mt-1 text-xs text-content-muted">
-													순서 {column.ordinalPosition} / {column.isNullable ? 'NULL 허용' : 'NOT NULL'}
+													순서 {column.ordinalPosition} / {column.isNullable
+														? 'NULL 허용'
+														: 'NOT NULL'}
 												</p>
 											</td>
 											<td class="px-4 py-3 align-top text-content-secondary">{column.dataType}</td>

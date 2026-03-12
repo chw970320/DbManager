@@ -4,6 +4,59 @@
 
 ### 요약
 
+- 프로파일링 결과에 즉시 적용되는 `품질 규칙` 메뉴와 API가 추가되었습니다.
+- PostgreSQL 프로파일링 실행 결과에 규칙 평가 요약과 위반 목록이 함께 표시됩니다.
+
+### 상세 변경
+
+1. 품질 규칙 타입/저장소/평가 엔진 추가
+
+- 대상:
+  - `src/lib/types/data-quality-rule.ts`
+  - `src/lib/registry/data-quality-rule-registry.ts`
+  - `src/lib/utils/data-quality-rule-evaluator.ts`
+  - `static/data/settings/quality-rules.json`
+- 변경:
+  - `static/data/settings/quality-rules.json`에 품질 규칙을 저장하는 레지스트리 추가
+  - table 범위 `rowCount`, column 범위 `null/distinct/length` 메트릭 규칙 타입 추가
+  - 와일드카드 패턴 기반 타깃 매칭과 `gte/lte/eq` 비교를 수행하는 평가 유틸리티 추가
+
+2. 품질 규칙 API/화면 및 프로파일링 연동 추가
+
+- 대상:
+  - `src/routes/api/quality-rules/+server.ts`
+  - `src/routes/quality-rule/browse/+page.svelte`
+  - `src/lib/components/QualityRuleEditor.svelte`
+  - `src/routes/api/data-sources/profile/run/+server.ts`
+  - `src/routes/profiling/browse/+page.svelte`
+  - `src/routes/+layout.svelte`
+- 변경:
+  - 품질 규칙 목록 조회, 생성, 수정, 삭제 API 추가
+  - 상단 네비게이션에 `품질 규칙` 메뉴 추가
+  - 화면에서 규칙 등록/수정/삭제와 요약 조회 제공
+  - 프로파일링 실행 시 저장된 활성 규칙을 즉시 평가하고 결과 화면에 요약/위반 목록 표시
+
+3. 테스트/문서 동기화
+
+- 대상:
+  - `src/lib/utils/data-quality-rule-evaluator.test.ts`
+  - `src/routes/api/quality-rules/server.test.ts`
+  - `src/routes/quality-rule/browse/page.test.ts`
+  - `src/routes/api/data-sources/profile/run/server.test.ts`
+  - `src/routes/profiling/browse/page.test.ts`
+  - `docs/tests/QUALITY_RULE_TEST_DESCRIPTION.md`
+  - `docs/specs/api-reference.md`
+  - `docs/specs/data-model.md`
+  - `docs/USER_GUIDE.md`
+  - `README.md`
+- 변경:
+  - 규칙 평가 유틸리티, CRUD API, browse 화면, 프로파일링 연동 흐름을 테스트로 고정
+  - 저장소 문서와 사용자 가이드에 새 메뉴, 저장 모델, 응답 필드 반영
+
+## 2026-03-12
+
+### 요약
+
 - 저장된 PostgreSQL 데이터 소스를 재사용하는 `프로파일링` 메뉴와 API가 추가되었습니다.
 - 사용자 테이블 목록 조회와 컬럼 단위 실데이터 프로파일링을 즉시 실행할 수 있습니다.
 

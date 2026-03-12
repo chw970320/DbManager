@@ -14,6 +14,7 @@
 - [Table API](#table-api)
 - [Column API](#column-api)
 - [Data Source API](#data-source-api)
+- [Quality Rule API](#quality-rule-api)
 - [ERD API](#erd-api)
 - [Forbidden Words API](#forbidden-words-api)
 - [Search API](#search-api)
@@ -93,12 +94,16 @@ http://localhost:5173/api
 
 ## 최근 변경 사항 (2026-03-12)
 
+- `GET/POST/PUT/DELETE /api/quality-rules`
+  - 프로파일링 기반 품질 규칙 목록 조회 및 CRUD를 제공합니다.
+  - 규칙은 `static/data/settings/quality-rules.json`에 저장됩니다.
 - `GET /api/data-sources/profile/targets`
   - 저장된 PostgreSQL 데이터 소스를 기준으로 조회 가능한 사용자 스키마/테이블 목록을 반환합니다.
   - 각 테이블마다 `estimatedRowCount`, `columnCount`를 함께 제공합니다.
 - `POST /api/data-sources/profile/run`
   - 선택한 PostgreSQL 테이블의 컬럼 프로파일링을 실행합니다.
   - 결과에는 `rowCount`, `nullCount/nullRatio`, `distinctCount/distinctRatio`, `minLength/maxLength`가 포함됩니다.
+  - 저장된 활성 품질 규칙이 있으면 `qualityRuleEvaluation.summary`, `qualityRuleEvaluation.violations`도 함께 반환합니다.
 - `GET/POST/PUT/DELETE /api/data-sources`
   - 내부 관리자용 PostgreSQL 데이터 소스 연결 정의 CRUD를 제공합니다.
   - 응답 요약에는 비밀번호 원문 대신 `config.hasPassword`만 노출됩니다.
@@ -1789,6 +1794,9 @@ PostgreSQL 연결 테스트를 실행합니다.
   - `columns[].nullCount`, `columns[].nullRatio`
   - `columns[].distinctCount`, `columns[].distinctRatio`
   - `columns[].minLength`, `columns[].maxLength`
+  - `qualityRuleEvaluation.summary.totalRules`, `matchedRules`, `passedRules`, `failedRules`
+  - `qualityRuleEvaluation.summary.warningCount`, `errorCount`
+  - `qualityRuleEvaluation.violations[].ruleName`, `target`, `metric`, `actualValue`, `threshold`
 
 예시:
 
@@ -1815,10 +1823,108 @@ PostgreSQL 연결 테스트를 실행합니다.
 				"minLength": 1,
 				"maxLength": 5
 			}
-		]
+		],
+		"qualityRuleEvaluation": {
+			"evaluatedAt": "2026-03-12T08:00:00.000Z",
+			"summary": {
+				"totalRules": 2,
+				"matchedRules": 2,
+				"passedRules": 1,
+				"failedRules": 1,
+				"infoCount": 0,
+				"warningCount": 1,
+				"errorCount": 0
+			},
+			"violations": [
+				{
+					"ruleId": "rule-1",
+					"ruleName": "고객 이메일 NULL 비율 1% 이하",
+					"severity": "warning",
+					"scope": "column",
+					"target": {
+						"schema": "public",
+						"table": "customers",
+						"column": "email"
+					},
+					"metric": "nullRatio",
+					"operator": "lte",
+					"threshold": 0.01,
+					"actualValue": 0.02,
+					"message": "public.customers.email의 nullRatio 값 0.02이(가) 기준 0.01 이하 조건을 만족하지 않습니다."
+				}
+			]
+		}
 	}
 }
 ```
+
+---
+
+## Quality Rule API
+
+프로파일링 결과에 즉시 적용할 품질 규칙을 관리합니다.
+
+### GET /api/quality-rules
+
+저장된 품질 규칙 목록을 조회합니다.
+
+- 응답 핵심:
+  - `entries[].id`, `entries[].name`, `entries[].description`
+  - `entries[].enabled`, `entries[].severity`, `entries[].scope`
+  - `entries[].metric`, `entries[].operator`, `entries[].threshold`
+  - `entries[].target.schemaPattern`, `tablePattern`, `columnPattern`
+
+### POST /api/quality-rules
+
+새 품질 규칙을 등록합니다.
+
+- 요청 바디:
+
+```json
+{
+	"name": "고객 이메일 NULL 비율 1% 이하",
+	"description": "email 컬럼 NULL 비율 상한",
+	"enabled": true,
+	"severity": "warning",
+	"scope": "column",
+	"metric": "nullRatio",
+	"operator": "lte",
+	"threshold": 0.01,
+	"target": {
+		"schemaPattern": "public",
+		"tablePattern": "customers",
+		"columnPattern": "email"
+	}
+}
+```
+
+- 에러 코드:
+  - `400`: 필수 입력 누락, 범위와 메트릭 조합 오류, 숫자 기준값 오류
+  - `409`: 동일한 규칙 이름 중복
+
+### PUT /api/quality-rules
+
+기존 품질 규칙을 수정합니다.
+
+- 요청 바디:
+  - `id` 필수
+  - 나머지 필드는 POST와 동일
+
+### DELETE /api/quality-rules
+
+저장된 품질 규칙을 삭제합니다.
+
+- 요청 바디:
+
+```json
+{
+	"id": "rule-uuid"
+}
+```
+
+- 에러 코드:
+  - `400`: `id` 누락
+  - `404`: 대상 없음
 
 ---
 

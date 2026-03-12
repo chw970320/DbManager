@@ -1,6 +1,8 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
 import { getDataSourceEntry } from '$lib/registry/data-source-registry';
+import { loadQualityRuleData } from '$lib/registry/data-quality-rule-registry';
 import { profileDataSourceTable } from '$lib/utils/data-source-profiling';
+import { evaluateQualityRules } from '$lib/utils/data-quality-rule-evaluator';
 
 type ProfileRunPayload = {
 	dataSourceId?: string;
@@ -28,7 +30,10 @@ export async function POST({ request }: RequestEvent) {
 	const payload = (await request.json()) as ProfileRunPayload;
 
 	if (!isNonEmptyString(payload.dataSourceId)) {
-		return json({ success: false, error: '필수 입력(dataSourceId)이 누락되었습니다.' }, { status: 400 });
+		return json(
+			{ success: false, error: '필수 입력(dataSourceId)이 누락되었습니다.' },
+			{ status: 400 }
+		);
 	}
 
 	if (!isNonEmptyString(payload.schema)) {
@@ -49,7 +54,20 @@ export async function POST({ request }: RequestEvent) {
 			schema: payload.schema.trim(),
 			table: payload.table.trim()
 		});
-		return json({ success: true, data }, { status: 200 });
+		const ruleData = await loadQualityRuleData();
+		const enabledRules = ruleData.entries.filter((rule) => rule.enabled);
+		const qualityRuleEvaluation = evaluateQualityRules(data, enabledRules);
+
+		return json(
+			{
+				success: true,
+				data: {
+					...data,
+					qualityRuleEvaluation
+				}
+			},
+			{ status: 200 }
+		);
 	} catch (error) {
 		const message = getErrorMessage(error, '테이블 프로파일링 중 오류가 발생했습니다.');
 		return json({ success: false, error: message }, { status: getErrorStatus(message) });

@@ -16,13 +16,14 @@
 | `term/download/server.test.ts`       | 5개       | 완료 |
 | `term/filter-options/server.test.ts` | 7개       | 완료 |
 | `term/recommend/server.test.ts`      | 6개       | 완료 |
+| `term/impact-preview/server.test.ts` | 2개       | 완료 |
 | `generator/server.test.ts`           | 8개       | 완료 |
-| `TermEditor.test.ts`                 | 12개      | 완료 |
+| `TermEditor.test.ts`                 | 13개      | 완료 |
 | `TermFileManager.test.ts`            | 9개       | 완료 |
 | `TermTable.test.ts`                  | 6개       | 완료 |
 | `TermGenerator.test.ts`              | 4개       | 완료 |
 | `TermValidationPanel.test.ts`        | 6개       | 완료 |
-| **합계**                             | **115개** |      |
+| **합계**                             | **118개** |      |
 
 ---
 
@@ -272,7 +273,20 @@
 
 ---
 
-## 11. TermEditor.test.ts (12개)
+## 11. term/impact-preview/server.test.ts (2개)
+
+**파일 경로**: `src/routes/api/term/impact-preview/server.test.ts`
+
+용어 editor 저장 전 영향도 preview API를 테스트합니다.
+
+| 테스트명                             | 설명                    | 검증 내용                              |
+| ------------------------------------ | ----------------------- | -------------------------------------- |
+| proposedEntry가 없으면 400을 반환한다 | 필수 payload 검증       | proposedEntry 누락 시 400 에러 반환    |
+| 성공 시 영향도 preview를 반환한다     | preview 응답 성공       | summary/current/proposed 구조 반환 확인 |
+
+---
+
+## 12. TermEditor.test.ts (13개)
 
 **파일 경로**: `src/lib/components/TermEditor.test.ts`
 
@@ -309,16 +323,16 @@
 | should have cancel button that can be clicked     | 취소 버튼 클릭 가능 | 취소 버튼 존재 및 활성화     |
 | should have close icon button that can be clicked | 닫기 버튼 클릭 가능 | X 아이콘 버튼 존재 및 활성화 |
 
-### Mapping Status (1개)
+### Mapping Status (2개)
 
 | 테스트명                                                         | 설명                  | 검증 내용             |
 | ---------------------------------------------------------------- | --------------------- | --------------------- |
 | should display mapping status icons when entry has mapping flags | 매핑 상태 아이콘 표시 | 매핑 상태 아이콘 표시 |
-| should display mapping status icons when entry has mapping flags | 매핑 상태 아이콘 표시 | 매핑 상태 아이콘 표시 |
+| should render change impact preview section for edit mode        | 영향도 패널 표시      | 연결 컬럼 요약 및 안내 문구 표시 |
 
 ---
 
-## 12. TermFileManager.test.ts (9개)
+## 13. TermFileManager.test.ts (9개)
 
 **파일 경로**: `src/lib/components/TermFileManager.test.ts`
 
@@ -362,7 +376,7 @@
 
 ---
 
-## 13. TermTable.test.ts (6개)
+## 14. TermTable.test.ts (6개)
 
 **파일 경로**: `src/lib/components/TermTable.test.ts`
 
@@ -396,7 +410,7 @@
 
 ---
 
-## 14. TermGenerator.test.ts (4개)
+## 15. TermGenerator.test.ts (4개)
 
 **파일 경로**: `src/lib/components/TermGenerator.test.ts`
 
@@ -417,7 +431,7 @@
 
 ---
 
-## 15. TermValidationPanel.test.ts (6개)
+## 16. TermValidationPanel.test.ts (6개)
 
 **파일 경로**: `src/lib/components/TermValidationPanel.test.ts`
 
@@ -473,3 +487,4 @@ pnpm test term --watch
 | 날짜       | 변경 내용                     |
 | ---------- | ----------------------------- |
 | 2025-01-09 | 초기 문서 작성 (112개 테스트) |
+| 2026-03-12 | 영향도 preview API/Editor 테스트 추가 (118개 테스트) |

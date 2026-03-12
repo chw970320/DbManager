@@ -73,6 +73,53 @@ describe('TermEditor', () => {
 					json: () => Promise.resolve({ success: true })
 				});
 			}
+			if (url.includes('/api/term/impact-preview')) {
+				return Promise.resolve({
+					ok: true,
+					json: () =>
+						Promise.resolve({
+							success: true,
+							data: {
+								files: {
+									term: 'term.json',
+									domain: 'domain.json',
+									column: 'column.json'
+								},
+								mode: 'update',
+								current: {
+									id: 'entry-1',
+									termName: '사용자_이름',
+									columnName: 'USER_NAME',
+									domainName: '사용자분류_VARCHAR(50)'
+								},
+								proposed: {
+									id: 'entry-1',
+									termName: '사용자_이름',
+									columnName: 'USER_NAME',
+									domainName: '사용자분류_VARCHAR(50)'
+								},
+								changes: {
+									termNameChanged: false,
+									columnNameChanged: false,
+									domainNameChanged: false
+								},
+								summary: {
+									currentLinkedColumnCount: 2,
+									nextLinkedColumnCount: 2,
+									columnLinksToBeBroken: 0,
+									newColumnLinksDetected: 0,
+									affectedColumnStandardizationCount: 0,
+									proposedDomainExists: true
+								},
+								samples: {
+									currentLinkedColumns: [{ id: 'c1', name: 'USER_NAME' }],
+									nextLinkedColumns: [{ id: 'c1', name: 'USER_NAME' }]
+								},
+								guidance: ['이번 수정은 컬럼 연결 키와 동기화 대상에 즉시 영향을 주지 않습니다.']
+							}
+						})
+				});
+			}
 			return Promise.resolve({
 				ok: false,
 				json: () => Promise.resolve({ success: false })
@@ -260,6 +307,22 @@ describe('TermEditor', () => {
 			await waitFor(() => {
 				// 매핑 상태 표시 요소가 있는지 확인
 				expect(screen.getByText(/용어명/)).toBeInTheDocument();
+			});
+		});
+
+		it('should render change impact preview section for edit mode', async () => {
+			render(TermEditor, {
+				props: {
+					entry: createMockEntry(),
+					isEditMode: true
+				}
+			});
+
+			await waitFor(() => {
+				expect(screen.getByRole('region', { name: '용어 변경 영향도' })).toBeInTheDocument();
+				expect(screen.getByText('현재 연결 컬럼')).toBeInTheDocument();
+				expect(screen.getByText('저장 후 연결 컬럼')).toBeInTheDocument();
+				expect(screen.getByText('이번 수정은 컬럼 연결 키와 동기화 대상에 즉시 영향을 주지 않습니다.')).toBeInTheDocument();
 			});
 		});
 	});

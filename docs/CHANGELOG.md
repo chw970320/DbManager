@@ -4,6 +4,55 @@
 
 ### 요약
 
+- 도메인/용어 editor에 `변경 영향도` 미리보기가 추가되었습니다.
+- 저장 또는 삭제 전에 downstream 참조 수와 컬럼 표준화 파급을 즉시 확인할 수 있습니다.
+
+### 상세 변경
+
+1. 영향도 preview 타입/유틸리티/API 추가
+
+- 대상:
+  - `src/lib/types/change-impact.ts`
+  - `src/lib/utils/change-impact-preview.ts`
+  - `src/routes/api/domain/impact-preview/+server.ts`
+  - `src/routes/api/term/impact-preview/+server.ts`
+- 변경:
+  - 용어 저장 전 컬럼 연결 수, 끊기는 연결, 새 연결 후보, 도메인 존재 여부 계산 추가
+  - 도메인 저장/삭제 전 단어/용어/컬럼 참조 수와 삭제 영향 계산 추가
+  - 기존 `checkEntryReferences`와 파일 매핑 해석을 재사용하는 preview API 추가
+
+2. 도메인/용어 editor 영향도 패널 추가
+
+- 대상:
+  - `src/lib/components/DomainEditor.svelte`
+  - `src/lib/components/TermEditor.svelte`
+- 변경:
+  - 용어 editor에서 입력값 변경 시 영향도 자동 재계산
+  - 도메인 editor에서 현재 참조 수와 즉시 파급 여부 표시
+  - 도메인 삭제 확인창에 참조 건수 요약 포함
+
+3. 테스트/문서 동기화
+
+- 대상:
+  - `src/lib/utils/change-impact-preview.test.ts`
+  - `src/routes/api/domain/impact-preview/server.test.ts`
+  - `src/routes/api/term/impact-preview/server.test.ts`
+  - `src/lib/components/DomainEditor.test.ts`
+  - `src/lib/components/TermEditor.test.ts`
+  - `docs/tests/DOMAIN_TEST_DESCRIPTION.md`
+  - `docs/tests/TERM_TEST_DESCRIPTION.md`
+  - `docs/specs/api-reference.md`
+  - `docs/specs/data-model.md`
+  - `docs/USER_GUIDE.md`
+  - `README.md`
+- 변경:
+  - 영향도 계산 로직, preview API, editor 표시/삭제 안내 문구를 테스트로 고정
+  - 사용자 문서와 저장 모델 문서에 영향도 미리보기 동작과 응답 필드 반영
+
+## 2026-03-12
+
+### 요약
+
 - 프로파일링 결과에 즉시 적용되는 `품질 규칙` 메뉴와 API가 추가되었습니다.
 - PostgreSQL 프로파일링 실행 결과에 규칙 평가 요약과 위반 목록이 함께 표시됩니다.
 

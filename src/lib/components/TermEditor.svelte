@@ -5,6 +5,7 @@
 	import { get } from 'svelte/store';
 	import { termDataStore as termStore } from '$lib/stores/unified-store';
 	import type { TermEntry } from '$lib/types/term';
+	import type { TermImpactPreview } from '$lib/types/change-impact.js';
 	import { debounce } from '$lib/utils/debounce';
 	import { addToast } from '$lib/stores/toast-store';
 
@@ -45,6 +46,10 @@
 
 	// Form state
 	let isSubmitting = $state(false);
+	let impactPreview = $state<TermImpactPreview | null>(null);
+	let impactLoading = $state(false);
+	let impactError = $state('');
+	let impactRequestToken = 0;
 
 	// Autocomplete state
 	let termNameSuggestions = $state<string[]>([]);
@@ -95,6 +100,30 @@
 	$effect(() => {
 		void formData.termName;
 		debouncedUpdateDomainRecommendations();
+	});
+
+	$effect(() => {
+		void isEditMode;
+		void entry.id;
+		void entry.termName;
+		void entry.columnName;
+		void entry.domainName;
+		void filename;
+		void formData.termName;
+		void formData.columnName;
+		void formData.domainName;
+
+		if (
+			!formData.termName.trim() ||
+			!formData.columnName.trim() ||
+			!formData.domainName.trim()
+		) {
+			impactPreview = null;
+			impactError = '';
+			return;
+		}
+
+		debouncedLoadImpactPreview();
 	});
 
 	// Load term mapping info
@@ -277,6 +306,10 @@
 		void updateDomainRecommendations();
 	}, 300);
 
+	const debouncedLoadImpactPreview = debounce(() => {
+		void loadImpactPreview();
+	}, 300);
+
 	// Handle term name input
 	function handleTermNameInput() {
 		const query = formData.termName;
@@ -340,6 +373,75 @@
 			domainRecommendations = [];
 		} finally {
 			isLoadingDomainRecommendations = false;
+		}
+	}
+
+	function buildCurrentEntry() {
+		if (!isEditMode) return undefined;
+		return {
+			id: entry.id || '',
+			termName: entry.termName || '',
+			columnName: entry.columnName || '',
+			domainName: entry.domainName || ''
+		};
+	}
+
+	function buildPreviewEntry() {
+		return {
+			id: isEditMode && entry.id ? entry.id : '',
+			termName: formData.termName.trim(),
+			columnName: formData.columnName.trim(),
+			domainName: formData.domainName.trim()
+		};
+	}
+
+	async function loadImpactPreview() {
+		const proposedEntry = buildPreviewEntry();
+		if (!proposedEntry.termName || !proposedEntry.columnName || !proposedEntry.domainName) {
+			impactPreview = null;
+			impactError = '';
+			return null;
+		}
+
+		const requestToken = ++impactRequestToken;
+		impactLoading = true;
+		impactError = '';
+
+		try {
+			const response = await fetch('/api/term/impact-preview', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					filename,
+					currentEntry: buildCurrentEntry(),
+					proposedEntry
+				})
+			});
+			const result = await response.json();
+
+			if (requestToken !== impactRequestToken) {
+				return null;
+			}
+
+			if (!response.ok || !result.success || !result.data) {
+				throw new Error(result.error || '용어 영향도 미리보기를 불러오지 못했습니다.');
+			}
+
+			impactPreview = result.data as TermImpactPreview;
+			return impactPreview;
+		} catch (err) {
+			if (requestToken !== impactRequestToken) {
+				return null;
+			}
+			console.warn('용어 영향도 미리보기 로드 실패:', err);
+			impactPreview = null;
+			impactError =
+				err instanceof Error ? err.message : '용어 영향도 미리보기를 불러오지 못했습니다.';
+			return null;
+		} finally {
+			if (requestToken === impactRequestToken) {
+				impactLoading = false;
+			}
 		}
 	}
 
@@ -764,6 +866,120 @@
 					<input id="domainName" type="hidden" bind:value={formData.domainName} />
 					{#if errors.domainName}
 						<p class="text-error mt-1 text-sm">{errors.domainName}</p>
+					{/if}
+				</div>
+
+				<div class="rounded-xl border border-sky-200 bg-sky-50/70 p-4" role="region" aria-label="용어 변경 영향도">
+					<div class="mb-3 flex items-start justify-between gap-3">
+						<div>
+							<h3 class="text-sm font-semibold text-sky-900">변경 영향도</h3>
+							<p class="mt-1 text-xs text-sky-800">
+								저장 전에 컬럼 연결과 표준화 파급을 미리 계산합니다.
+							</p>
+						</div>
+						<button
+							type="button"
+							class="rounded-md border border-sky-300 bg-white px-3 py-1.5 text-xs font-medium text-sky-800 hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-50"
+							disabled={
+								impactLoading ||
+								!formData.termName.trim() ||
+								!formData.columnName.trim() ||
+								!formData.domainName.trim()
+							}
+							onclick={() => void loadImpactPreview()}
+						>
+							{impactLoading ? '계산 중...' : '다시 계산'}
+						</button>
+					</div>
+
+					{#if impactLoading}
+						<p class="text-xs text-sky-800">입력값 기준 영향도를 계산하는 중입니다.</p>
+					{:else if impactPreview}
+						<div class="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
+							<div class="rounded-lg border border-white/70 bg-white px-3 py-2">
+								<div class="text-slate-500">현재 연결 컬럼</div>
+								<div class="mt-1 text-base font-semibold text-slate-900">
+									{impactPreview.summary.currentLinkedColumnCount}
+								</div>
+							</div>
+							<div class="rounded-lg border border-white/70 bg-white px-3 py-2">
+								<div class="text-slate-500">저장 후 연결 컬럼</div>
+								<div class="mt-1 text-base font-semibold text-slate-900">
+									{impactPreview.summary.nextLinkedColumnCount}
+								</div>
+							</div>
+							<div class="rounded-lg border border-white/70 bg-white px-3 py-2">
+								<div class="text-slate-500">도메인 존재 여부</div>
+								<div class="mt-1 text-base font-semibold {impactPreview.summary.proposedDomainExists ? 'text-emerald-700' : 'text-rose-700'}">
+									{impactPreview.summary.proposedDomainExists ? '정상' : '누락'}
+								</div>
+							</div>
+							{#if impactPreview.summary.columnLinksToBeBroken > 0}
+								<div class="rounded-lg border border-rose-200 bg-white px-3 py-2">
+									<div class="text-rose-600">끊기는 컬럼 연결</div>
+									<div class="mt-1 text-base font-semibold text-rose-700">
+										{impactPreview.summary.columnLinksToBeBroken}
+									</div>
+								</div>
+							{/if}
+							{#if impactPreview.summary.newColumnLinksDetected > 0}
+								<div class="rounded-lg border border-emerald-200 bg-white px-3 py-2">
+									<div class="text-emerald-600">새 연결 후보</div>
+									<div class="mt-1 text-base font-semibold text-emerald-700">
+										{impactPreview.summary.newColumnLinksDetected}
+									</div>
+								</div>
+							{/if}
+							{#if impactPreview.summary.affectedColumnStandardizationCount > 0}
+								<div class="rounded-lg border border-amber-200 bg-white px-3 py-2">
+									<div class="text-amber-700">표준화 영향 컬럼</div>
+									<div class="mt-1 text-base font-semibold text-amber-800">
+										{impactPreview.summary.affectedColumnStandardizationCount}
+									</div>
+								</div>
+							{/if}
+						</div>
+
+						<div class="mt-3 space-y-2">
+							{#each impactPreview.guidance as guide (guide)}
+								<div class="rounded-lg border border-sky-100 bg-white/80 px-3 py-2 text-xs text-slate-700">
+									{guide}
+								</div>
+							{/each}
+						</div>
+
+						{#if impactPreview.samples.currentLinkedColumns.length > 0 || impactPreview.samples.nextLinkedColumns.length > 0}
+							<div class="mt-3 grid gap-2 sm:grid-cols-2">
+								{#if impactPreview.samples.currentLinkedColumns.length > 0}
+									<div class="rounded-lg border border-white/70 bg-white px-3 py-2 text-xs">
+										<div class="font-medium text-slate-800">현재 연결 컬럼 예시</div>
+										<div class="mt-2 flex flex-wrap gap-2">
+											{#each impactPreview.samples.currentLinkedColumns as column (column.id)}
+												<span class="rounded-full bg-slate-100 px-2 py-1 text-slate-700">
+													{column.name}
+												</span>
+											{/each}
+										</div>
+									</div>
+								{/if}
+								{#if impactPreview.samples.nextLinkedColumns.length > 0}
+									<div class="rounded-lg border border-white/70 bg-white px-3 py-2 text-xs">
+										<div class="font-medium text-slate-800">저장 후 연결 컬럼 예시</div>
+										<div class="mt-2 flex flex-wrap gap-2">
+											{#each impactPreview.samples.nextLinkedColumns as column (column.id)}
+												<span class="rounded-full bg-emerald-50 px-2 py-1 text-emerald-700">
+													{column.name}
+												</span>
+											{/each}
+										</div>
+									</div>
+								{/if}
+							</div>
+						{/if}
+					{:else if impactError}
+						<p class="text-xs text-rose-700">{impactError}</p>
+					{:else}
+						<p class="text-xs text-sky-800">필수 항목을 채우면 저장 전 영향도를 자동으로 계산합니다.</p>
 					{/if}
 				</div>
 

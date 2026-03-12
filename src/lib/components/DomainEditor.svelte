@@ -2,7 +2,9 @@
 	import { createEventDispatcher } from 'svelte';
 	import { tick } from 'svelte';
 	import type { DomainEntry } from '$lib/types/domain';
+	import type { DomainImpactPreview } from '$lib/types/change-impact.js';
 	import type { DomainDataTypeMappingLike } from '$lib/utils/domain-name';
+	import { debounce } from '$lib/utils/debounce';
 	import { generateStandardDomainName } from '$lib/utils/validation';
 	import { v4 as uuidv4 } from 'uuid';
 	import { addToast } from '$lib/stores/toast-store';
@@ -67,6 +69,10 @@
 
 	// Form state
 	let isSubmitting = $state(false);
+	let impactPreview = $state<DomainImpactPreview | null>(null);
+	let impactLoading = $state(false);
+	let impactError = $state('');
+	let impactRequestToken = 0;
 
 	// Update formData when entry prop changes
 	$effect(() => {
@@ -84,6 +90,10 @@
 			formData.allowedValues = entry.allowedValues || '';
 		}
 	});
+
+	const debouncedLoadImpactPreview = debounce(() => {
+		void loadImpactPreview();
+	}, 300);
 
 	// Validation functions
 	function validateDomainGroup(value: string): string {
@@ -120,6 +130,31 @@
 		errors.physicalDataType = validatePhysicalDataType(formData.physicalDataType);
 	});
 
+	$effect(() => {
+		void isEditMode;
+		void entry.id;
+		void entry.domainCategory;
+		void entry.standardDomainName;
+		void entry.physicalDataType;
+		void entry.dataLength;
+		void entry.decimalPlaces;
+		void filename;
+		void formData.domainGroup;
+		void formData.domainCategory;
+		void formData.physicalDataType;
+		void formData.dataLength;
+		void formData.decimalPlaces;
+		void generatedDomainName;
+
+		if (!formData.domainGroup.trim() || !formData.domainCategory.trim() || !formData.physicalDataType.trim()) {
+			impactPreview = null;
+			impactError = '';
+			return;
+		}
+
+		debouncedLoadImpactPreview();
+	});
+
 	// Form validation
 	function isFormValid(): boolean {
 		return (
@@ -130,6 +165,87 @@
 			!!formData.domainCategory.trim() &&
 			!!formData.physicalDataType.trim()
 		);
+	}
+
+	function buildCurrentEntry() {
+		if (!isEditMode) return undefined;
+		return {
+			id: entry.id || '',
+			domainCategory: entry.domainCategory || '',
+			standardDomainName: entry.standardDomainName || '',
+			physicalDataType: entry.physicalDataType || '',
+			dataLength: entry.dataLength || '',
+			decimalPlaces: entry.decimalPlaces || ''
+		};
+	}
+
+	function buildPreviewEntry() {
+		return {
+			id: entry.id || '',
+			domainCategory: formData.domainCategory.trim(),
+			standardDomainName: generatedDomainName,
+			physicalDataType: formData.physicalDataType.trim(),
+			dataLength: formData.dataLength.trim(),
+			decimalPlaces: formData.decimalPlaces.trim()
+		};
+	}
+
+	async function requestImpactPreview(
+		mode?: 'create' | 'update' | 'delete',
+		updateState = true
+	) {
+		const requestToken = updateState ? ++impactRequestToken : impactRequestToken;
+		if (updateState) {
+			impactLoading = true;
+			impactError = '';
+		}
+
+		try {
+			const response = await fetch('/api/domain/impact-preview', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					filename,
+					mode: mode || (isEditMode ? 'update' : 'create'),
+					currentEntry: buildCurrentEntry(),
+					proposedEntry: mode === 'delete' ? undefined : buildPreviewEntry()
+				})
+			});
+			const result = await response.json();
+
+			if (updateState && requestToken !== impactRequestToken) {
+				return null;
+			}
+
+			if (!response.ok || !result.success || !result.data) {
+				throw new Error(result.error || '도메인 영향도 미리보기를 불러오지 못했습니다.');
+			}
+
+			const preview = result.data as DomainImpactPreview;
+			if (updateState) {
+				impactPreview = preview;
+			}
+			return preview;
+		} catch (err) {
+			if (updateState && requestToken !== impactRequestToken) {
+				return null;
+			}
+			console.warn('도메인 영향도 미리보기 로드 실패:', err);
+			if (updateState) {
+				impactPreview = null;
+				impactError =
+					err instanceof Error ? err.message : '도메인 영향도 미리보기를 불러오지 못했습니다.';
+			}
+			return null;
+		} finally {
+			if (updateState && requestToken === impactRequestToken) {
+				impactLoading = false;
+			}
+		}
+	}
+
+	async function loadImpactPreview() {
+		return requestImpactPreview();
 	}
 
 	// Handle save
@@ -244,7 +360,18 @@
 			return;
 		}
 
-		const confirmed = await showConfirm({ title: '삭제 확인', message: '정말로 이 항목을 삭제하시겠습니까?', confirmText: '삭제', variant: 'danger' });
+		const deletePreview = await requestImpactPreview('delete', false);
+		const deleteMessage =
+			deletePreview && deletePreview.summary.totalReferenceCount > 0
+				? `정말로 이 항목을 삭제하시겠습니까?\n\n참조 현황: 단어 ${deletePreview.summary.vocabularyReferenceCount}건, 용어 ${deletePreview.summary.termReferenceCount}건, 컬럼 ${deletePreview.summary.columnReferenceCount}건`
+				: '정말로 이 항목을 삭제하시겠습니까?';
+
+		const confirmed = await showConfirm({
+			title: '삭제 확인',
+			message: deleteMessage,
+			confirmText: '삭제',
+			variant: 'danger'
+		});
 		if (confirmed) {
 			const entryToDelete: DomainEntry = {
 				id: entry.id,
@@ -610,6 +737,115 @@
 							disabled={isSubmitting}
 						></textarea>
 					</div>
+				</div>
+
+				<div class="rounded-xl border border-amber-200 bg-amber-50/70 p-4" role="region" aria-label="도메인 변경 영향도">
+					<div class="mb-3 flex items-start justify-between gap-3">
+						<div>
+							<h3 class="text-sm font-semibold text-amber-900">변경 영향도</h3>
+							<p class="mt-1 text-xs text-amber-800">
+								저장 또는 삭제 전에 downstream 참조 수를 확인합니다.
+							</p>
+						</div>
+						<button
+							type="button"
+							class="rounded-md border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+							disabled={
+								impactLoading ||
+								!formData.domainGroup.trim() ||
+								!formData.domainCategory.trim() ||
+								!formData.physicalDataType.trim()
+							}
+							onclick={() => void loadImpactPreview()}
+						>
+							{impactLoading ? '계산 중...' : '다시 계산'}
+						</button>
+					</div>
+
+					{#if impactLoading}
+						<p class="text-xs text-amber-800">참조 수와 변경 영향을 계산하는 중입니다.</p>
+					{:else if impactPreview}
+						<div class="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+							<div class="rounded-lg border border-white/70 bg-white px-3 py-2">
+								<div class="text-slate-500">단어 참조</div>
+								<div class="mt-1 text-base font-semibold text-slate-900">
+									{impactPreview.summary.vocabularyReferenceCount}
+								</div>
+							</div>
+							<div class="rounded-lg border border-white/70 bg-white px-3 py-2">
+								<div class="text-slate-500">용어 참조</div>
+								<div class="mt-1 text-base font-semibold text-slate-900">
+									{impactPreview.summary.termReferenceCount}
+								</div>
+							</div>
+							<div class="rounded-lg border border-white/70 bg-white px-3 py-2">
+								<div class="text-slate-500">컬럼 참조</div>
+								<div class="mt-1 text-base font-semibold text-slate-900">
+									{impactPreview.summary.columnReferenceCount}
+								</div>
+							</div>
+							<div class="rounded-lg border border-white/70 bg-white px-3 py-2">
+								<div class="text-slate-500">총 참조</div>
+								<div class="mt-1 text-base font-semibold {impactPreview.summary.totalReferenceCount > 0 ? 'text-amber-800' : 'text-emerald-700'}">
+									{impactPreview.summary.totalReferenceCount}
+								</div>
+							</div>
+						</div>
+
+						{#if impactPreview.summary.downstreamBreakCount > 0 || impactPreview.summary.affectedColumnSyncCount > 0}
+							<div class="mt-2 grid gap-2 text-xs sm:grid-cols-2">
+								{#if impactPreview.summary.downstreamBreakCount > 0}
+									<div class="rounded-lg border border-rose-200 bg-white px-3 py-2">
+										<div class="text-rose-600">참조 끊김 가능 건수</div>
+										<div class="mt-1 text-base font-semibold text-rose-700">
+											{impactPreview.summary.downstreamBreakCount}
+										</div>
+									</div>
+								{/if}
+								{#if impactPreview.summary.affectedColumnSyncCount > 0}
+									<div class="rounded-lg border border-blue-200 bg-white px-3 py-2">
+										<div class="text-blue-600">컬럼 동기화 영향</div>
+										<div class="mt-1 text-base font-semibold text-blue-700">
+											{impactPreview.summary.affectedColumnSyncCount}
+										</div>
+									</div>
+								{/if}
+							</div>
+						{/if}
+
+						<div class="mt-3 space-y-2">
+							{#each impactPreview.guidance as guide (guide)}
+								<div class="rounded-lg border border-amber-100 bg-white/80 px-3 py-2 text-xs text-slate-700">
+									{guide}
+								</div>
+							{/each}
+						</div>
+
+						{#if impactPreview.references.some((reference) => reference.count > 0)}
+							<div class="mt-3 grid gap-2 sm:grid-cols-3">
+								{#each impactPreview.references as reference (reference.type)}
+									{#if reference.count > 0}
+										<div class="rounded-lg border border-white/70 bg-white px-3 py-2 text-xs">
+											<div class="font-medium text-slate-800">
+												{reference.type.toUpperCase()} · {reference.count}건
+											</div>
+											<div class="mt-2 flex flex-wrap gap-2">
+												{#each reference.entries as item (item.id)}
+													<span class="rounded-full bg-slate-100 px-2 py-1 text-slate-700">
+														{item.name}
+													</span>
+												{/each}
+											</div>
+										</div>
+									{/if}
+								{/each}
+							</div>
+						{/if}
+					{:else if impactError}
+						<p class="text-xs text-rose-700">{impactError}</p>
+					{:else}
+						<p class="text-xs text-amber-800">필수 항목을 채우면 참조 수와 변경 영향을 자동으로 계산합니다.</p>
+					{/if}
 				</div>
 
 				<!-- 버튼 그룹 -->

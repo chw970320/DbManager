@@ -47,6 +47,73 @@ describe('DomainEditor', () => {
 					json: () => Promise.resolve({ success: true })
 				});
 			}
+			if (url.includes('/api/domain/impact-preview')) {
+				return Promise.resolve({
+					ok: true,
+					json: () =>
+						Promise.resolve({
+							success: true,
+							data: {
+								files: {
+									domain: 'domain.json',
+									vocabulary: 'vocabulary.json',
+									term: 'term.json',
+									column: 'column.json'
+								},
+								mode: 'update',
+								current: {
+									id: 'entry-1',
+									domainCategory: '사용자분류',
+									standardDomainName: '사용자분류_VARCHAR(50)',
+									physicalDataType: 'VARCHAR',
+									dataLength: '50',
+									decimalPlaces: ''
+								},
+								proposed: {
+									id: 'entry-1',
+									domainCategory: '사용자분류',
+									standardDomainName: '사용자분류_VARCHAR(50)',
+									physicalDataType: 'VARCHAR',
+									dataLength: '50',
+									decimalPlaces: ''
+								},
+								changes: {
+									referenceKeyChanged: false,
+									syncSpecChanged: false
+								},
+								summary: {
+									vocabularyReferenceCount: 1,
+									termReferenceCount: 2,
+									columnReferenceCount: 3,
+									totalReferenceCount: 6,
+									downstreamBreakCount: 0,
+									affectedColumnSyncCount: 0
+								},
+								references: [
+									{
+										type: 'vocabulary',
+										filename: 'vocabulary.json',
+										count: 1,
+										entries: [{ id: 'v1', name: '사용자' }]
+									},
+									{
+										type: 'term',
+										filename: 'term.json',
+										count: 2,
+										entries: [{ id: 't1', name: '사용자_이름' }]
+									},
+									{
+										type: 'column',
+										filename: 'column.json',
+										count: 3,
+										entries: [{ id: 'c1', name: 'USER_NAME' }]
+									}
+								],
+								guidance: ['현재 이 도메인은 단어 1건, 용어 2건, 컬럼 3건에서 참조되고 있습니다.']
+							}
+						})
+				});
+			}
 			return Promise.resolve({
 				ok: false,
 				json: () => Promise.resolve({ success: false })
@@ -233,11 +300,26 @@ describe('DomainEditor', () => {
 			expect(mockShowConfirm).toHaveBeenCalledWith(
 				expect.objectContaining({
 					title: '삭제 확인',
-					message: '정말로 이 항목을 삭제하시겠습니까?',
+					message: expect.stringContaining('참조 현황: 단어 1건, 용어 2건, 컬럼 3건'),
 					confirmText: '삭제',
 					variant: 'danger'
 				})
 			);
+		});
+
+		it('should render change impact preview section in edit mode', async () => {
+			render(DomainEditor, {
+				props: {
+					entry: createMockEntry(),
+					isEditMode: true
+				}
+			});
+
+			await waitFor(() => {
+				expect(screen.getByRole('region', { name: '도메인 변경 영향도' })).toBeInTheDocument();
+				expect(screen.getByText('총 참조')).toBeInTheDocument();
+				expect(screen.getByText('현재 이 도메인은 단어 1건, 용어 2건, 컬럼 3건에서 참조되고 있습니다.')).toBeInTheDocument();
+			});
 		});
 	});
 });

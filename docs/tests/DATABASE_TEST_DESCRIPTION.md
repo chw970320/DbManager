@@ -11,17 +11,20 @@
 | ---------------------------------------- | -------------- | -------------- | ------------------------- |
 | `database/server.test.ts`                | 9              | 20             | 완료                      |
 | `database/files/server.test.ts`          | 4              | 12             | 완료                      |
+| `database/files/mapping/server.test.ts`  | 3              | 3              | 완료                      |
 | `database/upload/server.test.ts`         | 4              | 9              | 완료                      |
 | `database/download/server.test.ts`       | 2              | 6              | 완료                      |
 | `database/filter-options/server.test.ts` | 3              | 8              | 완료                      |
 | `DatabaseEditor.test.ts`                 | 4              | 13             | 작성완료 (일부 수정 필요) |
 | `DatabaseTable.test.ts`                  | 4              | 8              | 작성완료                  |
 | `DatabaseFileManager.test.ts`            | 4              | 10             | 작성완료 (환경 설정 필요) |
-| **합계**                                 | **30**         | **82**         |                           |
+| **합계**                                 | **33**         | **85**         |                           |
 
 > **중요**: 데이터베이스 관련 모든 API/컴포넌트는 **현재 선택된 database 파일(`filename`)을 기준으로만** 동작해야 합니다.
 >
 > - CRUD, 업로드/다운로드, 필터 옵션, 파일 관리 모두 동일한 원칙을 따릅니다.
+> - `files/mapping`은 DB 화면에서도 `vocabulary/domain/term/entity/attribute/table/column` 전체 연결 상태를 같은 번들로 조회/저장해야 합니다.
+> - `DatabaseFileManager`는 DB 화면에서도 다른 7개 파일을 모두 선택할 수 있어야 합니다.
 
 ---
 
@@ -102,6 +105,15 @@
 
 > **특징**: 파일 관리 API는 "전체 파일 목록"을 다루지만,  
 > 실제 CRUD/검증/업로드/다운로드는 항상 **선택된 filename 기준**으로 동작해야 합니다.
+
+#### `/api/database/files/mapping` (`database/files/mapping/server.test.ts`)
+
+- GET - 나머지 7개 파일 기준 공통 매핑 번들 조회
+  - `vocabulary/domain/term/entity/attribute/table/column` 매핑이 함께 반환되는지 검증
+- PUT - 공통 매핑 번들 저장
+  - 현재 database 파일을 기준으로 선택된 8종 파일 조합이 함께 저장되는지 검증
+- PUT - 잘못된 매핑 요청 거부
+  - 7개 파일 중 일부가 빠진 요청은 400으로 거부되는지 검증
 
 ---
 
@@ -203,7 +215,7 @@
 
 ## 4. 테스트 구현 완료 현황
 
-### 4.1 API 테스트 (55개 테스트, 모두 통과)
+### 4.1 API 테스트 (58개 테스트, 모두 통과)
 
 ✅ **`database/server.test.ts`** (20개 테스트)
 
@@ -218,6 +230,12 @@
 - POST: 새 파일 생성, 파일명 누락, 파일 생성 실패
 - PUT: 파일 이름 변경, 파일명 누락, 파일 이름 변경 실패
 - DELETE: 파일 삭제, 파일명 누락, 파일 삭제 실패
+
+✅ **`database/files/mapping/server.test.ts`** (3개 테스트)
+
+- GET: 나머지 7개 파일 기준 공통 매핑 번들 반환
+- PUT: 공통 8종 파일 매핑 저장
+- PUT: 불완전한 매핑 요청 400 처리
 
 ✅ **`database/upload/server.test.ts`** (9개 테스트)
 
@@ -267,9 +285,14 @@
 - `loadDatabaseData(filename)`, `saveDatabaseData(data, filename)` 호출 확인
 - 다른 파일의 데이터에 영향을 주지 않음을 확인
 
+✅ **8종 공통 매핑 확인**
+
+- `database/files/mapping`이 DB 화면에서도 나머지 7개 파일을 포함한 공통 번들을 반환하는지 검증
+- 파일 관리 UI가 동일한 공통 매핑 섹션을 로드하는지 확인
+
 ## 5. 다음 작업 계획
 
-1. ✅ API 테스트 코드 작성 완료 (55개 테스트 모두 통과)
+1. ✅ API 테스트 코드 작성 완료 (58개 테스트 모두 통과)
 2. ✅ 컴포넌트 테스트 코드 작성 완료 (26개 테스트 작성, 일부 수정 필요)
 3. ⚠️ 컴포넌트 테스트 수정 (DatabaseEditor 제목 텍스트, DatabaseFileManager 환경 설정)
 4. ✅ `DATABASE_TEST_DESCRIPTION.md` 업데이트 완료

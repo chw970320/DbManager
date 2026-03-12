@@ -10,16 +10,20 @@
 | `vocabulary/validate/server.test.ts`       | 8개       | 완료 |
 | `vocabulary/duplicates/server.test.ts`     | 4개       | 완료 |
 | `vocabulary/files/server.test.ts`          | 12개      | 완료 |
-| `vocabulary/files/mapping/server.test.ts`  | 10개      | 완료 |
+| `vocabulary/files/mapping/server.test.ts`  | 3개       | 완료 |
 | `vocabulary/sync-domain/server.test.ts`    | 9개       | 완료 |
 | `vocabulary/download/server.test.ts`       | 8개       | 완료 |
 | `vocabulary/filter-options/server.test.ts` | 9개       | 완료 |
 | `search/server.test.ts`                    | 19개      | 완료 |
 | `VocabularyEditor.test.ts`                 | 18개      | 완료 |
 | `VocabularyFileManager.test.ts`            | 9개       | 완료 |
-| **합계**                                   | **122개** |      |
+| **합계**                                   | **115개** |      |
 
 ---
+
+> **추가 회귀 포인트 (2026-03-12)**:
+> `vocabulary/files/mapping`은 vocabulary 화면에서도 `domain/term/database/entity/attribute/table/column` 7개 파일을 같은 공통 번들로 조회/저장해야 하며,
+> `VocabularyFileManager`는 다른 7개 파일을 모두 선택할 수 있어야 합니다.
 
 ## 1. vocabulary/server.test.ts (18개)
 
@@ -142,31 +146,15 @@
 
 ---
 
-## 5. vocabulary/files/mapping/server.test.ts (10개)
+## 5. vocabulary/files/mapping/server.test.ts (3개)
 
 **파일 경로**: `src/routes/api/vocabulary/files/mapping/server.test.ts`
 
-단어집과 도메인 파일 간의 매핑 정보를 관리하는 API를 테스트합니다.
+8종 공통 파일 매핑 API를 테스트합니다.
 
-### GET (5개)
-
-| 테스트명                                       | 설명                 | 검증 내용                             |
-| ---------------------------------------------- | -------------------- | ------------------------------------- |
-| should return mapping info successfully        | 매핑 정보 조회 성공  | 200 응답, mapping.domain 반환         |
-| should use specified filename parameter        | 파일명 파라미터 사용 | filename 쿼리 파라미터 적용           |
-| should use default filename when not specified | 기본 파일명 사용     | 파라미터 없을 때 vocabulary.json 사용 |
-| should return default mapping when not set     | 기본 매핑값 반환     | mapping 없을 때 domain.json 기본값    |
-| should return 500 on error                     | 조회 오류 처리       | 파일 로드 실패 시 500 에러            |
-
-### PUT (5개)
-
-| 테스트명                                         | 설명                | 검증 내용                            |
-| ------------------------------------------------ | ------------------- | ------------------------------------ |
-| should save mapping info successfully            | 매핑 정보 저장 성공 | 200 응답, saveVocabularyData 호출    |
-| should return 400 when filename is missing       | 파일명 누락         | filename 없이 요청 시 400 에러       |
-| should return 400 when mapping is missing        | 매핑 정보 누락      | mapping 없이 요청 시 400 에러        |
-| should return 400 when mapping.domain is missing | domain 필드 누락    | mapping.domain 없이 요청 시 400 에러 |
-| should return 500 on save error                  | 저장 오류 처리      | saveVocabularyData 실패 시 500 에러  |
+- GET - 나머지 7개 파일 기준 공통 매핑 번들 반환
+- PUT - 공통 8종 파일 매핑 저장
+- PUT - 불완전한 매핑 요청 400 처리
 
 ---
 

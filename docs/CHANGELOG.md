@@ -4,6 +4,97 @@
 
 ### 요약
 
+- 단어집/도메인/용어/DB/엔터티/속성/테이블/컬럼 8종 파일 매핑 정본이 `static/data/settings/shared-file-mappings.json`으로 분리되었습니다.
+- 어느 파일 관리 화면에서 저장하더라도 같은 8종 연결 상태가 공유되며, DB 연관 상태 상세/정렬 화면도 동일한 파일 조합을 사용합니다.
+
+### 상세 변경
+
+1. 8종 공통 파일 매핑 번들 도입
+
+- 대상:
+  - `src/lib/registry/shared-file-mapping-registry.ts`
+  - `src/lib/utils/db-design-file-mapping.ts`
+  - `src/lib/registry/db-design-file-mapping.ts`
+  - `src/lib/types/shared-file-mapping.ts`
+  - `src/lib/types/base.ts`
+  - `src/lib/types/vocabulary.ts`
+  - `src/lib/types/domain.ts`
+  - `src/lib/types/term.ts`
+  - `src/lib/types/database-design.ts`
+  - `src/lib/registry/data-registry.ts`
+- 변경:
+  - `static/data/settings/shared-file-mappings.json`에 8종 파일 조합 전체를 저장하는 공통 번들 레지스트리 추가
+  - `loadData(...)`가 공통 매핑 파일을 기준으로 `mapping`을 런타임 주입하고, 개별 데이터 JSON 저장 시에는 `mapping`을 정본으로 남기지 않도록 정리
+  - 레거시 부분 매핑만 남아 있어도 기존 `mapping` 필드, 직접 관계 레지스트리, 기본 파일명을 조합해 전체 8종 번들을 복원하도록 정리
+  - 파일 이름 변경/삭제 시 공통 매핑 파일도 함께 동기화되도록 정리
+
+2. 파일 매핑 API/화면 통합
+
+- 대상:
+  - `src/routes/api/vocabulary/files/mapping/+server.ts`
+  - `src/routes/api/domain/files/mapping/+server.ts`
+  - `src/routes/api/term/files/mapping/+server.ts`
+  - `src/routes/api/database/files/mapping/+server.ts`
+  - `src/routes/api/entity/files/mapping/+server.ts`
+  - `src/routes/api/attribute/files/mapping/+server.ts`
+  - `src/routes/api/table/files/mapping/+server.ts`
+  - `src/routes/api/column/files/mapping/+server.ts`
+  - `src/lib/components/DbDesignFileMappingFields.svelte`
+  - `src/lib/components/VocabularyFileManager.svelte`
+  - `src/lib/components/DomainFileManager.svelte`
+  - `src/lib/components/TermFileManager.svelte`
+  - `src/lib/components/DatabaseFileManager.svelte`
+  - `src/lib/components/EntityFileManager.svelte`
+  - `src/lib/components/AttributeFileManager.svelte`
+  - `src/lib/components/TableDefFileManager.svelte`
+  - `src/lib/components/ColumnDefFileManager.svelte`
+- 변경:
+  - 각 `/files/mapping` GET API가 화면 고유 일부 관계가 아니라 공통 8종 연결 상태를 반환하도록 정리
+  - 각 `/files/mapping` PUT API가 저장 시 `shared-file-mappings.json`을 정본으로 갱신하고, 직접 레지스트리 관계는 파생 정보로 best-effort 동기화
+  - 8개 파일 관리 모달 어디서든 나머지 7개 파일을 모두 선택 가능하도록 UI 통일
+
+3. DB 연관 상태/정렬 화면 매핑 컨텍스트 확장
+
+- 대상:
+  - `src/lib/components/DesignRelationPanel.svelte`
+  - `src/routes/database/browse/+page.svelte`
+  - `src/routes/entity/browse/+page.svelte`
+  - `src/routes/attribute/browse/+page.svelte`
+  - `src/routes/table/browse/+page.svelte`
+  - `src/routes/column/browse/+page.svelte`
+- 변경:
+  - DB 5개 browse 화면이 `vocabulary/domain/term`까지 포함한 동일한 8종 파일 번들을 연관 상태 패널에 전달
+  - 연관 상태 상세 및 정렬 동기화 호출이 같은 파일 조합을 공유하도록 정리
+
+4. 회귀 테스트 보강
+
+- 대상:
+  - `src/lib/registry/db-design-file-mapping.test.ts`
+  - `src/routes/api/vocabulary/files/mapping/server.test.ts`
+  - `src/routes/api/domain/files/mapping/server.test.ts`
+  - `src/routes/api/term/files/mapping/server.test.ts`
+  - `src/routes/api/database/files/mapping/server.test.ts`
+  - `src/routes/api/entity/files/mapping/server.test.ts`
+  - `src/routes/api/attribute/files/mapping/server.test.ts`
+  - `src/routes/api/table/files/mapping/server.test.ts`
+  - `src/routes/api/column/files/mapping/server.test.ts`
+  - `src/lib/components/VocabularyFileManager.test.ts`
+  - `src/lib/components/DomainFileManager.test.ts`
+  - `src/lib/components/TermFileManager.test.ts`
+  - `src/lib/components/DatabaseFileManager.test.ts`
+  - `src/lib/components/EntityFileManager.test.ts`
+  - `src/lib/components/AttributeFileManager.test.ts`
+  - `src/lib/components/TableDefFileManager.test.ts`
+  - `src/lib/components/ColumnDefFileManager.test.ts`
+- 변경:
+  - 레거시 부분 매핑만 존재해도 8종 공통 번들을 해석할 수 있는지 검증
+  - 각 파일 매핑 API가 공통 번들을 반환/저장하는지 검증
+  - 8개 파일 관리 화면이 동일한 매핑 UI와 저장 흐름을 사용하는지 검증
+
+## 2026-03-12
+
+### 요약
+
 - 도메인/용어 browse 페이지가 탭 이동 후에도 마지막으로 선택한 파일을 유지하도록 복원 로직이 정리되었습니다.
 - 저장된 선택 파일이 목록에 남아 있으면 첫 번째 파일(`bksp.json` 등)로 덮어쓰지 않도록 공통 선택 규칙을 다시 적용했습니다.
 

@@ -8,15 +8,20 @@
 | ----------------------------------------- | --------- | ---- |
 | `attribute/server.test.ts`                | 18개      | 완료 |
 | `attribute/files/server.test.ts`          | 12개      | 완료 |
+| `attribute/files/mapping/server.test.ts`  | 3개       | 완료 |
 | `attribute/upload/server.test.ts`         | 5개       | 완료 |
 | `attribute/download/server.test.ts`       | 6개       | 완료 |
 | `attribute/filter-options/server.test.ts` | 9개       | 완료 |
 | `AttributeEditor.test.ts`                 | 11개      | 완료 |
 | `AttributeTable.test.ts`                  | 5개       | 완료 |
-| `AttributeFileManager.test.ts`            | 4개       | 완료 |
-| **합계**                                  | **70개**  |      |
+| `AttributeFileManager.test.ts`            | 5개       | 완료 |
+| **합계**                                  | **74개**  |      |
 
 ---
+
+> **추가 회귀 포인트 (2026-03-12)**:
+> `attribute/files/mapping`은 attribute 화면에서도 `vocabulary/domain/term/database/entity/table/column` 전체 연결 상태를 공유 번들로 조회/저장해야 하며,
+> `AttributeFileManager`는 다른 7개 파일을 모두 선택할 수 있어야 합니다.
 
 ## 1. attribute/server.test.ts (18개)
 
@@ -100,6 +105,16 @@
 | should delete file successfully            | 파일 삭제 성공 | 200 응답, deleteAttributeFile 호출 |
 | should return 400 when filename is missing | 파일명 누락    | filename 없이 요청 시 400 에러     |
 | should return 500 when delete fails        | 파일 삭제 실패 | 삭제 권한 없음 등 오류 시 500      |
+
+---
+
+### attribute/files/mapping/server.test.ts (3개)
+
+**파일 경로**: `src/routes/api/attribute/files/mapping/server.test.ts`
+
+- GET - 나머지 7개 파일 기준 공통 매핑 번들 반환
+- PUT - 공통 8종 파일 매핑 저장
+- PUT - 불완전한 매핑 요청 400 처리
 
 ---
 
@@ -234,18 +249,19 @@
 
 ---
 
-## 8. AttributeFileManager.test.ts (4개)
+## 8. AttributeFileManager.test.ts (5개)
 
 **파일 경로**: `src/lib/components/AttributeFileManager.test.ts`
 
 파일 관리 모달 컴포넌트를 테스트합니다.
 
-### Rendering (2개)
+### Rendering (3개)
 
 | 테스트명                        | 설명                 | 검증 내용                   |
 | ------------------------------- | -------------------- | --------------------------- |
 | 모달이 열릴 때 파일 목록 렌더링 | 모달 열기 시 UI 표시 | "파일 관리" 텍스트 표시     |
 | 파일 목록 표시                  | 파일 목록 API 호출   | `/api/attribute/files` 호출 |
+| 매핑 섹션 렌더링                | 공통 매핑 UI 표시    | `/api/attribute/files/mapping` 조회 |
 
 ### File Operations (1개)
 

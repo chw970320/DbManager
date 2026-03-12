@@ -28,12 +28,16 @@
 
 데이터 타입 간 관련 파일명은 아래 우선순위로 해석됩니다.
 
-1. `static/data/registry.json`의 매핑 관계
-2. 각 데이터 파일의 `mapping` 필드
+1. `static/data/settings/shared-file-mappings.json`의 8종 공통 매핑 번들
+2. 레거시 각 데이터 파일의 `mapping` 필드
 3. 타입별 기본 파일명(`DEFAULT_FILENAMES`)
+
+`static/data/registry.json`은 8종 공통 번들의 정본이 아니라, 직접 관계 해석과 레거시 복원을 돕는 파생 레지스트리입니다.
 
 관련 구현:
 
+- `src/lib/registry/shared-file-mapping-registry.ts`
+- `src/lib/registry/db-design-file-mapping.ts`
 - `src/lib/registry/mapping-registry.ts`
   - `resolveRelatedFilenames`
   - `getKnownRelatedTypes`
@@ -50,8 +54,9 @@
 
 ### 하위 호환성
 
-- 파일 내 `mapping` 필드는 유지됩니다.
-- `VocabularyData.mappedDomainFile`은 제거되었으며, 현재 스키마는 `mapping.domain`만 사용합니다.
+- 파일 내 `mapping` 필드는 더 이상 저장 정본이 아닙니다.
+- `loadData(...)`는 공통 매핑 파일을 기준으로 `mapping` 필드를 런타임 주입하며, 저장 시에는 해당 필드를 제거합니다.
+- `VocabularyData.mappedDomainFile`은 제거되었으며, 현재는 공통 매핑 파일 기준의 런타임 `mapping`만 사용합니다.
 
 ---
 
@@ -75,6 +80,60 @@
 ### 충돌 정책
 - 관계 동기화와 컬럼 동기화(`POST /api/column/sync-term`)의 필드 소유권/실행 순서는
   `docs/specs/relation-sync-policy.md`를 따른다.
+
+---
+
+## 8종 공통 파일 매핑 (2026-03-12)
+
+`vocabulary/domain/term/database/entity/attribute/table/column` 8개 데이터 파일은 개별 화면마다 다른 부분 매핑을 따로 저장하지 않고,
+서로 같은 파일 조합을 공유하는 공통 매핑 번들을 사용합니다.
+
+### 공통 규칙
+
+- 8종 파일 매핑의 저장 정본은 `static/data/settings/shared-file-mappings.json`입니다.
+- 각 `/files/mapping` API는 이 공통 매핑 파일을 기준으로 현재 파일을 포함한 8종 번들을 조회/저장합니다.
+- 저장 시 직접 관계(`vocabulary -> domain`, `term -> vocabulary/domain`, `database -> entity/table`, `entity -> attribute`, `table -> entity/column`, `attribute -> column`, `column -> term/domain`)도 `registry.json`에 파생 정보로 함께 반영됩니다.
+- 파일 이름 변경/삭제 시 공통 매핑 파일도 새 파일명 또는 타입별 기본 파일명으로 함께 동기화됩니다.
+- 공유 번들이 아직 없는 레거시 파일은 기존 `mapping` 필드, 직접 관계 레지스트리, 기본 파일명을 조합해 복원됩니다.
+- DB 5개 browse 화면의 연관 상태 상세/정렬 동기화는 같은 8종 파일 번들을 그대로 전달받습니다.
+
+### 저장 타입
+
+- 정본 저장 타입:
+  - `SharedFileMappingBundle = Record<DataType, string>`
+  - `SharedFileMappingRegistryData`
+- 저장 위치:
+  - `static/data/settings/shared-file-mappings.json`
+- 런타임/API 응답 타입:
+  - `SharedDataFileMapping = Partial<Record<DataType, string>>`
+  - `VocabularyData.mapping`
+  - `DomainData.mapping`
+  - `TermData.mapping`
+  - `DatabaseData.mapping`
+  - `EntityData.mapping`
+  - `AttributeData.mapping`
+  - `TableData.mapping`
+  - `ColumnData.mapping`
+- 런타임 `mapping`에는 현재 파일 타입 키를 제외한 나머지 7개 키만 노출됩니다.
+
+### 기본값
+
+기본 파일명은 `DEFAULT_FILENAMES`를 사용하며, 신규/기본 공통 번들은 아래 조합으로 시작합니다.
+
+```json
+{
+	"vocabulary": "vocabulary.json",
+	"domain": "domain.json",
+	"term": "term.json",
+	"database": "database.json",
+	"entity": "entity.json",
+	"attribute": "attribute.json",
+	"table": "table.json",
+	"column": "column.json"
+}
+```
+
+컨테이너 예시의 `mapping` 필드는 `loadData(...)` 또는 `/files/mapping` 응답 기준의 런타임 shape이며, 원본 데이터 JSON 저장 시에는 포함되지 않습니다.
 
 ---
 
@@ -241,7 +300,7 @@ const isValid =
   - 단어집 파일 목록 조회
 
 - **GET** `/api/vocabulary/files/mapping?filename={filename}`
-  - 매핑 정보 조회
+  - 현재 파일을 제외한 나머지 7개 파일 매핑 정보 조회
 
 - **PUT** `/api/vocabulary/files/mapping`
   - 매핑 정보 저장
@@ -250,7 +309,13 @@ const isValid =
     {
     	"filename": "vocabulary.json",
     	"mapping": {
-    		"domain": "domain.json"
+    		"domain": "domain.json",
+    		"term": "term.json",
+    		"database": "database.json",
+    		"entity": "entity.json",
+    		"attribute": "attribute.json",
+    		"table": "table.json",
+    		"column": "column.json"
     	}
     }
     ```
@@ -289,8 +354,7 @@ const isValid =
 | `entries`          | `VocabularyEntry[]` | ✅   | `[]`   | 단어집 엔트리 배열                 | 실제 데이터              |
 | `lastUpdated`      | `string`            | ✅   | -      | 마지막 업데이트 시간 (ISO 8601)    | 메타데이터               |
 | `totalCount`       | `number`            | ✅   | `0`    | 전체 엔트리 수                     | 성능 최적화용            |
-| `mapping`          | `object?`           | ❌   | -      | 매핑 정보                          | 도메인 매핑 정보         |
-| `mapping.domain`   | `string?`           | ❌   | -      | 매핑된 도메인 파일명               | 현재 사용 중인 매핑 정보 |
+| `mapping`          | `SharedDataFileMapping?` | ❌   | -      | 런타임 주입 공통 파일 매핑 정보    | 정본은 `shared-file-mappings.json`, 현재 파일을 제외한 나머지 7개 파일명 |
 
 ### Validation 규칙
 
@@ -325,7 +389,13 @@ const isValid =
 	"lastUpdated": "2024-01-15T10:30:00.000Z",
 	"totalCount": 1,
 	"mapping": {
-		"domain": "domain.json"
+		"domain": "domain.json",
+		"term": "term.json",
+		"database": "database.json",
+		"entity": "entity.json",
+		"attribute": "attribute.json",
+		"table": "table.json",
+		"column": "column.json"
 	}
 }
 ```
@@ -462,6 +532,27 @@ const isValid =
 - **GET** `/api/domain/files`
   - 도메인 파일 목록 조회
 
+- **GET** `/api/domain/files/mapping?filename={filename}`
+  - 현재 파일을 제외한 나머지 7개 파일 매핑 정보 조회
+
+- **PUT** `/api/domain/files/mapping`
+  - 매핑 정보 저장
+  - Request Body:
+    ```json
+    {
+    	"filename": "domain.json",
+    	"mapping": {
+    		"vocabulary": "vocabulary.json",
+    		"term": "term.json",
+    		"database": "database.json",
+    		"entity": "entity.json",
+    		"attribute": "attribute.json",
+    		"table": "table.json",
+    		"column": "column.json"
+    	}
+    }
+    ```
+
 - **GET** `/api/domain/download?filename={filename}`
   - 도메인 데이터 다운로드 (XLSX)
 
@@ -486,9 +577,10 @@ const isValid =
 
 | 필드명        | 타입            | 필수 | 기본값 | 설명                            | 용도          |
 | ------------- | --------------- | ---- | ------ | ------------------------------- | ------------- |
-| `entries`     | `DomainEntry[]` | ✅   | `[]`   | 도메인 엔트리 배열              | 실제 데이터   |
-| `lastUpdated` | `string`        | ✅   | -      | 마지막 업데이트 시간 (ISO 8601) | 메타데이터    |
-| `totalCount`  | `number`        | ✅   | `0`    | 전체 엔트리 수                  | 성능 최적화용 |
+| `entries`     | `DomainEntry[]`         | ✅   | `[]`   | 도메인 엔트리 배열              | 실제 데이터                    |
+| `lastUpdated` | `string`                | ✅   | -      | 마지막 업데이트 시간 (ISO 8601) | 메타데이터                     |
+| `totalCount`  | `number`                | ✅   | `0`    | 전체 엔트리 수                  | 성능 최적화용                  |
+| `mapping`     | `SharedDataFileMapping?` | ❌   | -      | 런타임 주입 공통 파일 매핑 정보 | 정본은 `shared-file-mappings.json`, 현재 파일을 제외한 나머지 7개 파일명 |
 
 ### 예시 데이터
 
@@ -507,7 +599,16 @@ const isValid =
 		}
 	],
 	"lastUpdated": "2024-01-15T10:30:00.000Z",
-	"totalCount": 1
+	"totalCount": 1,
+	"mapping": {
+		"vocabulary": "vocabulary.json",
+		"term": "term.json",
+		"database": "database.json",
+		"entity": "entity.json",
+		"attribute": "attribute.json",
+		"table": "table.json",
+		"column": "column.json"
+	}
 }
 ```
 
@@ -647,7 +748,7 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
   - 용어 파일 목록 조회
 
 - **GET** `/api/term/files/mapping?filename={filename}`
-  - 매핑 정보 조회
+  - 현재 파일을 제외한 나머지 7개 파일 매핑 정보 조회
 
 - **PUT** `/api/term/files/mapping`
   - 매핑 정보 저장
@@ -657,7 +758,12 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
     	"filename": "term.json",
     	"mapping": {
     		"vocabulary": "vocabulary.json",
-    		"domain": "domain.json"
+    		"domain": "domain.json",
+    		"database": "database.json",
+    		"entity": "entity.json",
+    		"attribute": "attribute.json",
+    		"table": "table.json",
+    		"column": "column.json"
     	}
     }
     ```
@@ -697,9 +803,7 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 | `entries`            | `TermEntry[]` | ✅   | `[]`   | 용어 엔트리 배열                | 실제 데이터             |
 | `lastUpdated`        | `string`      | ✅   | -      | 마지막 업데이트 시간 (ISO 8601) | 메타데이터              |
 | `totalCount`         | `number`      | ✅   | `0`    | 전체 엔트리 수                  | 성능 최적화용           |
-| `mapping`            | `object?`     | ❌   | -      | 매핑 정보                       | 참조하는 파일 정보      |
-| `mapping.vocabulary` | `string?`     | ❌   | -      | 매핑된 단어집 파일명            | 용어명/칼럼명 매핑 기준 |
-| `mapping.domain`     | `string?`     | ❌   | -      | 매핑된 도메인 파일명            | 도메인명 매핑 기준      |
+| `mapping`            | `SharedDataFileMapping?` | ❌   | -      | 런타임 주입 공통 파일 매핑 정보 | 정본은 `shared-file-mappings.json`, 현재 파일을 제외한 나머지 7개 파일명 |
 
 ### 예시 데이터
 
@@ -722,7 +826,12 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 	"totalCount": 1,
 	"mapping": {
 		"vocabulary": "vocabulary.json",
-		"domain": "domain.json"
+		"domain": "domain.json",
+		"database": "database.json",
+		"entity": "entity.json",
+		"attribute": "attribute.json",
+		"table": "table.json",
+		"column": "column.json"
 	}
 }
 ```
@@ -1283,3 +1392,4 @@ interface ApiResponse {
 
 4. **필드 정리 완료**
    - `VocabularyData.mappedDomainFile` 제거
+   - 파일 간 연결 정보는 공통 `mapping` 필드로 통합

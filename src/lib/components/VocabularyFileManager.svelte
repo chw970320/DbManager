@@ -6,7 +6,7 @@
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { filterVocabularyFiles } from '$lib/utils/file-filter';
 	import { resolvePreferredFilename } from '$lib/utils/file-selection';
-	import { vocabularyStore } from '$lib/stores/vocabulary-store';
+	import { vocabularyDataStore, domainDataStore } from '$lib/stores/unified-store';
 	import { showConfirm } from '$lib/stores/confirm-store';
 
 	interface Props {
@@ -122,7 +122,7 @@
 
 	// Sync domainGroup mapping into vocabulary file
 	async function handleDomainSync() {
-		const { selectedFilename } = get(vocabularyStore);
+		const { selectedFilename } = get(vocabularyDataStore);
 		const vocabFile =
 			selectedFilename || selectedUploadFile || currentMappingFile || 'vocabulary.json';
 
@@ -153,10 +153,7 @@
 				isSubmitting = false;
 				return;
 			}
-			vocabularyStore.update((state) => ({
-				...state,
-				selectedDomainFilename: selectedDomainFile
-			}));
+			domainDataStore.set({ selectedFilename: selectedDomainFile });
 
 			// 2) 매핑된 도메인으로 동기화 실행
 			const response = await fetch('/api/vocabulary/sync-domain', {
@@ -321,7 +318,7 @@
 
 	function handleDomainFileSelect(file: string) {
 		selectedDomainFile = file;
-		vocabularyStore.update((state) => ({ ...state, selectedDomainFilename: file }));
+		domainDataStore.set({ selectedFilename: file });
 	}
 
 	// Load mapping info for selected vocabulary file
@@ -415,10 +412,12 @@
 			});
 			loadFiles();
 			// 도메인 파일 로드 및 스토어 동기화
-			const unsubscribeDomain = vocabularyStore.subscribe((state) => {
-				if (state.selectedDomainFilename) {
-					selectedDomainFile = state.selectedDomainFilename;
+			const unsubscribeDomain = domainDataStore.subscribe((state) => {
+				if (state.selectedFilename) {
+					selectedDomainFile = state.selectedFilename;
 				}
+			});
+			const unsubscribeVocabulary = vocabularyDataStore.subscribe((state) => {
 				// 선택된 단어집 파일의 매핑 정보 로드
 				const vocabFile =
 					currentFilename || state.selectedFilename || selectedUploadFile || SYSTEM_FILE;
@@ -428,11 +427,12 @@
 			});
 			loadDomainFiles();
 			// 초기 매핑 정보 로드
-			const { selectedFilename } = get(vocabularyStore);
+			const { selectedFilename } = get(vocabularyDataStore);
 			loadMappingInfo(currentFilename || selectedFilename || selectedUploadFile || SYSTEM_FILE);
 			return () => {
 				unsubscribe();
 				unsubscribeDomain();
+				unsubscribeVocabulary();
 			};
 		}
 	});

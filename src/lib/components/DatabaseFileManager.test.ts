@@ -15,8 +15,8 @@ vi.mock('$app/environment', () => ({
 }));
 
 // Mock stores
-vi.mock('$lib/stores/database-design-store', () => ({
-	databaseStore: {
+vi.mock('$lib/stores/unified-store', () => ({
+	databaseDataStore: {
 		subscribe: vi.fn((callback) => {
 			callback({ selectedFilename: 'database.json' });
 			return () => {};

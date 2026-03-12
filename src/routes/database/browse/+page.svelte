@@ -7,7 +7,7 @@
 	import DatabaseEditor from '$lib/components/DatabaseEditor.svelte';
 	import DatabaseFileManager from '$lib/components/DatabaseFileManager.svelte';
 	import type { DatabaseEntry, DbDesignApiResponse } from '$lib/types/database-design.js';
-	import { databaseStore } from '$lib/stores/database-design-store';
+	import { databaseDataStore as databaseStore } from '$lib/stores/unified-store';
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { filterDatabaseFiles } from '$lib/utils/file-filter';
 

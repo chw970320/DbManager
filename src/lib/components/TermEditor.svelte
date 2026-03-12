@@ -3,9 +3,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import { tick } from 'svelte';
 	import { get } from 'svelte/store';
-	import { vocabularyStore } from '$lib/stores/vocabulary-store';
-	import { domainStore } from '$lib/stores/domain-store';
-	import { termStore } from '$lib/stores/term-store';
+	import { termDataStore as termStore } from '$lib/stores/unified-store';
 	import type { TermEntry } from '$lib/types/term';
 	import { debounce } from '$lib/utils/debounce';
 	import { addToast } from '$lib/stores/toast-store';

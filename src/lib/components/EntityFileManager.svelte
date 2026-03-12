@@ -2,7 +2,7 @@
 	import { createEventDispatcher, untrack } from 'svelte';
 	import FileUpload from './FileUpload.svelte';
 	import type { DbDesignApiResponse, DbDesignUploadResult } from '$lib/types/database-design';
-	import { entityStore } from '$lib/stores/database-design-store';
+	import { entityDataStore as entityStore } from '$lib/stores/unified-store';
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { resolvePreferredFilename } from '$lib/utils/file-selection';
 	import { showConfirm } from '$lib/stores/confirm-store';

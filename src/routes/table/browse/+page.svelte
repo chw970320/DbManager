@@ -7,7 +7,7 @@
 	import TableDefEditor from '$lib/components/TableDefEditor.svelte';
 	import TableDefFileManager from '$lib/components/TableDefFileManager.svelte';
 	import type { TableEntry, DbDesignApiResponse } from '$lib/types/database-design.js';
-	import { tableStore } from '$lib/stores/database-design-store';
+	import { tableDataStore as tableStore } from '$lib/stores/unified-store';
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { filterTableFiles } from '$lib/utils/file-filter';
 

@@ -125,7 +125,7 @@ DbManager/
 - **컴포넌트**: PascalCase (예: `DomainTable.svelte`)
 - **유틸리티**: kebab-case (예: `api-client.ts`)
 - **타입 파일**: kebab-case (예: `vocabulary.ts`)
-- **스토어**: kebab-case (예: `domain-store.ts`)
+- **스토어**: kebab-case (예: `unified-store.ts`, `settings-store.ts`)
 - **API 라우트**: `+server.ts` (SvelteKit 컨벤션)
 
 ---
@@ -1263,25 +1263,21 @@ interface ApiResponse {
 간단한 전역 상태는 Svelte Stores를 사용합니다.
 
 ```typescript
-// stores/domain-store.ts
-import { writable } from 'svelte/store';
-
-export const domainStore = writable({
-	selectedFilename: 'domain.json'
-});
+// stores/unified-store.ts
+import { domainDataStore } from '$lib/stores/unified-store';
 ```
 
 **사용법**:
 
 ```typescript
-import { domainStore } from '$lib/stores/domain-store';
+import { domainDataStore } from '$lib/stores/unified-store';
 import { get } from 'svelte/store';
 
 // 읽기
-const filename = get(domainStore).selectedFilename;
+const filename = get(domainDataStore).selectedFilename;
 
 // 구독
-domainStore.subscribe((value) => {
+domainDataStore.subscribe((value) => {
 	console.log(value.selectedFilename);
 });
 ```

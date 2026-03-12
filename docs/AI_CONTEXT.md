@@ -356,7 +356,7 @@ src/lib/
 - **컴포넌트**: PascalCase (예: `VocabularyTable.svelte`)
 - **유틸리티**: kebab-case (예: `api-client.ts`)
 - **타입 파일**: kebab-case (예: `vocabulary.ts`)
-- **스토어**: kebab-case (예: `domain-store.ts`)
+- **스토어**: kebab-case (예: `unified-store.ts`, `settings-store.ts`)
 - **API 라우트**: `+server.ts` (SvelteKit 컨벤션)
 
 ### 타입 정의 위치

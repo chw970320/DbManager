@@ -7,7 +7,7 @@
 	import ColumnDefEditor from '$lib/components/ColumnDefEditor.svelte';
 	import ColumnDefFileManager from '$lib/components/ColumnDefFileManager.svelte';
 	import type { ColumnEntry, DbDesignApiResponse } from '$lib/types/database-design.js';
-	import { columnStore } from '$lib/stores/database-design-store';
+	import { columnDataStore as columnStore } from '$lib/stores/unified-store';
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { filterColumnFiles } from '$lib/utils/file-filter';
 

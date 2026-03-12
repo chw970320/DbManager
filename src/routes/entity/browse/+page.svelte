@@ -7,7 +7,7 @@
 	import EntityEditor from '$lib/components/EntityEditor.svelte';
 	import EntityFileManager from '$lib/components/EntityFileManager.svelte';
 	import type { EntityEntry, DbDesignApiResponse } from '$lib/types/database-design.js';
-	import { entityStore } from '$lib/stores/database-design-store';
+	import { entityDataStore as entityStore } from '$lib/stores/unified-store';
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { filterEntityFiles } from '$lib/utils/file-filter';
 

@@ -15,12 +15,21 @@ vi.mock('$app/environment', () => ({
 }));
 
 // Mock stores
-vi.mock('$lib/stores/vocabulary-store', () => ({
-	vocabularyStore: {
+vi.mock('$lib/stores/unified-store', () => ({
+	vocabularyDataStore: {
 		subscribe: vi.fn((callback) => {
 			callback({ selectedFilename: 'vocabulary.json' });
 			return () => {};
 		}),
+		set: vi.fn(),
+		update: vi.fn()
+	},
+	domainDataStore: {
+		subscribe: vi.fn((callback) => {
+			callback({ selectedFilename: 'domain.json' });
+			return () => {};
+		}),
+		set: vi.fn(),
 		update: vi.fn()
 	}
 }));

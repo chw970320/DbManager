@@ -7,7 +7,7 @@
 	import AttributeEditor from '$lib/components/AttributeEditor.svelte';
 	import AttributeFileManager from '$lib/components/AttributeFileManager.svelte';
 	import type { AttributeEntry, DbDesignApiResponse } from '$lib/types/database-design.js';
-	import { attributeStore } from '$lib/stores/database-design-store';
+	import { attributeDataStore as attributeStore } from '$lib/stores/unified-store';
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { filterAttributeFiles } from '$lib/utils/file-filter';
 

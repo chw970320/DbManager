@@ -8,7 +8,7 @@
 	import VocabularyFileManager from '$lib/components/VocabularyFileManager.svelte';
 	import type { VocabularyEntry, ApiResponse } from '$lib/types/vocabulary.js';
 	import { get } from 'svelte/store';
-	import { vocabularyStore } from '$lib/stores/vocabulary-store';
+	import { vocabularyDataStore as vocabularyStore } from '$lib/stores/unified-store';
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { filterVocabularyFiles, isSystemVocabularyFile } from '$lib/utils/file-filter';
 
@@ -88,11 +88,7 @@
 							vocabularyFiles.length > 0
 						) {
 							selectedFilename = vocabularyFiles[0];
-							const current = get(vocabularyStore);
-							vocabularyStore.set({
-								selectedFilename: vocabularyFiles[0],
-								selectedDomainFilename: current.selectedDomainFilename || 'domain.json'
-							});
+							vocabularyStore.set({ selectedFilename: vocabularyFiles[0] });
 							if (browser) {
 								loadVocabularyData();
 							}

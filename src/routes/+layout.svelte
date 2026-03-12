@@ -21,6 +21,7 @@
 		{ href: '/attribute/browse', label: '속성', icon: 'key' },
 		{ href: '/table/browse', label: '테이블', icon: 'table' },
 		{ href: '/column/browse', label: '컬럼', icon: 'columns' },
+		{ href: '/data-source/browse', label: '데이터 소스', icon: 'link' },
 		{ href: '/erd', label: 'ERD', icon: 'diagram' }
 	];
 
@@ -33,7 +34,6 @@
 	function isCurrentPage(href: string) {
 		return $page.url.pathname === href;
 	}
-
 </script>
 
 <div class="flex min-h-screen flex-col bg-gradient-to-br from-slate-50 via-white to-blue-50">

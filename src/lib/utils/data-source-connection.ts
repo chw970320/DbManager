@@ -11,6 +11,19 @@ type DataSourceConnectionTarget =
 	| Pick<DataSourceEntry, 'type' | 'config'>
 	| Pick<DataSourceInput, 'type' | 'config'>;
 
+export function createPostgreSqlClient(config: PostgreSqlConnectionConfig): Client {
+	return new Client({
+		host: config.host,
+		port: config.port,
+		database: config.database,
+		user: config.username,
+		password: config.password,
+		ssl: config.ssl ? { rejectUnauthorized: false } : undefined,
+		connectionTimeoutMillis: config.connectionTimeoutSeconds * 1000,
+		application_name: 'DbManager'
+	});
+}
+
 function trimVersion(value: unknown): string | undefined {
 	if (typeof value !== 'string' || !value.trim()) {
 		return undefined;
@@ -26,16 +39,7 @@ async function testPostgreSqlConnection(
 ): Promise<DataSourceConnectionTestResult> {
 	const testedAt = new Date().toISOString();
 	const startedAt = Date.now();
-	const client = new Client({
-		host: config.host,
-		port: config.port,
-		database: config.database,
-		user: config.username,
-		password: config.password,
-		ssl: config.ssl ? { rejectUnauthorized: false } : undefined,
-		connectionTimeoutMillis: config.connectionTimeoutSeconds * 1000,
-		application_name: 'DbManager'
-	});
+	const client = createPostgreSqlClient(config);
 
 	try {
 		await client.connect();

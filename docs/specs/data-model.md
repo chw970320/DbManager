@@ -1301,6 +1301,8 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 
 **파일 위치:** `src/lib/types/data-source.ts`
 
+**프로파일링 런타임 타입 위치:** `src/lib/types/data-profiling.ts`
+
 **저장 파일:** `static/data/settings/data-sources.json`
 
 ### DataSourceEntry
@@ -1359,6 +1361,63 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 | `latencyMs`             | `number?` | 연결 지연 시간       |
 | `testedAt`              | `string`  | 테스트 수행 시각     |
 
+### DataSourceProfileTarget
+
+프로파일링 대상 목록의 개별 테이블 요약입니다.
+
+| 필드명              | 타입      | 설명                               |
+| ------------------- | --------- | ---------------------------------- |
+| `schema`            | `string`  | PostgreSQL 스키마명                |
+| `table`             | `string`  | 테이블명                           |
+| `tableType`         | `string`  | 현재는 `BASE TABLE`                |
+| `estimatedRowCount` | `number?` | `pg_stat_user_tables` 기반 예상 행 수 |
+| `columnCount`       | `number`  | 컬럼 수                            |
+
+### DataSourceProfileTargetsResult
+
+프로파일링 대상 조회 API의 응답 모델입니다.
+
+| 필드명           | 타입                        | 설명                        |
+| ---------------- | --------------------------- | --------------------------- |
+| `dataSourceId`   | `string`                    | 데이터 소스 ID              |
+| `dataSourceName` | `string`                    | 데이터 소스 이름            |
+| `dataSourceType` | `'postgresql'`              | 현재 데이터 소스 유형       |
+| `defaultSchema`  | `string`                    | 화면 기본 스키마            |
+| `schemas`        | `string[]`                  | 조회 가능한 사용자 스키마 목록 |
+| `tables`         | `DataSourceProfileTarget[]` | 프로파일링 대상 테이블 목록 |
+
+### DataSourceColumnProfile
+
+프로파일링 결과의 컬럼별 지표 모델입니다.
+
+| 필드명            | 타입      | 설명                                   |
+| ----------------- | --------- | -------------------------------------- |
+| `columnName`      | `string`  | 컬럼명                                 |
+| `ordinalPosition` | `number`  | 컬럼 순서                              |
+| `dataType`        | `string`  | PostgreSQL 포맷 타입 문자열            |
+| `isNullable`      | `boolean` | NULL 허용 여부                         |
+| `nullCount`       | `number`  | NULL 건수                              |
+| `nullRatio`       | `number`  | 전체 행 대비 NULL 비율                 |
+| `distinctCount`   | `number`  | 고유값 건수                            |
+| `distinctRatio`   | `number`  | 전체 행 대비 고유값 비율               |
+| `minLength`       | `number?` | 값의 텍스트 길이 최소값                |
+| `maxLength`       | `number?` | 값의 텍스트 길이 최대값                |
+
+### DataSourceTableProfileResult
+
+단일 테이블 프로파일링 실행 결과입니다. 결과는 파일로 저장하지 않고 API 응답으로만 반환합니다.
+
+| 필드명           | 타입                      | 설명                        |
+| ---------------- | ------------------------- | --------------------------- |
+| `dataSourceId`   | `string`                  | 데이터 소스 ID              |
+| `dataSourceName` | `string`                  | 데이터 소스 이름            |
+| `dataSourceType` | `'postgresql'`            | 현재 데이터 소스 유형       |
+| `schema`         | `string`                  | 대상 스키마                 |
+| `table`          | `string`                  | 대상 테이블                 |
+| `rowCount`       | `number`                  | 정확한 `COUNT(*)` 기준 행 수 |
+| `profiledAt`     | `string`                  | 프로파일링 수행 시각        |
+| `columns`        | `DataSourceColumnProfile[]` | 컬럼별 프로파일링 결과    |
+
 ### Validation 규칙
 
 1. `type`
@@ -1407,6 +1466,8 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 
 - **GET, POST, PUT, DELETE** `/api/data-sources`
 - **POST** `/api/data-sources/test`
+- **GET** `/api/data-sources/profile/targets`
+- **POST** `/api/data-sources/profile/run`
 
 ---
 

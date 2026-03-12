@@ -93,6 +93,12 @@ http://localhost:5173/api
 
 ## 최근 변경 사항 (2026-03-12)
 
+- `GET /api/data-sources/profile/targets`
+  - 저장된 PostgreSQL 데이터 소스를 기준으로 조회 가능한 사용자 스키마/테이블 목록을 반환합니다.
+  - 각 테이블마다 `estimatedRowCount`, `columnCount`를 함께 제공합니다.
+- `POST /api/data-sources/profile/run`
+  - 선택한 PostgreSQL 테이블의 컬럼 프로파일링을 실행합니다.
+  - 결과에는 `rowCount`, `nullCount/nullRatio`, `distinctCount/distinctRatio`, `minLength/maxLength`가 포함됩니다.
 - `GET/POST/PUT/DELETE /api/data-sources`
   - 내부 관리자용 PostgreSQL 데이터 소스 연결 정의 CRUD를 제공합니다.
   - 응답 요약에는 비밀번호 원문 대신 `config.hasPassword`만 노출됩니다.
@@ -1723,6 +1729,96 @@ PostgreSQL 연결 테스트를 실행합니다.
   - `message`
   - `details.host`, `details.port`, `details.database`, `details.schema`, `details.serverVersion`
   - `latencyMs`, `testedAt`
+
+### GET /api/data-sources/profile/targets
+
+저장된 PostgreSQL 데이터 소스에서 프로파일링 가능한 스키마/테이블 목록을 조회합니다.
+
+- 필수 쿼리 파라미터:
+  - `dataSourceId`
+- 동작:
+  - 저장된 연결 ID를 사용해 DB에 직접 접속
+  - `information_schema`, `pg_catalog`를 제외한 사용자 테이블만 조회
+- 성공 응답 핵심:
+  - `dataSourceId`, `dataSourceName`, `defaultSchema`
+  - `schemas`
+  - `tables[].schema`, `tables[].table`, `tables[].tableType`
+  - `tables[].estimatedRowCount`, `tables[].columnCount`
+
+예시:
+
+```json
+{
+	"success": true,
+	"data": {
+		"dataSourceId": "source-1",
+		"dataSourceName": "운영 PostgreSQL",
+		"defaultSchema": "public",
+		"schemas": ["audit", "public"],
+		"tables": [
+			{
+				"schema": "public",
+				"table": "customers",
+				"tableType": "BASE TABLE",
+				"estimatedRowCount": 1200,
+				"columnCount": 8
+			}
+		]
+	}
+}
+```
+
+### POST /api/data-sources/profile/run
+
+선택한 PostgreSQL 테이블의 컬럼 프로파일링을 실행합니다.
+
+- 요청 바디:
+
+```json
+{
+	"dataSourceId": "source-1",
+	"schema": "public",
+	"table": "customers"
+}
+```
+
+- 성공 응답 핵심:
+  - `dataSourceId`, `dataSourceName`, `schema`, `table`
+  - `rowCount`, `profiledAt`
+  - `columns[].columnName`, `columns[].ordinalPosition`, `columns[].dataType`, `columns[].isNullable`
+  - `columns[].nullCount`, `columns[].nullRatio`
+  - `columns[].distinctCount`, `columns[].distinctRatio`
+  - `columns[].minLength`, `columns[].maxLength`
+
+예시:
+
+```json
+{
+	"success": true,
+	"data": {
+		"dataSourceId": "source-1",
+		"dataSourceName": "운영 PostgreSQL",
+		"schema": "public",
+		"table": "customers",
+		"rowCount": 1200,
+		"profiledAt": "2026-03-12T08:00:00.000Z",
+		"columns": [
+			{
+				"columnName": "customer_id",
+				"ordinalPosition": 1,
+				"dataType": "integer",
+				"isNullable": false,
+				"nullCount": 0,
+				"nullRatio": 0,
+				"distinctCount": 1200,
+				"distinctRatio": 1,
+				"minLength": 1,
+				"maxLength": 5
+			}
+		]
+	}
+}
+```
 
 ---
 

@@ -4,6 +4,104 @@
 
 ### 요약
 
+- 용어 browse에서 파일을 바꿀 때 `용어계 관계 진단 요약` 카드와 좌측 검색 결과 요약이 갱신 중 상태를 바로 표시합니다.
+- 단어집/도메인/용어/DB 설계/운영·품질 browse 메뉴의 좌측 요약 카드도 공통 로딩 오버레이와 `aria-busy` 상태를 사용합니다.
+
+### 상세 변경
+
+1. 좌측 요약 카드 공통 로딩 상태 추가
+
+- 대상:
+  - `src/lib/components/BrowseSidebarSummary.svelte`
+  - `src/lib/components/BrowseSidebarSummary.test.ts`
+  - `src/routes/browse/+page.svelte`
+  - `src/routes/domain/browse/+page.svelte`
+  - `src/routes/term/browse/+page.svelte`
+  - `src/routes/database/browse/+page.svelte`
+  - `src/routes/entity/browse/+page.svelte`
+  - `src/routes/attribute/browse/+page.svelte`
+  - `src/routes/table/browse/+page.svelte`
+  - `src/routes/column/browse/+page.svelte`
+  - `src/routes/data-source/browse/+page.svelte`
+  - `src/routes/profiling/browse/+page.svelte`
+  - `src/routes/quality-rule/browse/+page.svelte`
+  - `src/routes/snapshot/browse/+page.svelte`
+- 변경:
+  - 공통 `BrowseSidebarSummary`에 `loading`, `loadingText` props 추가
+  - 갱신 중 배지, 오버레이, `aria-busy` 속성을 공통으로 제공
+  - 각 browse 페이지가 기존 로딩 플래그를 좌측 요약 카드에 전달하도록 연결
+
+2. 용어 관계 진단 요약 갱신 상태 표시
+
+- 대상:
+  - `src/routes/term/browse/+page.svelte`
+  - `src/routes/term/browse/page.test.ts`
+- 변경:
+  - `relationshipSummaryLoading` 상태를 분리해 파일 전환 시 관계 진단 카드가 즉시 `갱신 중` 상태를 표시
+  - 새 파일 기준 진단 결과가 도착할 때까지 스피너와 안내 문구를 노출
+
+3. 테스트/문서 동기화
+
+- 대상:
+  - `docs/FRONTEND_UI_UX_GUIDE.md`
+  - `docs/tests/TERM_TEST_DESCRIPTION.md`
+- 변경:
+  - sidebar/진단 요약 카드의 로딩 피드백 원칙과 term browse 회귀 테스트 범위를 문서에 반영
+
+## 2026-03-13
+
+### 요약
+
+- 스냅샷 생성이 페이지 내 고정 카드가 아니라 `스냅샷 추가` 팝업 등록 흐름으로 바뀌었습니다.
+- 선택할 수 없는 상태였던 상단 `현재 번들 스냅샷 저장` 버튼은 제거됐고, 검색/목록 중심 레이아웃으로 정리됐습니다.
+
+### 상세 변경
+
+1. 스냅샷 생성 진입점 정리
+
+- 대상:
+  - `src/lib/components/DesignSnapshotEditor.svelte`
+  - `src/routes/snapshot/browse/+page.svelte`
+- 변경:
+  - 상단 액션을 `스냅샷 추가` 버튼으로 통일하고 전용 모달에서 번들 선택/이름/설명 입력 후 저장하도록 변경
+  - 페이지 본문에서 인라인 `스냅샷 생성` 카드를 제거하고 저장된 스냅샷 목록을 전체 폭으로 확장
+  - 선택 불가능해 의미가 없던 `현재 번들 스냅샷 저장` 버튼 제거
+  - 저장 가능한 번들이 없을 때는 모달 안에서 empty state로 원인을 안내
+
+2. 테스트/문서 동기화
+
+- 대상:
+  - `src/lib/components/DesignSnapshotEditor.test.ts`
+  - `src/routes/snapshot/browse/page.test.ts`
+  - `docs/USER_GUIDE.md`
+  - `docs/tests/SNAPSHOT_TEST_DESCRIPTION.md`
+- 변경:
+  - 모달 렌더링, 번들 전환, 저장 이벤트 전달, browse 페이지의 팝업 기반 생성 흐름을 테스트로 고정
+  - 사용자 가이드와 스냅샷 테스트 문서에 `스냅샷 추가` 팝업 절차 반영
+
+## 2026-03-13
+
+### 요약
+
+- 좌측 검색 결과 요약 플로팅 카드의 내부 레이아웃이 `2 x N`에서 `1 x N` 단일 컬럼 스택으로 변경됐습니다.
+
+### 상세 변경
+
+1. 좌측 요약 카드 레이아웃 단일 컬럼화
+
+- 대상:
+  - `src/lib/components/BrowseSidebarSummary.svelte`
+  - `src/lib/components/BrowseSidebarSummary.test.ts`
+  - `docs/FRONTEND_UI_UX_GUIDE.md`
+- 변경:
+  - 공통 좌측 요약 카드의 내부 그리드를 단일 컬럼으로 통일
+  - 기존 `span` 지정 항목도 추가 컬럼을 만들지 않고 같은 세로 스택 안에서 렌더링
+  - 컴포넌트 테스트와 프론트엔드 가이드에 1열 배치 규칙 반영
+
+## 2026-03-13
+
+### 요약
+
 - 프로파일링 화면의 `테이블 불러오기` 흐름이 `대상 선택` 카드 안으로 이동해 선택과 실행이 같은 영역에서 이어집니다.
 - 프로파일링 대상 테이블 목록이 10건 단위 페이지네이션으로 바뀌어 긴 목록에서도 화면 길이가 과도하게 늘어나지 않습니다.
 - 프로파일링 실행 결과가 대상 목록 위로 이동하고, 실행 완료 시 결과 카드로 즉시 스크롤됩니다.

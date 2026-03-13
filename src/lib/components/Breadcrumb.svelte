@@ -8,6 +8,14 @@
 
 	let { items }: Props = $props();
 	const previousItem = $derived(items.length > 1 ? items[items.length - 2] : undefined);
+
+	function getTriggerClass(item: NavigationBreadcrumbItem) {
+		if (item.level === 1) {
+			return 'inline-flex list-none items-center gap-1.5 rounded-full border border-brand-100 bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-dark shadow-sm transition-colors hover:border-brand hover:bg-brand-100 hover:text-brand-dark';
+		}
+
+		return 'inline-flex list-none items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-content-secondary shadow-sm transition-colors hover:border-brand-100 hover:bg-surface-muted hover:text-content';
+	}
 </script>
 
 <nav aria-label="현재 위치" class="mb-4">
@@ -22,13 +30,16 @@
 			<li class="relative">
 				{#if item.children?.length}
 					<details class="relative">
-						<summary
-							class="inline-flex list-none items-center gap-1.5 rounded-full border border-brand-100 bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-dark shadow-sm transition-colors hover:border-brand hover:bg-brand-100 hover:text-brand-dark"
-							aria-label={`${item.label} 메뉴 열기`}
-						>
-							<span class="h-1.5 w-1.5 rounded-full bg-brand" aria-hidden="true"></span>
+						<summary class={getTriggerClass(item)} aria-label={`${item.label} 메뉴 열기`}>
+							{#if item.level === 1}
+								<span class="h-1.5 w-1.5 rounded-full bg-brand" aria-hidden="true"></span>
+							{/if}
 							<span>{item.label}</span>
-							<Icon name="chevron-down" size="xs" class="text-brand-dark" />
+							<Icon
+								name="chevron-down"
+								size="xs"
+								class={item.level === 1 ? 'text-brand-dark' : 'text-content-muted'}
+							/>
 						</summary>
 						<div
 							class="absolute left-0 top-full z-popover mt-2 min-w-[13rem] rounded-xl border border-border bg-surface p-1 shadow-lg"
@@ -36,13 +47,16 @@
 							{#each item.children as child (child.href)}
 								<a
 									href={child.href}
-									class="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-colors {items[
-										index + 1
-									]?.href === child.href
-										? 'bg-brand-50 text-brand-dark'
+									class="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-colors {item.activeChildId ===
+									child.id
+										? item.level === 1
+											? 'bg-brand-50 text-brand-dark'
+											: 'bg-surface-muted text-content'
 										: 'text-content-secondary hover:bg-surface-muted hover:text-content'}"
 								>
-									<Icon name={child.icon} size="sm" />
+									{#if child.icon}
+										<Icon name={child.icon} size="sm" />
+									{/if}
 									<span>{child.label}</span>
 								</a>
 							{/each}

@@ -10,10 +10,19 @@ export interface NavigationMenuGroup {
 	items: NavigationMenuItem[];
 }
 
+export interface NavigationBreadcrumbOption {
+	id: string;
+	label: string;
+	href: string;
+	icon?: string;
+}
+
 export interface NavigationBreadcrumbItem {
 	label: string;
 	href?: string;
-	children?: NavigationMenuItem[];
+	children?: NavigationBreadcrumbOption[];
+	activeChildId?: string;
+	level: 1 | 2;
 }
 
 export const menuGroups: NavigationMenuGroup[] = [
@@ -82,11 +91,25 @@ export function getNavigationBreadcrumbItems(pathname: string): NavigationBreadc
 		{
 			label: match.group.label,
 			href: match.group.items[0]?.href,
-			children: match.group.items
+			children: menuGroups.map((group) => ({
+				id: group.id,
+				label: group.label,
+				href: group.items[0]?.href ?? '/'
+			})),
+			activeChildId: match.group.id,
+			level: 1
 		},
 		{
 			label: match.item.label,
-			href: match.item.href
+			href: match.item.href,
+			children: match.group.items.map((item) => ({
+				id: item.href,
+				label: item.label,
+				href: item.href,
+				icon: item.icon
+			})),
+			activeChildId: match.item.href,
+			level: 2
 		}
 	];
 }

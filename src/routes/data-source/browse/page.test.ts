@@ -190,7 +190,7 @@ describe('Data source browse page', () => {
 		expect(screen.getByText('개발 PostgreSQL')).toBeInTheDocument();
 	});
 
-	it('should render breadcrumb navigation and expose sibling pages from the group crumb', async () => {
+	it('should render breadcrumb navigation and expose peer lv1 and lv2 menus from each crumb', async () => {
 		render(Page);
 
 		await waitFor(() => {
@@ -198,6 +198,14 @@ describe('Data source browse page', () => {
 		});
 
 		await fireEvent.click(screen.getByLabelText('운영 · 품질 메뉴 열기'));
+
+		expect(screen.getByRole('link', { name: '표준 용어' })).toHaveAttribute('href', '/browse');
+		expect(screen.getByRole('link', { name: 'DB 설계' })).toHaveAttribute(
+			'href',
+			'/database/browse'
+		);
+
+		await fireEvent.click(screen.getByLabelText('데이터 소스 메뉴 열기'));
 
 		expect(screen.getByRole('link', { name: '품질 규칙' })).toHaveAttribute(
 			'href',

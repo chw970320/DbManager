@@ -68,11 +68,11 @@
 
 데이터 소스 관리 화면의 기본 흐름을 테스트합니다.
 
-| 테스트명                                                                          | 설명                      | 검증 내용                                                            |
-| --------------------------------------------------------------------------------- | ------------------------- | -------------------------------------------------------------------- |
-| should load the saved data sources and run a connection test from the list        | 목록 조회 및 행 테스트    | GET 목록 로드, 저장된 연결 테스트 성공 메시지 표시                   |
-| should allow direct connection test and creation from the editor modal            | 모달 기반 테스트/생성     | 직접 연결 테스트 실행 후 POST 저장 및 목록 반영                      |
-| should render breadcrumb navigation and expose sibling pages from the group crumb | breadcrumb 그룹 이동 노출 | `운영 · 품질` breadcrumb에서 `품질 규칙/프로파일링/스냅샷` 링크 확인 |
+| 테스트명                                                                              | 설명                             | 검증 내용                                                                                    |
+| ------------------------------------------------------------------------------------- | -------------------------------- | -------------------------------------------------------------------------------------------- |
+| should load the saved data sources and run a connection test from the list            | 목록 조회 및 행 테스트           | GET 목록 로드, 저장된 연결 테스트 성공 메시지 표시                                           |
+| should allow direct connection test and creation from the editor modal                | 모달 기반 테스트/생성            | 직접 연결 테스트 실행 후 POST 저장 및 목록 반영                                              |
+| should render breadcrumb navigation and expose peer lv1 and lv2 menus from each crumb | breadcrumb 레벨별 메뉴 이동 노출 | `lv1` crumb에서 `표준 용어/DB 설계`, `lv2` crumb에서 `품질 규칙/프로파일링/스냅샷` 링크 확인 |
 
 ---
 

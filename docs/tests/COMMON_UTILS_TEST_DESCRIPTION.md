@@ -374,10 +374,10 @@ XLSX 파일 파싱 로직을 테스트합니다.
 
 상단 2단계 메뉴 정의에서 현재 경로의 breadcrumb와 그룹 정보를 파생하는 공통 로직을 테스트합니다.
 
-| 테스트명                                                                | 설명                         | 검증 내용                                                      |
-| ----------------------------------------------------------------------- | ---------------------------- | -------------------------------------------------------------- |
-| should resolve a grouped route to its menu group and current item       | 현재 경로의 메뉴 매칭 확인   | `/profiling/browse` 같은 경로에서 그룹/현재 메뉴를 정확히 찾음 |
-| should build breadcrumb items with sibling menu links for grouped pages | breadcrumb 파생 및 이동 목록 | 상위 crumb에 같은 그룹의 하위 메뉴 링크 목록이 포함됨          |
+| 테스트명                                                                | 설명                         | 검증 내용                                                          |
+| ----------------------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------ |
+| should resolve a grouped route to its menu group and current item       | 현재 경로의 메뉴 매칭 확인   | `/profiling/browse` 같은 경로에서 그룹/현재 메뉴를 정확히 찾음     |
+| should build breadcrumb items with sibling menu links for grouped pages | breadcrumb 파생 및 이동 목록 | `lv1`에는 동료 그룹 목록, `lv2`에는 현재 그룹의 메뉴 목록이 포함됨 |
 
 ---
 

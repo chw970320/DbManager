@@ -5,6 +5,8 @@
 	import BentoGrid from '$lib/components/BentoGrid.svelte';
 	import BrowsePageLayout from '$lib/components/BrowsePageLayout.svelte';
 	import BrowseSidebarSummary from '$lib/components/BrowseSidebarSummary.svelte';
+	import DesignSnapshotEditor from '$lib/components/DesignSnapshotEditor.svelte';
+	import type { DesignSnapshotEditorSubmitDetail } from '$lib/components/DesignSnapshotEditor.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import SearchBar from '$lib/components/SearchBar.svelte';
@@ -13,7 +15,6 @@
 	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
 	import type { DesignSnapshotSummaryEntry } from '$lib/types/design-snapshot.js';
 	import type { SharedFileMappingBundleEntry } from '$lib/types/shared-file-mapping.js';
-	import { ALL_DATA_TYPES, DATA_TYPE_LABELS } from '$lib/types/base.js';
 
 	type ApiResponse<T> = { success: true; data: T } | { success: false; error?: string };
 
@@ -32,10 +33,10 @@
 	let bundles = $state<SharedFileMappingBundleEntry[]>([]);
 	let loading = $state(false);
 	let createSubmitting = $state(false);
+	let isCreateEditorOpen = $state(false);
+	let createServerError = $state('');
 	let errorMessage = $state('');
 	let selectedBundleId = $state('');
-	let snapshotName = $state('');
-	let snapshotDescription = $state('');
 	let searchQuery = $state('');
 	let searchField = $state('all');
 	let searchExact = $state(false);
@@ -48,9 +49,6 @@
 		{ value: 'term', label: '용어 파일' }
 	];
 
-	const selectedBundle = $derived(
-		bundles.find((bundle) => bundle.id === selectedBundleId) ?? bundles[0] ?? null
-	);
 	const filteredSnapshots = $derived.by(() => {
 		const query = searchQuery.trim().toLowerCase();
 		if (!query) {
@@ -87,10 +85,6 @@
 
 	function sortBundles(entries: SharedFileMappingBundleEntry[]): SharedFileMappingBundleEntry[] {
 		return [...entries].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-	}
-
-	function getBundleLabel(bundle: SharedFileMappingBundleEntry): string {
-		return `${bundle.files.column} / ${bundle.files.term}`;
 	}
 
 	function formatDateTime(value?: string): string {
@@ -155,13 +149,23 @@
 		searchExact = false;
 	}
 
-	async function handleCreateSnapshot() {
+	function handleOpenCreateEditor() {
+		createServerError = '';
+		ensureSelectedBundle();
+		isCreateEditorOpen = true;
+	}
+
+	async function handleCreateSnapshot(detail: DesignSnapshotEditorSubmitDetail) {
+		const selectedBundle =
+			bundles.find((bundle) => bundle.id === detail.bundleId) ?? bundles[0] ?? null;
+
 		if (!selectedBundle) {
-			addToast('저장할 파일 번들을 먼저 선택하세요.', 'warning');
+			createServerError = '저장할 파일 번들을 먼저 구성하세요.';
 			return;
 		}
 
 		createSubmitting = true;
+		createServerError = '';
 		try {
 			const response = await fetch('/api/design-snapshots', {
 				method: 'POST',
@@ -169,8 +173,8 @@
 					'Content-Type': 'application/json'
 				},
 				body: JSON.stringify({
-					name: snapshotName.trim(),
-					description: snapshotDescription.trim(),
+					name: detail.name,
+					description: detail.description,
 					bundle: selectedBundle.files
 				})
 			});
@@ -181,15 +185,14 @@
 			}
 
 			snapshots = sortSnapshots([result.data.entry, ...snapshots]);
-			snapshotName = '';
-			snapshotDescription = '';
+			selectedBundleId = detail.bundleId;
+			isCreateEditorOpen = false;
+			createServerError = '';
 			addToast('스냅샷을 저장했습니다.', 'success');
 		} catch (error) {
 			console.error('스냅샷 저장 오류:', error);
-			addToast(
-				error instanceof Error ? error.message : '스냅샷 저장 중 오류가 발생했습니다.',
-				'error'
-			);
+			createServerError =
+				error instanceof Error ? error.message : '스냅샷 저장 중 오류가 발생했습니다.';
 		} finally {
 			createSubmitting = false;
 		}
@@ -288,6 +291,7 @@
 {#snippet sidebar()}
 	<BrowseSidebarSummary
 		variant="card"
+		{loading}
 		ariaLabel="스냅샷 요약"
 		subtitle="현재 저장소 상태"
 		items={[
@@ -308,10 +312,11 @@
 		<button
 			type="button"
 			class="btn btn-primary"
-			onclick={handleCreateSnapshot}
-			disabled={createSubmitting || !selectedBundle}
+			onclick={handleOpenCreateEditor}
+			disabled={loading}
 		>
-			<span>{createSubmitting ? '저장 중...' : '현재 번들 스냅샷 저장'}</span>
+			<Icon name="plus" size="sm" />
+			<span>스냅샷 추가</span>
 		</button>
 		<button type="button" class="btn btn-secondary" onclick={loadPageData} disabled={loading}>
 			<Icon name={loading ? 'spinner' : 'refresh'} size="sm" />
@@ -329,88 +334,20 @@
 	{sidebar}
 	{actions}
 >
+	<DesignSnapshotEditor
+		isOpen={isCreateEditorOpen}
+		{bundles}
+		initialBundleId={selectedBundleId}
+		isSubmitting={createSubmitting}
+		serverError={createServerError}
+		onsave={handleCreateSnapshot}
+		onclose={() => {
+			isCreateEditorOpen = false;
+			createServerError = '';
+		}}
+	/>
+
 	<BentoGrid gapClass="gap-6">
-		<div class="col-span-12 lg:col-span-5">
-			<BentoCard title="스냅샷 생성" subtitle="복구 포인트로 저장할 파일 번들을 선택하세요.">
-				{#if bundles.length === 0}
-					<EmptyState
-						icon="save"
-						title="저장 가능한 파일 번들이 없습니다."
-						description="먼저 정의서 화면에서 공통 파일 매핑 번들을 구성한 뒤 다시 시도하세요."
-					/>
-				{:else}
-					<div class="space-y-4">
-						<div>
-							<label for="snapshotBundle" class="mb-1 block text-sm font-medium text-content"
-								>대상 번들</label
-							>
-							<select
-								id="snapshotBundle"
-								bind:value={selectedBundleId}
-								class="input"
-								disabled={createSubmitting}
-							>
-								{#each bundles as bundle (bundle.id)}
-									<option value={bundle.id}>{getBundleLabel(bundle)}</option>
-								{/each}
-							</select>
-						</div>
-
-						<div>
-							<label for="snapshotName" class="mb-1 block text-sm font-medium text-content"
-								>스냅샷명</label
-							>
-							<input
-								id="snapshotName"
-								type="text"
-								bind:value={snapshotName}
-								class="input"
-								placeholder="예: 표준 보정 전"
-								disabled={createSubmitting}
-							/>
-						</div>
-
-						<div>
-							<label for="snapshotDescription" class="mb-1 block text-sm font-medium text-content"
-								>설명</label
-							>
-							<textarea
-								id="snapshotDescription"
-								bind:value={snapshotDescription}
-								rows="3"
-								class="input resize-none"
-								placeholder="왜 저장하는지 메모를 남깁니다."
-								disabled={createSubmitting}
-							></textarea>
-						</div>
-
-						{#if selectedBundle}
-							<div class="rounded-lg border border-border bg-surface-muted p-4">
-								<p class="text-xs font-medium text-content-secondary">포함되는 파일</p>
-								<div class="mt-3 flex flex-wrap gap-2">
-									{#each ALL_DATA_TYPES as type (type)}
-										<span class="rounded-full bg-surface px-3 py-1 text-xs text-content-secondary">
-											{DATA_TYPE_LABELS[type]} · {selectedBundle.files[type]}
-										</span>
-									{/each}
-								</div>
-							</div>
-						{/if}
-
-						<button
-							type="button"
-							class="btn btn-primary w-full"
-							onclick={handleCreateSnapshot}
-							disabled={createSubmitting || !selectedBundle}
-						>
-							<Icon name="save" size="sm" />
-							{createSubmitting ? '저장 중...' : '스냅샷 저장'}
-						</button>
-					</div>
-				{/if}
-			</BentoCard>
-		</div>
-
 		<div class="col-span-12">
 			<BentoCard title="검색" subtitle="스냅샷명 또는 주요 파일명으로 저장 지점을 찾습니다.">
 				<SearchBar
@@ -425,7 +362,7 @@
 			</BentoCard>
 		</div>
 
-		<div class="col-span-12 lg:col-span-7">
+		<div class="col-span-12">
 			<BentoCard
 				title="저장된 스냅샷"
 				subtitle={searchQuery
@@ -448,7 +385,7 @@
 						icon="save"
 						title={snapshots.length === 0 ? '저장된 스냅샷이 없습니다.' : '검색 결과가 없습니다.'}
 						description={snapshots.length === 0
-							? '먼저 현재 번들을 스냅샷으로 저장해 복구 지점을 만드세요.'
+							? '우상단의 스냅샷 추가 버튼으로 첫 복구 지점을 만들어 보세요.'
 							: '검색 조건을 바꾸거나 다른 스냅샷명을 확인해 보세요.'}
 					/>
 				{:else}

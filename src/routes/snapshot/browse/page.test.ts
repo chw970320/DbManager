@@ -151,14 +151,19 @@ describe('Snapshot browse page', () => {
 			expect(screen.getByText('기준 스냅샷')).toBeInTheDocument();
 		});
 
-		await fireEvent.input(screen.getByLabelText(/스냅샷명/), {
+		expect(screen.queryByRole('button', { name: '현재 번들 스냅샷 저장' })).not.toBeInTheDocument();
+
+		await fireEvent.click(screen.getByRole('button', { name: '스냅샷 추가' }));
+
+		const dialog = screen.getByRole('dialog', { name: '스냅샷 추가' });
+		await fireEvent.input(within(dialog).getByLabelText(/스냅샷명/), {
 			target: { value: '표준 보정 전' }
 		});
-		await fireEvent.input(screen.getByLabelText(/설명/), {
+		await fireEvent.input(within(dialog).getByLabelText(/설명/), {
 			target: { value: '자동 보정 실행 전 상태' }
 		});
 
-		await fireEvent.click(screen.getAllByRole('button', { name: '스냅샷 저장' })[0]);
+		await fireEvent.click(within(dialog).getByRole('button', { name: '스냅샷 저장' }));
 
 		await waitFor(() => {
 			expect(mockFetch).toHaveBeenCalledWith(
@@ -169,7 +174,17 @@ describe('Snapshot browse page', () => {
 			);
 		});
 
+		const createRequest = mockFetch.mock.calls.find(
+			([url, init]) => url === '/api/design-snapshots' && init?.method === 'POST'
+		)?.[1] as RequestInit;
+		expect(JSON.parse(String(createRequest.body))).toEqual({
+			name: '표준 보정 전',
+			description: '자동 보정 실행 전 상태',
+			bundle: mockBundle.files
+		});
+
 		expect(screen.getByText('표준 보정 전')).toBeInTheDocument();
+		expect(screen.queryByRole('dialog', { name: '스냅샷 추가' })).not.toBeInTheDocument();
 		expect(mockAddToast).toHaveBeenCalledWith('스냅샷을 저장했습니다.', 'success');
 	});
 

@@ -6,15 +6,30 @@
 
 | 테스트 파일                               | 테스트 수 | 상태 |
 | ----------------------------------------- | --------- | ---- |
+| `DesignSnapshotEditor.test.ts`            | 3개       | 완료 |
 | `design-snapshot-registry.test.ts`        | 3개       | 완료 |
 | `design-snapshots/server.test.ts`         | 4개       | 완료 |
 | `design-snapshots/restore/server.test.ts` | 2개       | 완료 |
 | `snapshot/browse/page.test.ts`            | 3개       | 완료 |
-| **합계**                                  | **12개**  |      |
+| **합계**                                  | **15개**  |      |
 
 ---
 
-## 1. design-snapshot-registry.test.ts (3개)
+## 1. DesignSnapshotEditor.test.ts (3개)
+
+**파일 경로**: `src/lib/components/DesignSnapshotEditor.test.ts`
+
+스냅샷 추가 모달의 기본 렌더링과 입력/요약 동작을 테스트합니다.
+
+| 테스트명                                                             | 설명                | 검증 내용                                                           |
+| -------------------------------------------------------------------- | ------------------- | ------------------------------------------------------------------- |
+| should render an empty state when no bundles are available           | 번들 없음 안내      | 모달 안 empty state 렌더링, 저장 버튼 비활성화                     |
+| should dispatch a save callback with trimmed values for the chosen bundle | 저장 콜백 전달 | 초기 번들 선택, 입력 trim, save 콜백 payload 전달                 |
+| should update the included file summary when the bundle changes      | 번들 변경 요약 반영 | select 변경 후 포함 파일 칩이 새 번들 파일명으로 즉시 갱신         |
+
+---
+
+## 2. design-snapshot-registry.test.ts (3개)
 
 **파일 경로**: `src/lib/registry/design-snapshot-registry.test.ts`
 
@@ -28,7 +43,7 @@
 
 ---
 
-## 2. design-snapshots/server.test.ts (4개)
+## 3. design-snapshots/server.test.ts (4개)
 
 **파일 경로**: `src/routes/api/design-snapshots/server.test.ts`
 
@@ -43,7 +58,7 @@
 
 ---
 
-## 3. design-snapshots/restore/server.test.ts (2개)
+## 4. design-snapshots/restore/server.test.ts (2개)
 
 **파일 경로**: `src/routes/api/design-snapshots/restore/server.test.ts`
 
@@ -56,7 +71,7 @@
 
 ---
 
-## 4. snapshot/browse/page.test.ts (3개)
+## 5. snapshot/browse/page.test.ts (3개)
 
 **파일 경로**: `src/routes/snapshot/browse/page.test.ts`
 
@@ -65,7 +80,7 @@
 | 테스트명                                                                             | 설명              | 검증 내용                                                                   |
 | ------------------------------------------------------------------------------------ | ----------------- | --------------------------------------------------------------------------- |
 | should load the saved snapshots and restore one from the list                        | 목록 조회 및 복원 | GET 목록 로드, 복원 confirm, restore API 호출                               |
-| should create a snapshot for the selected bundle                                     | 생성 흐름 성공    | 폼 입력, POST 호출, 새 스냅샷 행 렌더링                                     |
+| should create a snapshot for the selected bundle                                     | 생성 흐름 성공    | `스냅샷 추가` 모달 오픈, 폼 입력, POST 호출, 새 스냅샷 행 렌더링            |
 | should render the summary in the left sidebar and not expose a mobile sidebar toggle | 요약 sidebar 고정 | 좌측 요약 region 렌더링, `hidden lg:block`, 모바일 sidebar 열기 버튼 미노출 |
 
 ---
@@ -73,6 +88,7 @@
 ## 실행 명령어
 
 ```bash
+pnpm vitest run src/lib/components/DesignSnapshotEditor.test.ts
 pnpm vitest run src/lib/registry/design-snapshot-registry.test.ts
 pnpm vitest run src/routes/api/design-snapshots/server.test.ts
 pnpm vitest run src/routes/api/design-snapshots/restore/server.test.ts

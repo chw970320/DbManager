@@ -171,6 +171,7 @@ export const DEFAULT_MAPPING_RELATIONS = [
 const REGISTRY_FILENAME = 'registry.json';
 const SETTINGS_DIRNAME = 'settings';
 const SHARED_FILE_MAPPINGS_FILENAME = 'shared-file-mappings.json';
+const DESIGN_SNAPSHOTS_FILENAME = 'design-snapshots.json';
 
 /**
  * @param {string} timestamp
@@ -270,6 +271,9 @@ export async function resetTestData(options = {}) {
 
 	const sharedFileMappingsPath = join(settingsDir, SHARED_FILE_MAPPINGS_FILENAME);
 	await writeJson(sharedFileMappingsPath, createDefaultSharedFileMappings(timestamp));
+
+	const designSnapshotsPath = join(settingsDir, DESIGN_SNAPSHOTS_FILENAME);
+	await writeJson(designSnapshotsPath, createEmptyData(timestamp));
 
 	return {
 		dataDir,

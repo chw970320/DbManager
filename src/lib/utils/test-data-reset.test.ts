@@ -110,6 +110,24 @@ describe('resetTestData', () => {
 			JSON.stringify({ preserved: true }, null, 2),
 			'utf-8'
 		);
+		await writeFile(
+			join(settingsDir, 'design-snapshots.json'),
+			JSON.stringify(
+				{
+					entries: [
+						{
+							id: 'snapshot-1',
+							name: '기존 스냅샷'
+						}
+					],
+					lastUpdated: '2026-03-11T00:00:00.000Z',
+					totalCount: 1
+				},
+				null,
+				2
+			),
+			'utf-8'
+		);
 
 		const result = await resetTestData({
 			dataDir: tempDir,
@@ -188,6 +206,11 @@ describe('resetTestData', () => {
 			join(settingsDir, 'domain-data-type-mappings.json')
 		);
 		expect(domainTypeMappings).toEqual({ preserved: true });
+		await expect(readJson(join(settingsDir, 'design-snapshots.json'))).resolves.toEqual({
+			entries: [],
+			lastUpdated: FIXED_TIMESTAMP,
+			totalCount: 0
+		});
 	});
 
 	it('should create the reset baseline even when the data directory starts empty', async () => {
@@ -225,6 +248,11 @@ describe('resetTestData', () => {
 		).resolves.toMatchObject({
 			version: '1.0',
 			lastUpdated: FIXED_TIMESTAMP
+		});
+		await expect(readJson(join(tempDir, 'settings', 'design-snapshots.json'))).resolves.toEqual({
+			entries: [],
+			lastUpdated: FIXED_TIMESTAMP,
+			totalCount: 0
 		});
 	});
 });

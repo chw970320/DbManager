@@ -1663,6 +1663,187 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 
 ---
 
+## 16. DesignSnapshotEntry / DesignSnapshotData (설계 번들 스냅샷)
+
+### 개요
+
+표준/설계 변경 전에 현재 8종 파일 번들의 상태를 통째로 저장하는 복구용 설정 모델입니다.
+복원 시 스냅샷 안에 저장된 데이터와 공통 파일 매핑 번들을 함께 다시 적용합니다.
+
+**파일 위치:** `src/lib/types/design-snapshot.ts`
+
+**저장 파일:** `static/data/settings/design-snapshots.json`
+
+### DesignSnapshotPayload
+
+스냅샷 안에 저장되는 타입별 개별 파일 payload입니다.
+
+| 필드명       | 타입      | 필수 | 설명                    |
+| ------------ | --------- | ---- | ----------------------- |
+| `filename`   | `string`  | ✅   | 당시 저장 대상 파일명   |
+| `entryCount` | `number`  | ✅   | 해당 파일의 엔트리 수   |
+| `data`       | `unknown` | ✅   | 정규화된 실제 JSON 내용 |
+
+### DesignSnapshotPayloadMap
+
+`vocabulary/domain/term/database/entity/attribute/table/column` 8종 payload를 모두 포함하는 맵입니다.
+
+### DesignSnapshotEntry
+
+| 필드명        | 타입                     | 필수 | 설명                        |
+| ------------- | ------------------------ | ---- | --------------------------- |
+| `id`          | `string`                 | ✅   | 고유 식별자                 |
+| `name`        | `string`                 | ✅   | 스냅샷 이름                 |
+| `description` | `string?`                | ❌   | 사용자 메모                 |
+| `bundle`      | `SharedFileMappingBundle`| ✅   | 저장 당시 8종 파일 조합     |
+| `payloads`    | `DesignSnapshotPayloadMap` | ✅ | 타입별 실제 스냅샷 데이터   |
+| `createdAt`   | `string`                 | ✅   | 생성 시각 (ISO 8601)        |
+| `updatedAt`   | `string`                 | ✅   | 마지막 변경 시각            |
+| `restoredAt`  | `string?`                | ❌   | 최근 복원 시각 (ISO 8601)   |
+
+### DesignSnapshotSummaryEntry
+
+목록 API와 화면에서는 payload 전체를 내려주지 않고 요약 타입을 사용합니다.
+
+| 필드명       | 타입                      | 설명                         |
+| ------------ | ------------------------- | ---------------------------- |
+| `counts`     | `Record<DataType, number>`| 타입별 엔트리 수 요약        |
+| `bundle`     | `SharedFileMappingBundle` | 당시 저장한 8종 파일 조합    |
+| 나머지 필드  | `DesignSnapshotEntry`와 동일 | `payloads`를 제외한 메타데이터 |
+
+### DesignSnapshotData
+
+| 필드명        | 타입                    | 필수 | 설명              |
+| ------------- | ----------------------- | ---- | ----------------- |
+| `entries`     | `DesignSnapshotEntry[]` | ✅   | 저장된 스냅샷 목록 |
+| `lastUpdated` | `string`                | ✅   | 마지막 수정 시각  |
+| `totalCount`  | `number`                | ✅   | 저장된 스냅샷 수  |
+
+### 저장/복원 규칙
+
+1. `bundle`
+   - 8개 타입 모두 파일명이 있어야 함
+   - 하나라도 비어 있으면 스냅샷 생성 불가
+2. `payloads`
+   - 각 payload의 `data.entries`는 배열이어야 함
+   - 런타임 `mapping` 필드는 제거한 정규화 데이터만 저장
+3. `name`
+   - trim 후 빈 문자열이면 기본값으로 `"{column 파일명} 스냅샷"` 사용
+4. 복원 시
+   - 각 payload를 해당 파일에 다시 저장
+   - `saveDbDesignFileMappingBundle(...)`로 공통 파일 매핑 번들을 다시 적용
+   - 캐시 무효화 후 `restoredAt` 갱신
+
+### 예시 데이터
+
+```json
+{
+	"entries": [
+		{
+			"id": "snapshot-1",
+			"name": "표준 보정 전",
+			"description": "자동 보정 전에 저장",
+			"bundle": {
+				"vocabulary": "vocabulary.json",
+				"domain": "domain.json",
+				"term": "term.json",
+				"database": "database.json",
+				"entity": "entity.json",
+				"attribute": "attribute.json",
+				"table": "table.json",
+				"column": "column.json"
+			},
+			"payloads": {
+				"vocabulary": {
+					"filename": "vocabulary.json",
+					"entryCount": 120,
+					"data": {
+						"entries": [],
+						"lastUpdated": "2026-03-13T09:00:00.000Z",
+						"totalCount": 0
+					}
+				},
+				"domain": {
+					"filename": "domain.json",
+					"entryCount": 48,
+					"data": {
+						"entries": [],
+						"lastUpdated": "2026-03-13T09:00:00.000Z",
+						"totalCount": 0
+					}
+				},
+				"term": {
+					"filename": "term.json",
+					"entryCount": 230,
+					"data": {
+						"entries": [],
+						"lastUpdated": "2026-03-13T09:00:00.000Z",
+						"totalCount": 0
+					}
+				},
+				"database": {
+					"filename": "database.json",
+					"entryCount": 1,
+					"data": {
+						"entries": [],
+						"lastUpdated": "2026-03-13T09:00:00.000Z",
+						"totalCount": 0
+					}
+				},
+				"entity": {
+					"filename": "entity.json",
+					"entryCount": 10,
+					"data": {
+						"entries": [],
+						"lastUpdated": "2026-03-13T09:00:00.000Z",
+						"totalCount": 0
+					}
+				},
+				"attribute": {
+					"filename": "attribute.json",
+					"entryCount": 42,
+					"data": {
+						"entries": [],
+						"lastUpdated": "2026-03-13T09:00:00.000Z",
+						"totalCount": 0
+					}
+				},
+				"table": {
+					"filename": "table.json",
+					"entryCount": 10,
+					"data": {
+						"entries": [],
+						"lastUpdated": "2026-03-13T09:00:00.000Z",
+						"totalCount": 0
+					}
+				},
+				"column": {
+					"filename": "column.json",
+					"entryCount": 91,
+					"data": {
+						"entries": [],
+						"lastUpdated": "2026-03-13T09:00:00.000Z",
+						"totalCount": 0
+					}
+				}
+			},
+			"createdAt": "2026-03-13T09:00:00.000Z",
+			"updatedAt": "2026-03-13T09:00:00.000Z",
+			"restoredAt": "2026-03-13T09:30:00.000Z"
+		}
+	],
+	"lastUpdated": "2026-03-13T09:30:00.000Z",
+	"totalCount": 1
+}
+```
+
+### 관련 API 엔드포인트
+
+- **GET, POST, DELETE** `/api/design-snapshots`
+- **POST** `/api/design-snapshots/restore`
+
+---
+
 ## 공통 패턴
 
 ### Entry → Data 패턴

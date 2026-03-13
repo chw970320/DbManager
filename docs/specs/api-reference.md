@@ -15,6 +15,7 @@
 - [Column API](#column-api)
 - [Data Source API](#data-source-api)
 - [Quality Rule API](#quality-rule-api)
+- [Design Snapshot API](#design-snapshot-api)
 - [ERD API](#erd-api)
 - [Forbidden Words API](#forbidden-words-api)
 - [Search API](#search-api)
@@ -90,6 +91,18 @@ http://localhost:5173/api
   - 매핑 변경 후 도메인명 재생성과 함께 관련 `term.domainName`, `column.domainName` 참조를 자동 동기화합니다.
 - `POST /api/domain`, `PUT /api/domain`, `POST /api/domain/validate`, `GET /api/domain/validate-all`, `POST /api/domain/upload`
   - 도메인명 생성/검증 시 공통 데이터타입 매핑을 사용합니다.
+
+---
+
+## 최근 변경 사항 (2026-03-13)
+
+- `GET/POST/DELETE /api/design-snapshots`
+  - 8종 설계 파일 번들의 스냅샷 목록 조회, 생성, 삭제를 제공합니다.
+  - 조회 응답은 `snapshots`와 현재 저장 가능한 `bundles`를 함께 반환합니다.
+  - 스냅샷 정본은 `static/data/settings/design-snapshots.json`에 저장됩니다.
+- `POST /api/design-snapshots/restore`
+  - 저장된 스냅샷으로 현재 8종 파일 번들을 복원합니다.
+  - 복원 시 공통 파일 매핑 번들도 함께 다시 저장해 browse/ERD 흐름과 정합성을 맞춥니다.
 
 ---
 
@@ -2087,6 +2100,149 @@ PostgreSQL 연결 테스트를 실행합니다.
 
 ---
 
+## Design Snapshot API
+
+표준/설계 변경 전에 8종 파일 번들의 상태를 저장하고 복원하는 API입니다.
+
+### GET /api/design-snapshots
+
+저장된 스냅샷 목록과 현재 선택 가능한 공통 파일 매핑 번들을 함께 조회합니다.
+
+- 응답 핵심:
+  - `snapshots[].id`, `name`, `description`
+  - `snapshots[].bundle.vocabulary ... column`
+  - `snapshots[].counts.vocabulary ... column`
+  - `snapshots[].createdAt`, `updatedAt`, `restoredAt`
+  - `bundles[].id`, `bundles[].files`, `bundles[].createdAt`, `bundles[].updatedAt`
+
+예시:
+
+```json
+{
+	"success": true,
+	"data": {
+		"snapshots": [
+			{
+				"id": "snapshot-1",
+				"name": "표준 보정 전",
+				"description": "자동 보정 전에 저장",
+				"bundle": {
+					"vocabulary": "vocabulary.json",
+					"domain": "domain.json",
+					"term": "term.json",
+					"database": "database.json",
+					"entity": "entity.json",
+					"attribute": "attribute.json",
+					"table": "table.json",
+					"column": "column.json"
+				},
+				"counts": {
+					"vocabulary": 120,
+					"domain": 48,
+					"term": 230,
+					"database": 1,
+					"entity": 10,
+					"attribute": 42,
+					"table": 10,
+					"column": 91
+				},
+				"createdAt": "2026-03-13T09:00:00.000Z",
+				"updatedAt": "2026-03-13T09:00:00.000Z",
+				"restoredAt": null
+			}
+		],
+		"bundles": [
+			{
+				"id": "default-shared-file-mapping",
+				"files": {
+					"vocabulary": "vocabulary.json",
+					"domain": "domain.json",
+					"term": "term.json",
+					"database": "database.json",
+					"entity": "entity.json",
+					"attribute": "attribute.json",
+					"table": "table.json",
+					"column": "column.json"
+				},
+				"createdAt": "2026-03-12T00:00:00.000Z",
+				"updatedAt": "2026-03-12T00:00:00.000Z"
+			}
+		]
+	}
+}
+```
+
+### POST /api/design-snapshots
+
+현재 8종 파일 번들을 새 스냅샷으로 저장합니다.
+
+- 요청 바디:
+
+```json
+{
+	"name": "표준 보정 전",
+	"description": "자동 보정 전에 저장",
+	"bundle": {
+		"vocabulary": "vocabulary.json",
+		"domain": "domain.json",
+		"term": "term.json",
+		"database": "database.json",
+		"entity": "entity.json",
+		"attribute": "attribute.json",
+		"table": "table.json",
+		"column": "column.json"
+	}
+}
+```
+
+- 응답 핵심:
+  - `data.entry`에 생성된 스냅샷 요약 반환
+- 에러 코드:
+  - `400`: 8종 파일 번들 누락 또는 형식 오류
+
+### DELETE /api/design-snapshots
+
+저장된 스냅샷을 삭제합니다.
+
+- 요청 바디:
+
+```json
+{
+	"id": "snapshot-1"
+}
+```
+
+- 에러 코드:
+  - `400`: `id` 누락
+  - `404`: 대상 스냅샷 없음
+
+### POST /api/design-snapshots/restore
+
+저장된 스냅샷으로 8종 파일 번들을 복원합니다.
+
+- 요청 바디:
+
+```json
+{
+	"id": "snapshot-1"
+}
+```
+
+- 동작:
+  - 스냅샷에 저장된 8종 JSON 데이터를 각 파일에 다시 저장
+  - 공통 파일 매핑 번들을 다시 적용
+  - 캐시를 무효화하고 `restoredAt` 시각 갱신
+- 응답 핵심:
+  - `data.entry.id`, `name`
+  - `data.entry.bundle`
+  - `data.entry.counts`
+  - `data.entry.restoredAt`
+- 에러 코드:
+  - `400`: `id` 누락
+  - `404`: 대상 스냅샷 없음
+
+---
+
 ## ERD API
 
 ERD/관계 분석 관련 API입니다.
@@ -2683,4 +2839,4 @@ const data = await response.json();
 
 ---
 
-**마지막 업데이트**: 2026-03-12
+**마지막 업데이트**: 2026-03-13

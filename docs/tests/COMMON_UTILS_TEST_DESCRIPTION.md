@@ -362,8 +362,8 @@ XLSX 파일 파싱 로직을 테스트합니다.
 
 | 테스트명                                                                   | 설명                      | 검증 내용                                                                                      |
 | -------------------------------------------------------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------- |
-| should remove user json files and recreate the default empty files         | 기존 데이터 초기화        | 사용자 JSON 삭제, 기본 파일 빈 데이터 재생성, registry/shared mapping 초기화, 비대상 설정 유지 |
-| should create the reset baseline even when the data directory starts empty | 빈 데이터 디렉터리 초기화 | 디렉터리가 비어 있어도 8개 기본 파일과 registry/shared mapping 기준 상태 생성                  |
+| should remove user json files and recreate the default empty files         | 기존 데이터 초기화        | 사용자 JSON 삭제, 기본 파일 빈 데이터 재생성, registry/shared mapping/design snapshots 초기화, 비대상 설정 유지 |
+| should create the reset baseline even when the data directory starts empty | 빈 데이터 디렉터리 초기화 | 디렉터리가 비어 있어도 8개 기본 파일과 registry/shared mapping/design snapshots 기준 상태 생성 |
 
 ---
 
@@ -396,6 +396,7 @@ pnpm test src/lib/utils --watch
 | 2026-03-11 | validation 유틸리티 테스트 확장 (98개 테스트)       |
 | 2026-03-12 | file-selection 복원 회귀 테스트 추가 (100개 테스트) |
 | 2026-03-12 | test-data-reset 초기화 테스트 추가 (102개 테스트)   |
+| 2026-03-13 | test-data-reset에 design snapshots 초기화 반영      |
 
 ---
 

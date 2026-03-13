@@ -431,6 +431,7 @@
 			{currentPage}
 			{totalPages}
 			{searchQuery}
+			{loading}
 			ariaLabel="컬럼 검색 결과 요약"
 			variant="card"
 		/>

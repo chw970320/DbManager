@@ -732,6 +732,7 @@
 			{currentPage}
 			{totalPages}
 			{searchQuery}
+			{loading}
 			ariaLabel="도메인 검색 결과 요약"
 			variant="card"
 		/>

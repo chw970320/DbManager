@@ -345,6 +345,7 @@
 {#snippet sidebar()}
 	<BrowseSidebarSummary
 		variant="card"
+		{loading}
 		ariaLabel="데이터 소스 요약"
 		subtitle="저장된 연결 현황"
 		items={[

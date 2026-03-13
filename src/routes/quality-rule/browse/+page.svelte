@@ -250,6 +250,7 @@
 {#snippet sidebar()}
 	<BrowseSidebarSummary
 		variant="card"
+		{loading}
 		ariaLabel="품질 규칙 요약"
 		subtitle="저장된 규칙 현황"
 		items={[

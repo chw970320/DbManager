@@ -560,6 +560,7 @@
 			{currentPage}
 			{totalPages}
 			{searchQuery}
+			{loading}
 			ariaLabel="데이터베이스 검색 결과 요약"
 			variant="card"
 		/>

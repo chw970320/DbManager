@@ -440,6 +440,7 @@
 			{currentPage}
 			{totalPages}
 			{searchQuery}
+			{loading}
 			ariaLabel="엔터티 검색 결과 요약"
 			variant="card"
 		/>

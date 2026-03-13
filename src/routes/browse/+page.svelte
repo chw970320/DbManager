@@ -785,6 +785,7 @@
 			{currentPage}
 			{totalPages}
 			{searchQuery}
+			{loading}
 			ariaLabel="단어집 검색 결과 요약"
 			variant="card"
 		/>

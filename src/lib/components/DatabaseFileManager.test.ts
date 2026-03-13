@@ -100,6 +100,9 @@ describe('DatabaseFileManager', () => {
 				expect(screen.getByText('파일 매핑 설정')).toBeInTheDocument();
 			});
 
+			expect(screen.getAllByText('표준 용어')).toHaveLength(1);
+			expect(screen.getAllByText('DB 설계')).toHaveLength(1);
+
 			await waitFor(() => {
 				expect(mockFetch).toHaveBeenCalledWith(
 					expect.stringContaining('/api/database/files/mapping?filename=')

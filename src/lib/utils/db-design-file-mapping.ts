@@ -18,6 +18,39 @@ export const DB_DESIGN_DEFINITION_LABELS: Record<DbDesignDefinitionType, string>
 	...DATA_TYPE_LABELS
 };
 
+export type DbDesignDefinitionCategory = 'standard-terms' | 'db-design';
+
+export const DB_DESIGN_CATEGORY_LABELS: Record<DbDesignDefinitionCategory, string> = {
+	'standard-terms': '표준 용어',
+	'db-design': 'DB 설계'
+};
+
+export const DB_DESIGN_CATEGORY_DESCRIPTIONS: Record<DbDesignDefinitionCategory, string> = {
+	'standard-terms': '단어집, 도메인, 용어 파일을 연결합니다.',
+	'db-design': 'DB, 엔터티, 속성, 테이블, 컬럼 정의서를 연결합니다.'
+};
+
+export const DB_DESIGN_DEFINITION_CATEGORIES: Record<
+	DbDesignDefinitionType,
+	DbDesignDefinitionCategory
+> = {
+	vocabulary: 'standard-terms',
+	domain: 'standard-terms',
+	term: 'standard-terms',
+	database: 'db-design',
+	entity: 'db-design',
+	attribute: 'db-design',
+	table: 'db-design',
+	column: 'db-design'
+};
+
+export interface DbDesignSelectableTypeGroup {
+	key: DbDesignDefinitionCategory;
+	label: string;
+	description: string;
+	types: DbDesignDefinitionType[];
+}
+
 export function isDbDesignDefinitionType(value: string): value is DbDesignDefinitionType {
 	return ALL_DATA_TYPES.includes(value as DbDesignDefinitionType);
 }
@@ -62,6 +95,28 @@ export function getDbDesignSelectableTypes(
 	currentType: DbDesignDefinitionType
 ): DbDesignDefinitionType[] {
 	return ALL_DATA_TYPES.filter((type) => type !== currentType);
+}
+
+export function getDbDesignSelectableTypeGroups(
+	currentType: DbDesignDefinitionType
+): DbDesignSelectableTypeGroup[] {
+	const groups = new Map<DbDesignDefinitionCategory, DbDesignDefinitionType[]>();
+
+	for (const type of getDbDesignSelectableTypes(currentType)) {
+		const category = DB_DESIGN_DEFINITION_CATEGORIES[type];
+		const types = groups.get(category) ?? [];
+		types.push(type);
+		groups.set(category, types);
+	}
+
+	return (Object.keys(DB_DESIGN_CATEGORY_LABELS) as DbDesignDefinitionCategory[])
+		.map((key) => ({
+			key,
+			label: DB_DESIGN_CATEGORY_LABELS[key],
+			description: DB_DESIGN_CATEGORY_DESCRIPTIONS[key],
+			types: groups.get(key) ?? []
+		}))
+		.filter((group) => group.types.length > 0);
 }
 
 export function extractDbDesignRelatedMapping(mapping?: Record<string, unknown>): DbDesignRelatedMapping {

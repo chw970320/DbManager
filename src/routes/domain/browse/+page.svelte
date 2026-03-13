@@ -7,6 +7,7 @@
 	import DomainDataTypeMappingModal from '$lib/components/DomainDataTypeMappingModal.svelte';
 	import DomainValidationPanel from '$lib/components/DomainValidationPanel.svelte';
 	import BrowsePageLayout from '$lib/components/BrowsePageLayout.svelte';
+	import BrowseSidebarSummary from '$lib/components/BrowseSidebarSummary.svelte';
 	import ActionBar from '$lib/components/ActionBar.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import BentoGrid from '$lib/components/BentoGrid.svelte';
@@ -725,6 +726,15 @@
 				데이터타입 매핑 관리
 			</button>
 		</section>
+
+		<BrowseSidebarSummary
+			{totalCount}
+			{currentPage}
+			{totalPages}
+			{searchQuery}
+			ariaLabel="도메인 검색 결과 요약"
+			variant="card"
+		/>
 	</div>
 {/snippet}
 
@@ -823,7 +833,7 @@
 	/>
 
 	<BentoGrid>
-		<div class="col-span-12 lg:col-span-5">
+		<div class="col-span-12">
 			{#if errorMessage}
 				<BentoCard
 					title="오류 발생"
@@ -831,25 +841,6 @@
 					class="border-red-200/60 bg-gradient-to-r from-red-50 to-pink-50"
 				>
 					<p class="text-sm text-red-800">{errorMessage}</p>
-				</BentoCard>
-			{:else}
-				<BentoCard title="요약" subtitle="현재 조건의 결과를 확인하세요.">
-					<div class="grid grid-cols-2 gap-3 text-sm">
-						<div class="rounded-lg bg-surface-muted p-3">
-							<p class="text-xs text-content-muted">총 건수</p>
-							<p class="mt-1 text-lg font-semibold text-content">{totalCount.toLocaleString()}</p>
-						</div>
-						<div class="rounded-lg bg-surface-muted p-3">
-							<p class="text-xs text-content-muted">페이지</p>
-							<p class="mt-1 text-lg font-semibold text-content">{currentPage} / {totalPages}</p>
-						</div>
-						<div class="col-span-2 rounded-lg bg-surface-muted p-3">
-							<p class="text-xs text-content-muted">검색어</p>
-							<p class="mt-1 truncate text-content-secondary">
-								{searchQuery ? searchQuery : '전체'}
-							</p>
-						</div>
-					</div>
 				</BentoCard>
 			{/if}
 		</div>

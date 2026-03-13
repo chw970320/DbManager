@@ -8,6 +8,7 @@
 	import TermValidationPanel from '$lib/components/TermValidationPanel.svelte';
 	import VocabularyEditor from '$lib/components/VocabularyEditor.svelte';
 	import BrowsePageLayout from '$lib/components/BrowsePageLayout.svelte';
+	import BrowseSidebarSummary from '$lib/components/BrowseSidebarSummary.svelte';
 	import ActionBar from '$lib/components/ActionBar.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import BentoGrid from '$lib/components/BentoGrid.svelte';
@@ -945,49 +946,63 @@
 </svelte:head>
 
 {#snippet sidebar()}
-	<div>
-		<div class="mb-4 flex items-center justify-between">
-			<h2 class="text-lg font-bold text-gray-900">용어 파일</h2>
-			<button
-				type="button"
-				onclick={() => (isFileManagerOpen = true)}
-				class="text-gray-500 hover:text-blue-600"
-				title="파일 관리"
-				aria-label="파일 관리"
-			>
-				<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-					/>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-					/>
-				</svg>
-			</button>
-		</div>
-		<div class="space-y-2">
-			{#each fileList as file (file)}
+	<div class="space-y-4">
+		<section
+			aria-label="용어 파일 선택"
+			class="rounded-2xl border border-border bg-surface/95 p-4 shadow-xl backdrop-blur-md dark:bg-surface/90"
+		>
+			<div class="mb-4 flex items-center justify-between">
+				<h2 class="text-lg font-bold text-gray-900">용어 파일</h2>
 				<button
 					type="button"
-					onclick={() => handleFileSelect(file)}
-					class="w-full rounded-lg px-4 py-2 text-left text-sm font-medium transition-colors duration-200 {selectedFilename ===
-					file
-						? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
-						: 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}"
+					onclick={() => (isFileManagerOpen = true)}
+					class="text-gray-500 hover:text-blue-600"
+					title="파일 관리"
+					aria-label="파일 관리"
 				>
-					{file}
+					<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+						/>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+						/>
+					</svg>
 				</button>
-			{/each}
-			{#if fileList.length === 0}
-				<div class="px-4 py-2 text-sm text-gray-500">파일이 없습니다.</div>
-			{/if}
-		</div>
+			</div>
+			<div class="space-y-2">
+				{#each fileList as file (file)}
+					<button
+						type="button"
+						onclick={() => handleFileSelect(file)}
+						class="w-full rounded-lg px-4 py-2 text-left text-sm font-medium transition-colors duration-200 {selectedFilename ===
+						file
+							? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+							: 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}"
+					>
+						{file}
+					</button>
+				{/each}
+				{#if fileList.length === 0}
+					<div class="px-4 py-2 text-sm text-gray-500">파일이 없습니다.</div>
+				{/if}
+			</div>
+		</section>
+
+		<BrowseSidebarSummary
+			{totalCount}
+			{currentPage}
+			{totalPages}
+			{searchQuery}
+			ariaLabel="용어 검색 결과 요약"
+			variant="card"
+		/>
 	</div>
 {/snippet}
 
@@ -1027,6 +1042,7 @@
 	title="용어"
 	description={`현재 파일: ${selectedFilename}`}
 	breadcrumbItems={getNavigationBreadcrumbItems('/term/browse')}
+	sidebarSurface="plain"
 	{sidebar}
 	{actions}
 >
@@ -1297,7 +1313,7 @@
 			</div>
 		{/if}
 
-		<div class="col-span-12 lg:col-span-7">
+		<div class="col-span-12">
 			<BentoCard title="통합검색" subtitle="용어명, 컬럼명, 도메인으로 검색하세요">
 				<SearchBar
 					placeholder="용어명, 컬럼명, 도메인으로 검색하세요..."
@@ -1313,25 +1329,6 @@
 					onsearch={handleSearch}
 					onclear={handleSearchClear}
 				/>
-			</BentoCard>
-		</div>
-
-		<div class="col-span-12 lg:col-span-5">
-			<BentoCard title="요약" subtitle="현재 조건의 결과를 확인하세요.">
-				<div class="grid grid-cols-2 gap-3 text-sm">
-					<div class="rounded-lg bg-surface-muted p-3">
-						<p class="text-xs text-content-muted">총 건수</p>
-						<p class="mt-1 text-lg font-semibold text-content">{totalCount.toLocaleString()}</p>
-					</div>
-					<div class="rounded-lg bg-surface-muted p-3">
-						<p class="text-xs text-content-muted">페이지</p>
-						<p class="mt-1 text-lg font-semibold text-content">{currentPage} / {totalPages}</p>
-					</div>
-					<div class="col-span-2 rounded-lg bg-surface-muted p-3">
-						<p class="text-xs text-content-muted">검색어</p>
-						<p class="mt-1 truncate text-content-secondary">{searchQuery ? searchQuery : '전체'}</p>
-					</div>
-				</div>
 			</BentoCard>
 		</div>
 

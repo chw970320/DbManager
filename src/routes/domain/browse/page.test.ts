@@ -126,4 +126,22 @@ describe('Domain browse page', () => {
 			within(globalRuleSection).getByRole('button', { name: '데이터타입 매핑 관리' })
 		).toBeInTheDocument();
 	});
+
+	it('should place the browse result summary in the left sidebar and hide it below lg screens', async () => {
+		render(Page);
+
+		await waitFor(() => {
+			expect(mockFetch.mock.calls.some(([input]) => String(input).includes('/api/domain?'))).toBe(
+				true
+			);
+		});
+
+		const summaryRegion = screen.getByRole('region', { name: '도메인 검색 결과 요약' });
+		expect(summaryRegion.closest('aside')).not.toBeNull();
+		expect(summaryRegion).toHaveClass('hidden');
+		expect(summaryRegion).toHaveClass('lg:block');
+		expect(within(summaryRegion).getByText('0')).toBeInTheDocument();
+		expect(within(summaryRegion).getByText('1 / 1')).toBeInTheDocument();
+		expect(within(summaryRegion).getByText('전체')).toBeInTheDocument();
+	});
 });

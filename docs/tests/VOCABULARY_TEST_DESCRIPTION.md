@@ -17,7 +17,8 @@
 | `search/server.test.ts`                    | 19개      | 완료 |
 | `VocabularyEditor.test.ts`                 | 18개      | 완료 |
 | `VocabularyFileManager.test.ts`            | 9개       | 완료 |
-| **합계**                                   | **115개** |      |
+| `browse/page.test.ts`                      | 1개       | 완료 |
+| **합계**                                   | **116개** |      |
 
 ---
 
@@ -347,6 +348,18 @@
 
 ---
 
+## 12. browse/page.test.ts (1개)
+
+**파일 경로**: `src/routes/browse/page.test.ts`
+
+단어집 browse 페이지의 좌측 요약 배치 회귀를 테스트합니다.
+
+| 테스트명                                                                          | 설명                       | 검증 내용                                                                                              |
+| --------------------------------------------------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------ |
+| should render the result summary inside the left sidebar and keep it desktop-only | 좌측 sticky 요약 배치 확인 | 검색 결과 요약이 좌측 sidebar 안에 렌더링되고 `hidden lg:block` 클래스로 작은 화면에서 숨겨지는지 확인 |
+
+---
+
 ## 실행 명령어
 
 ```bash
@@ -359,6 +372,7 @@ pnpm test src/routes/api/vocabulary/server.test.ts
 # 컴포넌트 테스트
 pnpm test src/lib/components/VocabularyEditor.test.ts
 pnpm test src/lib/components/VocabularyFileManager.test.ts
+pnpm test src/routes/browse/page.test.ts
 
 # 감시 모드
 pnpm test vocabulary --watch
@@ -374,3 +388,4 @@ pnpm test vocabulary --watch
 | 2025-01-09 | sync-domain, download, filter-options, search API 테스트 추가 (105개 테스트) |
 | 2025-01-09 | filename 파라미터 테스트 추가 및 validate API 수정 (113개 테스트)            |
 | 2025-01-09 | VocabularyFileManager 컴포넌트 테스트 추가 (122개 테스트)                    |
+| 2026-03-13 | 단어집 browse 좌측 검색 요약 배치 테스트 추가 (116개 테스트)                 |

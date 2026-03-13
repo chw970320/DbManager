@@ -19,8 +19,8 @@
 | `DomainFileManager.test.ts`            | 9개       | 완료 |
 | `domain/type-mappings/server.test.ts`  | 6개       | 완료 |
 | `DomainDataTypeMappingModal.test.ts`   | 4개       | 완료 |
-| `domain/browse/page.test.ts`           | 1개       | 완료 |
-| **합계**                               | **102개** |      |
+| `domain/browse/page.test.ts`           | 2개       | 완료 |
+| **합계**                               | **103개** |      |
 
 ---
 
@@ -223,8 +223,8 @@
 
 도메인 editor 저장/삭제 전 영향도 preview API를 테스트합니다.
 
-| 테스트명                          | 설명              | 검증 내용                    |
-| --------------------------------- | ----------------- | ---------------------------- |
+| 테스트명                                 | 설명              | 검증 내용                     |
+| ---------------------------------------- | ----------------- | ----------------------------- |
 | 성공 시 도메인 영향도 preview를 반환한다 | preview 응답 성공 | totalReferenceCount 반환 확인 |
 
 ---
@@ -265,12 +265,12 @@
 
 ### User Interactions (4개)
 
-| 테스트명                                                 | 설명                | 검증 내용                    |
-| -------------------------------------------------------- | ------------------- | ---------------------------- |
-| should have cancel button that can be clicked            | 취소 버튼 클릭 가능 | 취소 버튼 존재 및 활성화     |
-| should have close icon button that can be clicked        | 닫기 버튼 클릭 가능 | X 아이콘 버튼 존재 및 활성화 |
+| 테스트명                                                 | 설명                | 검증 내용                        |
+| -------------------------------------------------------- | ------------------- | -------------------------------- |
+| should have cancel button that can be clicked            | 취소 버튼 클릭 가능 | 취소 버튼 존재 및 활성화         |
+| should have close icon button that can be clicked        | 닫기 버튼 클릭 가능 | X 아이콘 버튼 존재 및 활성화     |
 | should show confirm dialog when delete button is clicked | 삭제 확인 대화상자  | 참조 건수 포함 confirm 호출 확인 |
-| should render change impact preview section in edit mode | 영향도 패널 표시    | 총 참조 및 안내 문구 표시    |
+| should render change impact preview section in edit mode | 영향도 패널 표시    | 총 참조 및 안내 문구 표시        |
 
 ---
 
@@ -347,15 +347,16 @@
 
 ---
 
-## 13. domain/browse/page.test.ts (1개)
+## 13. domain/browse/page.test.ts (2개)
 
 **파일 경로**: `src/routes/domain/browse/page.test.ts`
 
 도메인 browse 페이지의 좌측 독립 플로팅 패널 배치를 테스트합니다.
 
-| 테스트명                                                                    | 설명                | 검증 내용                                                                             |
-| --------------------------------------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------- |
-| should render global data type mapping controls as a separate left floating panel | 독립 플로팅 패널 배치 | 현재 파일 작업 그룹에는 파일 기반 버튼만 남고 데이터타입 매핑은 `도메인 파일`과 분리된 좌측 패널에 간결하게 표시 |
+| 테스트명                                                                                | 설명                  | 검증 내용                                                                                                        |
+| --------------------------------------------------------------------------------------- | --------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| should render global data type mapping controls as a separate left floating panel       | 독립 플로팅 패널 배치 | 현재 파일 작업 그룹에는 파일 기반 버튼만 남고 데이터타입 매핑은 `도메인 파일`과 분리된 좌측 패널에 간결하게 표시 |
+| should place the browse result summary in the left sidebar and hide it below lg screens | 좌측 요약 배치        | 검색 결과 요약이 좌측 sidebar 카드로 이동하고 `hidden lg:block` 클래스로 작은 화면에서 숨겨지는지 확인           |
 
 ---
 
@@ -391,5 +392,6 @@ pnpm test domain --watch
 | 2026-03-11 | 업로드 대상 파일 기본 선택 동기화 테스트 추가 (80개 테스트)        |
 | 2026-03-11 | 데이터타입 매핑 및 도메인 검증 테스트 정리 (96개 테스트)           |
 | 2026-03-12 | 도메인 browse 전역 데이터타입 매핑 배치 테스트 추가 (100개 테스트) |
-| 2026-03-12 | 영향도 preview API/Editor 테스트 추가 (102개 테스트)              |
+| 2026-03-12 | 영향도 preview API/Editor 테스트 추가 (102개 테스트)               |
 | 2026-03-13 | 도메인 데이터타입 매핑 좌측 독립 플로팅 패널 배치 테스트로 갱신    |
+| 2026-03-13 | 도메인 browse 좌측 검색 요약 배치 테스트 추가                      |

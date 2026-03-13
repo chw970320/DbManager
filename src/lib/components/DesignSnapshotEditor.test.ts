@@ -5,6 +5,7 @@ import DesignSnapshotEditor from './DesignSnapshotEditor.svelte';
 const bundles = [
 	{
 		id: 'bundle-1',
+		name: 'bksp 번들',
 		files: {
 			vocabulary: 'vocabulary-1.json',
 			domain: 'domain-1.json',
@@ -20,6 +21,7 @@ const bundles = [
 	},
 	{
 		id: 'bundle-2',
+		name: 'ecobank + 기본 DB설계',
 		files: {
 			vocabulary: 'vocabulary-2.json',
 			domain: 'domain-2.json',
@@ -53,7 +55,7 @@ describe('DesignSnapshotEditor', () => {
 		expect(screen.getByRole('button', { name: '스냅샷 저장' })).toBeDisabled();
 	});
 
-	it('should dispatch a save event with trimmed values for the chosen bundle', async () => {
+	it('should call the save callback with trimmed values for the chosen bundle', async () => {
 		const handleSave = vi.fn();
 		render(DesignSnapshotEditor, {
 			props: {
@@ -64,6 +66,7 @@ describe('DesignSnapshotEditor', () => {
 			}
 		});
 
+		expect(screen.getByRole('option', { name: 'ecobank + 기본 DB설계' })).toBeInTheDocument();
 		expect(screen.getByLabelText('대상 번들')).toHaveValue('bundle-2');
 
 		await fireEvent.input(screen.getByLabelText('스냅샷명'), {

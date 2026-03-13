@@ -27,6 +27,7 @@ function createJsonResponse(data: unknown, ok = true) {
 
 const mockBundle = {
 	id: 'bundle-1',
+	name: 'bksp 번들',
 	files: {
 		vocabulary: 'vocabulary.json',
 		domain: 'domain.json',
@@ -156,6 +157,7 @@ describe('Snapshot browse page', () => {
 		await fireEvent.click(screen.getByRole('button', { name: '스냅샷 추가' }));
 
 		const dialog = screen.getByRole('dialog', { name: '스냅샷 추가' });
+		expect(within(dialog).getByRole('option', { name: 'bksp 번들' })).toBeInTheDocument();
 		await fireEvent.input(within(dialog).getByLabelText(/스냅샷명/), {
 			target: { value: '표준 보정 전' }
 		});
@@ -195,6 +197,7 @@ describe('Snapshot browse page', () => {
 			expect(screen.getByText('기준 스냅샷')).toBeInTheDocument();
 		});
 
+		expect(screen.getByRole('row', { name: /기준 스냅샷/ })).toHaveTextContent('기본 공통 번들');
 		const summaryRegion = screen.getByRole('region', { name: '스냅샷 요약' });
 		expect(summaryRegion.closest('aside')).not.toBeNull();
 		expect(summaryRegion).toHaveClass('hidden');

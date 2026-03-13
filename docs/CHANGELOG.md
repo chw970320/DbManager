@@ -39,6 +39,35 @@
 
 ### 요약
 
+- 스냅샷 추가 팝업과 저장된 스냅샷 목록에서 더 이상 `column / term` 임시 조합 대신 의미 있는 번들명이 표시됩니다.
+
+### 상세 변경
+
+1. 스냅샷 화면 표시명 적용
+
+- 대상:
+  - `src/lib/components/DesignSnapshotEditor.test.ts`
+  - `src/lib/components/DesignSnapshotEditor.svelte`
+  - `src/routes/snapshot/browse/+page.svelte`
+  - `src/routes/snapshot/browse/page.test.ts`
+- 변경:
+  - 스냅샷 추가 모달의 대상 번들 select가 자동 생성 표시명을 사용하도록 변경
+  - 저장된 스냅샷 목록의 `번들` 열도 표시명 중심으로 보여주고, 실제 컬럼/용어 파일은 보조 정보로 유지
+  - 통합 검색(`all`)에서도 번들 표시명을 함께 검색할 수 있도록 확장
+
+2. 테스트/문서 동기화
+
+- 대상:
+  - `docs/USER_GUIDE.md`
+  - `docs/tests/SNAPSHOT_TEST_DESCRIPTION.md`
+- 변경:
+  - 스냅샷 UI 표시명 렌더링과 번들 선택 옵션 노출을 테스트로 고정
+  - 사용자 가이드와 스냅샷 테스트 문서에 새 표시 규칙을 반영
+
+## 2026-03-13
+
+### 요약
+
 - 용어 browse에서 파일을 바꿀 때 `용어계 관계 진단 요약` 카드와 좌측 검색 결과 요약이 갱신 중 상태를 바로 표시합니다.
 - 단어집/도메인/용어/DB 설계/운영·품질 browse 메뉴의 좌측 요약 카드도 공통 로딩 오버레이와 `aria-busy` 상태를 사용합니다.
 

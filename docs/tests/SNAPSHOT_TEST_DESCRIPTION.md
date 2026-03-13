@@ -80,7 +80,7 @@
 | 테스트명                                                                             | 설명              | 검증 내용                                                                   |
 | ------------------------------------------------------------------------------------ | ----------------- | --------------------------------------------------------------------------- |
 | should load the saved snapshots and restore one from the list                        | 목록 조회 및 복원 | GET 목록 로드, 복원 confirm, restore API 호출                               |
-| should create a snapshot for the selected bundle                                     | 생성 흐름 성공    | `스냅샷 추가` 모달 오픈, 폼 입력, POST 호출, 새 스냅샷 행 렌더링            |
+| should create a snapshot for the selected bundle                                     | 생성 흐름 성공    | `스냅샷 추가` 모달 오픈, 번들 표시명 확인, 폼 입력, POST 호출, 새 스냅샷 행 렌더링 |
 | should render the summary in the left sidebar and not expose a mobile sidebar toggle | 요약 sidebar 고정 | 좌측 요약 region 렌더링, `hidden lg:block`, 모바일 sidebar 열기 버튼 미노출 |
 
 ---

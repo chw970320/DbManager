@@ -13,6 +13,7 @@
 	import { showConfirm } from '$lib/stores/confirm-store';
 	import { addToast } from '$lib/stores/toast-store';
 	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
+	import { getSharedFileMappingBundleDisplayName } from '$lib/utils/shared-file-mapping-name.js';
 	import type { DesignSnapshotSummaryEntry } from '$lib/types/design-snapshot.js';
 	import type { SharedFileMappingBundleEntry } from '$lib/types/shared-file-mapping.js';
 
@@ -66,6 +67,7 @@
 							: [
 									snapshot.name,
 									snapshot.description ?? '',
+									getSharedFileMappingBundleDisplayName(snapshot.bundle),
 									snapshot.bundle.column,
 									snapshot.bundle.term,
 									snapshot.bundle.table,
@@ -416,9 +418,11 @@
 											</div>
 										</td>
 										<td class="px-4 py-3 align-top text-content-secondary">
-											<div>{snapshot.bundle.column}</div>
+											<div class="font-medium text-content">
+												{getSharedFileMappingBundleDisplayName(snapshot.bundle)}
+											</div>
 											<div class="mt-1 text-xs text-content-muted">
-												{snapshot.bundle.term}
+												컬럼 {snapshot.bundle.column} · 용어 {snapshot.bundle.term}
 											</div>
 										</td>
 										<td class="px-4 py-3 align-top text-content-secondary">

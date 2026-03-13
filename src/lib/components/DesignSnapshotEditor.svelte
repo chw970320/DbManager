@@ -4,6 +4,7 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import { ALL_DATA_TYPES, DATA_TYPE_LABELS } from '$lib/types/base.js';
 	import type { SharedFileMappingBundleEntry } from '$lib/types/shared-file-mapping.js';
+	import { getSharedFileMappingBundleDisplayName } from '$lib/utils/shared-file-mapping-name.js';
 
 	export type DesignSnapshotEditorSubmitDetail = {
 		bundleId: string;
@@ -44,7 +45,7 @@
 	);
 
 	function getBundleLabel(bundle: SharedFileMappingBundleEntry): string {
-		return `${bundle.files.column} / ${bundle.files.term}`;
+		return bundle.name?.trim() || getSharedFileMappingBundleDisplayName(bundle.files);
 	}
 
 	function getInitialBundleId(): string {

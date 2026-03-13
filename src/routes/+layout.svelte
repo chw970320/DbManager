@@ -11,6 +11,9 @@
 	// 모바일 메뉴 상태
 	let mobileMenuOpen = $state(false);
 
+	// 모바일 메뉴 그룹 아코디언 상태
+	let openMobileGroupId = $state<string | null>(null);
+
 	// 네비게이션 메뉴 그룹 (업무 도메인 기준)
 	const menuGroups = [
 		{
@@ -55,6 +58,16 @@
 	function isCurrentPage(href: string) {
 		return $page.url.pathname === href;
 	}
+
+	// 그룹 내에 현재 페이지가 포함되는지 여부
+	function isGroupActive(group: (typeof menuGroups)[number]) {
+		return group.items.some((item) => isCurrentPage(item.href));
+	}
+
+	// 모바일에서 그룹 아코디언 토글
+	function toggleMobileGroup(groupId: string) {
+		openMobileGroupId = openMobileGroupId === groupId ? null : groupId;
+	}
 </script>
 
 <div class="flex min-h-screen flex-col bg-gradient-to-br from-slate-50 via-white to-blue-50">
@@ -81,23 +94,37 @@
 						>
 					</a>
 
-					<!-- 데스크탑 네비게이션 (업무 도메인 그룹) -->
-					<nav class="hidden items-center space-x-4 md:flex">
+					<!-- 데스크탑 네비게이션 (그룹 버튼 + 드롭다운) -->
+					<nav class="hidden items-center space-x-3 md:flex">
 						{#each menuGroups as group (group.id)}
-							<div class="flex items-center space-x-1">
-								<span
-									class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600"
+							<div class="relative group">
+								<!-- 그룹 버튼: 하위 메뉴 수를 시각적으로 접어서 표시 -->
+								<button
+									type="button"
+									class="inline-flex items-center space-x-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-200 {isGroupActive(
+										group
+									)
+										? 'border-blue-200 bg-blue-50 text-blue-700 shadow-sm'
+										: 'border-slate-200 bg-white/80 text-slate-700 hover:bg-slate-50'}"
 								>
-									{group.label}
-								</span>
-								<div class="flex items-center space-x-1">
+									<span>{group.label}</span>
+									<span class="text-[10px] text-slate-400">
+										{group.items.length}개
+									</span>
+									<Icon name="chevron-down" size="sm" class="text-slate-400" />
+								</button>
+
+								<!-- 드롭다운: 그룹 호버 시에만 전체 메뉴 노출 -->
+								<div
+									class="invisible absolute left-0 top-full z-40 mt-2 min-w-[220px] rounded-xl border border-slate-100 bg-white/95 p-1 text-sm shadow-lg opacity-0 backdrop-blur-sm transition-all duration-150 group-hover:visible group-hover:opacity-100"
+								>
 									{#each group.items as item (item.href)}
 										<a
 											href={item.href}
-											class="flex items-center space-x-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 {isCurrentPage(
+											class="flex items-center space-x-2 rounded-lg px-3 py-2 text-xs font-medium transition-colors {isCurrentPage(
 												item.href
 											)
-												? 'bg-blue-50 text-blue-700 shadow-sm'
+												? 'bg-blue-50 text-blue-700'
 												: 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}"
 										>
 											<Icon name={item.icon} size="sm" />
@@ -129,30 +156,42 @@
 			</div>
 		</div>
 
-		<!-- 모바일 메뉴 -->
+				<!-- 모바일 메뉴 -->
 		{#if mobileMenuOpen}
 			<div class="border-t border-gray-200 bg-white/95 backdrop-blur-sm md:hidden" id="mobile-menu">
 				<div class="space-y-3 px-4 py-3">
 					{#each menuGroups as group (group.id)}
 						<div>
-							<div class="px-1 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
-								{group.label}
-							</div>
-							<div class="space-y-1">
-								{#each group.items as item (item.href)}
-									<a
-										href={item.href}
-										class="flex items-center space-x-3 rounded-lg px-3 py-2 text-base font-medium transition-colors {isCurrentPage(
-											item.href
-										)
-											? 'bg-blue-50 text-blue-700'
-											: 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}"
-									>
-										<Icon name={item.icon} size="md" />
-										<span>{item.label}</span>
-									</a>
-								{/each}
-							</div>
+							<button
+								type="button"
+								class="flex w-full items-center justify-between rounded-lg px-2 py-2 text-xs font-semibold tracking-wide text-slate-500"
+								onclick={() => toggleMobileGroup(group.id)}
+							>
+								<span>{group.label}</span>
+								<Icon
+									name="chevron-down"
+									size="sm"
+									class={`transition-transform ${openMobileGroupId === group.id ? 'rotate-180' : ''}`}
+								/>
+							</button>
+
+							{#if openMobileGroupId === group.id}
+								<div class="mt-1 space-y-1">
+									{#each group.items as item (item.href)}
+										<a
+											href={item.href}
+											class="flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors {isCurrentPage(
+												item.href
+											)
+												? 'bg-blue-50 text-blue-700'
+												: 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}"
+										>
+											<Icon name={item.icon} size="md" />
+											<span>{item.label}</span>
+										</a>
+									{/each}
+								</div>
+							{/if}
 						</div>
 					{/each}
 				</div>

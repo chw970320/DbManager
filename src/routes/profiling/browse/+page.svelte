@@ -319,6 +319,8 @@
 {#snippet sidebar()}
 	<BrowseSidebarSummary
 		variant="card"
+		loading={loadingSources || loadingTargets}
+		loadingText="프로파일링 요약을 갱신하는 중입니다."
 		ariaLabel="프로파일링 요약"
 		subtitle="현재 선택과 조회 현황"
 		items={[

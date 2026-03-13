@@ -6,13 +6,13 @@
  *
  * async 함수 등 다양한 시그니처를 허용하기 위해 제네릭 함수 시그니처를 사용합니다.
  */
-export function debounce<T extends (...args: any[]) => any>(
-	func: T,
+export function debounce<TArgs extends unknown[], TReturn>(
+	func: (...args: TArgs) => TReturn,
 	wait: number
-): ((...args: Parameters<T>) => void) & { cancel: () => void } {
+): ((...args: TArgs) => void) & { cancel: () => void } {
 	let timeout: ReturnType<typeof setTimeout> | undefined;
 
-	const debounced = function executedFunction(...args: Parameters<T>) {
+	const debounced = function executedFunction(...args: TArgs) {
 		const later = () => {
 			clearTimeout(timeout);
 			func(...args);
@@ -36,14 +36,14 @@ export function debounce<T extends (...args: any[]) => any>(
  * @param immediate - 첫 호출 즉시 실행 여부
  * @returns debounced 함수
  */
-export function debounceImmediate<T extends (...args: any[]) => any>(
-	func: T,
+export function debounceImmediate<TArgs extends unknown[], TReturn>(
+	func: (...args: TArgs) => TReturn,
 	wait: number,
 	immediate = false
-): (...args: Parameters<T>) => void {
+): (...args: TArgs) => void {
 	let timeout: ReturnType<typeof setTimeout> | undefined;
 
-	return function executedFunction(...args: Parameters<T>) {
+	return function executedFunction(...args: TArgs) {
 		const later = () => {
 			timeout = undefined;
 			if (!immediate) func(...args);

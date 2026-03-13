@@ -6,11 +6,11 @@
 	import ColumnDefTable from '$lib/components/ColumnDefTable.svelte';
 	import ColumnDefEditor from '$lib/components/ColumnDefEditor.svelte';
 	import ColumnDefFileManager from '$lib/components/ColumnDefFileManager.svelte';
-import BrowsePageLayout from '$lib/components/BrowsePageLayout.svelte';
-import ActionBar from '$lib/components/ActionBar.svelte';
-import BentoGrid from '$lib/components/BentoGrid.svelte';
-import BentoCard from '$lib/components/BentoCard.svelte';
-import Icon from '$lib/components/Icon.svelte';
+	import BrowsePageLayout from '$lib/components/BrowsePageLayout.svelte';
+	import ActionBar from '$lib/components/ActionBar.svelte';
+	import BentoGrid from '$lib/components/BentoGrid.svelte';
+	import BentoCard from '$lib/components/BentoCard.svelte';
+	import Icon from '$lib/components/Icon.svelte';
 	import type { ColumnEntry, DbDesignApiResponse } from '$lib/types/database-design.js';
 	import type { DataType } from '$lib/types/base';
 	import { columnDataStore as columnStore } from '$lib/stores/unified-store';
@@ -111,7 +111,9 @@ import Icon from '$lib/components/Icon.svelte';
 		}
 	}
 
-	function toDefinitionFileMapping(mapping?: Record<string, unknown>): Partial<Record<DataType, string>> {
+	function toDefinitionFileMapping(
+		mapping?: Record<string, unknown>
+	): Partial<Record<DataType, string>> {
 		return extractDbDesignRelatedMapping(mapping);
 	}
 
@@ -125,9 +127,7 @@ import Icon from '$lib/components/Icon.svelte';
 			if (requestSeq !== undefined && requestSeq !== pageDataRequestSeq) {
 				return;
 			}
-			relationFileMapping = result.success
-				? toDefinitionFileMapping(result.data?.mapping)
-				: {};
+			relationFileMapping = result.success ? toDefinitionFileMapping(result.data?.mapping) : {};
 		} catch (mappingError) {
 			console.error('관계 파일 매핑 로드 오류:', mappingError);
 			if (requestSeq !== undefined && requestSeq !== pageDataRequestSeq) {
@@ -176,6 +176,7 @@ import Icon from '$lib/components/Icon.svelte';
 
 	async function loadData(filename = selectedFilename, requestSeq?: number) {
 		loading = true;
+		const isStaleRequest = () => requestSeq !== undefined && requestSeq !== pageDataRequestSeq;
 		try {
 			const params = new URLSearchParams({
 				page: currentPage.toString(),
@@ -198,7 +199,7 @@ import Icon from '$lib/components/Icon.svelte';
 			}
 			const response = await fetch(`/api/column?${params}`);
 			const result: DbDesignApiResponse = await response.json();
-			if (requestSeq !== undefined && requestSeq !== pageDataRequestSeq) {
+			if (isStaleRequest()) {
 				return;
 			}
 			if (result.success && result.data) {
@@ -217,15 +218,14 @@ import Icon from '$lib/components/Icon.svelte';
 			}
 		} catch (error) {
 			console.error('데이터 로드 오류:', error);
-			if (requestSeq !== undefined && requestSeq !== pageDataRequestSeq) {
+			if (isStaleRequest()) {
 				return;
 			}
 			entries = [];
 		} finally {
-			if (requestSeq !== undefined && requestSeq !== pageDataRequestSeq) {
-				return;
+			if (!isStaleRequest()) {
+				loading = false;
 			}
-			loading = false;
 		}
 	}
 
@@ -457,7 +457,12 @@ import Icon from '$lib/components/Icon.svelte';
 	</ActionBar>
 {/snippet}
 
-<BrowsePageLayout title="컬럼 정의서" description={`현재 파일: ${selectedFilename}`} {sidebar} {actions}>
+<BrowsePageLayout
+	title="컬럼 정의서"
+	description={`현재 파일: ${selectedFilename}`}
+	{sidebar}
+	{actions}
+>
 	<ColumnDefFileManager
 		isOpen={isFileManagerOpen}
 		currentFilename={selectedFilename}
@@ -537,7 +542,10 @@ import Icon from '$lib/components/Icon.svelte';
 		</div>
 
 		<div class="col-span-12">
-			<BentoCard title="검색 결과" subtitle={searchQuery ? `\"${searchQuery}\" 검색 결과` : '전체 컬럼 정의서'}>
+			<BentoCard
+				title="검색 결과"
+				subtitle={searchQuery ? `"${searchQuery}" 검색 결과` : '전체 컬럼 정의서'}
+			>
 				<div class="overflow-x-auto rounded-xl border border-gray-200">
 					<ColumnDefTable
 						{entries}

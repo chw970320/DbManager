@@ -11,7 +11,7 @@
 	import { addToast } from '$lib/stores/toast-store';
 	import type { DesignSnapshotSummaryEntry } from '$lib/types/design-snapshot.js';
 	import type { SharedFileMappingBundleEntry } from '$lib/types/shared-file-mapping.js';
-	import { ALL_DATA_TYPES, DATA_TYPE_LABELS, type DataType } from '$lib/types/base.js';
+	import { ALL_DATA_TYPES, DATA_TYPE_LABELS } from '$lib/types/base.js';
 
 	type ApiResponse<T> = { success: true; data: T } | { success: false; error?: string };
 
@@ -281,10 +281,7 @@
 
 <svelte:head>
 	<title>데이터 관리 | 스냅샷</title>
-	<meta
-		name="description"
-		content="8종 설계 파일 번들의 스냅샷을 저장하고 필요 시 복원합니다."
-	/>
+	<meta name="description" content="8종 설계 파일 번들의 스냅샷을 저장하고 필요 시 복원합니다." />
 </svelte:head>
 
 {#snippet actions()}
@@ -409,9 +406,7 @@
 						</div>
 
 						<div>
-							<label
-								for="snapshotDescription"
-								class="mb-1 block text-sm font-medium text-content"
+							<label for="snapshotDescription" class="mb-1 block text-sm font-medium text-content"
 								>설명</label
 							>
 							<textarea
@@ -429,9 +424,7 @@
 								<p class="text-xs font-medium text-content-secondary">포함되는 파일</p>
 								<div class="mt-3 flex flex-wrap gap-2">
 									{#each ALL_DATA_TYPES as type (type)}
-										<span
-											class="rounded-full bg-surface px-3 py-1 text-xs text-content-secondary"
-										>
+										<span class="rounded-full bg-surface px-3 py-1 text-xs text-content-secondary">
 											{DATA_TYPE_LABELS[type]} · {selectedBundle.files[type]}
 										</span>
 									{/each}
@@ -473,9 +466,7 @@
 				{:else if filteredSnapshots.length === 0}
 					<EmptyState
 						icon="save"
-						title={snapshots.length === 0
-							? '저장된 스냅샷이 없습니다.'
-							: '검색 결과가 없습니다.'}
+						title={snapshots.length === 0 ? '저장된 스냅샷이 없습니다.' : '검색 결과가 없습니다.'}
 						description={snapshots.length === 0
 							? '먼저 현재 번들을 스냅샷으로 저장해 복구 지점을 만드세요.'
 							: '검색 조건을 바꾸거나 다른 스냅샷명을 확인해 보세요.'}
@@ -489,7 +480,8 @@
 									<th class="px-4 py-3 text-left font-semibold text-content-secondary">번들</th>
 									<th class="px-4 py-3 text-left font-semibold text-content-secondary">컬럼 수</th>
 									<th class="px-4 py-3 text-left font-semibold text-content-secondary">생성일</th>
-									<th class="px-4 py-3 text-left font-semibold text-content-secondary">최근 복원</th>
+									<th class="px-4 py-3 text-left font-semibold text-content-secondary">최근 복원</th
+									>
 									<th class="px-4 py-3 text-right font-semibold text-content-secondary">관리</th>
 								</tr>
 							</thead>

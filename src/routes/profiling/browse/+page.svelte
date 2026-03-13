@@ -375,7 +375,7 @@
 								bind:value={schemaFilter}
 								aria-label="스키마 필터"
 							>
-								{#each schemaOptions as option}
+								{#each schemaOptions as option (option)}
 									<option value={option}>
 										{option === 'all' ? '전체 스키마' : option}
 									</option>

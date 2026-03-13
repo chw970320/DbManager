@@ -147,7 +147,7 @@ describe('DesignRelationPanel', () => {
 		});
 
 		await waitFor(() => {
-			expect(screen.getByText('5개 정의서 연관 상태')).toBeInTheDocument();
+			expect(screen.getByText('8종 공통 연관 상태')).toBeInTheDocument();
 			expect(screen.getByText('요약')).toBeInTheDocument();
 			expect(screen.queryByRole('button', { name: '정합성 조회' })).not.toBeInTheDocument();
 		});

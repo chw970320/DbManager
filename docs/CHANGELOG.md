@@ -4,6 +4,50 @@
 
 ### 요약
 
+- 검증 스크립트를 `lint`, `lint:all`, `format:check`, `validate`로 분리해 기본 게이트를 현실화했습니다.
+- 최근 기능 추가 이후 어긋난 회귀 테스트와 ESLint 오류 패턴을 함께 정리했습니다.
+
+### 상세 변경
+
+1. 검증 스크립트 정리
+
+- 대상:
+  - `package.json`
+  - `README.md`
+  - `docs/CONVENTIONS.md`
+- 변경:
+  - `lint`를 `eslint . --quiet`로 변경해 경고 백로그와 분리된 오류 게이트로 재정의
+  - `lint:all`, `format:check`, `validate` 스크립트 추가
+  - 저장소 문서에 검증 명령 사용 기준 반영
+
+2. 회귀 테스트/ESLint 오류 정리
+
+- 대상:
+  - `src/lib/components/DesignRelationPanel.test.ts`
+  - `src/lib/components/Icon.svelte`
+  - `src/lib/components/QualityRuleEditor.svelte`
+  - `src/lib/components/Skeleton.svelte`
+  - `src/lib/utils/debounce.ts`
+  - `src/routes/browse/+page.svelte`
+  - `src/routes/attribute/browse/+page.svelte`
+  - `src/routes/column/browse/+page.svelte`
+  - `src/routes/database/browse/+page.svelte`
+  - `src/routes/domain/browse/+page.svelte`
+  - `src/routes/entity/browse/+page.svelte`
+  - `src/routes/profiling/browse/+page.svelte`
+  - `src/routes/snapshot/browse/+page.svelte`
+  - `src/routes/table/browse/+page.svelte`
+  - `src/routes/term/browse/+page.svelte`
+  - `vitest-setup.ts`
+- 변경:
+  - `DesignRelationPanel` 테스트를 현재 UI 문구 기준으로 수정
+  - Svelte `{#each}` key 누락, `any` 사용, `no-unsafe-finally`, 불필요한 escape, 불필요한 가변 선언 등 실제 ESLint 오류 패턴 정리
+  - 도메인 browse 페이지의 보조 landmark 마크업을 정리해 접근성 경고 제거
+
+## 2026-03-13
+
+### 요약
+
 - 8종 설계 파일 번들을 통째로 저장/복원하는 `스냅샷` 메뉴가 추가되었습니다.
 - 복원 시 공통 파일 매핑 번들도 함께 다시 적용되어 browse/ERD 흐름과 정합성이 유지됩니다.
 

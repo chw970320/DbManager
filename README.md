@@ -160,8 +160,11 @@ docker-compose up --build
 - `pnpm run preview`
 - `pnpm run check`
 - `pnpm run lint`
+- `pnpm run lint:all`
 - `pnpm run format`
+- `pnpm run format:check`
 - `pnpm run test`
+- `pnpm run validate`
 - `pnpm run reset:test-data`
   - 단어집, 도메인, 용어집, DB/엔터티/속성/테이블/컬럼 정의서 JSON을 빈 기본 파일로 다시 만들고 `registry.json`, `static/data/settings/shared-file-mappings.json`, `static/data/settings/design-snapshots.json`도 기본 상태로 초기화합니다.
   - `static/data/settings/domain-data-type-mappings.json` 같은 비대상 설정 파일은 유지합니다.
@@ -170,6 +173,13 @@ docker-compose up --build
   - 예외적으로 사용한 기능 브랜치를 `main` 기준 반영, 검증, `main` fast-forward 병합, 브랜치 삭제 순서로 정리합니다.
   - 현재 브랜치가 곧 정리 대상이면 `<branch-name>`은 생략할 수 있습니다.
   - 추가 테스트가 필요하면 `pnpm run finalize:branch -- <branch-name> -AdditionalTestCommand "pnpm vitest run ..."` 형태로 실행합니다.
+
+검증 명령 기준:
+
+- `pnpm run lint`: ESLint 오류만 실패로 처리하는 기본 게이트입니다.
+- `pnpm run lint:all`: 경고까지 포함한 전체 ESLint 결과를 확인합니다.
+- `pnpm run format:check`: 저장소 전체 Prettier 포맷 불일치를 점검합니다.
+- `pnpm run validate`: `pnpm check`, `pnpm run lint`, `pnpm vitest run`을 순서대로 실행합니다.
 
 ## 개발 워크플로
 

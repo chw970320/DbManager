@@ -263,7 +263,7 @@
 								bind:value={formData.severity}
 								aria-label="심각도"
 							>
-								{#each severityOptions as option}
+								{#each severityOptions as option (option.value)}
 									<option value={option.value}>{option.label}</option>
 								{/each}
 							</select>
@@ -276,7 +276,7 @@
 								bind:value={formData.scope}
 								aria-label="범위"
 							>
-								{#each scopeOptions as option}
+								{#each scopeOptions as option (option.value)}
 									<option value={option.value}>{option.label}</option>
 								{/each}
 							</select>
@@ -289,7 +289,7 @@
 								bind:value={formData.metric}
 								aria-label="메트릭"
 							>
-								{#each availableMetrics as option}
+								{#each availableMetrics as option (option.value)}
 									<option value={option.value}>{option.label}</option>
 								{/each}
 							</select>
@@ -302,7 +302,7 @@
 								bind:value={formData.operator}
 								aria-label="연산자"
 							>
-								{#each operatorOptions as option}
+								{#each operatorOptions as option (option.value)}
 									<option value={option.value}>{option.label}</option>
 								{/each}
 							</select>

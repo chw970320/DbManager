@@ -6,9 +6,9 @@
 	import DomainEditor from '$lib/components/DomainEditor.svelte';
 	import DomainDataTypeMappingModal from '$lib/components/DomainDataTypeMappingModal.svelte';
 	import DomainValidationPanel from '$lib/components/DomainValidationPanel.svelte';
-import BrowsePageLayout from '$lib/components/BrowsePageLayout.svelte';
-import ActionBar from '$lib/components/ActionBar.svelte';
-import Icon from '$lib/components/Icon.svelte';
+	import BrowsePageLayout from '$lib/components/BrowsePageLayout.svelte';
+	import ActionBar from '$lib/components/ActionBar.svelte';
+	import Icon from '$lib/components/Icon.svelte';
 	import BentoGrid from '$lib/components/BentoGrid.svelte';
 	import BentoCard from '$lib/components/BentoCard.svelte';
 	import type { DomainEntry, DomainApiResponse } from '$lib/types/domain.js';
@@ -708,48 +708,50 @@ import Icon from '$lib/components/Icon.svelte';
 {/snippet}
 
 {#snippet actions()}
-	<ActionBar alignment="right">
-		<button
-			type="button"
-			onclick={() => {
-				currentEditingEntry = null;
-				editorServerError = '';
-				showEditor = true;
-			}}
-			disabled={loading}
-			class="btn btn-primary rounded-xl px-6 py-3"
-		>
-			<Icon name="plus" size="sm" />
-			<span>새 도메인 추가</span>
-		</button>
-		<button
-			type="button"
-			onclick={handleValidateAllDomain}
-			disabled={loading || validationLoading}
-			class="btn btn-outline rounded-xl px-6 py-3"
-		>
-			<Icon name={validationLoading ? 'spinner' : 'check-circle'} size="sm" />
-			<span>{validationLoading ? '검사 중' : '유효성 검사'}</span>
-		</button>
-		<button
-			type="button"
-			onclick={handleDomainDownload}
-			disabled={loading}
-			class="btn btn-outline rounded-xl px-6 py-3"
-		>
-			<Icon name={loading ? 'spinner' : 'download'} size="sm" />
-			<span>{loading ? '준비 중' : 'XLSX 다운로드'}</span>
-		</button>
-		<button
-			type="button"
-			onclick={handleRefresh}
-			disabled={loading}
-			class="btn btn-secondary rounded-xl px-6 py-3"
-		>
-			<Icon name={loading ? 'spinner' : 'refresh'} size="sm" />
-			<span>{loading ? '로딩 중' : '새로고침'}</span>
-		</button>
-	</ActionBar>
+	<div role="group" aria-label="현재 파일 작업">
+		<ActionBar alignment="right">
+			<button
+				type="button"
+				onclick={() => {
+					currentEditingEntry = null;
+					editorServerError = '';
+					showEditor = true;
+				}}
+				disabled={loading}
+				class="btn btn-primary rounded-xl px-6 py-3"
+			>
+				<Icon name="plus" size="sm" />
+				<span>새 도메인 추가</span>
+			</button>
+			<button
+				type="button"
+				onclick={handleValidateAllDomain}
+				disabled={loading || validationLoading}
+				class="btn btn-outline rounded-xl px-6 py-3"
+			>
+				<Icon name={validationLoading ? 'spinner' : 'check-circle'} size="sm" />
+				<span>{validationLoading ? '검사 중' : '유효성 검사'}</span>
+			</button>
+			<button
+				type="button"
+				onclick={handleDomainDownload}
+				disabled={loading}
+				class="btn btn-outline rounded-xl px-6 py-3"
+			>
+				<Icon name={loading ? 'spinner' : 'download'} size="sm" />
+				<span>{loading ? '준비 중' : 'XLSX 다운로드'}</span>
+			</button>
+			<button
+				type="button"
+				onclick={handleRefresh}
+				disabled={loading}
+				class="btn btn-secondary rounded-xl px-6 py-3"
+			>
+				<Icon name={loading ? 'spinner' : 'refresh'} size="sm" />
+				<span>{loading ? '로딩 중' : '새로고침'}</span>
+			</button>
+		</ActionBar>
+	</div>
 {/snippet}
 
 {#snippet dataTypeMappingActions()}
@@ -805,17 +807,19 @@ import Icon from '$lib/components/Icon.svelte';
 
 	<BentoGrid>
 		<div class="col-span-12 lg:col-span-7">
-			<BentoCard
-				eyebrow="전체 파일 공통 규칙"
-				title="데이터타입 매핑 관리"
-				subtitle="모든 도메인 파일의 표준명 생성 규칙에 적용됩니다."
-				class="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50"
-				actions={dataTypeMappingActions}
-			>
-				<p class="text-sm text-gray-700">
-					도메인 표준명 생성 시 자료형을 일관되게 유지하려면 먼저 매핑을 정리하는 것을 권장합니다.
-				</p>
-			</BentoCard>
+			<section aria-label="전역 도메인명 규칙">
+				<BentoCard
+					eyebrow="전체 파일 공통 규칙"
+					title="데이터타입 매핑 관리"
+					subtitle="현재 선택 파일과 관계없이 모든 도메인 파일의 표준명 생성 규칙에 적용됩니다."
+					class="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50"
+					actions={dataTypeMappingActions}
+				>
+					<p class="text-sm text-gray-700">
+						도메인 표준명 생성 시 자료형을 일관되게 유지하려면 먼저 매핑을 정리하는 것을 권장합니다.
+					</p>
+				</BentoCard>
+			</section>
 		</div>
 
 		<div class="col-span-12 lg:col-span-5">
@@ -840,7 +844,9 @@ import Icon from '$lib/components/Icon.svelte';
 						</div>
 						<div class="col-span-2 rounded-lg bg-surface-muted p-3">
 							<p class="text-xs text-content-muted">검색어</p>
-							<p class="mt-1 truncate text-content-secondary">{searchQuery ? searchQuery : '전체'}</p>
+							<p class="mt-1 truncate text-content-secondary">
+								{searchQuery ? searchQuery : '전체'}
+							</p>
 						</div>
 					</div>
 				</BentoCard>
@@ -848,7 +854,10 @@ import Icon from '$lib/components/Icon.svelte';
 		</div>
 
 		<div class="col-span-12">
-			<BentoCard title="통합검색" subtitle="도메인 그룹, 분류명, 표준 도메인명, 데이터타입으로 검색하세요">
+			<BentoCard
+				title="통합검색"
+				subtitle="도메인 그룹, 분류명, 표준 도메인명, 데이터타입으로 검색하세요"
+			>
 				<SearchBar
 					placeholder="도메인 그룹, 분류명, 표준명, 데이터타입으로 검색하세요..."
 					searchFields={[
@@ -868,7 +877,10 @@ import Icon from '$lib/components/Icon.svelte';
 		</div>
 
 		<div class="col-span-12">
-			<BentoCard title="검색 결과" subtitle={searchQuery ? `\"${searchQuery}\" 검색 결과` : '전체 도메인'}>
+			<BentoCard
+				title="검색 결과"
+				subtitle={searchQuery ? `"${searchQuery}" 검색 결과` : '전체 도메인'}
+			>
 				<div class="overflow-x-auto rounded-xl border border-gray-200">
 					<DomainTable
 						{entries}

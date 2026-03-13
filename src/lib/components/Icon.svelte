@@ -28,25 +28,19 @@
 
 	const icons: Record<string, IconDef> = {
 		search: {
-			paths: [
-				'M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'
-			]
+			paths: ['M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z']
 		},
 		x: {
 			paths: ['M6 18L18 6M6 6l12 12']
 		},
 		'x-circle': {
-			paths: [
-				'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'
-			]
+			paths: ['M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z']
 		},
 		check: {
 			paths: ['M5 13l4 4L19 7']
 		},
 		'check-circle': {
-			paths: [
-				'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'
-			]
+			paths: ['M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z']
 		},
 		'chevron-down': {
 			paths: ['M19 9l-7 7-7-7']
@@ -82,9 +76,7 @@
 			]
 		},
 		download: {
-			paths: [
-				'M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10'
-			]
+			paths: ['M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10']
 		},
 		file: {
 			paths: [
@@ -92,9 +84,7 @@
 			]
 		},
 		folder: {
-			paths: [
-				'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z'
-			]
+			paths: ['M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z']
 		},
 		warning: {
 			paths: [
@@ -102,9 +92,7 @@
 			]
 		},
 		info: {
-			paths: [
-				'M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z'
-			]
+			paths: ['M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z']
 		},
 		refresh: {
 			paths: [
@@ -112,9 +100,7 @@
 			]
 		},
 		'external-link': {
-			paths: [
-				'M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14'
-			]
+			paths: ['M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14']
 		},
 		copy: {
 			paths: [
@@ -122,7 +108,9 @@
 			]
 		},
 		filter: {
-			paths: ['M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z']
+			paths: [
+				'M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z'
+			]
 		},
 		database: {
 			paths: [
@@ -140,9 +128,7 @@
 			]
 		},
 		cube: {
-			paths: [
-				'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4'
-			]
+			paths: ['M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4']
 		},
 		key: {
 			paths: [
@@ -172,9 +158,7 @@
 			circles: [{ cx: '12', cy: '12', r: '10' }]
 		},
 		'dots-vertical': {
-			paths: [
-				'M12 5v.01M12 12v.01M12 19v.01'
-			]
+			paths: ['M12 5v.01M12 12v.01M12 19v.01']
 		},
 		save: {
 			paths: [
@@ -219,10 +203,10 @@
 		xmlns="http://www.w3.org/2000/svg"
 		aria-hidden="true"
 	>
-		{#each icon.paths || [] as d}
+		{#each icon.paths || [] as d (d)}
 			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" {d}></path>
 		{/each}
-		{#each icon.circles || [] as circle}
+		{#each icon.circles || [] as circle (`${circle.cx}-${circle.cy}-${circle.r}`)}
 			<circle
 				cx={circle.cx}
 				cy={circle.cy}
@@ -232,11 +216,10 @@
 				stroke-width="2"
 			></circle>
 		{/each}
-		{#each icon.polylines || [] as points}
-			<polyline stroke-linecap="round" stroke-linejoin="round" stroke-width="2" {points}
-			></polyline>
+		{#each icon.polylines || [] as points (points)}
+			<polyline stroke-linecap="round" stroke-linejoin="round" stroke-width="2" {points}></polyline>
 		{/each}
-		{#each icon.lines || [] as line}
+		{#each icon.lines || [] as line (`${line.x1}-${line.y1}-${line.x2}-${line.y2}`)}
 			<line
 				x1={line.x1}
 				y1={line.y1}

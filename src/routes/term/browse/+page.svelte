@@ -7,9 +7,9 @@
 	import TermGenerator from '$lib/components/TermGenerator.svelte';
 	import TermValidationPanel from '$lib/components/TermValidationPanel.svelte';
 	import VocabularyEditor from '$lib/components/VocabularyEditor.svelte';
-import BrowsePageLayout from '$lib/components/BrowsePageLayout.svelte';
-import ActionBar from '$lib/components/ActionBar.svelte';
-import Icon from '$lib/components/Icon.svelte';
+	import BrowsePageLayout from '$lib/components/BrowsePageLayout.svelte';
+	import ActionBar from '$lib/components/ActionBar.svelte';
+	import Icon from '$lib/components/Icon.svelte';
 	import BentoGrid from '$lib/components/BentoGrid.svelte';
 	import BentoCard from '$lib/components/BentoCard.svelte';
 	import { addToast } from '$lib/stores/toast-store';
@@ -497,7 +497,8 @@ import Icon from '$lib/components/Icon.svelte';
 			}
 		} catch (error) {
 			console.error('용어계 관계 진단 오류:', error);
-			errorMessage = error instanceof Error ? error.message : '용어계 관계 진단 중 오류가 발생했습니다.';
+			errorMessage =
+				error instanceof Error ? error.message : '용어계 관계 진단 중 오류가 발생했습니다.';
 		}
 	}
 
@@ -1231,30 +1232,43 @@ import Icon from '$lib/components/Icon.svelte';
 	<BentoGrid>
 		{#if relationshipSummary}
 			<div class="col-span-12">
-				<BentoCard title="용어계 관계 진단 요약" subtitle="용어/단어/도메인 매핑 상태를 빠르게 확인합니다.">
+				<BentoCard
+					title="용어계 관계 진단 요약"
+					subtitle="용어/단어/도메인 매핑 상태를 빠르게 확인합니다."
+				>
 					<div class="mb-3 text-xs text-content-secondary">
-						term: {relationshipSummary.files.term}, vocabulary: {relationshipSummary.files.vocabulary},
-						domain: {relationshipSummary.files.domain}
+						term: {relationshipSummary.files.term}, vocabulary: {relationshipSummary.files
+							.vocabulary}, domain: {relationshipSummary.files.domain}
 					</div>
 					<div class="grid grid-cols-2 gap-2 text-xs sm:grid-cols-5">
 						<div class="rounded border border-green-200 bg-white p-2 text-center">
-							<div class="font-semibold text-green-700">{relationshipSummary.summary.termNameMappedCount}</div>
+							<div class="font-semibold text-green-700">
+								{relationshipSummary.summary.termNameMappedCount}
+							</div>
 							<div class="text-green-600">용어명 매핑</div>
 						</div>
 						<div class="rounded border border-blue-200 bg-white p-2 text-center">
-							<div class="font-semibold text-blue-700">{relationshipSummary.summary.columnNameMappedCount}</div>
+							<div class="font-semibold text-blue-700">
+								{relationshipSummary.summary.columnNameMappedCount}
+							</div>
 							<div class="text-blue-600">컬럼명 매핑</div>
 						</div>
 						<div class="rounded border border-purple-200 bg-white p-2 text-center">
-							<div class="font-semibold text-purple-700">{relationshipSummary.summary.termDomainMappedCount}</div>
+							<div class="font-semibold text-purple-700">
+								{relationshipSummary.summary.termDomainMappedCount}
+							</div>
 							<div class="text-purple-600">도메인 매핑</div>
 						</div>
 						<div class="rounded border border-rose-200 bg-white p-2 text-center">
-							<div class="font-semibold text-rose-700">{relationshipSummary.summary.missingDomainCount}</div>
+							<div class="font-semibold text-rose-700">
+								{relationshipSummary.summary.missingDomainCount}
+							</div>
 							<div class="text-rose-600">미매핑 도메인</div>
 						</div>
 						<div class="rounded border border-amber-200 bg-white p-2 text-center">
-							<div class="font-semibold text-amber-700">{relationshipSummary.summary.orphanDomainCount}</div>
+							<div class="font-semibold text-amber-700">
+								{relationshipSummary.summary.orphanDomainCount}
+							</div>
 							<div class="text-amber-600">미참조 도메인</div>
 						</div>
 					</div>
@@ -1315,7 +1329,10 @@ import Icon from '$lib/components/Icon.svelte';
 		</div>
 
 		<div class="col-span-12">
-			<BentoCard title="검색 결과" subtitle={searchQuery ? `\"${searchQuery}\" 검색 결과` : '전체 용어'}>
+			<BentoCard
+				title="검색 결과"
+				subtitle={searchQuery ? `"${searchQuery}" 검색 결과` : '전체 용어'}
+			>
 				<div class="overflow-x-auto rounded-xl border border-gray-200">
 					<TermTable
 						{entries}

@@ -7,8 +7,8 @@
 	import VocabularyValidationPanel from '$lib/components/VocabularyValidationPanel.svelte';
 	import VocabularyFileManager from '$lib/components/VocabularyFileManager.svelte';
 	import BrowsePageLayout from '$lib/components/BrowsePageLayout.svelte';
-import ActionBar from '$lib/components/ActionBar.svelte';
-import Icon from '$lib/components/Icon.svelte';
+	import ActionBar from '$lib/components/ActionBar.svelte';
+	import Icon from '$lib/components/Icon.svelte';
 	import BentoGrid from '$lib/components/BentoGrid.svelte';
 	import BentoCard from '$lib/components/BentoCard.svelte';
 	import type { VocabularyEntry, ApiResponse } from '$lib/types/vocabulary.js';
@@ -884,7 +884,10 @@ import Icon from '$lib/components/Icon.svelte';
 								onchange={handleDuplicateFilterChange}
 								class="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
 							/>
-							<label for="duplicateStandardName" class="cursor-pointer select-none text-sm font-medium text-gray-700">
+							<label
+								for="duplicateStandardName"
+								class="cursor-pointer select-none text-sm font-medium text-gray-700"
+							>
 								표준단어명 중복
 							</label>
 						</div>
@@ -896,7 +899,10 @@ import Icon from '$lib/components/Icon.svelte';
 								onchange={handleDuplicateFilterChange}
 								class="h-4 w-4 rounded border-gray-300 text-orange-600 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
 							/>
-							<label for="duplicateAbbreviation" class="cursor-pointer select-none text-sm font-medium text-gray-700">
+							<label
+								for="duplicateAbbreviation"
+								class="cursor-pointer select-none text-sm font-medium text-gray-700"
+							>
 								영문약어 중복
 							</label>
 						</div>
@@ -908,7 +914,10 @@ import Icon from '$lib/components/Icon.svelte';
 								onchange={handleDuplicateFilterChange}
 								class="h-4 w-4 rounded border-gray-300 text-yellow-600 focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
 							/>
-							<label for="duplicateEnglishName" class="cursor-pointer select-none text-sm font-medium text-gray-700">
+							<label
+								for="duplicateEnglishName"
+								class="cursor-pointer select-none text-sm font-medium text-gray-700"
+							>
 								영문명 중복
 							</label>
 						</div>
@@ -920,7 +929,10 @@ import Icon from '$lib/components/Icon.svelte';
 								onchange={handleUnmappedToggle}
 								class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
 							/>
-							<label for="unmappedDomainOnly" class="cursor-pointer select-none text-sm font-medium text-gray-700">
+							<label
+								for="unmappedDomainOnly"
+								class="cursor-pointer select-none text-sm font-medium text-gray-700"
+							>
 								도메인 미매핑
 							</label>
 						</div>
@@ -949,7 +961,10 @@ import Icon from '$lib/components/Icon.svelte';
 		</div>
 
 		<div class="col-span-12">
-			<BentoCard title="검색 결과" subtitle={searchQuery ? `\"${searchQuery}\" 검색 결과` : '전체 단어'}>
+			<BentoCard
+				title="검색 결과"
+				subtitle={searchQuery ? `"${searchQuery}" 검색 결과` : '전체 단어'}
+			>
 				<div class="overflow-x-auto rounded-xl border border-gray-200">
 					<VocabularyTable
 						{entries}

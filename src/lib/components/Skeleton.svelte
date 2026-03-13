@@ -21,7 +21,7 @@
 
 {#if variant === 'text' && lines > 1}
 	<div class="space-y-3 {className}">
-		{#each Array(lines) as _, i}
+		{#each Array(lines) as _, i (i)}
 			<div
 				class="animate-pulse rounded bg-gray-200"
 				style="width: {i === lines - 1 ? '75%' : width}; height: {resolvedHeight}"

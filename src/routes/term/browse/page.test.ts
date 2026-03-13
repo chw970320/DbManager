@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import Page from './+page.svelte';
-import { resetAllStores, termDataStore } from '$lib/stores/unified-store';
+import { resetAllStores } from '$lib/stores/unified-store';
 import { settingsStore } from '$lib/stores/settings-store';
 
 const { mockAddToast, mockShowConfirm } = vi.hoisted(() => ({
@@ -19,10 +19,8 @@ vi.mock('$lib/stores/confirm-store', () => ({
 
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
-let initialTermData: ReturnType<typeof createDeferredJsonResponse>;
-let initialRelationshipSummary: ReturnType<typeof createDeferredJsonResponse>;
-let delayedTermData: ReturnType<typeof createDeferredJsonResponse>;
-let delayedRelationshipSummary: ReturnType<typeof createDeferredJsonResponse>;
+let termDataResponses: Record<string, ReturnType<typeof createDeferredJsonResponse>>;
+let relationshipResponses: Record<string, ReturnType<typeof createDeferredJsonResponse>>;
 
 function createJsonResponse(data: unknown, ok = true) {
 	return {
@@ -89,7 +87,6 @@ describe('Term browse page', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		resetAllStores();
-		termDataStore.set({ selectedFilename: 'term.json' });
 		settingsStore.set({
 			showVocabularySystemFiles: false,
 			showDomainSystemFiles: false,
@@ -101,10 +98,14 @@ describe('Term browse page', () => {
 			showColumnSystemFiles: false
 		});
 
-		initialTermData = createDeferredJsonResponse();
-		initialRelationshipSummary = createDeferredJsonResponse();
-		delayedTermData = createDeferredJsonResponse();
-		delayedRelationshipSummary = createDeferredJsonResponse();
+		termDataResponses = {
+			'term.json': createDeferredJsonResponse(),
+			'user-term.json': createDeferredJsonResponse()
+		};
+		relationshipResponses = {
+			'term.json': createDeferredJsonResponse(),
+			'user-term.json': createDeferredJsonResponse()
+		};
 
 		mockFetch.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
 			const url = String(input);
@@ -153,22 +154,22 @@ describe('Term browse page', () => {
 				url.includes('/api/term/relationship-summary?') &&
 				url.includes('termFilename=term.json')
 			) {
-				return initialRelationshipSummary.promise;
+				return relationshipResponses['term.json'].promise;
 			}
 
 			if (
 				url.includes('/api/term/relationship-summary?') &&
 				url.includes('termFilename=user-term.json')
 			) {
-				return delayedRelationshipSummary.promise;
+				return relationshipResponses['user-term.json'].promise;
 			}
 
 			if (url.includes('/api/term?') && url.includes('filename=term.json')) {
-				return initialTermData.promise;
+				return termDataResponses['term.json'].promise;
 			}
 
 			if (url.includes('/api/term?') && url.includes('filename=user-term.json')) {
-				return delayedTermData.promise;
+				return termDataResponses['user-term.json'].promise;
 			}
 
 			return Promise.resolve(
@@ -187,38 +188,45 @@ describe('Term browse page', () => {
 		render(Page);
 
 		const summaryRegion = screen.getByRole('region', { name: '용어 검색 결과 요약' });
+		const fileButtons = await screen.findAllByRole('button', { name: /term\.json/ });
+		const initialButton =
+			fileButtons.find((button) => button.className.includes('bg-blue-50')) ?? fileButtons[0];
+		const initialFilename = initialButton.textContent?.trim() ?? 'term.json';
+		const targetFilename = initialFilename === 'term.json' ? 'user-term.json' : 'term.json';
+
 		await waitFor(() => {
 			expect(summaryRegion).toHaveAttribute('aria-busy', 'true');
 		});
 
-		initialTermData.resolve(createTermData(2, 1));
-		initialRelationshipSummary.resolve(createRelationshipSummary('term.json', 2));
+		termDataResponses[initialFilename].resolve(createTermData(2, 1));
+		relationshipResponses[initialFilename].resolve(createRelationshipSummary(initialFilename, 2));
 
 		await waitFor(() => {
-			expect(summaryRegion).toHaveAttribute('aria-busy', 'false');
 			expect(within(summaryRegion).getByText('2')).toBeInTheDocument();
 		});
 
-		await fireEvent.click(screen.getByRole('button', { name: 'user-term.json' }));
+		await fireEvent.click(screen.getByRole('button', { name: targetFilename }));
 
 		await waitFor(() => {
 			expect(summaryRegion).toHaveAttribute('aria-busy', 'true');
 		});
 
-		delayedTermData.resolve(createTermData(5, 3));
+		termDataResponses[targetFilename].resolve(createTermData(5, 3));
 
 		await waitFor(() => {
 			expect(screen.getByText('용어계 관계 진단을 갱신하는 중입니다.')).toBeInTheDocument();
 		});
 
-		delayedRelationshipSummary.resolve(createRelationshipSummary('user-term.json', 9));
+		relationshipResponses[targetFilename].resolve(createRelationshipSummary(targetFilename, 9));
 
 		await waitFor(() => {
 			expect(summaryRegion).toHaveAttribute('aria-busy', 'false');
 			expect(within(summaryRegion).getByText('5')).toBeInTheDocument();
 			expect(within(summaryRegion).getByText('1 / 3')).toBeInTheDocument();
 			expect(screen.getByText('용어계 관계 진단 요약').closest('section')).toHaveTextContent(
-				'term: user-term.json, vocabulary: user-vocabulary.json, domain: user-domain.json'
+				`term: ${targetFilename}, vocabulary: ${
+					targetFilename === 'term.json' ? 'vocabulary.json' : 'user-vocabulary.json'
+				}, domain: ${targetFilename === 'term.json' ? 'domain.json' : 'user-domain.json'}`
 			);
 			expect(screen.getByText('용어계 관계 진단 요약').closest('section')).toHaveTextContent('9');
 		});

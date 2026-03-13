@@ -51,6 +51,80 @@ const createMockEntry = (): Partial<ColumnEntry> => ({
 describe('ColumnDefEditor', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mockFetch.mockImplementation((url: string) => {
+			if (url.includes('/api/column/recommend-standard')) {
+				return Promise.resolve({
+					ok: true,
+					json: () =>
+						Promise.resolve({
+							success: true,
+							data: {
+								files: {
+									column: 'column.json',
+									term: 'term.json',
+									domain: 'domain.json'
+								},
+								entry: {
+									columnEnglishName: 'COLUMN1',
+									columnKoreanName: '컬럼1',
+									domainName: 'USER_NAME_DOM',
+									dataType: 'VARCHAR',
+									dataLength: '100',
+									dataDecimalLength: '0'
+								},
+								matchedTerm: {
+									id: 'term-1',
+									termName: '표준컬럼명',
+									columnName: 'COLUMN1',
+									domainName: 'USER_NAME_DOM'
+								},
+								matchedDomain: {
+									id: 'domain-1',
+									standardDomainName: 'USER_NAME_DOM',
+									physicalDataType: 'VARCHAR',
+									dataLength: '200',
+									decimalPlaces: '0'
+								},
+								recommendedValues: {
+									columnKoreanName: '표준컬럼명',
+									domainName: 'USER_NAME_DOM',
+									dataType: 'VARCHAR',
+									dataLength: '200',
+									dataDecimalLength: '0'
+								},
+								changes: [
+									{
+										field: 'columnKoreanName',
+										currentValue: '컬럼1',
+										recommendedValue: '표준컬럼명',
+										reason: '매핑된 표준 용어의 용어명으로 컬럼 한글명을 맞춥니다.'
+									},
+									{
+										field: 'dataLength',
+										currentValue: '100',
+										recommendedValue: '200',
+										reason: '매핑된 도메인의 데이터 길이를 컬럼 자료길이로 맞춥니다.'
+									}
+								],
+								issues: [],
+								guidance: ['추천값 2건을 적용하면 컬럼 정의를 표준 용어와 바로 맞출 수 있습니다.'],
+								summary: {
+									status: 'recommended',
+									changeCount: 2,
+									issueCount: 0,
+									exactTermMatch: true,
+									domainResolved: true
+								}
+							}
+						})
+				});
+			}
+
+			return Promise.resolve({
+				ok: false,
+				json: () => Promise.resolve({ success: false })
+			});
+		});
 	});
 
 	describe('Rendering', () => {
@@ -190,6 +264,46 @@ describe('ColumnDefEditor', () => {
 			const closeButton = screen.getByRole('button', { name: /닫기/ });
 			expect(closeButton).toBeInTheDocument();
 			expect(closeButton).not.toBeDisabled();
+		});
+
+		it('should render standard recommendation section in edit mode', async () => {
+			render(ColumnDefEditor, {
+				props: {
+					entry: createMockEntry(),
+					isEditMode: true,
+					filename: 'column.json'
+				}
+			});
+
+			await waitFor(() => {
+				expect(screen.getByRole('region', { name: '컬럼 표준 추천' })).toBeInTheDocument();
+				expect(screen.getByText('표준 추천')).toBeInTheDocument();
+				expect(screen.getByText('표준컬럼명')).toBeInTheDocument();
+				expect(screen.getByText('추천값 전체 적용')).toBeInTheDocument();
+			});
+		});
+
+		it('should apply recommended values to the form', async () => {
+			render(ColumnDefEditor, {
+				props: {
+					entry: createMockEntry(),
+					isEditMode: true,
+					filename: 'column.json'
+				}
+			});
+
+			await waitFor(() => {
+				expect(screen.getByRole('button', { name: '추천값 전체 적용' })).toBeInTheDocument();
+			});
+
+			await fireEvent.click(screen.getByRole('button', { name: '추천값 전체 적용' }));
+
+			await waitFor(() => {
+				expect((screen.getByLabelText(/^컬럼한글명/) as HTMLInputElement).value).toBe(
+					'표준컬럼명'
+				);
+				expect((screen.getByLabelText(/^자료길이/) as HTMLInputElement).value).toBe('200');
+			});
 		});
 	});
 });

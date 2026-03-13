@@ -1297,6 +1297,7 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 
 - **GET, POST, PUT, DELETE** `/api/column`
 - **GET, POST** `/api/column/sync-term`
+- **POST** `/api/column/recommend-standard`
 
 ### 컬럼-용어-도메인 동기화 규칙
 
@@ -1308,6 +1309,49 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
    - `ColumnEntry.dataType` ← `DomainEntry.physicalDataType`
    - `ColumnEntry.dataLength` ← `DomainEntry.dataLength`
    - `ColumnEntry.dataDecimalLength` ← `DomainEntry.decimalPlaces`
+
+### 컬럼 편집기 표준 추천 런타임 모델
+
+컬럼 팝업의 `표준 추천` 카드와 `POST /api/column/recommend-standard` 응답에서 사용하는 런타임 모델입니다.
+
+**파일 위치:** `src/lib/types/column-standard-recommendation.ts`
+
+#### ColumnStandardRecommendationPreview
+
+| 필드명                        | 타입                                           | 설명                                  |
+| ----------------------------- | ---------------------------------------------- | ------------------------------------- |
+| `files.column`                | `string`                                       | 기준 컬럼 파일명                      |
+| `files.term`                  | `string`                                       | 연결된 용어 파일명                    |
+| `files.domain`                | `string`                                       | 연결된 도메인 파일명                  |
+| `entry`                       | `Partial<ColumnEntry>`                         | 현재 편집 중인 핵심 입력값            |
+| `matchedTerm`                 | `TermEntry` 축약 모델 또는 `null`             | `columnEnglishName`으로 찾은 표준 용어 |
+| `matchedDomain`               | `DomainEntry` 축약 모델 또는 `null`           | 용어의 `domainName`으로 찾은 도메인   |
+| `recommendedValues`           | `Partial<ColumnEntry>`                         | 추천 가능한 표준 값                   |
+| `changes`                     | `ColumnStandardRecommendationChange[]`         | 필드별 변경 후보                      |
+| `issues`                      | `ColumnStandardRecommendationIssue[]`          | 즉시 경고/오류                        |
+| `guidance`                    | `string[]`                                     | UI 안내 메시지                        |
+| `summary.status`              | `'aligned' \| 'recommended' \| 'unmatched'`    | 현재 정렬 상태                        |
+| `summary.changeCount`         | `number`                                       | 추천 변경 필드 수                     |
+| `summary.issueCount`          | `number`                                       | 경고/오류 수                          |
+| `summary.exactTermMatch`      | `boolean`                                      | 일치하는 용어 존재 여부               |
+| `summary.domainResolved`      | `boolean`                                      | 연결 도메인 해석 성공 여부            |
+
+#### ColumnStandardRecommendationChange
+
+| 필드명             | 타입                                                                 | 설명          |
+| ------------------ | -------------------------------------------------------------------- | ------------- |
+| `field`            | `'columnKoreanName' \| 'domainName' \| 'dataType' \| 'dataLength' \| 'dataDecimalLength'` | 추천 대상 필드 |
+| `currentValue`     | `string`                                                             | 현재 입력값   |
+| `recommendedValue` | `string`                                                             | 추천값        |
+| `reason`           | `string`                                                             | 추천 근거     |
+
+#### ColumnStandardRecommendationIssue
+
+| 필드명     | 타입                                                         | 설명             |
+| ---------- | ------------------------------------------------------------ | ---------------- |
+| `code`     | `'COLUMN_NAME_EMPTY' \| 'TERM_NOT_FOUND' \| 'TERM_DOMAIN_EMPTY' \| 'DOMAIN_NOT_FOUND'` | 진단 코드        |
+| `severity` | `'error' \| 'warning'`                                       | 심각도           |
+| `message`  | `string`                                                     | 사용자 안내 문구 |
 
 ---
 

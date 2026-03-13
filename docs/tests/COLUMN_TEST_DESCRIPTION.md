@@ -8,15 +8,17 @@
 | -------------------------------------- | --------- | ---- |
 | `column/server.test.ts`                | 17개      | 완료 |
 | `column/sync-term/server.test.ts`      | 10개      | 완료 |
+| `column/recommend-standard/server.test.ts` | 4개   | 완료 |
 | `column/files/server.test.ts`          | 12개      | 완료 |
 | `column/files/mapping/server.test.ts`  | 3개       | 완료 |
 | `column/upload/server.test.ts`         | 5개       | 완료 |
 | `column/download/server.test.ts`       | 6개       | 완료 |
 | `column/filter-options/server.test.ts` | 8개       | 완료 |
-| `ColumnDefEditor.test.ts`              | 11개      | 완료 |
+| `column-standard-recommendation.test.ts` | 5개    | 완료 |
+| `ColumnDefEditor.test.ts`              | 13개      | 완료 |
 | `ColumnDefTable.test.ts`               | 5개       | 완료 |
 | `ColumnDefFileManager.test.ts`         | 5개       | 완료 |
-| **합계**                               | **82개**  |      |
+| **합계**                               | **93개**  |      |
 
 ---
 
@@ -206,7 +208,34 @@
 
 ---
 
-## 7. ColumnDefEditor.test.ts (11개)
+## 7. column/recommend-standard/server.test.ts (4개)
+
+**파일 경로**: `src/routes/api/column/recommend-standard/server.test.ts`
+
+컬럼 편집기에서 사용하는 단건 표준 추천 preview API를 테스트합니다.
+
+- term/domain 파일 로드 후 추천값 계산 반환
+- 파일명 override 파라미터 적용
+- 컬럼영문명 비어 있을 때 미매핑 상태 반환
+- 데이터 로드 실패 시 500 처리
+
+---
+
+## 8. column-standard-recommendation.test.ts (5개)
+
+**파일 경로**: `src/lib/utils/column-standard-recommendation.test.ts`
+
+컬럼 표준 추천 유틸리티의 핵심 규칙을 검증합니다.
+
+- 빈 `columnEnglishName` 처리
+- term/domain 매핑 성공 시 추천 필드 계산
+- 이미 정렬된 입력값의 `aligned` 상태 처리
+- term은 있지만 domain이 비어 있을 때 경고 반환
+- 일치하는 term이 없을 때 `unmatched` 상태 반환
+
+---
+
+## 9. ColumnDefEditor.test.ts (13개)
 
 **파일 경로**: `src/lib/components/ColumnDefEditor.test.ts`
 
@@ -236,16 +265,18 @@
 | should show delete button in edit mode       | 수정 모드 삭제 버튼 표시   | isEditMode=true 시 삭제 버튼 표시    |
 | should not show delete button in create mode | 생성 모드 삭제 버튼 미표시 | isEditMode=false 시 삭제 버튼 미표시 |
 
-### User Interactions (2개)
+### User Interactions (4개)
 
 | 테스트명                                          | 설명                | 검증 내용                    |
 | ------------------------------------------------- | ------------------- | ---------------------------- |
 | should have cancel button that can be clicked     | 취소 버튼 클릭 가능 | 취소 버튼 존재 및 활성화     |
 | should have close icon button that can be clicked | 닫기 버튼 클릭 가능 | X 아이콘 버튼 존재 및 활성화 |
+| should render standard recommendation section in edit mode | 추천 패널 렌더링 | 표준 추천 카드와 추천값 전체 적용 버튼 표시 |
+| should apply recommended values to the form | 추천값 반영 | 추천값 전체 적용 시 컬럼한글명/자료길이 갱신 |
 
 ---
 
-## 8. ColumnDefTable.test.ts (5개)
+## 10. ColumnDefTable.test.ts (5개)
 
 **파일 경로**: `src/lib/components/ColumnDefTable.test.ts`
 
@@ -278,7 +309,7 @@
 
 ---
 
-## 9. ColumnDefFileManager.test.ts (5개)
+## 11. ColumnDefFileManager.test.ts (5개)
 
 **파일 경로**: `src/lib/components/ColumnDefFileManager.test.ts`
 

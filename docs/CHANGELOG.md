@@ -1,5 +1,49 @@
 # 변경 이력
 
+## 2026-03-13
+
+### 요약
+
+- 컬럼 editor에 `표준 추천` 패널이 추가되었습니다.
+- 저장 전에 term/domain 기준 추천값과 경고를 즉시 보고, 필요한 필드만 바로 적용할 수 있습니다.
+
+### 상세 변경
+
+1. 컬럼 표준 추천 타입/유틸리티/API 추가
+
+- 대상:
+  - `src/lib/types/column-standard-recommendation.ts`
+  - `src/lib/utils/column-standard-recommendation.ts`
+  - `src/routes/api/column/recommend-standard/+server.ts`
+- 변경:
+  - `columnEnglishName` 기준 단건 표준 추천 모델 추가
+  - term/domain 매핑 결과를 `matchedTerm`, `matchedDomain`, `recommendedValues`, `changes`, `issues`로 구조화
+  - 컬럼 파일 매핑을 따라 연결된 term/domain 파일을 해석하는 preview API 추가
+
+2. 컬럼 editor 사전예방형 UX 추가
+
+- 대상:
+  - `src/lib/components/ColumnDefEditor.svelte`
+- 변경:
+  - 입력 중 `컬럼영문명` 기준 자동 추천 조회
+  - 상태 배지, 연결된 용어/도메인 요약, 경고, 필드별 추천값 표시
+  - `추천값 전체 적용` 및 필드별 `적용` 버튼 추가
+
+3. 테스트/문서 동기화
+
+- 대상:
+  - `src/lib/utils/column-standard-recommendation.test.ts`
+  - `src/routes/api/column/recommend-standard/server.test.ts`
+  - `src/lib/components/ColumnDefEditor.test.ts`
+  - `docs/tests/COLUMN_TEST_DESCRIPTION.md`
+  - `docs/specs/api-reference.md`
+  - `docs/specs/data-model.md`
+  - `docs/USER_GUIDE.md`
+  - `README.md`
+- 변경:
+  - 추천 계산 로직, preview API, editor 적용 버튼을 테스트로 고정
+  - 사용자 문서와 API/런타임 모델 문서에 컬럼 표준 추천 흐름 반영
+
 ## 2026-03-12
 
 ### 요약

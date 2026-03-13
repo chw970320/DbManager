@@ -68,6 +68,7 @@ http://localhost:5173/api
 - `POST /api/term/sync`
 - `POST /api/vocabulary/sync-domain`
 - `GET/POST /api/column/sync-term`
+- `POST /api/column/recommend-standard`
 - `POST /api/term/validate`
 - `GET /api/term/validate-all`
 
@@ -1732,6 +1733,36 @@ ID를 기반으로 컬럼 정의를 삭제합니다.
   - `columnFilename`
   - `termFilename`
   - `domainFilename`
+
+### POST /api/column/recommend-standard
+
+컬럼 editor에서 단건 입력값 기준의 표준 추천과 경고를 계산합니다.
+
+- 기본 파일:
+  - `columnFilename`: `column.json`
+  - `termFilename`: `term.json`
+  - `domainFilename`: `domain.json`
+- 요청 바디:
+  - `columnFilename?`
+  - `termFilename?`
+  - `domainFilename?`
+  - `entry`
+    - `columnEnglishName`
+    - `columnKoreanName?`
+    - `domainName?`
+    - `dataType?`
+    - `dataLength?`
+    - `dataDecimalLength?`
+- 응답 핵심:
+  - `files.column`, `files.term`, `files.domain`
+  - `matchedTerm`, `matchedDomain`
+  - `recommendedValues`
+  - `changes[]`
+  - `issues[]`
+  - `summary.status`
+  - `summary.changeCount`, `summary.issueCount`
+  - `summary.exactTermMatch`, `summary.domainResolved`
+  - `guidance[]`
 
 ---
 

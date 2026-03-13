@@ -109,6 +109,7 @@
   - 현재 경로 기준 breadcrumb 파생 로직 추가
   - `lv1` breadcrumb는 동료 `lv1` 그룹 목록, `lv2` breadcrumb는 현재 그룹의 동료 `lv2` 메뉴 목록을 각각 여는 UI로 정리
   - 상위 breadcrumb를 셀렉트박스 느낌보다 버튼형 칩 스타일로 조정해 구분자와 시각 충돌 완화
+  - 작은 화면에서는 breadcrumb를 숨겨 모바일 상단 밀도를 낮춤
 
 2. 프로젝트 메뉴 화면 breadcrumb 적용
 

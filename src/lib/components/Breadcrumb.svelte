@@ -7,7 +7,6 @@
 	}
 
 	let { items }: Props = $props();
-	const previousItem = $derived(items.length > 1 ? items[items.length - 2] : undefined);
 
 	function getTriggerClass(item: NavigationBreadcrumbItem) {
 		if (item.level === 1) {
@@ -72,21 +71,6 @@
 			</li>
 		{/each}
 	</ol>
-
-	<!-- 모바일: 뒤로 링크 -->
-	{#if items.length > 1}
-		<div class="sm:hidden">
-			{#if previousItem?.href}
-				<a
-					href={previousItem.href}
-					class="inline-flex items-center gap-1 text-sm text-content-muted hover:text-content"
-				>
-					<Icon name="chevron-right" size="xs" class="rotate-180" />
-					{previousItem.label}
-				</a>
-			{/if}
-		</div>
-	{/if}
 </nav>
 
 <style>

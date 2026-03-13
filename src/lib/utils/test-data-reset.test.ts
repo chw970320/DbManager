@@ -183,6 +183,7 @@ describe('resetTestData', () => {
 			lastUpdated: string;
 			bundles: Array<{
 				id: string;
+				name: string;
 				files: typeof DEFAULT_FILENAMES;
 				createdAt: string;
 				updatedAt: string;
@@ -194,6 +195,7 @@ describe('resetTestData', () => {
 			bundles: [
 				{
 					id: 'default-shared-file-mapping',
+					name: '기본 공통 번들',
 					files: { ...DEFAULT_FILENAMES },
 					createdAt: FIXED_TIMESTAMP,
 					updatedAt: FIXED_TIMESTAMP

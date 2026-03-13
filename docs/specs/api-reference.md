@@ -99,6 +99,7 @@ http://localhost:5173/api
 - `GET/POST/DELETE /api/design-snapshots`
   - 8종 설계 파일 번들의 스냅샷 목록 조회, 생성, 삭제를 제공합니다.
   - 조회 응답은 `snapshots`와 현재 저장 가능한 `bundles`를 함께 반환합니다.
+  - `bundles[].name`에는 파일 조합 기준 자동 생성된 표시명이 함께 포함됩니다.
   - 스냅샷 정본은 `static/data/settings/design-snapshots.json`에 저장됩니다.
 - `POST /api/design-snapshots/restore`
   - 저장된 스냅샷으로 현재 8종 파일 번들을 복원합니다.
@@ -2113,7 +2114,7 @@ PostgreSQL 연결 테스트를 실행합니다.
   - `snapshots[].bundle.vocabulary ... column`
   - `snapshots[].counts.vocabulary ... column`
   - `snapshots[].createdAt`, `updatedAt`, `restoredAt`
-  - `bundles[].id`, `bundles[].files`, `bundles[].createdAt`, `bundles[].updatedAt`
+  - `bundles[].id`, `bundles[].name`, `bundles[].files`, `bundles[].createdAt`, `bundles[].updatedAt`
 
 예시:
 
@@ -2154,6 +2155,7 @@ PostgreSQL 연결 테스트를 실행합니다.
 		"bundles": [
 			{
 				"id": "default-shared-file-mapping",
+				"name": "기본 공통 번들",
 				"files": {
 					"vocabulary": "vocabulary.json",
 					"domain": "domain.json",

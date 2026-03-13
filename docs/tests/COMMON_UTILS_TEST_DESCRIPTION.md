@@ -14,7 +14,8 @@
 | `test-data-reset.test.ts` | 2개       | 완료 |
 | `navigation.test.ts`      | 2개       | 완료 |
 | `debounce.test.ts`        | 8개       | 완료 |
-| **합계**                  | **104개** |      |
+| `shared-file-mapping-name.test.ts` | 3개 | 완료 |
+| **합계**                  | **107개** |      |
 
 **참고**: `file-handler.test.ts`와 `database-design-handler.test.ts`는 복잡한 파일 시스템 의존성으로 인해 API 테스트에서 간접적으로 검증됩니다.
 
@@ -227,6 +228,20 @@ XLSX 파일 파싱 로직을 테스트합니다.
 | 테스트명                              | 설명                  | 검증 내용                       |
 | ------------------------------------- | --------------------- | ------------------------------- |
 | should invalidate specific type cache | 특정 타입 캐시 무효화 | 특정 타입의 특정 파일 캐시 삭제 |
+
+---
+
+## 4-1. shared-file-mapping-name.test.ts (3개)
+
+**파일 경로**: `src/lib/utils/shared-file-mapping-name.test.ts`
+
+공통 파일 매핑 번들의 자동 표시명 생성 규칙을 테스트합니다.
+
+| 테스트명                                                             | 설명                   | 검증 내용                                              |
+| -------------------------------------------------------------------- | ---------------------- | ------------------------------------------------------ |
+| should return a single bundle name when all file stems match         | 동일 파일군 번들명     | `bksp.json` 8종 조합이 `bksp 번들`로 요약되는지 확인   |
+| should summarize standard files separately from default design files | 표준/설계 혼합 번들명 | 표준용어 3종 커스텀 + 설계 5종 기본 조합 이름 생성 확인 |
+| should return the default shared bundle label for the built-in mapping | 기본 번들명          | 기본 파일 조합이 `기본 공통 번들`로 생성되는지 확인    |
 
 ---
 

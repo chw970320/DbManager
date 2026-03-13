@@ -100,11 +100,16 @@
 - 파일 이름 변경/삭제 시 공통 매핑 파일도 새 파일명 또는 타입별 기본 파일명으로 함께 동기화됩니다.
 - 공유 번들이 아직 없는 레거시 파일은 기존 `mapping` 필드, 직접 관계 레지스트리, 기본 파일명을 조합해 복원됩니다.
 - DB 5개 browse 화면의 연관 상태 상세/정렬 동기화는 같은 8종 파일 번들을 그대로 전달받습니다.
+- 각 공통 번들은 사용자 화면용 `name` 표시명을 함께 저장합니다.
+- 표시명이 비어 있으면 파일 조합을 기준으로 자동 생성합니다.
+  - 예: 8종 파일이 모두 `bksp.json`이면 `bksp 번들`
+  - 예: 표준 용어 3종만 `ecobank.json`이고 DB 설계 5종이 기본 파일이면 `ecobank + 기본 DB설계`
 
 ### 저장 타입
 
 - 정본 저장 타입:
   - `SharedFileMappingBundle = Record<DataType, string>`
+  - `SharedFileMappingBundleEntry = { id, name, files, createdAt, updatedAt }`
   - `SharedFileMappingRegistryData`
 - 저장 위치:
   - `static/data/settings/shared-file-mappings.json`
@@ -134,6 +139,33 @@
 	"attribute": "attribute.json",
 	"table": "table.json",
 	"column": "column.json"
+}
+```
+
+공통 매핑 정본 예시:
+
+```json
+{
+	"version": "1.0",
+	"bundles": [
+		{
+			"id": "default-shared-file-mapping",
+			"name": "기본 공통 번들",
+			"files": {
+				"vocabulary": "vocabulary.json",
+				"domain": "domain.json",
+				"term": "term.json",
+				"database": "database.json",
+				"entity": "entity.json",
+				"attribute": "attribute.json",
+				"table": "table.json",
+				"column": "column.json"
+			},
+			"createdAt": "2026-03-12T00:00:00.000Z",
+			"updatedAt": "2026-03-12T00:00:00.000Z"
+		}
+	],
+	"lastUpdated": "2026-03-12T00:00:00.000Z"
 }
 ```
 

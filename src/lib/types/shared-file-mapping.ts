@@ -4,6 +4,7 @@ export type SharedFileMappingBundle = Record<DataType, string>;
 
 export interface SharedFileMappingBundleEntry {
 	id: string;
+	name: string;
 	files: SharedFileMappingBundle;
 	createdAt: string;
 	updatedAt: string;

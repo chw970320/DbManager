@@ -9,6 +9,7 @@ import type {
 	SharedFileMappingRegistryData
 } from '$lib/types/shared-file-mapping.js';
 import { safeReadFile, safeWriteFile } from '$lib/utils/file-lock.js';
+import { getSharedFileMappingBundleDisplayName } from '$lib/utils/shared-file-mapping-name.js';
 
 const DATA_DIR = process.env.DATA_PATH || 'static/data';
 const SETTINGS_DIR = join(DATA_DIR, 'settings');
@@ -77,6 +78,10 @@ function normalizeBundleEntry(
 
 	return {
 		id: entry.id.trim(),
+		name:
+			typeof entry.name === 'string' && entry.name.trim()
+				? entry.name.trim()
+				: getSharedFileMappingBundleDisplayName(bundle),
 		files: bundle,
 		createdAt,
 		updatedAt
@@ -105,6 +110,7 @@ function createDefaultSharedFileMappingRegistryData(): SharedFileMappingRegistry
 		bundles: [
 			{
 				id: 'default-shared-file-mapping',
+				name: getSharedFileMappingBundleDisplayName(createDefaultBundle()),
 				files: createDefaultBundle(),
 				createdAt: now,
 				updatedAt: now
@@ -152,8 +158,12 @@ export async function loadSharedFileMappingRegistryData(): Promise<SharedFileMap
 
 	const parsed = JSON.parse(raw) as Partial<SharedFileMappingRegistryData>;
 	const normalized = normalizeRegistryData(parsed);
+	const rawBundles = Array.isArray(parsed.bundles) ? parsed.bundles : [];
+	const hasMissingBundleNames = rawBundles.some(
+		(entry) => typeof entry?.name !== 'string' || entry.name.trim() === ''
+	);
 
-	if (normalized.bundles.length !== (parsed.bundles?.length ?? 0)) {
+	if (normalized.bundles.length !== rawBundles.length || hasMissingBundleNames) {
 		await saveSharedFileMappingRegistryData(normalized);
 	}
 
@@ -205,11 +215,13 @@ export async function saveSharedFileMappingBundle(
 	const nextEntry: SharedFileMappingBundleEntry = exactMatch
 		? {
 				...exactMatch,
+				name: getSharedFileMappingBundleDisplayName(bundle),
 				files: bundle,
 				updatedAt: now
 			}
 		: {
 				id: randomUUID(),
+				name: getSharedFileMappingBundleDisplayName(bundle),
 				files: bundle,
 				createdAt: now,
 				updatedAt: now
@@ -242,6 +254,10 @@ export async function syncSharedFileMappingsOnRename(
 		updatedCount += 1;
 		return {
 			...entry,
+			name: getSharedFileMappingBundleDisplayName({
+				...entry.files,
+				[type]: newFilename
+			}),
 			files: {
 				...entry.files,
 				[type]: newFilename
@@ -279,6 +295,10 @@ export async function syncSharedFileMappingsOnDelete(
 		updatedCount += 1;
 		return {
 			...entry,
+			name: getSharedFileMappingBundleDisplayName({
+				...entry.files,
+				[type]: DEFAULT_FILENAMES[type]
+			}),
 			files: {
 				...entry.files,
 				[type]: DEFAULT_FILENAMES[type]

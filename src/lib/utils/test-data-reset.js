@@ -208,6 +208,7 @@ export function createDefaultSharedFileMappings(timestamp) {
 		bundles: [
 			{
 				id: 'default-shared-file-mapping',
+				name: '기본 공통 번들',
 				files: { ...DEFAULT_FILENAMES },
 				createdAt: timestamp,
 				updatedAt: timestamp

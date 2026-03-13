@@ -31,6 +31,7 @@ function createEvent(options: { method?: string; body?: unknown } = {}): Request
 
 const mockBundle = {
 	id: 'bundle-1',
+	name: '기본 공통 번들',
 	files: {
 		vocabulary: 'vocabulary.json',
 		domain: 'domain.json',

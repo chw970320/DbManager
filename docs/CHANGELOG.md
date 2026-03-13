@@ -4,6 +4,41 @@
 
 ### 요약
 
+- 공통 파일 매핑 번들에 자동 생성 표시명(`name`)이 추가됐습니다.
+
+### 상세 변경
+
+1. 공통 파일 매핑 번들 표시명 추가
+
+- 대상:
+  - `src/lib/types/shared-file-mapping.ts`
+  - `src/lib/registry/shared-file-mapping-registry.ts`
+  - `src/lib/utils/shared-file-mapping-name.ts`
+  - `static/data/settings/shared-file-mappings.json`
+  - `src/lib/utils/test-data-reset.js`
+- 변경:
+  - 공통 파일 매핑 정본의 각 번들에 `name` 필드를 추가
+  - 레거시 번들이 `name` 없이 로드되면 파일 조합 기준 자동 표시명을 생성해 정본에 다시 저장
+  - 기본/동일 파일군/표준용어-설계 혼합 조합에 대한 자동 이름 규칙 추가
+  - 테스트 데이터 초기화 기준도 `기본 공통 번들` 이름을 포함하도록 갱신
+
+2. 테스트/문서 동기화
+
+- 대상:
+  - `src/lib/utils/shared-file-mapping-name.test.ts`
+  - `src/lib/registry/shared-file-mapping-registry.test.ts`
+  - `src/routes/api/design-snapshots/server.test.ts`
+  - `docs/specs/api-reference.md`
+  - `docs/specs/data-model.md`
+  - `docs/tests/COMMON_UTILS_TEST_DESCRIPTION.md`
+- 변경:
+  - 번들명 생성 규칙, 레거시 정규화, API 응답 shape를 테스트와 스펙 문서에 반영
+  - 공통 유틸리티 테스트 문서에 새 표시명 생성 테스트 범위를 추가
+
+## 2026-03-13
+
+### 요약
+
 - 용어 browse에서 파일을 바꿀 때 `용어계 관계 진단 요약` 카드와 좌측 검색 결과 요약이 갱신 중 상태를 바로 표시합니다.
 - 단어집/도메인/용어/DB 설계/운영·품질 browse 메뉴의 좌측 요약 카드도 공통 로딩 오버레이와 `aria-busy` 상태를 사용합니다.
 

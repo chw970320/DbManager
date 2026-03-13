@@ -189,4 +189,27 @@ describe('Data source browse page', () => {
 
 		expect(screen.getByText('개발 PostgreSQL')).toBeInTheDocument();
 	});
+
+	it('should render breadcrumb navigation and expose sibling pages from the group crumb', async () => {
+		render(Page);
+
+		await waitFor(() => {
+			expect(screen.getByText('운영 PostgreSQL')).toBeInTheDocument();
+		});
+
+		await fireEvent.click(screen.getByLabelText('운영 · 품질 메뉴 열기'));
+
+		expect(screen.getByRole('link', { name: '품질 규칙' })).toHaveAttribute(
+			'href',
+			'/quality-rule/browse'
+		);
+		expect(screen.getByRole('link', { name: '프로파일링' })).toHaveAttribute(
+			'href',
+			'/profiling/browse'
+		);
+		expect(screen.getByRole('link', { name: '스냅샷' })).toHaveAttribute(
+			'href',
+			'/snapshot/browse'
+		);
+	});
 });

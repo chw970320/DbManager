@@ -9,6 +9,7 @@
 	import SearchBar from '$lib/components/SearchBar.svelte';
 	import { showConfirm } from '$lib/stores/confirm-store';
 	import { addToast } from '$lib/stores/toast-store';
+	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
 	import type { DesignSnapshotSummaryEntry } from '$lib/types/design-snapshot.js';
 	import type { SharedFileMappingBundleEntry } from '$lib/types/shared-file-mapping.js';
 	import { ALL_DATA_TYPES, DATA_TYPE_LABELS } from '$lib/types/base.js';
@@ -305,6 +306,7 @@
 <BrowsePageLayout
 	title="스냅샷"
 	description="8종 파일 번들을 통째로 저장하고 필요할 때 빠르게 복원합니다."
+	breadcrumbItems={getNavigationBreadcrumbItems('/snapshot/browse')}
 	{actions}
 >
 	<BentoGrid gapClass="gap-6">

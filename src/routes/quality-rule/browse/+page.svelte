@@ -12,6 +12,7 @@
 	import SearchBar from '$lib/components/SearchBar.svelte';
 	import { showConfirm } from '$lib/stores/confirm-store';
 	import { addToast } from '$lib/stores/toast-store';
+	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
 	import type { QualityRuleData, QualityRuleEntry } from '$lib/types/data-quality-rule.js';
 
 	type ApiResponse<T> = { success: true; data: T } | { success: false; error?: string };
@@ -261,6 +262,7 @@
 <BrowsePageLayout
 	title="품질 규칙"
 	description="PostgreSQL 프로파일링 결과에 즉시 적용할 최소 품질 규칙을 저장합니다."
+	breadcrumbItems={getNavigationBreadcrumbItems('/quality-rule/browse')}
 	{actions}
 >
 	<QualityRuleEditor

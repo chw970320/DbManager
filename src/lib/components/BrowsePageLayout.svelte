@@ -1,13 +1,15 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import Breadcrumb from './Breadcrumb.svelte';
+	import type { NavigationBreadcrumbItem } from '$lib/utils/navigation';
 
 	interface Props {
 		title: string;
 		description?: string;
-		breadcrumbItems?: Array<{ label: string; href?: string }>;
+		breadcrumbItems?: NavigationBreadcrumbItem[];
 		actions?: Snippet;
 		sidebar?: Snippet;
+		sidebarSurface?: 'card' | 'plain';
 		children: Snippet;
 	}
 
@@ -17,6 +19,7 @@
 		breadcrumbItems = [],
 		actions,
 		sidebar,
+		sidebarSurface = 'card',
 		children
 	}: Props = $props();
 
@@ -25,7 +28,9 @@
 </script>
 
 <!-- 배경 및 밀집도 조정 (py-8 -> py-4 sm:py-6), 향후 다크모드 대응 -->
-<div class="min-h-screen bg-gradient-to-br from-slate-50 via-surface to-blue-50 py-4 sm:py-6 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+<div
+	class="min-h-screen bg-gradient-to-br from-slate-50 via-surface to-blue-50 py-4 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 sm:py-6"
+>
 	<div class="mx-auto w-full px-4 sm:px-6 lg:px-8">
 		{#if breadcrumbItems.length > 0}
 			<div class="mb-4">
@@ -38,9 +43,17 @@
 			<!-- 사이드바 -->
 			{#if sidebar}
 				<aside class="hidden h-full w-64 lg:block">
-					<div class="sticky top-6 rounded-2xl border border-border bg-surface/95 p-4 shadow-xl backdrop-blur-md dark:bg-surface/90">
-						{@render sidebar()}
-					</div>
+					{#if sidebarSurface === 'card'}
+						<div
+							class="sticky top-6 rounded-2xl border border-border bg-surface/95 p-4 shadow-xl backdrop-blur-md dark:bg-surface/90"
+						>
+							{@render sidebar()}
+						</div>
+					{:else}
+						<div class="sticky top-6">
+							{@render sidebar()}
+						</div>
+					{/if}
 				</aside>
 
 				{#if mobileSidebarOpen}
@@ -88,7 +101,9 @@
 								</button>
 							{/if}
 							<div>
-								<h1 class="bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-3xl sm:text-4xl font-bold text-transparent dark:from-white dark:to-gray-300">
+								<h1
+									class="bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-3xl font-bold text-transparent dark:from-white dark:to-gray-300 sm:text-4xl"
+								>
 									{title}
 								</h1>
 								{#if description}

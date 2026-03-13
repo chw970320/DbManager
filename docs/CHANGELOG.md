@@ -4,6 +4,152 @@
 
 ### 요약
 
+- 파일 관리 팝업의 공통 파일 매핑 설정이 `파일 목록`에서 분리되어 별도 `파일 매핑` 탭으로 이동했습니다.
+- 도메인 포함 8종 파일 관리 화면 모두 같은 3탭 구조(`파일 목록 / 파일 매핑 / 파일 업로드`)를 사용합니다.
+
+### 상세 변경
+
+1. 파일 매핑 탭 분리
+
+- 대상:
+  - `src/lib/components/VocabularyFileManager.svelte`
+  - `src/lib/components/DomainFileManager.svelte`
+  - `src/lib/components/TermFileManager.svelte`
+  - `src/lib/components/DatabaseFileManager.svelte`
+  - `src/lib/components/EntityFileManager.svelte`
+  - `src/lib/components/AttributeFileManager.svelte`
+  - `src/lib/components/TableDefFileManager.svelte`
+  - `src/lib/components/ColumnDefFileManager.svelte`
+- 변경:
+  - 기존 `파일 목록` 탭 안에 있던 매핑 설정을 별도 `파일 매핑` 탭으로 이동
+  - 파일 생성/삭제 작업과 파일 연결 작업을 시각적으로 분리해 역할이 섞이지 않도록 정리
+  - Vocabulary/Term의 저장 후 동기화 액션도 새 `파일 매핑` 탭에서 실행하도록 유지
+
+2. 테스트/문서 동기화
+
+- 대상:
+  - `src/lib/components/DatabaseFileManager.test.ts`
+  - `src/lib/components/DomainFileManager.test.ts`
+  - `src/lib/components/AttributeFileManager.test.ts`
+  - `src/lib/components/EntityFileManager.test.ts`
+  - `src/lib/components/TableDefFileManager.test.ts`
+  - `src/lib/components/ColumnDefFileManager.test.ts`
+  - `docs/USER_GUIDE.md`
+- 변경:
+  - FileManager 테스트를 `파일 매핑` 탭 클릭 기준으로 갱신
+  - 사용자 가이드에 파일 관리 팝업의 3탭 구조를 반영
+
+## 2026-03-13
+
+### 요약
+
+- 도메인 browse 화면의 데이터타입 매핑 관리 진입점이 메인 카드에서 좌측 독립 플로팅 패널로 이동했습니다.
+- `도메인 파일` 카드 안에 포함하지 않고 별도 sticky 카드로 분리해 전역 규칙 성격을 더 분명하게 표시합니다.
+- 좌측 외부 패널의 설명/건수는 제거하고, 색상도 `도메인 파일` 플로팅 카드와 같은 톤으로 맞췄습니다.
+
+### 상세 변경
+
+1. 도메인 전역 규칙 진입점 재배치
+
+- 대상:
+  - `src/routes/domain/browse/+page.svelte`
+  - `src/routes/domain/browse/page.test.ts`
+  - `docs/tests/DOMAIN_TEST_DESCRIPTION.md`
+- 변경:
+  - 전역 데이터타입 매핑 관리 버튼과 설명을 메인 본문 카드에서 좌측 독립 sidebar 패널로 이동
+  - `도메인 파일` 선택 카드와 분리된 별도 sticky 카드로 렌더링되도록 `BrowsePageLayout`의 plain sidebar surface를 추가
+  - 외부 패널에서는 설명 문구와 건수 배지를 제거하고, 배경/테두리/버튼 색상을 파일 카드와 동일 계열로 통일
+  - browse 페이지 테스트와 도메인 테스트 문서에 독립 플로팅 패널 배치 기준 반영
+
+## 2026-03-13
+
+### 요약
+
+- 파일 관리 팝업의 공통 파일 매핑 설정이 `표준 용어`와 `DB 설계` 그룹으로 나뉘어 표시됩니다.
+- 8종 화면 어디서 열어도 같은 분류 기준으로 매핑 대상을 빠르게 찾을 수 있습니다.
+
+### 상세 변경
+
+1. 파일 매핑 UI 카테고리화
+
+- 대상:
+  - `src/lib/components/DbDesignFileMappingFields.svelte`
+  - `src/lib/utils/db-design-file-mapping.ts`
+- 변경:
+  - 공통 파일 매핑 필드를 `표준 용어`, `DB 설계` 두 섹션으로 그룹화
+  - 각 섹션에 설명, 항목 수, 카드형 셀렉트 스타일을 추가해 연결 범위를 즉시 파악할 수 있도록 정리
+  - 카테고리명은 섹션 제목에서 한 번만 표시하고, 카드 내부 반복 배지는 제거
+  - 현재 열어 둔 파일 유형을 제외한 나머지 매핑 항목만 그룹별로 표시
+
+2. 테스트/문서 동기화
+
+- 대상:
+  - `src/lib/components/DbDesignFileMappingFields.test.ts`
+  - `src/lib/components/DatabaseFileManager.test.ts`
+  - `docs/USER_GUIDE.md`
+- 변경:
+  - 공통 매핑 필드의 그룹 렌더링과 실제 파일 관리 팝업 노출 여부를 테스트로 고정
+  - 사용자 가이드에 파일 관리 팝업의 새 분류 기준을 반영
+
+## 2026-03-13
+
+### 요약
+
+- 2단계 프로젝트 메뉴 구조에 맞춰 각 화면 상단에 breadcrumb가 추가되었습니다.
+- breadcrumb의 상위 항목을 클릭하면 같은 그룹의 다른 메뉴로 바로 이동할 수 있습니다.
+
+### 상세 변경
+
+1. 공용 navigation/breadcrumb 구조 정리
+
+- 대상:
+  - `src/lib/utils/navigation.ts`
+  - `src/routes/+layout.svelte`
+  - `src/lib/components/Breadcrumb.svelte`
+  - `src/lib/components/BrowsePageLayout.svelte`
+- 변경:
+  - 상단 2단계 메뉴 정의를 공용 navigation 유틸로 이동
+  - 현재 경로 기준 breadcrumb 파생 로직 추가
+  - breadcrumb 상위 항목 클릭 시 같은 그룹의 하위 메뉴 목록을 여는 UI 추가
+  - 상위 breadcrumb를 셀렉트박스 느낌보다 버튼형 칩 스타일로 조정해 구분자와 시각 충돌 완화
+
+2. 프로젝트 메뉴 화면 breadcrumb 적용
+
+- 대상:
+  - `src/routes/browse/+page.svelte`
+  - `src/routes/domain/browse/+page.svelte`
+  - `src/routes/term/browse/+page.svelte`
+  - `src/routes/database/browse/+page.svelte`
+  - `src/routes/entity/browse/+page.svelte`
+  - `src/routes/attribute/browse/+page.svelte`
+  - `src/routes/table/browse/+page.svelte`
+  - `src/routes/column/browse/+page.svelte`
+  - `src/routes/erd/+page.svelte`
+  - `src/routes/data-source/browse/+page.svelte`
+  - `src/routes/quality-rule/browse/+page.svelte`
+  - `src/routes/profiling/browse/+page.svelte`
+  - `src/routes/snapshot/browse/+page.svelte`
+- 변경:
+  - browse/ERD 화면에서 현재 메뉴 그룹과 현재 페이지를 breadcrumb로 표시
+  - 상위 breadcrumb로 같은 그룹 내 다른 메뉴로 이동 가능하도록 연결
+
+3. 테스트/문서 동기화
+
+- 대상:
+  - `src/lib/utils/navigation.test.ts`
+  - `src/routes/data-source/browse/page.test.ts`
+  - `docs/tests/COMMON_UTILS_TEST_DESCRIPTION.md`
+  - `docs/tests/DATA_SOURCE_TEST_DESCRIPTION.md`
+  - `docs/USER_GUIDE.md`
+  - `docs/FRONTEND_UI_UX_GUIDE.md`
+- 변경:
+  - breadcrumb 파생 유틸리티와 그룹 메뉴 이동 UI를 테스트로 고정
+  - 사용자 가이드와 프론트엔드 가이드에 새 breadcrumb 이동 패턴 반영
+
+## 2026-03-13
+
+### 요약
+
 - 검증 스크립트를 `lint`, `lint:all`, `format:check`, `validate`로 분리해 기본 게이트를 현실화했습니다.
 - 최근 기능 추가 이후 어긋난 회귀 테스트와 ESLint 오류 패턴을 함께 정리했습니다.
 

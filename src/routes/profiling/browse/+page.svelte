@@ -8,6 +8,7 @@
 	import FormField from '$lib/components/FormField.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import { addToast } from '$lib/stores/toast-store';
+	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
 	import type { QualityRuleMetric, QualityRuleViolation } from '$lib/types/data-quality-rule.js';
 	import type { DataSourceSummaryEntry } from '$lib/types/data-source.js';
 	import type {
@@ -259,6 +260,7 @@
 <BrowsePageLayout
 	title="프로파일링"
 	description="저장된 PostgreSQL 데이터 소스를 기준으로 실제 테이블과 컬럼 분포를 즉시 확인합니다."
+	breadcrumbItems={getNavigationBreadcrumbItems('/profiling/browse')}
 	{actions}
 >
 	<BentoGrid gapClass="gap-6">

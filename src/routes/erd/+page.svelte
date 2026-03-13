@@ -1,8 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import Breadcrumb from '$lib/components/Breadcrumb.svelte';
 	import ERDViewer from '$lib/components/ERDViewer.svelte';
 	import type { ERDData } from '$lib/types/erd-mapping.js';
 	import type { DbDesignApiResponse } from '$lib/types/database-design.js';
+	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
 	import type {
 		DesignRelationSyncPreview,
 		DesignRelationValidationResult
@@ -361,6 +363,7 @@
 <div class="flex h-screen flex-col">
 	<!-- 페이지 헤더 -->
 	<header class="border-b border-gray-200 bg-white px-4 py-4 sm:px-6 lg:px-8">
+		<Breadcrumb items={getNavigationBreadcrumbItems('/erd')} />
 		<div class="flex items-center justify-between">
 			<div>
 				<h1 class="text-2xl font-bold text-gray-900">ERD 다이어그램</h1>
@@ -584,290 +587,306 @@
 		{@const stats = mappingStats()}
 		{#if stats}
 			<div class="border-b border-gray-200 bg-white px-4 py-4 sm:px-6 lg:px-8">
-			<div class="space-y-4">
-				<h3 class="text-sm font-semibold text-gray-900">데이터 연관관계 요약</h3>
+				<div class="space-y-4">
+					<h3 class="text-sm font-semibold text-gray-900">데이터 연관관계 요약</h3>
 
-				<!-- 노드 통계 -->
-				<div class="grid grid-cols-3 gap-3 sm:grid-cols-6">
-					<div class="rounded-lg border border-blue-200 bg-blue-50 p-2 text-center">
-						<div class="text-lg font-bold text-blue-700">{stats.databases}</div>
-						<div class="text-xs text-blue-600">데이터베이스</div>
+					<!-- 노드 통계 -->
+					<div class="grid grid-cols-3 gap-3 sm:grid-cols-6">
+						<div class="rounded-lg border border-blue-200 bg-blue-50 p-2 text-center">
+							<div class="text-lg font-bold text-blue-700">{stats.databases}</div>
+							<div class="text-xs text-blue-600">데이터베이스</div>
+						</div>
+						<div class="rounded-lg border border-green-200 bg-green-50 p-2 text-center">
+							<div class="text-lg font-bold text-green-700">{stats.entities}</div>
+							<div class="text-xs text-green-600">엔터티</div>
+						</div>
+						<div class="rounded-lg border border-teal-200 bg-teal-50 p-2 text-center">
+							<div class="text-lg font-bold text-teal-700">{stats.attributes}</div>
+							<div class="text-xs text-teal-600">속성</div>
+						</div>
+						<div class="rounded-lg border border-purple-200 bg-purple-50 p-2 text-center">
+							<div class="text-lg font-bold text-purple-700">{stats.tables}</div>
+							<div class="text-xs text-purple-600">테이블</div>
+						</div>
+						<div class="rounded-lg border border-orange-200 bg-orange-50 p-2 text-center">
+							<div class="text-lg font-bold text-orange-700">{stats.columns}</div>
+							<div class="text-xs text-orange-600">컬럼</div>
+						</div>
+						<div class="rounded-lg border border-pink-200 bg-pink-50 p-2 text-center">
+							<div class="text-lg font-bold text-pink-700">{stats.domains}</div>
+							<div class="text-xs text-pink-600">도메인</div>
+						</div>
 					</div>
-					<div class="rounded-lg border border-green-200 bg-green-50 p-2 text-center">
-						<div class="text-lg font-bold text-green-700">{stats.entities}</div>
-						<div class="text-xs text-green-600">엔터티</div>
-					</div>
-					<div class="rounded-lg border border-teal-200 bg-teal-50 p-2 text-center">
-						<div class="text-lg font-bold text-teal-700">{stats.attributes}</div>
-						<div class="text-xs text-teal-600">속성</div>
-					</div>
-					<div class="rounded-lg border border-purple-200 bg-purple-50 p-2 text-center">
-						<div class="text-lg font-bold text-purple-700">{stats.tables}</div>
-						<div class="text-xs text-purple-600">테이블</div>
-					</div>
-					<div class="rounded-lg border border-orange-200 bg-orange-50 p-2 text-center">
-						<div class="text-lg font-bold text-orange-700">{stats.columns}</div>
-						<div class="text-xs text-orange-600">컬럼</div>
-					</div>
-					<div class="rounded-lg border border-pink-200 bg-pink-50 p-2 text-center">
-						<div class="text-lg font-bold text-pink-700">{stats.domains}</div>
-						<div class="text-xs text-pink-600">도메인</div>
-					</div>
-				</div>
 
-				<!-- 매핑 관계 상세 -->
-				<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-					<!-- 논리적 계층 -->
-					<div class="rounded-lg border border-gray-200 p-3">
-						<h4 class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
-							논리적 계층
-						</h4>
-						<div class="space-y-1 text-sm">
-							<div class="flex justify-between">
-								<span class="text-gray-600">DB → 엔터티</span>
-								<span class="font-medium text-gray-900">{stats.dbEntity}건</span>
+					<!-- 매핑 관계 상세 -->
+					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+						<!-- 논리적 계층 -->
+						<div class="rounded-lg border border-gray-200 p-3">
+							<h4 class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+								논리적 계층
+							</h4>
+							<div class="space-y-1 text-sm">
+								<div class="flex justify-between">
+									<span class="text-gray-600">DB → 엔터티</span>
+									<span class="font-medium text-gray-900">{stats.dbEntity}건</span>
+								</div>
+								<div class="flex justify-between">
+									<span class="text-gray-600">엔터티 → 속성</span>
+									<span class="font-medium text-gray-900">{stats.entityAttribute}건</span>
+								</div>
+								<div class="flex justify-between">
+									<span class="text-gray-600">엔터티 상속</span>
+									<span class="font-medium text-gray-900">{stats.entityInheritance}건</span>
+								</div>
+								<div class="flex justify-between">
+									<span class="text-gray-600">속성 → 엔터티 참조</span>
+									<span class="font-medium text-gray-900">{stats.attributeEntityRef}건</span>
+								</div>
 							</div>
-							<div class="flex justify-between">
-								<span class="text-gray-600">엔터티 → 속성</span>
-								<span class="font-medium text-gray-900">{stats.entityAttribute}건</span>
+						</div>
+
+						<!-- 물리적 계층 -->
+						<div class="rounded-lg border border-gray-200 p-3">
+							<h4 class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+								물리적 계층
+							</h4>
+							<div class="space-y-1 text-sm">
+								<div class="flex justify-between">
+									<span class="text-gray-600">DB → 테이블</span>
+									<span class="font-medium text-gray-900">{stats.dbTable}건</span>
+								</div>
+								<div class="flex justify-between">
+									<span class="text-gray-600">테이블 → 컬럼</span>
+									<span class="font-medium text-gray-900">{stats.tableColumn}건</span>
+								</div>
+								<div class="flex justify-between">
+									<span class="text-gray-600">컬럼 FK 관계</span>
+									<span class="font-medium text-gray-900">{stats.columnFK}건</span>
+								</div>
 							</div>
-							<div class="flex justify-between">
-								<span class="text-gray-600">엔터티 상속</span>
-								<span class="font-medium text-gray-900">{stats.entityInheritance}건</span>
-							</div>
-							<div class="flex justify-between">
-								<span class="text-gray-600">속성 → 엔터티 참조</span>
-								<span class="font-medium text-gray-900">{stats.attributeEntityRef}건</span>
+						</div>
+
+						<!-- 논리-물리 / 도메인 계층 -->
+						<div class="rounded-lg border border-gray-200 p-3">
+							<h4 class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
+								논리-물리 / 도메인
+							</h4>
+							<div class="space-y-1 text-sm">
+								<div class="flex justify-between">
+									<span class="text-gray-600">테이블 → 엔터티</span>
+									<span class="font-medium text-gray-900">{stats.tableEntity}건</span>
+								</div>
+								<div class="flex justify-between">
+									<span class="text-gray-600">컬럼 → 엔터티</span>
+									<span class="font-medium text-gray-900">{stats.columnEntity}건</span>
+								</div>
+								<div class="flex justify-between">
+									<span class="text-gray-600">속성 → 컬럼</span>
+									<span class="font-medium text-gray-900">{stats.attributeColumn}건</span>
+								</div>
+								<div class="flex justify-between">
+									<span class="text-gray-600">컬럼 → 도메인</span>
+									<span class="font-medium text-gray-900">{stats.columnDomain}건</span>
+								</div>
 							</div>
 						</div>
 					</div>
 
-					<!-- 물리적 계층 -->
-					<div class="rounded-lg border border-gray-200 p-3">
-						<h4 class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
-							물리적 계층
-						</h4>
-						<div class="space-y-1 text-sm">
-							<div class="flex justify-between">
-								<span class="text-gray-600">DB → 테이블</span>
-								<span class="font-medium text-gray-900">{stats.dbTable}건</span>
+					{#if erdData.relationValidation}
+						<div class="rounded-lg border border-amber-200 bg-amber-50 p-3">
+							<div class="mb-2 flex items-center justify-between">
+								<h4 class="text-xs font-semibold uppercase tracking-wider text-amber-700">
+									5개 정의서 정합성
+								</h4>
+								<div class="flex items-center gap-2">
+									<span class="text-xs text-amber-700">
+										검사 {erdData.relationValidation.totals.totalChecked}건
+									</span>
+									<button
+										onclick={() => handleRelationSync(false)}
+										disabled={relationSyncLoading}
+										class="rounded border border-amber-300 bg-white px-2 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+									>
+										보정 미리보기
+									</button>
+									<button
+										onclick={() => handleRelationSync(true)}
+										disabled={relationSyncLoading}
+										class="rounded border border-blue-300 bg-blue-600 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+									>
+										자동 보정 실행
+									</button>
+								</div>
 							</div>
-							<div class="flex justify-between">
-								<span class="text-gray-600">테이블 → 컬럼</span>
-								<span class="font-medium text-gray-900">{stats.tableColumn}건</span>
+							<div class="mb-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+								<div class="rounded border border-green-200 bg-white p-2 text-center">
+									<div class="font-semibold text-green-700">
+										{erdData.relationValidation.totals.matched}
+									</div>
+									<div class="text-xs text-green-600">매칭</div>
+								</div>
+								<div class="rounded border border-red-200 bg-white p-2 text-center">
+									<div class="font-semibold text-red-700">
+										{erdData.relationValidation.totals.errorCount}
+									</div>
+									<div class="text-xs text-red-600">오류</div>
+								</div>
+								<div class="rounded border border-yellow-200 bg-white p-2 text-center">
+									<div class="font-semibold text-yellow-700">
+										{erdData.relationValidation.totals.warningCount}
+									</div>
+									<div class="text-xs text-yellow-600">경고</div>
+								</div>
+								<div class="rounded border border-gray-200 bg-white p-2 text-center">
+									<div class="font-semibold text-gray-700">
+										{erdData.relationValidation.totals.unmatched}
+									</div>
+									<div class="text-xs text-gray-600">총 미매칭</div>
+								</div>
 							</div>
-							<div class="flex justify-between">
-								<span class="text-gray-600">컬럼 FK 관계</span>
-								<span class="font-medium text-gray-900">{stats.columnFK}건</span>
+							<div class="grid grid-cols-1 gap-1 text-xs text-gray-700 sm:grid-cols-2">
+								{#each erdData.relationValidation.summaries as summary (summary.relationId)}
+									<div class="flex items-center justify-between rounded bg-white px-2 py-1">
+										<span>{summary.relationName}</span>
+										<span
+											class={summary.severity === 'error'
+												? 'font-medium text-red-700'
+												: 'font-medium text-yellow-700'}>{summary.unmatched}</span
+										>
+									</div>
+								{/each}
 							</div>
+							{#if relationSyncError}
+								<div
+									class="mt-2 rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700"
+								>
+									{relationSyncError}
+								</div>
+							{/if}
+							{#if relationSyncResult}
+								<div class="mt-2 rounded border border-blue-200 bg-white p-2 text-xs text-gray-700">
+									<div class="mb-1 font-semibold text-blue-700">
+										최근 동기화 결과 ({relationSyncResult.mode === 'apply' ? '실행' : '미리보기'})
+									</div>
+									<div class="grid grid-cols-2 gap-1 sm:grid-cols-4">
+										<div>후보 테이블: {relationSyncResult.counts.tableCandidates}</div>
+										<div>후보 컬럼: {relationSyncResult.counts.columnCandidates}</div>
+										<div>
+											추천(속성→컬럼): {relationSyncResult.counts.attributeColumnSuggestions}
+										</div>
+										<div>실제 반영: {relationSyncResult.counts.appliedTotalUpdates}</div>
+									</div>
+								</div>
+							{/if}
 						</div>
-					</div>
+					{/if}
 
-					<!-- 논리-물리 / 도메인 계층 -->
-					<div class="rounded-lg border border-gray-200 p-3">
-						<h4 class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
-							논리-물리 / 도메인
-						</h4>
-						<div class="space-y-1 text-sm">
-							<div class="flex justify-between">
-								<span class="text-gray-600">테이블 → 엔터티</span>
-								<span class="font-medium text-gray-900">{stats.tableEntity}건</span>
-							</div>
-							<div class="flex justify-between">
-								<span class="text-gray-600">컬럼 → 엔터티</span>
-								<span class="font-medium text-gray-900">{stats.columnEntity}건</span>
-							</div>
-							<div class="flex justify-between">
-								<span class="text-gray-600">속성 → 컬럼</span>
-								<span class="font-medium text-gray-900">{stats.attributeColumn}건</span>
-							</div>
-							<div class="flex justify-between">
-								<span class="text-gray-600">컬럼 → 도메인</span>
-								<span class="font-medium text-gray-900">{stats.columnDomain}건</span>
-							</div>
-						</div>
-					</div>
-				</div>
-
-				{#if erdData.relationValidation}
-					<div class="rounded-lg border border-amber-200 bg-amber-50 p-3">
+					<div class="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
 						<div class="mb-2 flex items-center justify-between">
-							<h4 class="text-xs font-semibold uppercase tracking-wider text-amber-700">
-								5개 정의서 정합성
+							<h4 class="text-xs font-semibold uppercase tracking-wider text-indigo-700">
+								통합 정합성 요약
 							</h4>
 							<div class="flex items-center gap-2">
-								<span class="text-xs text-amber-700">
-									검사 {erdData.relationValidation.totals.totalChecked}건
-								</span>
 								<button
-									onclick={() => handleRelationSync(false)}
-									disabled={relationSyncLoading}
-									class="rounded border border-amber-300 bg-white px-2 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+									onclick={() => loadUnifiedValidationSummary()}
+									disabled={unifiedValidationLoading || alignmentFlowLoading}
+									class="rounded border border-indigo-300 bg-white px-2 py-1 text-xs font-medium text-indigo-700 transition-colors hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
 								>
-									보정 미리보기
+									통합 재검증
 								</button>
 								<button
-									onclick={() => handleRelationSync(true)}
-									disabled={relationSyncLoading}
+									onclick={handleStandardAlignmentFlow}
+									disabled={alignmentFlowLoading || relationSyncLoading}
 									class="rounded border border-blue-300 bg-blue-600 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
 								>
-									자동 보정 실행
+									표준 순서 실행
 								</button>
 							</div>
 						</div>
 						<div class="mb-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+							<div class="rounded border border-amber-200 bg-white p-2 text-center">
+								<div class="font-semibold text-amber-700">
+									{unifiedValidationSummary
+										? unifiedValidationSummary.relationUnmatchedCount
+										: erdData.relationValidation
+											? erdData.relationValidation.totals.unmatched
+											: 0}
+								</div>
+								<div class="text-xs text-amber-600">관계 미매칭</div>
+							</div>
+							<div class="rounded border border-rose-200 bg-white p-2 text-center">
+								<div class="font-semibold text-rose-700">
+									{unifiedValidationSummary ? unifiedValidationSummary.termFailedCount : 0}
+								</div>
+								<div class="text-xs text-rose-600">용어계 실패</div>
+							</div>
 							<div class="rounded border border-green-200 bg-white p-2 text-center">
 								<div class="font-semibold text-green-700">
-									{erdData.relationValidation.totals.matched}
+									{unifiedValidationSummary ? unifiedValidationSummary.termPassedCount : 0}
 								</div>
-								<div class="text-xs text-green-600">매칭</div>
-							</div>
-							<div class="rounded border border-red-200 bg-white p-2 text-center">
-								<div class="font-semibold text-red-700">
-									{erdData.relationValidation.totals.errorCount}
-								</div>
-								<div class="text-xs text-red-600">오류</div>
-							</div>
-							<div class="rounded border border-yellow-200 bg-white p-2 text-center">
-								<div class="font-semibold text-yellow-700">
-									{erdData.relationValidation.totals.warningCount}
-								</div>
-								<div class="text-xs text-yellow-600">경고</div>
+								<div class="text-xs text-green-600">용어계 통과</div>
 							</div>
 							<div class="rounded border border-gray-200 bg-white p-2 text-center">
 								<div class="font-semibold text-gray-700">
-									{erdData.relationValidation.totals.unmatched}
+									{unifiedValidationSummary ? unifiedValidationSummary.totalIssues : 0}
 								</div>
-								<div class="text-xs text-gray-600">총 미매칭</div>
+								<div class="text-xs text-gray-600">통합 이슈</div>
 							</div>
 						</div>
-						<div class="grid grid-cols-1 gap-1 text-xs text-gray-700 sm:grid-cols-2">
-							{#each erdData.relationValidation.summaries as summary (summary.relationId)}
-								<div class="flex items-center justify-between rounded bg-white px-2 py-1">
-									<span>{summary.relationName}</span>
-									<span class={summary.severity === 'error'
-										? 'font-medium text-red-700'
-										: 'font-medium text-yellow-700'}>{summary.unmatched}</span>
+						{#if unifiedValidationSummary}
+							<div class="mb-2 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+								<div class="rounded border border-red-200 bg-white p-1 text-center text-red-700">
+									Error {unifiedValidationSummary.errorCount}
 								</div>
-							{/each}
-						</div>
-						{#if relationSyncError}
-							<div class="mt-2 rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700">
-								{relationSyncError}
+								<div
+									class="rounded border border-yellow-200 bg-white p-1 text-center text-yellow-700"
+								>
+									Auto-fixable {unifiedValidationSummary.autoFixableCount}
+								</div>
+								<div
+									class="rounded border border-amber-200 bg-white p-1 text-center text-amber-700"
+								>
+									Warning {unifiedValidationSummary.warningCount}
+								</div>
+								<div
+									class="rounded border border-slate-200 bg-white p-1 text-center text-slate-700"
+								>
+									Info {unifiedValidationSummary.infoCount}
+								</div>
 							</div>
 						{/if}
-						{#if relationSyncResult}
+						<p class="text-xs text-indigo-700">
+							권장 실행 순서: <code>vocabulary sync-domain(apply=true)</code> ->
+							<code>term sync(apply=true)</code> -> <code>relations sync(apply=true)</code> ->
+							<code>column sync-term(apply=true)</code> -> <code>validation/report</code>
+						</p>
+						{#if unifiedValidationLoading}
+							<div class="mt-2 text-xs text-indigo-700">통합 진단 요약을 불러오는 중...</div>
+						{/if}
+						{#if unifiedValidationError}
+							<div
+								class="mt-2 rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700"
+							>
+								{unifiedValidationError}
+							</div>
+						{/if}
+						{#if alignmentFlowError}
+							<div
+								class="mt-2 rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700"
+							>
+								{alignmentFlowError}
+							</div>
+						{/if}
+						{#if alignmentFlowResult}
 							<div class="mt-2 rounded border border-blue-200 bg-white p-2 text-xs text-gray-700">
-								<div class="mb-1 font-semibold text-blue-700">
-									최근 동기화 결과 ({relationSyncResult.mode === 'apply' ? '실행' : '미리보기'})
-								</div>
-								<div class="grid grid-cols-2 gap-1 sm:grid-cols-4">
-									<div>후보 테이블: {relationSyncResult.counts.tableCandidates}</div>
-									<div>후보 컬럼: {relationSyncResult.counts.columnCandidates}</div>
-									<div>추천(속성→컬럼): {relationSyncResult.counts.attributeColumnSuggestions}</div>
-									<div>실제 반영: {relationSyncResult.counts.appliedTotalUpdates}</div>
-								</div>
+								<div>단어집 반영: {alignmentFlowResult.appliedVocabularyUpdates}</div>
+								<div>용어 반영: {alignmentFlowResult.appliedTermUpdates}</div>
+								<div>관계 반영: {alignmentFlowResult.appliedRelationUpdates}</div>
+								<div>컬럼 반영: {alignmentFlowResult.appliedColumnUpdates}</div>
+								<div>재검증 실패(용어계): {alignmentFlowResult.remainingTermFailed}</div>
 							</div>
 						{/if}
 					</div>
-				{/if}
-
-				<div class="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
-					<div class="mb-2 flex items-center justify-between">
-						<h4 class="text-xs font-semibold uppercase tracking-wider text-indigo-700">
-							통합 정합성 요약
-						</h4>
-						<div class="flex items-center gap-2">
-							<button
-								onclick={() => loadUnifiedValidationSummary()}
-								disabled={unifiedValidationLoading || alignmentFlowLoading}
-								class="rounded border border-indigo-300 bg-white px-2 py-1 text-xs font-medium text-indigo-700 transition-colors hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
-							>
-								통합 재검증
-							</button>
-							<button
-								onclick={handleStandardAlignmentFlow}
-								disabled={alignmentFlowLoading || relationSyncLoading}
-								class="rounded border border-blue-300 bg-blue-600 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-							>
-								표준 순서 실행
-							</button>
-						</div>
-					</div>
-					<div class="mb-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
-						<div class="rounded border border-amber-200 bg-white p-2 text-center">
-							<div class="font-semibold text-amber-700">
-								{unifiedValidationSummary
-									? unifiedValidationSummary.relationUnmatchedCount
-									: erdData.relationValidation
-										? erdData.relationValidation.totals.unmatched
-										: 0}
-							</div>
-							<div class="text-xs text-amber-600">관계 미매칭</div>
-						</div>
-						<div class="rounded border border-rose-200 bg-white p-2 text-center">
-							<div class="font-semibold text-rose-700">
-								{unifiedValidationSummary ? unifiedValidationSummary.termFailedCount : 0}
-							</div>
-							<div class="text-xs text-rose-600">용어계 실패</div>
-						</div>
-						<div class="rounded border border-green-200 bg-white p-2 text-center">
-							<div class="font-semibold text-green-700">
-								{unifiedValidationSummary ? unifiedValidationSummary.termPassedCount : 0}
-							</div>
-							<div class="text-xs text-green-600">용어계 통과</div>
-						</div>
-						<div class="rounded border border-gray-200 bg-white p-2 text-center">
-							<div class="font-semibold text-gray-700">
-								{unifiedValidationSummary ? unifiedValidationSummary.totalIssues : 0}
-							</div>
-							<div class="text-xs text-gray-600">통합 이슈</div>
-						</div>
-					</div>
-					{#if unifiedValidationSummary}
-						<div class="mb-2 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
-							<div class="rounded border border-red-200 bg-white p-1 text-center text-red-700">
-								Error {unifiedValidationSummary.errorCount}
-							</div>
-							<div class="rounded border border-yellow-200 bg-white p-1 text-center text-yellow-700">
-								Auto-fixable {unifiedValidationSummary.autoFixableCount}
-							</div>
-							<div class="rounded border border-amber-200 bg-white p-1 text-center text-amber-700">
-								Warning {unifiedValidationSummary.warningCount}
-							</div>
-							<div class="rounded border border-slate-200 bg-white p-1 text-center text-slate-700">
-								Info {unifiedValidationSummary.infoCount}
-							</div>
-						</div>
-					{/if}
-					<p class="text-xs text-indigo-700">
-						권장 실행 순서: <code>vocabulary sync-domain(apply=true)</code> ->
-						<code>term sync(apply=true)</code> -> <code>relations sync(apply=true)</code> ->
-						<code>column sync-term(apply=true)</code> -> <code>validation/report</code>
-					</p>
-					{#if unifiedValidationLoading}
-						<div class="mt-2 text-xs text-indigo-700">통합 진단 요약을 불러오는 중...</div>
-					{/if}
-					{#if unifiedValidationError}
-						<div class="mt-2 rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700">
-							{unifiedValidationError}
-						</div>
-					{/if}
-					{#if alignmentFlowError}
-						<div class="mt-2 rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700">
-							{alignmentFlowError}
-						</div>
-					{/if}
-					{#if alignmentFlowResult}
-						<div class="mt-2 rounded border border-blue-200 bg-white p-2 text-xs text-gray-700">
-							<div>단어집 반영: {alignmentFlowResult.appliedVocabularyUpdates}</div>
-							<div>용어 반영: {alignmentFlowResult.appliedTermUpdates}</div>
-							<div>관계 반영: {alignmentFlowResult.appliedRelationUpdates}</div>
-							<div>컬럼 반영: {alignmentFlowResult.appliedColumnUpdates}</div>
-							<div>재검증 실패(용어계): {alignmentFlowResult.remainingTermFailed}</div>
-						</div>
-					{/if}
-				</div>
 				</div>
 			</div>
 		{/if}

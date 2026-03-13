@@ -17,6 +17,7 @@
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { filterTableFiles } from '$lib/utils/file-filter';
 	import { extractDbDesignRelatedMapping } from '$lib/utils/db-design-file-mapping';
+	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
 
 	type SearchDetail = { query: string; field: string; exact: boolean };
 	type SortDetail = { column: string; direction: 'asc' | 'desc' | null };
@@ -460,6 +461,7 @@
 <BrowsePageLayout
 	title="테이블 정의서"
 	description={`현재 파일: ${selectedFilename}`}
+	breadcrumbItems={getNavigationBreadcrumbItems('/table/browse')}
 	{sidebar}
 	{actions}
 >

@@ -5,6 +5,7 @@
 	import Toast from '$lib/components/Toast.svelte';
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 	import Icon from '$lib/components/Icon.svelte';
+	import { menuGroups, type NavigationMenuGroup } from '$lib/utils/navigation';
 
 	let { children } = $props();
 
@@ -13,41 +14,6 @@
 
 	// 모바일 메뉴 그룹 아코디언 상태
 	let openMobileGroupId = $state<string | null>(null);
-
-	// 네비게이션 메뉴 그룹 (업무 도메인 기준)
-	const menuGroups = [
-		{
-			id: 'standard',
-			label: '표준 용어',
-			items: [
-				{ href: '/browse', label: '단어집', icon: 'search' },
-				{ href: '/domain/browse', label: '도메인', icon: 'database' },
-				{ href: '/term/browse', label: '용어', icon: 'tag' }
-			]
-		},
-		{
-			id: 'design',
-			label: 'DB 설계',
-			items: [
-				{ href: '/database/browse', label: 'DB', icon: 'server' },
-				{ href: '/entity/browse', label: '엔터티', icon: 'cube' },
-				{ href: '/attribute/browse', label: '속성', icon: 'key' },
-				{ href: '/table/browse', label: '테이블', icon: 'table' },
-				{ href: '/column/browse', label: '컬럼', icon: 'columns' },
-				{ href: '/erd', label: 'ERD', icon: 'diagram' }
-			]
-		},
-		{
-			id: 'tools',
-			label: '운영 · 품질',
-			items: [
-				{ href: '/data-source/browse', label: '데이터 소스', icon: 'link' },
-				{ href: '/quality-rule/browse', label: '품질 규칙', icon: 'check-circle' },
-				{ href: '/profiling/browse', label: '프로파일링', icon: 'chart-bar' },
-				{ href: '/snapshot/browse', label: '스냅샷', icon: 'save' }
-			]
-		}
-	];
 
 	// 모바일 메뉴 토글
 	function toggleMobileMenu() {
@@ -60,7 +26,7 @@
 	}
 
 	// 그룹 내에 현재 페이지가 포함되는지 여부
-	function isGroupActive(group: (typeof menuGroups)[number]) {
+	function isGroupActive(group: NavigationMenuGroup) {
 		return group.items.some((item) => isCurrentPage(item.href));
 	}
 
@@ -97,7 +63,7 @@
 					<!-- 데스크탑 네비게이션 (그룹 버튼 + 드롭다운) -->
 					<nav class="hidden items-center space-x-3 md:flex">
 						{#each menuGroups as group (group.id)}
-							<div class="relative group">
+							<div class="group relative">
 								<!-- 그룹 버튼: 하위 메뉴 수를 시각적으로 접어서 표시 -->
 								<button
 									type="button"
@@ -116,7 +82,7 @@
 
 								<!-- 드롭다운: 그룹 호버 시에만 전체 메뉴 노출 -->
 								<div
-									class="invisible absolute left-0 top-full z-40 mt-2 min-w-[220px] rounded-xl border border-slate-100 bg-white/95 p-1 text-sm shadow-lg opacity-0 backdrop-blur-sm transition-all duration-150 group-hover:visible group-hover:opacity-100"
+									class="invisible absolute left-0 top-full z-40 mt-2 min-w-[220px] rounded-xl border border-slate-100 bg-white/95 p-1 text-sm opacity-0 shadow-lg backdrop-blur-sm transition-all duration-150 group-hover:visible group-hover:opacity-100"
 								>
 									{#each group.items as item (item.href)}
 										<a
@@ -156,7 +122,7 @@
 			</div>
 		</div>
 
-				<!-- 모바일 메뉴 -->
+		<!-- 모바일 메뉴 -->
 		{#if mobileMenuOpen}
 			<div class="border-t border-gray-200 bg-white/95 backdrop-blur-sm md:hidden" id="mobile-menu">
 				<div class="space-y-3 px-4 py-3">

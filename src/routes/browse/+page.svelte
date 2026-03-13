@@ -16,6 +16,7 @@
 	import { vocabularyDataStore as vocabularyStore } from '$lib/stores/unified-store';
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { filterVocabularyFiles, isSystemVocabularyFile } from '$lib/utils/file-filter';
+	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
 
 	// 이벤트 상세 타입 정의
 	type SearchDetail = { query: string; field: string; exact: boolean };
@@ -820,7 +821,13 @@
 	</ActionBar>
 {/snippet}
 
-<BrowsePageLayout title="단어집" description={`현재 파일: ${selectedFilename}`} {sidebar} {actions}>
+<BrowsePageLayout
+	title="단어집"
+	description={`현재 파일: ${selectedFilename}`}
+	breadcrumbItems={getNavigationBreadcrumbItems('/browse')}
+	{sidebar}
+	{actions}
+>
 	{#if showEditor}
 		<VocabularyEditor
 			entry={currentEditingEntry || {}}

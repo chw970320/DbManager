@@ -26,6 +26,7 @@
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { termDataStore as termStore } from '$lib/stores/unified-store';
 	import { filterTermFiles, isSystemTermFile } from '$lib/utils/file-filter';
+	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
 
 	// 상태 변수
 	let entries = $state<TermEntry[]>([]);
@@ -1022,7 +1023,13 @@
 	</ActionBar>
 {/snippet}
 
-<BrowsePageLayout title="용어" description={`현재 파일: ${selectedFilename}`} {sidebar} {actions}>
+<BrowsePageLayout
+	title="용어"
+	description={`현재 파일: ${selectedFilename}`}
+	breadcrumbItems={getNavigationBreadcrumbItems('/term/browse')}
+	{sidebar}
+	{actions}
+>
 	<!-- TermEditor 모달 -->
 	{#if showEditor}
 		<TermEditor

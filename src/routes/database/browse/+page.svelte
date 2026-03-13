@@ -17,6 +17,7 @@
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { filterDatabaseFiles } from '$lib/utils/file-filter';
 	import { extractDbDesignRelatedMapping } from '$lib/utils/db-design-file-mapping';
+	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
 
 	// 이벤트 상세 타입 정의
 	type SearchDetail = { query: string; field: string; exact: boolean };
@@ -589,6 +590,7 @@
 <BrowsePageLayout
 	title="데이터베이스 정의서"
 	description={`현재 파일: ${selectedFilename}`}
+	breadcrumbItems={getNavigationBreadcrumbItems('/database/browse')}
 	{sidebar}
 	{actions}
 >

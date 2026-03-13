@@ -10,6 +10,7 @@
 	import SearchBar from '$lib/components/SearchBar.svelte';
 	import { showConfirm } from '$lib/stores/confirm-store';
 	import { addToast } from '$lib/stores/toast-store';
+	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
 	import type {
 		DataSourceConnectionTestResult,
 		DataSourceSummaryEntry
@@ -356,6 +357,7 @@
 <BrowsePageLayout
 	title="데이터 소스"
 	description="저장 가능한 연결 정의를 관리하고 PostgreSQL 연결 테스트를 실행합니다."
+	breadcrumbItems={getNavigationBreadcrumbItems('/data-source/browse')}
 	{actions}
 >
 	<DataSourceEditor

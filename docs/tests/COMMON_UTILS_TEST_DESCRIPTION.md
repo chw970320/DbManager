@@ -12,8 +12,9 @@
 | `file-filter.test.ts`     | 29개      | 완료 |
 | `file-selection.test.ts`  | 6개       | 완료 |
 | `test-data-reset.test.ts` | 2개       | 완료 |
+| `navigation.test.ts`      | 2개       | 완료 |
 | `debounce.test.ts`        | 8개       | 완료 |
-| **합계**                  | **102개** |      |
+| **합계**                  | **104개** |      |
 
 **참고**: `file-handler.test.ts`와 `database-design-handler.test.ts`는 복잡한 파일 시스템 의존성으로 인해 API 테스트에서 간접적으로 검증됩니다.
 
@@ -360,10 +361,23 @@ XLSX 파일 파싱 로직을 테스트합니다.
 
 테스트용 전체 데이터 초기화 스크립트의 기준 상태 복원 동작을 테스트합니다.
 
-| 테스트명                                                                   | 설명                      | 검증 내용                                                                                      |
-| -------------------------------------------------------------------------- | ------------------------- | ---------------------------------------------------------------------------------------------- |
+| 테스트명                                                                   | 설명                      | 검증 내용                                                                                                       |
+| -------------------------------------------------------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | should remove user json files and recreate the default empty files         | 기존 데이터 초기화        | 사용자 JSON 삭제, 기본 파일 빈 데이터 재생성, registry/shared mapping/design snapshots 초기화, 비대상 설정 유지 |
-| should create the reset baseline even when the data directory starts empty | 빈 데이터 디렉터리 초기화 | 디렉터리가 비어 있어도 8개 기본 파일과 registry/shared mapping/design snapshots 기준 상태 생성 |
+| should create the reset baseline even when the data directory starts empty | 빈 데이터 디렉터리 초기화 | 디렉터리가 비어 있어도 8개 기본 파일과 registry/shared mapping/design snapshots 기준 상태 생성                  |
+
+---
+
+## 8. navigation.test.ts (2개)
+
+**파일 경로**: `src/lib/utils/navigation.test.ts`
+
+상단 2단계 메뉴 정의에서 현재 경로의 breadcrumb와 그룹 정보를 파생하는 공통 로직을 테스트합니다.
+
+| 테스트명                                                                | 설명                         | 검증 내용                                                      |
+| ----------------------------------------------------------------------- | ---------------------------- | -------------------------------------------------------------- |
+| should resolve a grouped route to its menu group and current item       | 현재 경로의 메뉴 매칭 확인   | `/profiling/browse` 같은 경로에서 그룹/현재 메뉴를 정확히 찾음 |
+| should build breadcrumb items with sibling menu links for grouped pages | breadcrumb 파생 및 이동 목록 | 상위 crumb에 같은 그룹의 하위 메뉴 링크 목록이 포함됨          |
 
 ---
 
@@ -381,6 +395,7 @@ pnpm test src/lib/utils/xlsx-parser.test.ts
 pnpm test src/lib/utils/cache.test.ts
 pnpm test src/lib/utils/file-filter.test.ts
 pnpm test src/lib/utils/test-data-reset.test.ts
+pnpm test src/lib/utils/navigation.test.ts
 
 # 감시 모드
 pnpm test src/lib/utils --watch
@@ -390,13 +405,14 @@ pnpm test src/lib/utils --watch
 
 ## 변경 이력
 
-| 날짜       | 변경 내용                                           |
-| ---------- | --------------------------------------------------- |
-| 2025-01-09 | 초기 문서 작성 (82개 테스트)                        |
-| 2026-03-11 | validation 유틸리티 테스트 확장 (98개 테스트)       |
-| 2026-03-12 | file-selection 복원 회귀 테스트 추가 (100개 테스트) |
-| 2026-03-12 | test-data-reset 초기화 테스트 추가 (102개 테스트)   |
-| 2026-03-13 | test-data-reset에 design snapshots 초기화 반영      |
+| 날짜       | 변경 내용                                                 |
+| ---------- | --------------------------------------------------------- |
+| 2025-01-09 | 초기 문서 작성 (82개 테스트)                              |
+| 2026-03-11 | validation 유틸리티 테스트 확장 (98개 테스트)             |
+| 2026-03-12 | file-selection 복원 회귀 테스트 추가 (100개 테스트)       |
+| 2026-03-12 | test-data-reset 초기화 테스트 추가 (102개 테스트)         |
+| 2026-03-13 | navigation breadcrumb 유틸리티 테스트 추가 (104개 테스트) |
+| 2026-03-13 | test-data-reset에 design snapshots 초기화 반영            |
 
 ---
 

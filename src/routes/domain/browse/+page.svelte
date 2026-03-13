@@ -19,6 +19,7 @@
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { domainDataStore as domainStore } from '$lib/stores/unified-store';
 	import { filterDomainFiles, isSystemDomainFile } from '$lib/utils/file-filter';
+	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
 
 	// 상태 변수
 	let entries = $state<DomainEntry[]>([]);
@@ -661,49 +662,69 @@
 </svelte:head>
 
 {#snippet sidebar()}
-	<div>
-		<div class="mb-4 flex items-center justify-between">
-			<h2 class="text-lg font-bold text-gray-900">도메인 파일</h2>
-			<button
-				type="button"
-				onclick={() => (isFileManagerOpen = true)}
-				class="text-gray-500 hover:text-blue-600"
-				title="파일 관리"
-				aria-label="파일 관리"
-			>
-				<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-					/>
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						stroke-width="2"
-						d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-					/>
-				</svg>
-			</button>
-		</div>
-		<div class="space-y-2">
-			{#each fileList as file (file)}
+	<div class="space-y-4">
+		<section
+			aria-label="도메인 파일 선택"
+			class="rounded-2xl border border-border bg-surface/95 p-4 shadow-xl backdrop-blur-md dark:bg-surface/90"
+		>
+			<div class="mb-4 flex items-center justify-between">
+				<h2 class="text-lg font-bold text-gray-900">도메인 파일</h2>
 				<button
 					type="button"
-					onclick={() => handleFileSelect(file)}
-					class="w-full rounded-lg px-4 py-2 text-left text-sm font-medium transition-colors duration-200 {selectedFilename ===
-					file
-						? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
-						: 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}"
+					onclick={() => (isFileManagerOpen = true)}
+					class="text-gray-500 hover:text-blue-600"
+					title="파일 관리"
+					aria-label="파일 관리"
 				>
-					{file}
+					<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+						/>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+						/>
+					</svg>
 				</button>
-			{/each}
-			{#if fileList.length === 0}
-				<div class="px-4 py-2 text-sm text-gray-500">파일이 없습니다.</div>
-			{/if}
-		</div>
+			</div>
+			<div class="space-y-2">
+				{#each fileList as file (file)}
+					<button
+						type="button"
+						onclick={() => handleFileSelect(file)}
+						class="w-full rounded-lg px-4 py-2 text-left text-sm font-medium transition-colors duration-200 {selectedFilename ===
+						file
+							? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+							: 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}"
+					>
+						{file}
+					</button>
+				{/each}
+				{#if fileList.length === 0}
+					<div class="px-4 py-2 text-sm text-gray-500">파일이 없습니다.</div>
+				{/if}
+			</div>
+		</section>
+
+		<section
+			aria-label="전역 데이터타입 규칙"
+			class="rounded-2xl border border-border bg-surface/95 p-4 shadow-xl backdrop-blur-md dark:bg-surface/90"
+		>
+			<h2 class="text-lg font-bold text-gray-900">공통 설정</h2>
+			<button
+				type="button"
+				onclick={() => (isDataTypeMappingOpen = true)}
+				disabled={loading}
+				class="btn btn-secondary mt-4 w-full"
+			>
+				데이터타입 매핑 관리
+			</button>
+		</section>
 	</div>
 {/snippet}
 
@@ -754,18 +775,14 @@
 	</div>
 {/snippet}
 
-{#snippet dataTypeMappingActions()}
-	<button
-		type="button"
-		onclick={() => (isDataTypeMappingOpen = true)}
-		disabled={loading}
-		class="btn btn-outline rounded-xl px-5 py-3 text-amber-900"
-	>
-		데이터타입 매핑 관리
-	</button>
-{/snippet}
-
-<BrowsePageLayout title="도메인" description={`현재 파일: ${selectedFilename}`} {sidebar} {actions}>
+<BrowsePageLayout
+	title="도메인"
+	description={`현재 파일: ${selectedFilename}`}
+	breadcrumbItems={getNavigationBreadcrumbItems('/domain/browse')}
+	sidebarSurface="plain"
+	{sidebar}
+	{actions}
+>
 	{#if showEditor}
 		<DomainEditor
 			entry={currentEditingEntry || {}}
@@ -806,22 +823,6 @@
 	/>
 
 	<BentoGrid>
-		<div class="col-span-12 lg:col-span-7">
-			<section aria-label="전역 도메인명 규칙">
-				<BentoCard
-					eyebrow="전체 파일 공통 규칙"
-					title="데이터타입 매핑 관리"
-					subtitle="현재 선택 파일과 관계없이 모든 도메인 파일의 표준명 생성 규칙에 적용됩니다."
-					class="bg-gradient-to-r from-amber-50 via-orange-50 to-amber-50"
-					actions={dataTypeMappingActions}
-				>
-					<p class="text-sm text-gray-700">
-						도메인 표준명 생성 시 자료형을 일관되게 유지하려면 먼저 매핑을 정리하는 것을 권장합니다.
-					</p>
-				</BentoCard>
-			</section>
-		</div>
-
 		<div class="col-span-12 lg:col-span-5">
 			{#if errorMessage}
 				<BentoCard

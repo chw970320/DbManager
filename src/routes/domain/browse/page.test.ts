@@ -88,7 +88,7 @@ describe('Domain browse page', () => {
 		});
 	});
 
-	it('should separate global data type mapping controls from current file actions', async () => {
+	it('should render global data type mapping controls as a separate left floating panel', async () => {
 		render(Page);
 
 		await waitFor(() => {
@@ -111,13 +111,17 @@ describe('Domain browse page', () => {
 			within(currentFileActions).queryByRole('button', { name: /데이터타입 매핑/ })
 		).not.toBeInTheDocument();
 
-		const globalRuleSection = screen.getByRole('region', { name: '전역 도메인명 규칙' });
-		expect(within(globalRuleSection).getByText('전체 파일 공통 규칙')).toBeInTheDocument();
+		const fileSelectionSection = screen.getByRole('region', { name: '도메인 파일 선택' });
+		const globalRuleSection = screen.getByRole('region', { name: '전역 데이터타입 규칙' });
+		expect(fileSelectionSection).not.toContainElement(globalRuleSection);
+		expect(globalRuleSection.closest('aside')).not.toBeNull();
+		expect(within(globalRuleSection).queryByText('전체 파일 공통 규칙')).not.toBeInTheDocument();
 		expect(
-			within(globalRuleSection).getByText(
+			within(globalRuleSection).queryByText(
 				'현재 선택 파일과 관계없이 모든 도메인 파일의 표준명 생성 규칙에 적용됩니다.'
 			)
-		).toBeInTheDocument();
+		).not.toBeInTheDocument();
+		expect(within(globalRuleSection).queryByText('1건')).not.toBeInTheDocument();
 		expect(
 			within(globalRuleSection).getByRole('button', { name: '데이터타입 매핑 관리' })
 		).toBeInTheDocument();

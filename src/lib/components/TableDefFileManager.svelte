@@ -39,7 +39,7 @@
 	let renameValue = $state('');
 	let isSubmitting = $state(false);
 	let showSystemFiles = $state(false);
-	let activeTab = $state<'files' | 'upload'>('files');
+	let activeTab = $state<'files' | 'mapping' | 'upload'>('files');
 
 	// 업로드 관련 상태
 	let selectedUploadFile = $state(currentFilename);
@@ -513,6 +513,15 @@
 						파일 목록
 					</button>
 					<button
+						onclick={() => (activeTab = 'mapping')}
+						class="border-b-2 px-4 py-2 text-sm font-medium transition-colors {activeTab ===
+						'mapping'
+							? 'border-blue-600 text-blue-600'
+							: 'border-transparent text-gray-500 hover:text-gray-700'}"
+					>
+						파일 매핑
+					</button>
+					<button
 						onclick={() => (activeTab = 'upload')}
 						class="border-b-2 px-4 py-2 text-sm font-medium transition-colors {activeTab ===
 						'upload'
@@ -539,34 +548,6 @@
 				{/if}
 
 				{#if activeTab === 'files'}
-					<div class="mb-6 rounded-lg border border-gray-200 bg-white/70 p-4">
-						<div class="mb-3 flex items-center justify-between">
-							<div>
-								<h3 class="text-sm font-semibold text-gray-800">파일 매핑 설정</h3>
-								<p class="text-xs text-gray-500">
-									{#if currentMappingFile}
-										현재 파일: {currentMappingFile}
-									{:else}
-										매핑할 파일을 선택하세요
-									{/if}
-								</p>
-							</div>
-							<button
-								onclick={saveMappingInfo}
-								disabled={isSubmitting || isMappingLoading || !currentMappingFile}
-								class="rounded-md bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
-							>
-								매핑 저장
-							</button>
-						</div>
-						<DbDesignFileMappingFields
-							{currentType}
-							bind:mapping={selectedDbDesignMapping}
-							fileOptions={dbDesignFileOptions}
-							disabled={isMappingLoading || !currentMappingFile}
-						/>
-					</div>
-
 					<!-- 새 파일 생성 -->
 					<div class="mb-6">
 						<h3 class="mb-2 text-sm font-medium text-gray-700">새 파일 생성</h3>
@@ -702,6 +683,36 @@
 								{/each}
 							</ul>
 						{/if}
+					</div>
+				{:else if activeTab === 'mapping'}
+					<div class="space-y-4">
+						<div class="rounded-lg border border-gray-200 bg-white/70 p-4">
+							<div class="mb-3 flex items-center justify-between">
+								<div>
+									<h3 class="text-sm font-semibold text-gray-800">파일 매핑 설정</h3>
+									<p class="text-xs text-gray-500">
+										{#if currentMappingFile}
+											현재 파일: {currentMappingFile}
+										{:else}
+											매핑할 파일을 선택하세요
+										{/if}
+									</p>
+								</div>
+								<button
+									onclick={saveMappingInfo}
+									disabled={isSubmitting || isMappingLoading || !currentMappingFile}
+									class="rounded-md bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+								>
+									매핑 저장
+								</button>
+							</div>
+							<DbDesignFileMappingFields
+								{currentType}
+								bind:mapping={selectedDbDesignMapping}
+								fileOptions={dbDesignFileOptions}
+								disabled={isMappingLoading || !currentMappingFile}
+							/>
+						</div>
 					</div>
 				{:else}
 					<!-- 업로드 탭 -->

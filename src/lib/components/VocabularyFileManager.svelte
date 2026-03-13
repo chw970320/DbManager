@@ -42,7 +42,7 @@
 	let renameValue = $state('');
 	let isSubmitting = $state(false);
 	let showSystemFiles = $state(true);
-	let activeTab = $state<'files' | 'upload'>('files');
+	let activeTab = $state<'files' | 'mapping' | 'upload'>('files');
 
 	let selectedUploadFile = $state(currentFilename);
 	type UploadSuccessDetail = { result: UploadResult };
@@ -552,6 +552,14 @@
 					파일 목록
 				</button>
 				<button
+					onclick={() => (activeTab = 'mapping')}
+					class="flex-1 px-6 py-3 text-sm font-medium transition-colors {activeTab === 'mapping'
+						? 'border-b-2 border-blue-600 text-blue-600'
+						: 'text-gray-500 hover:text-gray-700'}"
+				>
+					파일 매핑
+				</button>
+				<button
 					onclick={() => (activeTab = 'upload')}
 					class="flex-1 px-6 py-3 text-sm font-medium transition-colors {activeTab === 'upload'
 						? 'border-b-2 border-blue-600 text-blue-600'
@@ -578,43 +586,6 @@
 			<div class="flex-1 overflow-y-auto px-6 py-4">
 				{#if activeTab === 'files'}
 					<div class="space-y-6">
-						<div class="rounded-lg border border-gray-200 bg-white/70 p-4">
-							<div class="mb-3 flex items-center justify-between">
-								<div>
-									<h3 class="text-sm font-semibold text-gray-800">파일 매핑 설정</h3>
-									<p class="text-xs text-gray-500">
-										{#if currentMappingFile}
-											현재 파일: {currentMappingFile}
-										{:else}
-											매핑할 파일을 선택하세요
-										{/if}
-									</p>
-								</div>
-								<div class="flex gap-2">
-									<button
-										onclick={() => saveMappingInfo()}
-										class="rounded-md bg-slate-600 px-3 py-2 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-50"
-										disabled={isSubmitting || isMappingLoading || !currentMappingFile}
-									>
-										매핑 저장
-									</button>
-									<button
-										onclick={handleDomainSync}
-										class="rounded-md bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
-										disabled={isSubmitting || isMappingLoading || !currentMappingFile}
-									>
-										{isSubmitting ? '동기화 중...' : '매핑 저장 후 동기화'}
-									</button>
-								</div>
-							</div>
-							<DbDesignFileMappingFields
-								{currentType}
-								bind:mapping={selectedDbDesignMapping}
-								fileOptions={dbDesignFileOptions}
-								disabled={isMappingLoading || !currentMappingFile}
-							/>
-						</div>
-
 						<div class="rounded-lg bg-gray-50 p-4">
 							<h3 class="mb-3 text-sm font-medium text-gray-700">새 파일 생성</h3>
 							<div class="flex gap-2">
@@ -780,6 +751,45 @@
 									</ul>
 								{/if}
 							</div>
+						</div>
+					</div>
+				{:else if activeTab === 'mapping'}
+					<div class="space-y-6">
+						<div class="rounded-lg border border-gray-200 bg-white/70 p-4">
+							<div class="mb-3 flex items-center justify-between">
+								<div>
+									<h3 class="text-sm font-semibold text-gray-800">파일 매핑 설정</h3>
+									<p class="text-xs text-gray-500">
+										{#if currentMappingFile}
+											현재 파일: {currentMappingFile}
+										{:else}
+											매핑할 파일을 선택하세요
+										{/if}
+									</p>
+								</div>
+								<div class="flex gap-2">
+									<button
+										onclick={() => saveMappingInfo()}
+										class="rounded-md bg-slate-600 px-3 py-2 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+										disabled={isSubmitting || isMappingLoading || !currentMappingFile}
+									>
+										매핑 저장
+									</button>
+									<button
+										onclick={handleDomainSync}
+										class="rounded-md bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
+										disabled={isSubmitting || isMappingLoading || !currentMappingFile}
+									>
+										{isSubmitting ? '동기화 중...' : '매핑 저장 후 동기화'}
+									</button>
+								</div>
+							</div>
+							<DbDesignFileMappingFields
+								{currentType}
+								bind:mapping={selectedDbDesignMapping}
+								fileOptions={dbDesignFileOptions}
+								disabled={isMappingLoading || !currentMappingFile}
+							/>
 						</div>
 					</div>
 				{:else}

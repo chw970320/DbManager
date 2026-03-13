@@ -83,6 +83,20 @@ describe('DomainFileManager', () => {
 				);
 			});
 		});
+
+		it('파일 매핑 탭에서 매핑 설정을 표시한다', async () => {
+			render(DomainFileManager, {
+				props: {
+					isOpen: true
+				}
+			});
+
+			await fireEvent.click(screen.getByRole('button', { name: '파일 매핑' }));
+
+			await waitFor(() => {
+				expect(screen.getByText('파일 매핑 설정')).toBeInTheDocument();
+			});
+		});
 	});
 
 	describe('File Operations', () => {

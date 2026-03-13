@@ -94,6 +94,8 @@ describe('DatabaseFileManager', () => {
 				}
 			});
 
+			await fireEvent.click(screen.getByRole('button', { name: '파일 매핑' }));
+
 			await waitFor(() => {
 				expect(screen.getByText('파일 매핑 설정')).toBeInTheDocument();
 			});

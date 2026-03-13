@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/svelte';
+import { render, screen, waitFor, fireEvent } from '@testing-library/svelte';
 import EntityFileManager from './EntityFileManager.svelte';
 
 // Mock fetch API
@@ -90,6 +90,8 @@ describe('EntityFileManager', () => {
 					isOpen: true
 				}
 			});
+
+			await fireEvent.click(screen.getByRole('button', { name: '파일 매핑' }));
 
 			await waitFor(() => {
 				expect(screen.getByText('파일 매핑 설정')).toBeInTheDocument();

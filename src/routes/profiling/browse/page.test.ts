@@ -2,8 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import Page from './+page.svelte';
 
-const { mockAddToast } = vi.hoisted(() => ({
-	mockAddToast: vi.fn()
+const { mockAddToast, mockScrollIntoView } = vi.hoisted(() => ({
+	mockAddToast: vi.fn(),
+	mockScrollIntoView: vi.fn()
 }));
 
 vi.mock('$lib/stores/toast-store', () => ({
@@ -18,6 +19,25 @@ function createJsonResponse(data: unknown, ok = true) {
 		ok,
 		json: () => Promise.resolve(data)
 	};
+}
+
+function createProfileTargets() {
+	return [
+		{
+			schema: 'public',
+			table: 'customers',
+			tableType: 'BASE TABLE',
+			estimatedRowCount: 1200,
+			columnCount: 4
+		},
+		...Array.from({ length: 11 }, (_, index) => ({
+			schema: 'public',
+			table: `table_${String(index + 2).padStart(2, '0')}`,
+			tableType: 'BASE TABLE',
+			estimatedRowCount: 100 + index,
+			columnCount: 3
+		}))
+	];
 }
 
 const sourceEntry = {
@@ -42,6 +62,10 @@ const sourceEntry = {
 describe('Profiling browse page', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		Object.defineProperty(window.HTMLElement.prototype, 'scrollIntoView', {
+			configurable: true,
+			value: mockScrollIntoView
+		});
 		mockFetch.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
 			const url = String(input);
 			const method = init?.method || 'GET';
@@ -64,15 +88,7 @@ describe('Profiling browse page', () => {
 							dataSourceName: '운영 PostgreSQL',
 							defaultSchema: 'public',
 							schemas: ['public'],
-							tables: [
-								{
-									schema: 'public',
-									table: 'customers',
-									tableType: 'BASE TABLE',
-									estimatedRowCount: 1200,
-									columnCount: 4
-								}
-							]
+							tables: createProfileTargets()
 						}
 					})
 				);
@@ -168,7 +184,20 @@ describe('Profiling browse page', () => {
 			expect(screen.getByLabelText('저장된 데이터 소스')).toBeInTheDocument();
 		});
 
-		await fireEvent.click(screen.getByRole('button', { name: '테이블 불러오기' }));
+		const targetSelectionCard = screen.getByText('대상 선택').closest('section');
+		expect(targetSelectionCard).not.toBeNull();
+		expect(
+			within(targetSelectionCard as HTMLElement).getByRole('button', { name: '테이블 불러오기' })
+		).toBeInTheDocument();
+		expect(
+			within(targetSelectionCard as HTMLElement).getByRole('button', {
+				name: '데이터 소스 새로고침'
+			})
+		).toBeInTheDocument();
+
+		await fireEvent.click(
+			within(targetSelectionCard as HTMLElement).getByRole('button', { name: '테이블 불러오기' })
+		);
 
 		await waitFor(() => {
 			expect(mockFetch).toHaveBeenCalledWith(
@@ -177,6 +206,7 @@ describe('Profiling browse page', () => {
 		});
 
 		expect(screen.getByText('customers')).toBeInTheDocument();
+		expect(screen.getAllByRole('button', { name: /프로파일링 실행$/ })).toHaveLength(10);
 
 		await fireEvent.click(screen.getByRole('button', { name: /customers 프로파일링 실행/ }));
 
@@ -194,6 +224,36 @@ describe('Profiling browse page', () => {
 		expect(screen.getAllByText('1,200').length).toBeGreaterThan(0);
 		expect(screen.getByText('품질 규칙 평가')).toBeInTheDocument();
 		expect(screen.getByText('고객 이메일 NULL 비율 5% 이하')).toBeInTheDocument();
+		expect(mockScrollIntoView).toHaveBeenCalled();
+	});
+
+	it('should paginate profile targets in groups of ten rows', async () => {
+		render(Page);
+
+		await waitFor(() => {
+			expect(screen.getByLabelText('저장된 데이터 소스')).toBeInTheDocument();
+		});
+
+		await fireEvent.click(screen.getByRole('button', { name: '테이블 불러오기' }));
+
+		await waitFor(() => {
+			expect(
+				screen.getByRole('navigation', { name: '프로파일링 대상 페이지네이션' })
+			).toBeInTheDocument();
+		});
+
+		expect(screen.getByText('customers')).toBeInTheDocument();
+		expect(screen.queryByText('table_11')).not.toBeInTheDocument();
+		expect(screen.getAllByRole('button', { name: /프로파일링 실행$/ })).toHaveLength(10);
+
+		await fireEvent.click(screen.getByRole('button', { name: '다음' }));
+
+		await waitFor(() => {
+			expect(screen.getByText('table_11')).toBeInTheDocument();
+		});
+
+		expect(screen.queryByText('customers')).not.toBeInTheDocument();
+		expect(screen.getAllByRole('button', { name: /프로파일링 실행$/ })).toHaveLength(2);
 	});
 
 	it('should show an empty state when there are no saved data sources', async () => {
@@ -226,7 +286,7 @@ describe('Profiling browse page', () => {
 		expect(summaryRegion).toHaveClass('lg:block');
 		expect(within(summaryRegion).getByText('저장된 데이터 소스')).toBeInTheDocument();
 		expect(within(summaryRegion).getByText('조회된 테이블')).toBeInTheDocument();
-		expect(within(summaryRegion).getByText('예상 행 수 합계')).toBeInTheDocument();
+		expect(within(summaryRegion).getByText('목록 페이지')).toBeInTheDocument();
 		expect(screen.queryByRole('button', { name: '사이드바 열기' })).not.toBeInTheDocument();
 	});
 });

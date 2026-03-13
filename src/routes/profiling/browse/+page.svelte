@@ -1,6 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-	import ActionBar from '$lib/components/ActionBar.svelte';
+	import { onMount, tick } from 'svelte';
 	import BentoCard from '$lib/components/BentoCard.svelte';
 	import BentoGrid from '$lib/components/BentoGrid.svelte';
 	import BrowsePageLayout from '$lib/components/BrowsePageLayout.svelte';
@@ -20,6 +19,8 @@
 
 	type ApiResponse<T> = { success: true; data: T } | { success: false; error?: string };
 
+	const TARGETS_PER_PAGE = 10;
+
 	let dataSources = $state<DataSourceSummaryEntry[]>([]);
 	let selectedDataSourceId = $state('');
 	let targetsResult = $state<DataSourceProfileTargetsResult | null>(null);
@@ -33,6 +34,8 @@
 	let targetError = $state('');
 	let profileError = $state('');
 	let activeTableKey = $state('');
+	let currentTargetPage = $state(1);
+	let profileResultSection = $state<HTMLElement | null>(null);
 
 	const selectedDataSource = $derived(
 		dataSources.find((entry) => entry.id === selectedDataSourceId) ?? null
@@ -60,6 +63,26 @@
 	const totalTargets = $derived(targetsResult?.tables.length ?? 0);
 	const totalEstimatedRows = $derived.by(() =>
 		(targetsResult?.tables ?? []).reduce((sum, target) => sum + (target.estimatedRowCount ?? 0), 0)
+	);
+	const targetTotalPages = $derived(
+		Math.max(1, Math.ceil(filteredTables.length / TARGETS_PER_PAGE))
+	);
+	const pagedTables = $derived.by(() => {
+		const startIndex = (currentTargetPage - 1) * TARGETS_PER_PAGE;
+		return filteredTables.slice(startIndex, startIndex + TARGETS_PER_PAGE);
+	});
+	const currentTargetRange = $derived.by(() => {
+		if (filteredTables.length === 0) {
+			return { start: 0, end: 0 };
+		}
+
+		const start = (currentTargetPage - 1) * TARGETS_PER_PAGE + 1;
+		const end = Math.min(filteredTables.length, currentTargetPage * TARGETS_PER_PAGE);
+
+		return { start, end };
+	});
+	const targetDisplayedPages = $derived.by(() =>
+		getDisplayedPages(currentTargetPage, targetTotalPages)
 	);
 
 	function formatNumber(value: number | undefined | null): string {
@@ -98,6 +121,38 @@
 		return [...entries].sort((a, b) => a.name.localeCompare(b.name, 'ko-KR'));
 	}
 
+	function getDisplayedPages(currentPage: number, totalPages: number): Array<number | string> {
+		if (totalPages <= 7) {
+			return Array.from({ length: totalPages }, (_, index) => index + 1);
+		}
+
+		if (currentPage <= 4) {
+			return [1, 2, 3, 4, 5, 'ellipsis-right', totalPages];
+		}
+
+		if (currentPage >= totalPages - 3) {
+			return [
+				1,
+				'ellipsis-left',
+				totalPages - 4,
+				totalPages - 3,
+				totalPages - 2,
+				totalPages - 1,
+				totalPages
+			];
+		}
+
+		return [
+			1,
+			'ellipsis-left',
+			currentPage - 1,
+			currentPage,
+			currentPage + 1,
+			'ellipsis-right',
+			totalPages
+		];
+	}
+
 	function resetTargets() {
 		targetsResult = null;
 		profileResult = null;
@@ -106,6 +161,7 @@
 		activeTableKey = '';
 		tableSearchQuery = '';
 		schemaFilter = 'all';
+		currentTargetPage = 1;
 	}
 
 	async function loadDataSources() {
@@ -162,6 +218,7 @@
 			targetsResult = result.data;
 			schemaFilter = 'all';
 			tableSearchQuery = '';
+			currentTargetPage = 1;
 		} catch (error) {
 			console.error('프로파일링 대상 조회 오류:', error);
 			targetError =
@@ -176,6 +233,29 @@
 	function handleDataSourceChange(event: Event) {
 		selectedDataSourceId = (event.target as HTMLSelectElement).value;
 		resetTargets();
+	}
+
+	function handleSchemaFilterChange(event: Event) {
+		schemaFilter = (event.target as HTMLSelectElement).value;
+		currentTargetPage = 1;
+	}
+
+	function handleTableSearchInput(event: Event) {
+		tableSearchQuery = (event.target as HTMLInputElement).value;
+		currentTargetPage = 1;
+	}
+
+	function handleTargetPageChange(page: number) {
+		if (page < 1 || page > targetTotalPages || page === currentTargetPage) {
+			return;
+		}
+
+		currentTargetPage = page;
+	}
+
+	async function moveToProfileResult() {
+		await tick();
+		profileResultSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 	}
 
 	async function runProfiling(target: DataSourceProfileTarget) {
@@ -207,11 +287,13 @@
 
 			profileResult = result.data;
 			addToast(`${target.schema}.${target.table} 프로파일링을 완료했습니다.`, 'success');
+			await moveToProfileResult();
 		} catch (error) {
 			console.error('프로파일링 실행 오류:', error);
 			profileError =
 				error instanceof Error ? error.message : '테이블 프로파일링 중 오류가 발생했습니다.';
 			addToast(profileError, 'error');
+			await moveToProfileResult();
 		} finally {
 			profiling = false;
 		}
@@ -242,33 +324,10 @@
 		items={[
 			{ label: '저장된 데이터 소스', value: dataSources.length },
 			{ label: '조회된 테이블', value: totalTargets },
+			{ label: '목록 페이지', value: `${currentTargetPage} / ${targetTotalPages}` },
 			{ label: '예상 행 수 합계', value: formatNumber(totalEstimatedRows), span: 2 }
 		]}
 	/>
-{/snippet}
-
-{#snippet actions()}
-	<ActionBar alignment="right">
-		<!-- 1순위: 실행(테이블 불러오기), 2순위: 보조 액션(새로고침) -->
-		<button
-			type="button"
-			class="btn btn-primary"
-			onclick={loadTargets}
-			disabled={loadingSources || loadingTargets || !selectedDataSourceId}
-		>
-			<Icon name={loadingTargets ? 'spinner' : 'search'} size="sm" />
-			<span>{loadingTargets ? '불러오는 중...' : '테이블 불러오기'}</span>
-		</button>
-		<button
-			type="button"
-			class="btn btn-secondary"
-			onclick={loadDataSources}
-			disabled={loadingSources}
-		>
-			<Icon name={loadingSources ? 'spinner' : 'refresh'} size="sm" />
-			<span>{loadingSources ? '로딩 중...' : '데이터 소스 새로고침'}</span>
-		</button>
-	</ActionBar>
 {/snippet}
 
 <BrowsePageLayout
@@ -278,7 +337,6 @@
 	sidebarSurface="plain"
 	mobileSidebarEnabled={false}
 	{sidebar}
-	{actions}
 >
 	<BentoGrid gapClass="gap-6">
 		<div class="col-span-12">
@@ -327,10 +385,244 @@
 								</p>
 							</div>
 						{/if}
+
+						<div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+							<button
+								type="button"
+								class="btn btn-secondary"
+								onclick={loadDataSources}
+								disabled={loadingSources}
+							>
+								<Icon name={loadingSources ? 'spinner' : 'refresh'} size="sm" />
+								<span>{loadingSources ? '로딩 중...' : '데이터 소스 새로고침'}</span>
+							</button>
+							<button
+								type="button"
+								class="btn btn-primary"
+								onclick={loadTargets}
+								disabled={loadingSources || loadingTargets || !selectedDataSourceId}
+							>
+								<Icon name={loadingTargets ? 'spinner' : 'search'} size="sm" />
+								<span>{loadingTargets ? '불러오는 중...' : '테이블 불러오기'}</span>
+							</button>
+						</div>
 					</div>
 				{/if}
 			</BentoCard>
 		</div>
+
+		{#if profileResult || profileError}
+			<div class="col-span-12">
+				<div bind:this={profileResultSection}>
+					<BentoCard
+						title="프로파일링 결과"
+						subtitle={profileResult
+							? `${profileResult.schema}.${profileResult.table} / ${profileResult.columns.length}개 컬럼`
+							: '실행 오류'}
+					>
+						{#if profileError}
+							<div
+								class="rounded-lg border border-status-error-border bg-status-error-bg p-4 text-sm text-status-error"
+							>
+								{profileError}
+							</div>
+						{/if}
+
+						{#if profileResult}
+							<div class="grid gap-3 text-sm sm:grid-cols-3">
+								<div class="rounded-lg bg-surface-muted p-4">
+									<p class="text-xs text-content-muted">총 행 수</p>
+									<p class="mt-1 text-2xl font-semibold text-content">
+										{formatNumber(profileResult.rowCount)}건
+									</p>
+								</div>
+								<div class="rounded-lg bg-surface-muted p-4">
+									<p class="text-xs text-content-muted">프로파일링 컬럼</p>
+									<p class="mt-1 text-2xl font-semibold text-content">
+										{formatNumber(profileResult.columns.length)}개
+									</p>
+								</div>
+								<div class="rounded-lg bg-surface-muted p-4">
+									<p class="text-xs text-content-muted">실행 시각</p>
+									<p class="mt-1 text-sm font-medium text-content">{profileResult.profiledAt}</p>
+								</div>
+							</div>
+
+							{#if profileResult.qualityRuleEvaluation}
+								<div class="mt-5 rounded-xl border border-border bg-surface-muted p-4">
+									<div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+										<div>
+											<h3 class="text-base font-semibold text-content">품질 규칙 평가</h3>
+											<p class="mt-1 text-sm text-content-muted">
+												활성 규칙 {profileResult.qualityRuleEvaluation.summary.totalRules}건 중 매칭 {profileResult
+													.qualityRuleEvaluation.summary.matchedRules}건
+											</p>
+										</div>
+										<p class="text-xs text-content-muted">
+											평가 시각: {profileResult.qualityRuleEvaluation.evaluatedAt}
+										</p>
+									</div>
+
+									<div class="mt-4 grid gap-3 text-sm sm:grid-cols-4">
+										<div class="rounded-lg bg-surface p-4">
+											<p class="text-xs text-content-muted">통과 규칙</p>
+											<p class="mt-1 text-2xl font-semibold text-content">
+												{formatNumber(profileResult.qualityRuleEvaluation.summary.passedRules)}
+											</p>
+										</div>
+										<div class="rounded-lg bg-surface p-4">
+											<p class="text-xs text-content-muted">실패 규칙</p>
+											<p class="mt-1 text-2xl font-semibold text-content">
+												{formatNumber(profileResult.qualityRuleEvaluation.summary.failedRules)}
+											</p>
+										</div>
+										<div class="rounded-lg bg-surface p-4">
+											<p class="text-xs text-content-muted">warning 위반</p>
+											<p class="mt-1 text-2xl font-semibold text-content">
+												{formatNumber(profileResult.qualityRuleEvaluation.summary.warningCount)}
+											</p>
+										</div>
+										<div class="rounded-lg bg-surface p-4">
+											<p class="text-xs text-content-muted">error 위반</p>
+											<p class="mt-1 text-2xl font-semibold text-content">
+												{formatNumber(profileResult.qualityRuleEvaluation.summary.errorCount)}
+											</p>
+										</div>
+									</div>
+
+									{#if profileResult.qualityRuleEvaluation.violations.length > 0}
+										<div class="mt-4 overflow-x-auto rounded-xl border border-border bg-surface">
+											<table class="min-w-full divide-y divide-border text-sm">
+												<thead class="bg-surface-muted">
+													<tr>
+														<th class="px-4 py-3 text-left font-semibold text-content-secondary">
+															규칙
+														</th>
+														<th class="px-4 py-3 text-left font-semibold text-content-secondary">
+															대상
+														</th>
+														<th class="px-4 py-3 text-left font-semibold text-content-secondary">
+															심각도
+														</th>
+														<th class="px-4 py-3 text-left font-semibold text-content-secondary">
+															메트릭
+														</th>
+														<th class="px-4 py-3 text-left font-semibold text-content-secondary">
+															실제값 / 기준
+														</th>
+													</tr>
+												</thead>
+												<tbody class="divide-y divide-border bg-surface">
+													{#each profileResult.qualityRuleEvaluation.violations as violation (`${violation.ruleId}:${violation.target.column ?? violation.target.table}`)}
+														<tr>
+															<td class="px-4 py-3 align-top">
+																<p class="font-medium text-content">{violation.ruleName}</p>
+																<p class="mt-1 text-xs text-content-muted">{violation.message}</p>
+															</td>
+															<td class="px-4 py-3 align-top text-content-secondary">
+																{violation.target.schema}.{violation.target.table}
+																{#if violation.target.column}
+																	.{violation.target.column}
+																{/if}
+															</td>
+															<td class="px-4 py-3 align-top">
+																<span class={`badge ${severityBadgeClass(violation.severity)}`}>
+																	{violation.severity}
+																</span>
+															</td>
+															<td class="px-4 py-3 align-top text-content-secondary">
+																{violation.metric}
+																{violation.operator}
+															</td>
+															<td class="px-4 py-3 align-top text-content-secondary">
+																{formatRuleMetricValue(violation.metric, violation.actualValue)}
+																/
+																{formatRuleMetricValue(violation.metric, violation.threshold)}
+															</td>
+														</tr>
+													{/each}
+												</tbody>
+											</table>
+										</div>
+									{:else if profileResult.qualityRuleEvaluation.summary.totalRules === 0}
+										<div
+											class="mt-4 rounded-lg border border-status-info-border bg-status-info-bg p-4 text-sm text-status-info"
+										>
+											활성 품질 규칙이 없습니다. `품질 규칙` 메뉴에서 규칙을 추가하면 프로파일링
+											결과와 함께 평가됩니다.
+										</div>
+									{:else}
+										<div
+											class="mt-4 rounded-lg border border-status-success-border bg-status-success-bg p-4 text-sm text-status-success"
+										>
+											매칭된 품질 규칙 위반이 없습니다.
+										</div>
+									{/if}
+								</div>
+							{/if}
+
+							<div class="mt-5 overflow-x-auto rounded-xl border border-border">
+								<table class="min-w-full divide-y divide-border text-sm">
+									<thead class="bg-surface-muted">
+										<tr>
+											<th class="px-4 py-3 text-left font-semibold text-content-secondary">컬럼</th>
+											<th class="px-4 py-3 text-left font-semibold text-content-secondary">타입</th>
+											<th class="px-4 py-3 text-left font-semibold text-content-secondary">NULL</th>
+											<th class="px-4 py-3 text-left font-semibold text-content-secondary">
+												NULL 비율
+											</th>
+											<th class="px-4 py-3 text-left font-semibold text-content-secondary">
+												Distinct
+											</th>
+											<th class="px-4 py-3 text-left font-semibold text-content-secondary">
+												Distinct 비율
+											</th>
+											<th class="px-4 py-3 text-left font-semibold text-content-secondary">
+												길이 범위
+											</th>
+										</tr>
+									</thead>
+									<tbody class="divide-y divide-border bg-surface">
+										{#each profileResult.columns as column (column.columnName)}
+											<tr>
+												<td class="px-4 py-3 align-top">
+													<p class="font-medium text-content">{column.columnName}</p>
+													<p class="mt-1 text-xs text-content-muted">
+														순서 {column.ordinalPosition} / {column.isNullable
+															? 'NULL 허용'
+															: 'NOT NULL'}
+													</p>
+												</td>
+												<td class="px-4 py-3 align-top text-content-secondary">
+													{column.dataType}
+												</td>
+												<td class="px-4 py-3 align-top text-content-secondary">
+													{formatNumber(column.nullCount)}
+												</td>
+												<td class="px-4 py-3 align-top text-content-secondary">
+													{formatRatio(column.nullRatio)}
+												</td>
+												<td class="px-4 py-3 align-top text-content-secondary">
+													{formatNumber(column.distinctCount)}
+												</td>
+												<td class="px-4 py-3 align-top text-content-secondary">
+													{formatRatio(column.distinctRatio)}
+												</td>
+												<td class="px-4 py-3 align-top text-content-secondary">
+													{column.minLength !== undefined && column.maxLength !== undefined
+														? `${formatNumber(column.minLength)} ~ ${formatNumber(column.maxLength)}`
+														: '-'}
+												</td>
+											</tr>
+										{/each}
+									</tbody>
+								</table>
+							</div>
+						{/if}
+					</BentoCard>
+				</div>
+			</div>
+		{/if}
 
 		{#if targetsResult}
 			<div class="col-span-12">
@@ -343,7 +635,8 @@
 							<select
 								id="profiling-schema-filter"
 								class="input"
-								bind:value={schemaFilter}
+								value={schemaFilter}
+								onchange={handleSchemaFilterChange}
 								aria-label="스키마 필터"
 							>
 								{#each schemaOptions as option (option)}
@@ -358,7 +651,8 @@
 							<input
 								id="profiling-table-search"
 								class="input"
-								bind:value={tableSearchQuery}
+								value={tableSearchQuery}
+								oninput={handleTableSearchInput}
 								placeholder="schema.table 또는 테이블명으로 검색"
 								aria-label="테이블 검색"
 							/>
@@ -372,7 +666,11 @@
 			<BentoCard
 				title="프로파일링 대상 테이블"
 				subtitle={targetsResult
-					? `검색 결과 ${filteredTables.length}건 / 전체 ${targetsResult.tables.length}건`
+					? `검색 결과 ${filteredTables.length}건 / 전체 ${targetsResult.tables.length}건${
+							filteredTables.length > 0
+								? ` · ${currentTargetRange.start}-${currentTargetRange.end}건 표시`
+								: ''
+						}`
 					: '데이터 소스를 선택하고 테이블을 불러오면 목록이 표시됩니다.'}
 			>
 				{#if targetError}
@@ -414,7 +712,7 @@
 								</tr>
 							</thead>
 							<tbody class="divide-y divide-border bg-surface">
-								{#each filteredTables as target (`${target.schema}.${target.table}`)}
+								{#each pagedTables as target (`${target.schema}.${target.table}`)}
 									<tr
 										class="hover:bg-surface-muted/70"
 										aria-label={`${target.schema}.${target.table}`}
@@ -452,217 +750,59 @@
 							</tbody>
 						</table>
 					</div>
+
+					{#if targetTotalPages > 1}
+						<div
+							class="mt-4 flex flex-col gap-4 rounded-xl border border-border bg-surface-muted px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+						>
+							<p class="text-sm text-content-muted">
+								총 <span class="font-semibold text-content">{targetTotalPages}</span> 페이지 중
+								<span class="font-semibold text-content">{currentTargetPage}</span> 페이지
+							</p>
+
+							<nav
+								class="flex flex-wrap items-center justify-end gap-2"
+								aria-label="프로파일링 대상 페이지네이션"
+							>
+								<button
+									type="button"
+									class="btn btn-outline btn-sm"
+									onclick={() => handleTargetPageChange(currentTargetPage - 1)}
+									disabled={currentTargetPage === 1}
+								>
+									이전
+								</button>
+
+								{#each targetDisplayedPages as page, index (`${page}-${index}`)}
+									{#if typeof page === 'number'}
+										<button
+											type="button"
+											class={`btn btn-sm ${
+												currentTargetPage === page ? 'btn-primary' : 'btn-outline'
+											}`}
+											onclick={() => handleTargetPageChange(page)}
+											aria-current={currentTargetPage === page ? 'page' : undefined}
+										>
+											{page}
+										</button>
+									{:else}
+										<span class="px-1 text-sm font-medium text-content-muted">...</span>
+									{/if}
+								{/each}
+
+								<button
+									type="button"
+									class="btn btn-outline btn-sm"
+									onclick={() => handleTargetPageChange(currentTargetPage + 1)}
+									disabled={currentTargetPage === targetTotalPages}
+								>
+									다음
+								</button>
+							</nav>
+						</div>
+					{/if}
 				{/if}
 			</BentoCard>
 		</div>
-
-		{#if profileResult || profileError}
-			<div class="col-span-12">
-				<BentoCard
-					title="프로파일링 결과"
-					subtitle={profileResult
-						? `${profileResult.schema}.${profileResult.table} / ${profileResult.columns.length}개 컬럼`
-						: '실행 오류'}
-				>
-					{#if profileError}
-						<div
-							class="rounded-lg border border-status-error-border bg-status-error-bg p-4 text-sm text-status-error"
-						>
-							{profileError}
-						</div>
-					{/if}
-
-					{#if profileResult}
-						<div class="grid gap-3 text-sm sm:grid-cols-3">
-							<div class="rounded-lg bg-surface-muted p-4">
-								<p class="text-xs text-content-muted">총 행 수</p>
-								<p class="mt-1 text-2xl font-semibold text-content">
-									{formatNumber(profileResult.rowCount)}건
-								</p>
-							</div>
-							<div class="rounded-lg bg-surface-muted p-4">
-								<p class="text-xs text-content-muted">프로파일링 컬럼</p>
-								<p class="mt-1 text-2xl font-semibold text-content">
-									{formatNumber(profileResult.columns.length)}개
-								</p>
-							</div>
-							<div class="rounded-lg bg-surface-muted p-4">
-								<p class="text-xs text-content-muted">실행 시각</p>
-								<p class="mt-1 text-sm font-medium text-content">{profileResult.profiledAt}</p>
-							</div>
-						</div>
-
-						{#if profileResult.qualityRuleEvaluation}
-							<div class="mt-5 rounded-xl border border-border bg-surface-muted p-4">
-								<div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-									<div>
-										<h3 class="text-base font-semibold text-content">품질 규칙 평가</h3>
-										<p class="mt-1 text-sm text-content-muted">
-											활성 규칙 {profileResult.qualityRuleEvaluation.summary.totalRules}건 중 매칭
-											{profileResult.qualityRuleEvaluation.summary.matchedRules}건
-										</p>
-									</div>
-									<p class="text-xs text-content-muted">
-										평가 시각: {profileResult.qualityRuleEvaluation.evaluatedAt}
-									</p>
-								</div>
-
-								<div class="mt-4 grid gap-3 text-sm sm:grid-cols-4">
-									<div class="rounded-lg bg-surface p-4">
-										<p class="text-xs text-content-muted">통과 규칙</p>
-										<p class="mt-1 text-2xl font-semibold text-content">
-											{formatNumber(profileResult.qualityRuleEvaluation.summary.passedRules)}
-										</p>
-									</div>
-									<div class="rounded-lg bg-surface p-4">
-										<p class="text-xs text-content-muted">실패 규칙</p>
-										<p class="mt-1 text-2xl font-semibold text-content">
-											{formatNumber(profileResult.qualityRuleEvaluation.summary.failedRules)}
-										</p>
-									</div>
-									<div class="rounded-lg bg-surface p-4">
-										<p class="text-xs text-content-muted">warning 위반</p>
-										<p class="mt-1 text-2xl font-semibold text-content">
-											{formatNumber(profileResult.qualityRuleEvaluation.summary.warningCount)}
-										</p>
-									</div>
-									<div class="rounded-lg bg-surface p-4">
-										<p class="text-xs text-content-muted">error 위반</p>
-										<p class="mt-1 text-2xl font-semibold text-content">
-											{formatNumber(profileResult.qualityRuleEvaluation.summary.errorCount)}
-										</p>
-									</div>
-								</div>
-
-								{#if profileResult.qualityRuleEvaluation.violations.length > 0}
-									<div class="mt-4 overflow-x-auto rounded-xl border border-border bg-surface">
-										<table class="min-w-full divide-y divide-border text-sm">
-											<thead class="bg-surface-muted">
-												<tr>
-													<th class="px-4 py-3 text-left font-semibold text-content-secondary">
-														규칙
-													</th>
-													<th class="px-4 py-3 text-left font-semibold text-content-secondary">
-														대상
-													</th>
-													<th class="px-4 py-3 text-left font-semibold text-content-secondary">
-														심각도
-													</th>
-													<th class="px-4 py-3 text-left font-semibold text-content-secondary">
-														메트릭
-													</th>
-													<th class="px-4 py-3 text-left font-semibold text-content-secondary">
-														실제값 / 기준
-													</th>
-												</tr>
-											</thead>
-											<tbody class="divide-y divide-border bg-surface">
-												{#each profileResult.qualityRuleEvaluation.violations as violation (`${violation.ruleId}:${violation.target.column ?? violation.target.table}`)}
-													<tr>
-														<td class="px-4 py-3 align-top">
-															<p class="font-medium text-content">{violation.ruleName}</p>
-															<p class="mt-1 text-xs text-content-muted">{violation.message}</p>
-														</td>
-														<td class="px-4 py-3 align-top text-content-secondary">
-															{violation.target.schema}.{violation.target.table}
-															{#if violation.target.column}
-																.{violation.target.column}
-															{/if}
-														</td>
-														<td class="px-4 py-3 align-top">
-															<span class={`badge ${severityBadgeClass(violation.severity)}`}>
-																{violation.severity}
-															</span>
-														</td>
-														<td class="px-4 py-3 align-top text-content-secondary">
-															{violation.metric}
-															{violation.operator}
-														</td>
-														<td class="px-4 py-3 align-top text-content-secondary">
-															{formatRuleMetricValue(violation.metric, violation.actualValue)}
-															/
-															{formatRuleMetricValue(violation.metric, violation.threshold)}
-														</td>
-													</tr>
-												{/each}
-											</tbody>
-										</table>
-									</div>
-								{:else if profileResult.qualityRuleEvaluation.summary.totalRules === 0}
-									<div
-										class="mt-4 rounded-lg border border-status-info-border bg-status-info-bg p-4 text-sm text-status-info"
-									>
-										활성 품질 규칙이 없습니다. `품질 규칙` 메뉴에서 규칙을 추가하면 프로파일링
-										결과와 함께 평가됩니다.
-									</div>
-								{:else}
-									<div
-										class="mt-4 rounded-lg border border-status-success-border bg-status-success-bg p-4 text-sm text-status-success"
-									>
-										매칭된 품질 규칙 위반이 없습니다.
-									</div>
-								{/if}
-							</div>
-						{/if}
-
-						<div class="mt-5 overflow-x-auto rounded-xl border border-border">
-							<table class="min-w-full divide-y divide-border text-sm">
-								<thead class="bg-surface-muted">
-									<tr>
-										<th class="px-4 py-3 text-left font-semibold text-content-secondary">컬럼</th>
-										<th class="px-4 py-3 text-left font-semibold text-content-secondary">타입</th>
-										<th class="px-4 py-3 text-left font-semibold text-content-secondary">NULL</th>
-										<th class="px-4 py-3 text-left font-semibold text-content-secondary"
-											>NULL 비율</th
-										>
-										<th class="px-4 py-3 text-left font-semibold text-content-secondary">
-											Distinct
-										</th>
-										<th class="px-4 py-3 text-left font-semibold text-content-secondary">
-											Distinct 비율
-										</th>
-										<th class="px-4 py-3 text-left font-semibold text-content-secondary"
-											>길이 범위</th
-										>
-									</tr>
-								</thead>
-								<tbody class="divide-y divide-border bg-surface">
-									{#each profileResult.columns as column (column.columnName)}
-										<tr>
-											<td class="px-4 py-3 align-top">
-												<p class="font-medium text-content">{column.columnName}</p>
-												<p class="mt-1 text-xs text-content-muted">
-													순서 {column.ordinalPosition} / {column.isNullable
-														? 'NULL 허용'
-														: 'NOT NULL'}
-												</p>
-											</td>
-											<td class="px-4 py-3 align-top text-content-secondary">{column.dataType}</td>
-											<td class="px-4 py-3 align-top text-content-secondary">
-												{formatNumber(column.nullCount)}
-											</td>
-											<td class="px-4 py-3 align-top text-content-secondary">
-												{formatRatio(column.nullRatio)}
-											</td>
-											<td class="px-4 py-3 align-top text-content-secondary">
-												{formatNumber(column.distinctCount)}
-											</td>
-											<td class="px-4 py-3 align-top text-content-secondary">
-												{formatRatio(column.distinctRatio)}
-											</td>
-											<td class="px-4 py-3 align-top text-content-secondary">
-												{column.minLength !== undefined && column.maxLength !== undefined
-													? `${formatNumber(column.minLength)} ~ ${formatNumber(column.maxLength)}`
-													: '-'}
-											</td>
-										</tr>
-									{/each}
-								</tbody>
-							</table>
-						</div>
-					{/if}
-				</BentoCard>
-			</div>
-		{/if}
 	</BentoGrid>
 </BrowsePageLayout>

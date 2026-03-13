@@ -10,8 +10,8 @@
 | `quality-rules/server.test.ts`            | 6개       | 완료 |
 | `quality-rule/browse/page.test.ts`        | 3개       | 완료 |
 | `data-sources/profile/run/server.test.ts` | 4개       | 완료 |
-| `profiling/browse/page.test.ts`           | 3개       | 완료 |
-| **합계**                                  | **19개**  |      |
+| `profiling/browse/page.test.ts`           | 4개       | 완료 |
+| **합계**                                  | **20개**  |      |
 
 ---
 
@@ -75,17 +75,18 @@
 
 ---
 
-## 5. profiling/browse/page.test.ts (3개)
+## 5. profiling/browse/page.test.ts (4개)
 
 **파일 경로**: `src/routes/profiling/browse/page.test.ts`
 
 프로파일링 결과 화면에 품질 규칙 평가 요약과 위반 목록이 함께 표시되는지 테스트합니다.
 
-| 테스트명                                                                           | 설명                | 검증 내용                                                                   |
-| ---------------------------------------------------------------------------------- | ------------------- | --------------------------------------------------------------------------- |
-| should load profile targets for the selected data source and render the result     | 화면 기본 성공 흐름 | 대상 조회, 프로파일링 실행, 컬럼 결과 및 규칙 평가 요약 표시                |
-| should show an empty state when there are no saved data sources                    | 빈 상태 처리        | 데이터 소스가 없을 때 안내 문구와 이동 CTA 표시                             |
-| should render the desktop-only summary in the left sidebar without a mobile toggle | 요약 sidebar 고정   | 좌측 요약 region 렌더링, `hidden lg:block`, 모바일 sidebar 열기 버튼 미노출 |
+| 테스트명                                                                           | 설명                | 검증 내용                                                                       |
+| ---------------------------------------------------------------------------------- | ------------------- | ------------------------------------------------------------------------------- |
+| should load profile targets for the selected data source and render the result     | 화면 기본 성공 흐름 | 대상 조회, 프로파일링 실행, 컬럼 결과 및 규칙 평가 요약 표시                    |
+| should paginate profile targets in groups of ten rows                              | 목록 페이지네이션   | 프로파일링 대상이 많을 때 10건씩 페이지를 나눠 보고 다음 목록으로 이동 가능     |
+| should show an empty state when there are no saved data sources                    | 빈 상태 처리        | 데이터 소스가 없을 때 안내 문구와 이동 CTA 표시                                 |
+| should render the desktop-only summary in the left sidebar without a mobile toggle | 요약 sidebar 고정   | 좌측 요약 region 렌더링, 현재 목록 페이지 표시, 모바일 sidebar 열기 버튼 미노출 |
 
 ---
 

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import Page from './+page.svelte';
 
 const { mockAddToast, mockShowConfirm } = vi.hoisted(() => ({
@@ -158,5 +158,23 @@ describe('Quality rule browse page', () => {
 		});
 
 		expect(screen.getByText('고객 수 1건 이상')).toBeInTheDocument();
+	});
+
+	it('should render the summary in the left sidebar and keep the mobile sidebar disabled', async () => {
+		render(Page);
+
+		await waitFor(() => {
+			expect(screen.getByText('고객 이메일 NULL 비율 5% 이하')).toBeInTheDocument();
+		});
+
+		const summaryRegion = screen.getByRole('region', { name: '품질 규칙 요약' });
+		expect(summaryRegion.closest('aside')).not.toBeNull();
+		expect(summaryRegion).toHaveClass('hidden');
+		expect(summaryRegion).toHaveClass('lg:block');
+		expect(within(summaryRegion).getByText('전체 규칙')).toBeInTheDocument();
+		expect(within(summaryRegion).getByText('활성 규칙')).toBeInTheDocument();
+		expect(within(summaryRegion).getByText('column 규칙')).toBeInTheDocument();
+		expect(within(summaryRegion).getByText('warning 규칙')).toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: '사이드바 열기' })).not.toBeInTheDocument();
 	});
 });

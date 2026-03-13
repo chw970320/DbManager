@@ -172,4 +172,21 @@ describe('Snapshot browse page', () => {
 		expect(screen.getByText('표준 보정 전')).toBeInTheDocument();
 		expect(mockAddToast).toHaveBeenCalledWith('스냅샷을 저장했습니다.', 'success');
 	});
+
+	it('should render the summary in the left sidebar and not expose a mobile sidebar toggle', async () => {
+		render(Page);
+
+		await waitFor(() => {
+			expect(screen.getByText('기준 스냅샷')).toBeInTheDocument();
+		});
+
+		const summaryRegion = screen.getByRole('region', { name: '스냅샷 요약' });
+		expect(summaryRegion.closest('aside')).not.toBeNull();
+		expect(summaryRegion).toHaveClass('hidden');
+		expect(summaryRegion).toHaveClass('lg:block');
+		expect(within(summaryRegion).getByText('저장된 스냅샷')).toBeInTheDocument();
+		expect(within(summaryRegion).getByText('사용 가능한 번들')).toBeInTheDocument();
+		expect(within(summaryRegion).getByText('최근 복원')).toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: '사이드바 열기' })).not.toBeInTheDocument();
+	});
 });

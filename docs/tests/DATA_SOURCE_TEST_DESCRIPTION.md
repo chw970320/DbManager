@@ -9,8 +9,8 @@
 | `data-source-registry.test.ts`     | 3개       | 완료 |
 | `data-sources/server.test.ts`      | 7개       | 완료 |
 | `data-sources/test/server.test.ts` | 5개       | 완료 |
-| `data-source/browse/page.test.ts`  | 3개       | 완료 |
-| **합계**                           | **18개**  |      |
+| `data-source/browse/page.test.ts`  | 4개       | 완료 |
+| **합계**                           | **19개**  |      |
 
 ---
 
@@ -62,7 +62,7 @@
 
 ---
 
-## 4. data-source/browse/page.test.ts (3개)
+## 4. data-source/browse/page.test.ts (4개)
 
 **파일 경로**: `src/routes/data-source/browse/page.test.ts`
 
@@ -73,6 +73,7 @@
 | should load the saved data sources and run a connection test from the list            | 목록 조회 및 행 테스트           | GET 목록 로드, 저장된 연결 테스트 성공 메시지 표시                                           |
 | should allow direct connection test and creation from the editor modal                | 모달 기반 테스트/생성            | 직접 연결 테스트 실행 후 POST 저장 및 목록 반영                                              |
 | should render breadcrumb navigation and expose peer lv1 and lv2 menus from each crumb | breadcrumb 레벨별 메뉴 이동 노출 | `lv1` crumb에서 `표준 용어/DB 설계`, `lv2` crumb에서 `품질 규칙/프로파일링/스냅샷` 링크 확인 |
+| should place the summary in the left sidebar and omit the mobile sidebar toggle       | 요약 sidebar 고정                | 좌측 요약 region 렌더링, `hidden lg:block`, 모바일 sidebar 열기 버튼 미노출                  |
 
 ---
 

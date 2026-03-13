@@ -220,4 +220,21 @@ describe('Data source browse page', () => {
 			'/snapshot/browse'
 		);
 	});
+
+	it('should place the summary in the left sidebar and omit the mobile sidebar toggle', async () => {
+		render(Page);
+
+		await waitFor(() => {
+			expect(screen.getByText('운영 PostgreSQL')).toBeInTheDocument();
+		});
+
+		const summaryRegion = screen.getByRole('region', { name: '데이터 소스 요약' });
+		expect(summaryRegion.closest('aside')).not.toBeNull();
+		expect(summaryRegion).toHaveClass('hidden');
+		expect(summaryRegion).toHaveClass('lg:block');
+		expect(within(summaryRegion).getByText('저장된 연결')).toBeInTheDocument();
+		expect(within(summaryRegion).getByText('SSL 사용')).toBeInTheDocument();
+		expect(within(summaryRegion).getByText('비밀번호 저장됨')).toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: '사이드바 열기' })).not.toBeInTheDocument();
+	});
 });

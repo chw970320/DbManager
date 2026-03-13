@@ -4,6 +4,7 @@
 	import BentoCard from '$lib/components/BentoCard.svelte';
 	import BentoGrid from '$lib/components/BentoGrid.svelte';
 	import BrowsePageLayout from '$lib/components/BrowsePageLayout.svelte';
+	import BrowseSidebarSummary from '$lib/components/BrowseSidebarSummary.svelte';
 	import DataSourceEditor from '$lib/components/DataSourceEditor.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import Icon from '$lib/components/Icon.svelte';
@@ -341,6 +342,19 @@
 	<meta name="description" content="PostgreSQL 데이터 소스를 등록하고 연결 테스트를 수행합니다." />
 </svelte:head>
 
+{#snippet sidebar()}
+	<BrowseSidebarSummary
+		variant="card"
+		ariaLabel="데이터 소스 요약"
+		subtitle="저장된 연결 현황"
+		items={[
+			{ label: '저장된 연결', value: entries.length },
+			{ label: 'SSL 사용', value: sslEnabledCount },
+			{ label: '비밀번호 저장됨', value: passwordConfiguredCount, span: 2 }
+		]}
+	/>
+{/snippet}
+
 {#snippet actions()}
 	<ActionBar alignment="right">
 		<button type="button" class="btn btn-primary" onclick={openCreateEditor} disabled={loading}>
@@ -358,6 +372,9 @@
 	title="데이터 소스"
 	description="저장 가능한 연결 정의를 관리하고 PostgreSQL 연결 테스트를 실행합니다."
 	breadcrumbItems={getNavigationBreadcrumbItems('/data-source/browse')}
+	sidebarSurface="plain"
+	mobileSidebarEnabled={false}
+	{sidebar}
 	{actions}
 >
 	<DataSourceEditor
@@ -373,8 +390,8 @@
 	/>
 
 	<BentoGrid gapClass="gap-6">
-		<!-- 1. 검색 영역 + 요약을 한 줄에 배치해 상단 여백과 공백을 줄임 -->
-		<div class="col-span-12 lg:col-span-7">
+		<!-- 1. 검색은 본문 전체 폭으로 유지하고 요약은 좌측 sidebar에서 보조 정보로 제공 -->
+		<div class="col-span-12">
 			<BentoCard title="검색" subtitle="연결 이름, 호스트, 데이터베이스, 사용자명으로 검색">
 				<SearchBar
 					placeholder="연결 이름, 호스트, 데이터베이스, 사용자명으로 검색하세요..."
@@ -385,50 +402,6 @@
 					onsearch={handleSearch}
 					onclear={handleSearchClear}
 				/>
-			</BentoCard>
-		</div>
-
-		<!-- 2. 요약 카드: 검색 카드 옆으로 붙여 상단을 채움 -->
-		<div class="col-span-12 lg:col-span-5">
-			<BentoCard title="요약" subtitle="저장된 연결 현황">
-				<div class="grid gap-3 text-sm sm:grid-cols-3 lg:grid-cols-1">
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="text-xs text-content-muted">저장된 연결</p>
-						<p class="mt-1 text-2xl font-semibold text-content">{entries.length}</p>
-					</div>
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="text-xs text-content-muted">SSL 사용</p>
-						<p class="mt-1 text-2xl font-semibold text-content">{sslEnabledCount}</p>
-					</div>
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="text-xs text-content-muted">비밀번호 저장됨</p>
-						<p class="mt-1 text-2xl font-semibold text-content">{passwordConfiguredCount}</p>
-					</div>
-				</div>
-			</BentoCard>
-		</div>
-
-		<div class="col-span-12 lg:col-span-6">
-			<BentoCard
-				eyebrow="현재 지원"
-				title="PostgreSQL 연결 관리"
-				subtitle="확장 가능한 구조로 시작하되, 첫 단계는 PostgreSQL만 지원합니다."
-				class="bg-gradient-to-r from-sky-50 via-white to-emerald-50"
-			>
-				<div class="grid gap-3 text-sm text-content-secondary sm:grid-cols-2">
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="font-medium text-content">저장 위치</p>
-						<p class="mt-1 break-all">
-							<code class="font-mono text-xs">static/data/settings/data-sources.json</code>
-						</p>
-					</div>
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="font-medium text-content">확장 방향</p>
-						<p class="mt-1">
-							타입 분기와 연결 테스트 유틸리티를 기준으로 이후 DBMS를 추가할 수 있습니다.
-						</p>
-					</div>
-				</div>
 			</BentoCard>
 		</div>
 

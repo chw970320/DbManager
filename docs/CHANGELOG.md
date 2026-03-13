@@ -4,6 +4,62 @@
 
 ### 요약
 
+- 표준 용어/DB 설계 browse 화면의 파일 선택/결과 요약 sidebar UI가 모두 같은 `plain sidebar + 개별 floating 카드` 패턴으로 통일됐습니다.
+- 운영 · 품질 browse 화면도 요약 정보를 좌측 sticky sidebar로 옮겼고, summary-only sidebar는 모바일에서 버튼/드로어를 노출하지 않습니다.
+- 좌측으로 이동한 요약은 모두 `lg` 미만 화면에서 숨겨져 모바일과 소형 화면 밀도를 낮춥니다.
+
+### 상세 변경
+
+1. browse 요약/사이드바 패턴 통일
+
+- 대상:
+  - `src/lib/components/BrowsePageLayout.svelte`
+  - `src/lib/components/BrowseSidebarSummary.svelte`
+  - `src/routes/browse/+page.svelte`
+  - `src/routes/domain/browse/+page.svelte`
+  - `src/routes/term/browse/+page.svelte`
+  - `src/routes/database/browse/+page.svelte`
+  - `src/routes/entity/browse/+page.svelte`
+  - `src/routes/attribute/browse/+page.svelte`
+  - `src/routes/table/browse/+page.svelte`
+  - `src/routes/column/browse/+page.svelte`
+  - `src/routes/data-source/browse/+page.svelte`
+  - `src/routes/profiling/browse/+page.svelte`
+  - `src/routes/quality-rule/browse/+page.svelte`
+  - `src/routes/snapshot/browse/+page.svelte`
+- 변경:
+  - 본문 상단 `요약` 카드를 제거하고 좌측 sidebar 안으로 이동
+  - 파일 선택이 있는 browse 화면은 모두 `plain sidebar` 안에 파일 카드와 요약 카드를 분리한 동일 구조로 정리
+  - 운영 · 품질 화면은 같은 요약 카드 컴포넌트를 사용하되 모바일 sidebar 버튼/드로어는 비활성화
+  - 검색/안내 카드는 본문 전체 폭으로 확장해 요약 제거 후 생기는 빈 영역을 없앰
+  - 좌측 요약에는 `hidden lg:block` 규칙을 적용해 작은 화면에서는 표시하지 않음
+
+2. 테스트/문서 동기화
+
+- 대상:
+  - `src/lib/components/BrowseSidebarSummary.test.ts`
+  - `src/routes/browse/page.test.ts`
+  - `src/routes/domain/browse/page.test.ts`
+  - `src/routes/data-source/browse/page.test.ts`
+  - `src/routes/profiling/browse/page.test.ts`
+  - `src/routes/quality-rule/browse/page.test.ts`
+  - `src/routes/snapshot/browse/page.test.ts`
+  - `docs/tests/DATA_SOURCE_TEST_DESCRIPTION.md`
+  - `docs/tests/DATA_PROFILING_TEST_DESCRIPTION.md`
+  - `docs/tests/QUALITY_RULE_TEST_DESCRIPTION.md`
+  - `docs/tests/SNAPSHOT_TEST_DESCRIPTION.md`
+  - `docs/tests/VOCABULARY_TEST_DESCRIPTION.md`
+  - `docs/tests/DOMAIN_TEST_DESCRIPTION.md`
+  - `docs/FRONTEND_UI_UX_GUIDE.md`
+- 변경:
+  - 공통 요약 컴포넌트 렌더링과 좌측 배치/반응형 숨김 동작을 테스트로 고정
+  - summary-only sidebar 화면의 모바일 토글 비노출도 페이지 테스트로 고정
+  - 프론트엔드 가이드에 sidebar 카드 분리와 모바일 토글 규칙을 반영
+
+## 2026-03-13
+
+### 요약
+
 - 파일 관리 팝업의 공통 파일 매핑 설정이 `파일 목록`에서 분리되어 별도 `파일 매핑` 탭으로 이동했습니다.
 - 도메인 포함 8종 파일 관리 화면 모두 같은 3탭 구조(`파일 목록 / 파일 매핑 / 파일 업로드`)를 사용합니다.
 

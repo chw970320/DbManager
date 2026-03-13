@@ -4,6 +4,7 @@
 	import BentoCard from '$lib/components/BentoCard.svelte';
 	import BentoGrid from '$lib/components/BentoGrid.svelte';
 	import BrowsePageLayout from '$lib/components/BrowsePageLayout.svelte';
+	import BrowseSidebarSummary from '$lib/components/BrowseSidebarSummary.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import QualityRuleEditor, {
@@ -246,6 +247,20 @@
 	/>
 </svelte:head>
 
+{#snippet sidebar()}
+	<BrowseSidebarSummary
+		variant="card"
+		ariaLabel="품질 규칙 요약"
+		subtitle="저장된 규칙 현황"
+		items={[
+			{ label: '전체 규칙', value: entries.length },
+			{ label: '활성 규칙', value: enabledCount },
+			{ label: 'column 규칙', value: columnRuleCount },
+			{ label: 'warning 규칙', value: warningRuleCount }
+		]}
+	/>
+{/snippet}
+
 {#snippet actions()}
 	<ActionBar alignment="right">
 		<button type="button" class="btn btn-primary" onclick={openCreateEditor} disabled={loading}>
@@ -263,6 +278,9 @@
 	title="품질 규칙"
 	description="PostgreSQL 프로파일링 결과에 즉시 적용할 최소 품질 규칙을 저장합니다."
 	breadcrumbItems={getNavigationBreadcrumbItems('/quality-rule/browse')}
+	sidebarSurface="plain"
+	mobileSidebarEnabled={false}
+	{sidebar}
 	{actions}
 >
 	<QualityRuleEditor
@@ -287,56 +305,6 @@
 					onsearch={handleSearch}
 					onclear={handleSearchClear}
 				/>
-			</BentoCard>
-		</div>
-
-		<!-- 2. 요약/설명 카드를 6:6으로 정리 -->
-		<div class="col-span-12 lg:col-span-6">
-			<BentoCard title="요약" subtitle="저장된 규칙 현황">
-				<div class="grid gap-3 text-sm sm:grid-cols-4 lg:grid-cols-2">
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="text-xs text-content-muted">전체 규칙</p>
-						<p class="mt-1 text-2xl font-semibold text-content">{entries.length}</p>
-					</div>
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="text-xs text-content-muted">활성 규칙</p>
-						<p class="mt-1 text-2xl font-semibold text-content">{enabledCount}</p>
-					</div>
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="text-xs text-content-muted">column 규칙</p>
-						<p class="mt-1 text-2xl font-semibold text-content">{columnRuleCount}</p>
-					</div>
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="text-xs text-content-muted">warning 규칙</p>
-						<p class="mt-1 text-2xl font-semibold text-content">{warningRuleCount}</p>
-					</div>
-				</div>
-			</BentoCard>
-		</div>
-
-		<div class="col-span-12 lg:col-span-6">
-			<BentoCard
-				eyebrow="현재 범위"
-				title="프로파일링 기반 품질 규칙"
-				subtitle="실데이터 프로파일링에서 계산하는 지표만 규칙으로 저장해 즉시 평가합니다."
-				class="bg-gradient-to-r from-amber-50 via-white to-emerald-50"
-			>
-				<div class="grid gap-3 text-sm text-content-secondary sm:grid-cols-3">
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="font-medium text-content">table 범위</p>
-						<p class="mt-1">현재는 `rowCount` 기준만 지원합니다.</p>
-					</div>
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="font-medium text-content">column 범위</p>
-						<p class="mt-1">NULL, distinct, 길이 기반 메트릭을 평가합니다.</p>
-					</div>
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="font-medium text-content">타깃 지정</p>
-						<p class="mt-1">
-							`schema`, `table`, `column` 패턴에 `*` 와일드카드를 사용할 수 있습니다.
-						</p>
-					</div>
-				</div>
 			</BentoCard>
 		</div>
 

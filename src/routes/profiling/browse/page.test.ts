@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import Page from './+page.svelte';
 
 const { mockAddToast } = vi.hoisted(() => ({
@@ -211,5 +211,22 @@ describe('Profiling browse page', () => {
 		await waitFor(() => {
 			expect(screen.getByText('저장된 데이터 소스가 없습니다.')).toBeInTheDocument();
 		});
+	});
+
+	it('should render the desktop-only summary in the left sidebar without a mobile toggle', async () => {
+		render(Page);
+
+		await waitFor(() => {
+			expect(screen.getByLabelText('저장된 데이터 소스')).toBeInTheDocument();
+		});
+
+		const summaryRegion = screen.getByRole('region', { name: '프로파일링 요약' });
+		expect(summaryRegion.closest('aside')).not.toBeNull();
+		expect(summaryRegion).toHaveClass('hidden');
+		expect(summaryRegion).toHaveClass('lg:block');
+		expect(within(summaryRegion).getByText('저장된 데이터 소스')).toBeInTheDocument();
+		expect(within(summaryRegion).getByText('조회된 테이블')).toBeInTheDocument();
+		expect(within(summaryRegion).getByText('예상 행 수 합계')).toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: '사이드바 열기' })).not.toBeInTheDocument();
 	});
 });

@@ -10,6 +10,7 @@
 		actions?: Snippet;
 		sidebar?: Snippet;
 		sidebarSurface?: 'card' | 'plain';
+		mobileSidebarEnabled?: boolean;
 		children: Snippet;
 	}
 
@@ -20,11 +21,13 @@
 		actions,
 		sidebar,
 		sidebarSurface = 'card',
+		mobileSidebarEnabled = true,
 		children
 	}: Props = $props();
 
 	let mobileSidebarOpen = $state(false);
 	const hasSidebar = $derived(Boolean(sidebar));
+	const showMobileSidebar = $derived(hasSidebar && mobileSidebarEnabled);
 </script>
 
 <!-- 배경 및 밀집도 조정 (py-8 -> py-4 sm:py-6), 향후 다크모드 대응 -->
@@ -56,7 +59,7 @@
 					{/if}
 				</aside>
 
-				{#if mobileSidebarOpen}
+				{#if showMobileSidebar && mobileSidebarOpen}
 					<!-- 체계적인 z-index 사용 (z-modal-backdrop) -->
 					<div class="fixed inset-0 z-modal-backdrop flex lg:hidden">
 						<div
@@ -82,7 +85,7 @@
 				<div class="mb-6">
 					<div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
 						<div class="flex items-center gap-4">
-							{#if sidebar}
+							{#if showMobileSidebar}
 								<button
 									type="button"
 									onclick={() => (mobileSidebarOpen = true)}

@@ -4,6 +4,7 @@
 	import BentoCard from '$lib/components/BentoCard.svelte';
 	import BentoGrid from '$lib/components/BentoGrid.svelte';
 	import BrowsePageLayout from '$lib/components/BrowsePageLayout.svelte';
+	import BrowseSidebarSummary from '$lib/components/BrowseSidebarSummary.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import SearchBar from '$lib/components/SearchBar.svelte';
@@ -50,7 +51,6 @@
 	const selectedBundle = $derived(
 		bundles.find((bundle) => bundle.id === selectedBundleId) ?? bundles[0] ?? null
 	);
-	const protectedFileCount = ALL_DATA_TYPES.length;
 	const filteredSnapshots = $derived.by(() => {
 		const query = searchQuery.trim().toLowerCase();
 		if (!query) {
@@ -285,6 +285,24 @@
 	<meta name="description" content="8종 설계 파일 번들의 스냅샷을 저장하고 필요 시 복원합니다." />
 </svelte:head>
 
+{#snippet sidebar()}
+	<BrowseSidebarSummary
+		variant="card"
+		ariaLabel="스냅샷 요약"
+		subtitle="현재 저장소 상태"
+		items={[
+			{ label: '저장된 스냅샷', value: snapshots.length },
+			{ label: '사용 가능한 번들', value: bundles.length },
+			{
+				label: '최근 복원',
+				value: lastRestoredSnapshot ? formatDateTime(lastRestoredSnapshot.restoredAt) : '없음',
+				span: 2,
+				valueClass: 'mt-1 text-sm font-medium text-content'
+			}
+		]}
+	/>
+{/snippet}
+
 {#snippet actions()}
 	<ActionBar alignment="right">
 		<button
@@ -293,7 +311,6 @@
 			onclick={handleCreateSnapshot}
 			disabled={createSubmitting || !selectedBundle}
 		>
-			<Icon name="save" size="sm" />
 			<span>{createSubmitting ? '저장 중...' : '현재 번들 스냅샷 저장'}</span>
 		</button>
 		<button type="button" class="btn btn-secondary" onclick={loadPageData} disabled={loading}>
@@ -307,66 +324,12 @@
 	title="스냅샷"
 	description="8종 파일 번들을 통째로 저장하고 필요할 때 빠르게 복원합니다."
 	breadcrumbItems={getNavigationBreadcrumbItems('/snapshot/browse')}
+	sidebarSurface="plain"
+	mobileSidebarEnabled={false}
+	{sidebar}
 	{actions}
 >
 	<BentoGrid gapClass="gap-6">
-		<div class="col-span-12 lg:col-span-8">
-			<BentoCard
-				eyebrow="복구 수단"
-				title="설계 번들 스냅샷"
-				subtitle="표준/설계 변경 전에 현재 번들의 8개 JSON 상태를 저장하고 되돌릴 수 있습니다."
-				class="bg-gradient-to-r from-amber-50 via-white to-sky-50"
-			>
-				<div class="grid gap-3 text-sm text-content-secondary sm:grid-cols-2">
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="font-medium text-content">저장 위치</p>
-						<p class="mt-1 break-all">
-							<code class="font-mono text-xs">static/data/settings/design-snapshots.json</code>
-						</p>
-					</div>
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="font-medium text-content">보호 범위</p>
-						<p class="mt-1">{protectedFileCount}개 파일 번들 + 공통 파일 매핑 번들</p>
-					</div>
-				</div>
-			</BentoCard>
-		</div>
-
-		<div class="col-span-12 lg:col-span-4">
-			<BentoCard title="요약" subtitle="현재 저장소 상태">
-				<div class="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-1">
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="text-xs text-content-muted">저장된 스냅샷</p>
-						<p class="mt-1 text-2xl font-semibold text-content">{snapshots.length}</p>
-					</div>
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="text-xs text-content-muted">사용 가능한 번들</p>
-						<p class="mt-1 text-2xl font-semibold text-content">{bundles.length}</p>
-					</div>
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="text-xs text-content-muted">최근 복원</p>
-						<p class="mt-1 text-sm font-medium text-content">
-							{lastRestoredSnapshot ? formatDateTime(lastRestoredSnapshot.restoredAt) : '없음'}
-						</p>
-					</div>
-				</div>
-			</BentoCard>
-		</div>
-
-		<div class="col-span-12">
-			<BentoCard title="검색" subtitle="스냅샷명 또는 주요 파일명으로 저장 지점을 찾습니다.">
-				<SearchBar
-					placeholder="스냅샷명, 컬럼 파일, 용어 파일로 검색하세요..."
-					{searchFields}
-					bind:query={searchQuery}
-					bind:field={searchField}
-					bind:exact={searchExact}
-					onsearch={handleSearch}
-					onclear={handleSearchClear}
-				/>
-			</BentoCard>
-		</div>
-
 		<div class="col-span-12 lg:col-span-5">
 			<BentoCard title="스냅샷 생성" subtitle="복구 포인트로 저장할 파일 번들을 선택하세요.">
 				{#if bundles.length === 0}
@@ -440,10 +403,25 @@
 							onclick={handleCreateSnapshot}
 							disabled={createSubmitting || !selectedBundle}
 						>
+							<Icon name="save" size="sm" />
 							{createSubmitting ? '저장 중...' : '스냅샷 저장'}
 						</button>
 					</div>
 				{/if}
+			</BentoCard>
+		</div>
+
+		<div class="col-span-12">
+			<BentoCard title="검색" subtitle="스냅샷명 또는 주요 파일명으로 저장 지점을 찾습니다.">
+				<SearchBar
+					placeholder="스냅샷명, 컬럼 파일, 용어 파일로 검색하세요..."
+					{searchFields}
+					bind:query={searchQuery}
+					bind:field={searchField}
+					bind:exact={searchExact}
+					onsearch={handleSearch}
+					onclear={handleSearchClear}
+				/>
 			</BentoCard>
 		</div>
 

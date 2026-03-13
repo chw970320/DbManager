@@ -4,6 +4,7 @@
 	import BentoCard from '$lib/components/BentoCard.svelte';
 	import BentoGrid from '$lib/components/BentoGrid.svelte';
 	import BrowsePageLayout from '$lib/components/BrowsePageLayout.svelte';
+	import BrowseSidebarSummary from '$lib/components/BrowseSidebarSummary.svelte';
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import FormField from '$lib/components/FormField.svelte';
 	import Icon from '$lib/components/Icon.svelte';
@@ -233,6 +234,19 @@
 	/>
 </svelte:head>
 
+{#snippet sidebar()}
+	<BrowseSidebarSummary
+		variant="card"
+		ariaLabel="프로파일링 요약"
+		subtitle="현재 선택과 조회 현황"
+		items={[
+			{ label: '저장된 데이터 소스', value: dataSources.length },
+			{ label: '조회된 테이블', value: totalTargets },
+			{ label: '예상 행 수 합계', value: formatNumber(totalEstimatedRows), span: 2 }
+		]}
+	/>
+{/snippet}
+
 {#snippet actions()}
 	<ActionBar alignment="right">
 		<!-- 1순위: 실행(테이블 불러오기), 2순위: 보조 액션(새로고침) -->
@@ -261,57 +275,12 @@
 	title="프로파일링"
 	description="저장된 PostgreSQL 데이터 소스를 기준으로 실제 테이블과 컬럼 분포를 즉시 확인합니다."
 	breadcrumbItems={getNavigationBreadcrumbItems('/profiling/browse')}
+	sidebarSurface="plain"
+	mobileSidebarEnabled={false}
+	{sidebar}
 	{actions}
 >
 	<BentoGrid gapClass="gap-6">
-		<!-- 1. 요약/설명 카드를 보다 컴팩트하게 6:6 배치 -->
-		<div class="col-span-12 lg:col-span-6">
-			<BentoCard title="요약" subtitle="현재 선택과 조회 현황">
-				<div class="grid gap-3 text-sm sm:grid-cols-3 lg:grid-cols-1">
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="text-xs text-content-muted">저장된 데이터 소스</p>
-						<p class="mt-1 text-2xl font-semibold text-content">{dataSources.length}</p>
-					</div>
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="text-xs text-content-muted">조회된 테이블</p>
-						<p class="mt-1 text-2xl font-semibold text-content">{totalTargets}</p>
-					</div>
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="text-xs text-content-muted">예상 행 수 합계</p>
-						<p class="mt-1 text-2xl font-semibold text-content">
-							{formatNumber(totalEstimatedRows)}
-						</p>
-					</div>
-				</div>
-			</BentoCard>
-		</div>
-
-		<div class="col-span-12 lg:col-span-6">
-			<BentoCard
-				eyebrow="1차 범위"
-				title="PostgreSQL 실데이터 프로파일링"
-				subtitle="실행 이력 저장 없이 현재 연결 상태에서 스키마/테이블/컬럼 지표를 바로 계산합니다."
-				class="bg-gradient-to-r from-emerald-50 via-white to-sky-50"
-			>
-				<div class="grid gap-3 text-sm text-content-secondary sm:grid-cols-3">
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="font-medium text-content">현재 지표</p>
-						<p class="mt-1">행 수, NULL 비율, distinct 비율, 최소/최대 길이</p>
-					</div>
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="font-medium text-content">입력 범위</p>
-						<p class="mt-1">저장된 PostgreSQL 사용자 테이블</p>
-					</div>
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="font-medium text-content">주의</p>
-						<p class="mt-1">
-							정확한 `COUNT(*)`를 사용하므로 대용량 테이블은 시간이 걸릴 수 있습니다.
-						</p>
-					</div>
-				</div>
-			</BentoCard>
-		</div>
-
 		<div class="col-span-12">
 			<BentoCard title="대상 선택" subtitle="데이터 소스를 고른 뒤 테이블 목록을 불러오세요.">
 				{#if sourceError}
@@ -463,17 +432,19 @@
 										</td>
 										<td class="px-4 py-3">
 											<div class="flex justify-end">
-												<button
-													type="button"
-													class="btn btn-primary btn-sm"
-													onclick={() => runProfiling(target)}
-													disabled={profiling}
-													aria-label={`${target.table} 프로파일링 실행`}
-												>
-													{profiling && activeTableKey === `${target.schema}.${target.table}`
-														? '실행 중...'
-														: '프로파일링 실행'}
-												</button>
+												{#if profiling && activeTableKey === `${target.schema}.${target.table}`}
+													<button type="button" class="btn btn-outline btn-sm" disabled>
+														실행 중...
+													</button>
+												{:else}
+													<button
+														type="button"
+														class="btn btn-primary btn-sm"
+														onclick={() => runProfiling(target)}
+														disabled={profiling}
+														aria-label={`${target.table} 프로파일링 실행`}>프로파일링 실행</button
+													>
+												{/if}
 											</div>
 										</td>
 									</tr>

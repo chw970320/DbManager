@@ -8,10 +8,10 @@
 | ----------------------------------------- | --------- | ---- |
 | `data-quality-rule-evaluator.test.ts`     | 3개       | 완료 |
 | `quality-rules/server.test.ts`            | 6개       | 완료 |
-| `quality-rule/browse/page.test.ts`        | 2개       | 완료 |
+| `quality-rule/browse/page.test.ts`        | 3개       | 완료 |
 | `data-sources/profile/run/server.test.ts` | 4개       | 완료 |
-| `profiling/browse/page.test.ts`           | 2개       | 완료 |
-| **합계**                                  | **17개**  |      |
+| `profiling/browse/page.test.ts`           | 3개       | 완료 |
+| **합계**                                  | **19개**  |      |
 
 ---
 
@@ -46,16 +46,17 @@
 
 ---
 
-## 3. quality-rule/browse/page.test.ts (2개)
+## 3. quality-rule/browse/page.test.ts (3개)
 
 **파일 경로**: `src/routes/quality-rule/browse/page.test.ts`
 
 품질 규칙 관리 화면에서 목록 조회와 등록/수정 흐름을 테스트합니다.
 
-| 테스트명                                           | 설명           | 검증 내용                                      |
-| -------------------------------------------------- | -------------- | ---------------------------------------------- |
-| should load quality rules and render summary cards | 화면 기본 조회 | 규칙 목록, 활성 규칙 수, 범위/심각도 요약 표시 |
-| should allow creating a rule from the editor modal | 등록 흐름 성공 | 모달 입력, POST 호출, 목록 갱신                |
+| 테스트명                                                                           | 설명              | 검증 내용                                                                   |
+| ---------------------------------------------------------------------------------- | ----------------- | --------------------------------------------------------------------------- |
+| should load quality rules and render summary cards                                 | 화면 기본 조회    | 규칙 목록, 활성 규칙 수, 범위/심각도 요약 표시                              |
+| should allow creating a rule from the editor modal                                 | 등록 흐름 성공    | 모달 입력, POST 호출, 목록 갱신                                             |
+| should render the summary in the left sidebar and keep the mobile sidebar disabled | 요약 sidebar 고정 | 좌측 요약 region 렌더링, `hidden lg:block`, 모바일 sidebar 열기 버튼 미노출 |
 
 ---
 
@@ -74,16 +75,17 @@
 
 ---
 
-## 5. profiling/browse/page.test.ts (2개)
+## 5. profiling/browse/page.test.ts (3개)
 
 **파일 경로**: `src/routes/profiling/browse/page.test.ts`
 
 프로파일링 결과 화면에 품질 규칙 평가 요약과 위반 목록이 함께 표시되는지 테스트합니다.
 
-| 테스트명                                                                       | 설명                | 검증 내용                                                    |
-| ------------------------------------------------------------------------------ | ------------------- | ------------------------------------------------------------ |
-| should load profile targets for the selected data source and render the result | 화면 기본 성공 흐름 | 대상 조회, 프로파일링 실행, 컬럼 결과 및 규칙 평가 요약 표시 |
-| should show an empty state when there are no saved data sources                | 빈 상태 처리        | 데이터 소스가 없을 때 안내 문구와 이동 CTA 표시              |
+| 테스트명                                                                           | 설명                | 검증 내용                                                                   |
+| ---------------------------------------------------------------------------------- | ------------------- | --------------------------------------------------------------------------- |
+| should load profile targets for the selected data source and render the result     | 화면 기본 성공 흐름 | 대상 조회, 프로파일링 실행, 컬럼 결과 및 규칙 평가 요약 표시                |
+| should show an empty state when there are no saved data sources                    | 빈 상태 처리        | 데이터 소스가 없을 때 안내 문구와 이동 CTA 표시                             |
+| should render the desktop-only summary in the left sidebar without a mobile toggle | 요약 sidebar 고정   | 좌측 요약 region 렌더링, `hidden lg:block`, 모바일 sidebar 열기 버튼 미노출 |
 
 ---
 

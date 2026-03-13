@@ -4,6 +4,58 @@
 
 ### 요약
 
+- 8종 설계 파일 번들을 통째로 저장/복원하는 `스냅샷` 메뉴가 추가되었습니다.
+- 복원 시 공통 파일 매핑 번들도 함께 다시 적용되어 browse/ERD 흐름과 정합성이 유지됩니다.
+
+### 상세 변경
+
+1. 스냅샷 타입/저장소/API 추가
+
+- 대상:
+  - `src/lib/types/design-snapshot.ts`
+  - `src/lib/registry/design-snapshot-registry.ts`
+  - `src/routes/api/design-snapshots/+server.ts`
+  - `src/routes/api/design-snapshots/restore/+server.ts`
+  - `static/data/settings/design-snapshots.json`
+- 변경:
+  - 8종 파일 번들의 현재 JSON 상태를 스냅샷으로 저장하는 설정 모델과 레지스트리 추가
+  - 스냅샷 생성 시 런타임 `mapping` 필드를 제거한 정규화 payload 저장
+  - 스냅샷 복원 시 각 파일 데이터 저장과 공통 파일 매핑 번들 재적용, 캐시 무효화 수행
+
+2. 스냅샷 화면/메뉴 추가
+
+- 대상:
+  - `src/routes/snapshot/browse/+page.svelte`
+  - `src/routes/+layout.svelte`
+- 변경:
+  - 상단 네비게이션에 `스냅샷` 메뉴 추가
+  - 번들 선택, 스냅샷 생성, 검색, 복원, 삭제 흐름을 한 화면에서 제공
+  - 최근 복원 시각과 번들 요약 카드 표시
+
+3. 테스트/문서 동기화
+
+- 대상:
+  - `src/lib/registry/design-snapshot-registry.test.ts`
+  - `src/routes/api/design-snapshots/server.test.ts`
+  - `src/routes/api/design-snapshots/restore/server.test.ts`
+  - `src/routes/snapshot/browse/page.test.ts`
+  - `src/lib/utils/test-data-reset.test.ts`
+  - `src/lib/utils/test-data-reset.js`
+  - `docs/tests/SNAPSHOT_TEST_DESCRIPTION.md`
+  - `docs/tests/COMMON_UTILS_TEST_DESCRIPTION.md`
+  - `docs/specs/api-reference.md`
+  - `docs/specs/data-model.md`
+  - `docs/USER_GUIDE.md`
+  - `README.md`
+- 변경:
+  - 스냅샷 저장소, API, browse 화면 흐름을 테스트로 고정
+  - 테스트 데이터 초기화 시 `design-snapshots.json`도 빈 기준 상태로 재생성하도록 보강
+  - 사용자 문서와 API/모델 문서에 새 메뉴 및 복원 흐름 반영
+
+## 2026-03-13
+
+### 요약
+
 - 컬럼 editor에 `표준 추천` 패널이 추가되었습니다.
 - 저장 전에 term/domain 기준 추천값과 경고를 즉시 보고, 필요한 필드만 바로 적용할 수 있습니다.
 

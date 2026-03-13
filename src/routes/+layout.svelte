@@ -11,20 +11,39 @@
 	// 모바일 메뉴 상태
 	let mobileMenuOpen = $state(false);
 
-	// 네비게이션 메뉴 아이템
-	const menuItems = [
-		{ href: '/browse', label: '단어집', icon: 'search' },
-		{ href: '/domain/browse', label: '도메인', icon: 'database' },
-		{ href: '/term/browse', label: '용어', icon: 'tag' },
-		{ href: '/database/browse', label: 'DB', icon: 'server' },
-		{ href: '/entity/browse', label: '엔터티', icon: 'cube' },
-		{ href: '/attribute/browse', label: '속성', icon: 'key' },
-		{ href: '/table/browse', label: '테이블', icon: 'table' },
-		{ href: '/column/browse', label: '컬럼', icon: 'columns' },
-		{ href: '/data-source/browse', label: '데이터 소스', icon: 'link' },
-		{ href: '/quality-rule/browse', label: '품질 규칙', icon: 'check-circle' },
-		{ href: '/profiling/browse', label: '프로파일링', icon: 'chart-bar' },
-		{ href: '/erd', label: 'ERD', icon: 'diagram' }
+	// 네비게이션 메뉴 그룹 (업무 도메인 기준)
+	const menuGroups = [
+		{
+			id: 'standard',
+			label: '표준 용어',
+			items: [
+				{ href: '/browse', label: '단어집', icon: 'search' },
+				{ href: '/domain/browse', label: '도메인', icon: 'database' },
+				{ href: '/term/browse', label: '용어', icon: 'tag' }
+			]
+		},
+		{
+			id: 'design',
+			label: 'DB 설계',
+			items: [
+				{ href: '/database/browse', label: 'DB', icon: 'server' },
+				{ href: '/entity/browse', label: '엔터티', icon: 'cube' },
+				{ href: '/attribute/browse', label: '속성', icon: 'key' },
+				{ href: '/table/browse', label: '테이블', icon: 'table' },
+				{ href: '/column/browse', label: '컬럼', icon: 'columns' },
+				{ href: '/erd', label: 'ERD', icon: 'diagram' }
+			]
+		},
+		{
+			id: 'tools',
+			label: '운영 · 품질',
+			items: [
+				{ href: '/data-source/browse', label: '데이터 소스', icon: 'link' },
+				{ href: '/quality-rule/browse', label: '품질 규칙', icon: 'check-circle' },
+				{ href: '/profiling/browse', label: '프로파일링', icon: 'chart-bar' },
+				{ href: '/snapshot/browse', label: '스냅샷', icon: 'save' }
+			]
+		}
 	];
 
 	// 모바일 메뉴 토글
@@ -62,20 +81,31 @@
 						>
 					</a>
 
-					<!-- 데스크탑 네비게이션 -->
-					<nav class="hidden items-center space-x-2 md:flex">
-						{#each menuItems as item (item.href)}
-							<a
-								href={item.href}
-								class="flex items-center space-x-2 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 {isCurrentPage(
-									item.href
-								)
-									? 'bg-blue-50 text-blue-700 shadow-sm'
-									: 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}"
-							>
-								<Icon name={item.icon} size="sm" />
-								<span>{item.label}</span>
-							</a>
+					<!-- 데스크탑 네비게이션 (업무 도메인 그룹) -->
+					<nav class="hidden items-center space-x-4 md:flex">
+						{#each menuGroups as group (group.id)}
+							<div class="flex items-center space-x-1">
+								<span
+									class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600"
+								>
+									{group.label}
+								</span>
+								<div class="flex items-center space-x-1">
+									{#each group.items as item (item.href)}
+										<a
+											href={item.href}
+											class="flex items-center space-x-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition-all duration-200 {isCurrentPage(
+												item.href
+											)
+												? 'bg-blue-50 text-blue-700 shadow-sm'
+												: 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}"
+										>
+											<Icon name={item.icon} size="sm" />
+											<span>{item.label}</span>
+										</a>
+									{/each}
+								</div>
+							</div>
 						{/each}
 					</nav>
 				</div>
@@ -102,19 +132,28 @@
 		<!-- 모바일 메뉴 -->
 		{#if mobileMenuOpen}
 			<div class="border-t border-gray-200 bg-white/95 backdrop-blur-sm md:hidden" id="mobile-menu">
-				<div class="space-y-1 px-4 py-3">
-					{#each menuItems as item (item.href)}
-						<a
-							href={item.href}
-							class="flex items-center space-x-3 rounded-lg px-3 py-2 text-base font-medium transition-colors {isCurrentPage(
-								item.href
-							)
-								? 'bg-blue-50 text-blue-700'
-								: 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}"
-						>
-							<Icon name={item.icon} size="md" />
-							<span>{item.label}</span>
-						</a>
+				<div class="space-y-3 px-4 py-3">
+					{#each menuGroups as group (group.id)}
+						<div>
+							<div class="px-1 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-400">
+								{group.label}
+							</div>
+							<div class="space-y-1">
+								{#each group.items as item (item.href)}
+									<a
+										href={item.href}
+										class="flex items-center space-x-3 rounded-lg px-3 py-2 text-base font-medium transition-colors {isCurrentPage(
+											item.href
+										)
+											? 'bg-blue-50 text-blue-700'
+											: 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}"
+									>
+										<Icon name={item.icon} size="md" />
+										<span>{item.label}</span>
+									</a>
+								{/each}
+							</div>
+						</div>
 					{/each}
 				</div>
 			</div>

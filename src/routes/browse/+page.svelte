@@ -7,7 +7,8 @@
 	import VocabularyValidationPanel from '$lib/components/VocabularyValidationPanel.svelte';
 	import VocabularyFileManager from '$lib/components/VocabularyFileManager.svelte';
 	import BrowsePageLayout from '$lib/components/BrowsePageLayout.svelte';
-	import ActionBar from '$lib/components/ActionBar.svelte';
+import ActionBar from '$lib/components/ActionBar.svelte';
+import Icon from '$lib/components/Icon.svelte';
 	import BentoGrid from '$lib/components/BentoGrid.svelte';
 	import BentoCard from '$lib/components/BentoCard.svelte';
 	import type { VocabularyEntry, ApiResponse } from '$lib/types/vocabulary.js';
@@ -786,6 +787,7 @@
 			disabled={loading}
 			class="btn btn-primary rounded-xl px-6 py-3"
 		>
+			<Icon name="plus" size="sm" />
 			<span>새 단어 추가</span>
 		</button>
 		<button
@@ -794,6 +796,7 @@
 			disabled={loading || validationLoading}
 			class="btn btn-outline rounded-xl px-6 py-3"
 		>
+			<Icon name={validationLoading ? 'spinner' : 'check-circle'} size="sm" />
 			<span>{validationLoading ? '검사 중' : '유효성 검사'}</span>
 		</button>
 		<button
@@ -802,6 +805,7 @@
 			disabled={loading}
 			class="btn btn-outline rounded-xl px-6 py-3"
 		>
+			<Icon name={loading ? 'spinner' : 'download'} size="sm" />
 			<span>{loading ? '준비 중' : 'XLSX 다운로드'}</span>
 		</button>
 		<button
@@ -810,6 +814,7 @@
 			disabled={loading}
 			class="btn btn-secondary rounded-xl px-6 py-3"
 		>
+			<Icon name={loading ? 'spinner' : 'refresh'} size="sm" />
 			<span>{loading ? '로딩 중' : '새로고침'}</span>
 		</button>
 	</ActionBar>

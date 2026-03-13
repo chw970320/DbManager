@@ -21,6 +21,7 @@
 	}: Props = $props();
 
 	let mobileSidebarOpen = $state(false);
+	const hasSidebar = $derived(Boolean(sidebar));
 </script>
 
 <!-- 배경 및 밀집도 조정 (py-8 -> py-4 sm:py-6), 향후 다크모드 대응 -->
@@ -32,7 +33,8 @@
 			</div>
 		{/if}
 
-		<div class="gap-6 lg:grid lg:grid-cols-[16rem_1fr] lg:items-start">
+		<!-- 사이드바 유무에 따라 그리드 레이아웃을 조건부로 적용 -->
+		<div class={`gap-6 ${hasSidebar ? 'lg:grid lg:grid-cols-[16rem_1fr] lg:items-start' : ''}`}>
 			<!-- 사이드바 -->
 			{#if sidebar}
 				<aside class="hidden h-full w-64 lg:block">

@@ -371,7 +371,42 @@
 	/>
 
 	<BentoGrid gapClass="gap-6">
-		<div class="col-span-12 lg:col-span-8">
+		<!-- 1. 검색 영역 + 요약을 한 줄에 배치해 상단 여백과 공백을 줄임 -->
+		<div class="col-span-12 lg:col-span-7">
+			<BentoCard title="검색" subtitle="연결 이름, 호스트, 데이터베이스, 사용자명으로 검색">
+				<SearchBar
+					placeholder="연결 이름, 호스트, 데이터베이스, 사용자명으로 검색하세요..."
+					{searchFields}
+					bind:query={searchQuery}
+					bind:field={searchField}
+					bind:exact={searchExact}
+					onsearch={handleSearch}
+					onclear={handleSearchClear}
+				/>
+			</BentoCard>
+		</div>
+
+		<!-- 2. 요약 카드: 검색 카드 옆으로 붙여 상단을 채움 -->
+		<div class="col-span-12 lg:col-span-5">
+			<BentoCard title="요약" subtitle="저장된 연결 현황">
+				<div class="grid gap-3 text-sm sm:grid-cols-3 lg:grid-cols-1">
+					<div class="rounded-lg bg-surface-muted p-4">
+						<p class="text-xs text-content-muted">저장된 연결</p>
+						<p class="mt-1 text-2xl font-semibold text-content">{entries.length}</p>
+					</div>
+					<div class="rounded-lg bg-surface-muted p-4">
+						<p class="text-xs text-content-muted">SSL 사용</p>
+						<p class="mt-1 text-2xl font-semibold text-content">{sslEnabledCount}</p>
+					</div>
+					<div class="rounded-lg bg-surface-muted p-4">
+						<p class="text-xs text-content-muted">비밀번호 저장됨</p>
+						<p class="mt-1 text-2xl font-semibold text-content">{passwordConfiguredCount}</p>
+					</div>
+				</div>
+			</BentoCard>
+		</div>
+
+		<div class="col-span-12 lg:col-span-6">
 			<BentoCard
 				eyebrow="현재 지원"
 				title="PostgreSQL 연결 관리"
@@ -392,39 +427,6 @@
 						</p>
 					</div>
 				</div>
-			</BentoCard>
-		</div>
-
-		<div class="col-span-12 lg:col-span-4">
-			<BentoCard title="요약" subtitle="저장된 연결 현황">
-				<div class="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-1">
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="text-xs text-content-muted">저장된 연결</p>
-						<p class="mt-1 text-2xl font-semibold text-content">{entries.length}</p>
-					</div>
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="text-xs text-content-muted">SSL 사용</p>
-						<p class="mt-1 text-2xl font-semibold text-content">{sslEnabledCount}</p>
-					</div>
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="text-xs text-content-muted">비밀번호 저장됨</p>
-						<p class="mt-1 text-2xl font-semibold text-content">{passwordConfiguredCount}</p>
-					</div>
-				</div>
-			</BentoCard>
-		</div>
-
-		<div class="col-span-12">
-			<BentoCard title="검색" subtitle="연결 이름, 호스트, 데이터베이스, 사용자명으로 검색">
-				<SearchBar
-					placeholder="연결 이름, 호스트, 데이터베이스, 사용자명으로 검색하세요..."
-					{searchFields}
-					bind:query={searchQuery}
-					bind:field={searchField}
-					bind:exact={searchExact}
-					onsearch={handleSearch}
-					onclear={handleSearchClear}
-				/>
 			</BentoCard>
 		</div>
 

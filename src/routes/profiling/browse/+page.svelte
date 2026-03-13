@@ -234,15 +234,7 @@
 
 {#snippet actions()}
 	<ActionBar alignment="right">
-		<button
-			type="button"
-			class="btn btn-secondary"
-			onclick={loadDataSources}
-			disabled={loadingSources}
-		>
-			<Icon name={loadingSources ? 'spinner' : 'refresh'} size="sm" />
-			<span>{loadingSources ? '로딩 중...' : '데이터 소스 새로고침'}</span>
-		</button>
+		<!-- 1순위: 실행(테이블 불러오기), 2순위: 보조 액션(새로고침) -->
 		<button
 			type="button"
 			class="btn btn-primary"
@@ -251,6 +243,15 @@
 		>
 			<Icon name={loadingTargets ? 'spinner' : 'search'} size="sm" />
 			<span>{loadingTargets ? '불러오는 중...' : '테이블 불러오기'}</span>
+		</button>
+		<button
+			type="button"
+			class="btn btn-secondary"
+			onclick={loadDataSources}
+			disabled={loadingSources}
+		>
+			<Icon name={loadingSources ? 'spinner' : 'refresh'} size="sm" />
+			<span>{loadingSources ? '로딩 중...' : '데이터 소스 새로고침'}</span>
 		</button>
 	</ActionBar>
 {/snippet}
@@ -261,7 +262,29 @@
 	{actions}
 >
 	<BentoGrid gapClass="gap-6">
-		<div class="col-span-12 lg:col-span-8">
+		<!-- 1. 요약/설명 카드를 보다 컴팩트하게 6:6 배치 -->
+		<div class="col-span-12 lg:col-span-6">
+			<BentoCard title="요약" subtitle="현재 선택과 조회 현황">
+				<div class="grid gap-3 text-sm sm:grid-cols-3 lg:grid-cols-1">
+					<div class="rounded-lg bg-surface-muted p-4">
+						<p class="text-xs text-content-muted">저장된 데이터 소스</p>
+						<p class="mt-1 text-2xl font-semibold text-content">{dataSources.length}</p>
+					</div>
+					<div class="rounded-lg bg-surface-muted p-4">
+						<p class="text-xs text-content-muted">조회된 테이블</p>
+						<p class="mt-1 text-2xl font-semibold text-content">{totalTargets}</p>
+					</div>
+					<div class="rounded-lg bg-surface-muted p-4">
+						<p class="text-xs text-content-muted">예상 행 수 합계</p>
+						<p class="mt-1 text-2xl font-semibold text-content">
+							{formatNumber(totalEstimatedRows)}
+						</p>
+					</div>
+				</div>
+			</BentoCard>
+		</div>
+
+		<div class="col-span-12 lg:col-span-6">
 			<BentoCard
 				eyebrow="1차 범위"
 				title="PostgreSQL 실데이터 프로파일링"
@@ -281,27 +304,6 @@
 						<p class="font-medium text-content">주의</p>
 						<p class="mt-1">
 							정확한 `COUNT(*)`를 사용하므로 대용량 테이블은 시간이 걸릴 수 있습니다.
-						</p>
-					</div>
-				</div>
-			</BentoCard>
-		</div>
-
-		<div class="col-span-12 lg:col-span-4">
-			<BentoCard title="요약" subtitle="현재 선택과 조회 현황">
-				<div class="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-1">
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="text-xs text-content-muted">저장된 데이터 소스</p>
-						<p class="mt-1 text-2xl font-semibold text-content">{dataSources.length}</p>
-					</div>
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="text-xs text-content-muted">조회된 테이블</p>
-						<p class="mt-1 text-2xl font-semibold text-content">{totalTargets}</p>
-					</div>
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="text-xs text-content-muted">예상 행 수 합계</p>
-						<p class="mt-1 text-2xl font-semibold text-content">
-							{formatNumber(totalEstimatedRows)}
 						</p>
 					</div>
 				</div>

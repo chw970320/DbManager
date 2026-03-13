@@ -273,7 +273,46 @@
 	/>
 
 	<BentoGrid gapClass="gap-6">
-		<div class="col-span-12 lg:col-span-8">
+		<!-- 1. 검색 영역 우선 노출 -->
+		<div class="col-span-12">
+			<BentoCard title="검색" subtitle="규칙 이름, 심각도, 범위, 메트릭으로 검색">
+				<SearchBar
+					placeholder="규칙 이름, 심각도, 범위, 메트릭으로 검색하세요..."
+					{searchFields}
+					bind:query={searchQuery}
+					bind:field={searchField}
+					bind:exact={searchExact}
+					onsearch={handleSearch}
+					onclear={handleSearchClear}
+				/>
+			</BentoCard>
+		</div>
+
+		<!-- 2. 요약/설명 카드를 6:6으로 정리 -->
+		<div class="col-span-12 lg:col-span-6">
+			<BentoCard title="요약" subtitle="저장된 규칙 현황">
+				<div class="grid gap-3 text-sm sm:grid-cols-4 lg:grid-cols-2">
+					<div class="rounded-lg bg-surface-muted p-4">
+						<p class="text-xs text-content-muted">전체 규칙</p>
+						<p class="mt-1 text-2xl font-semibold text-content">{entries.length}</p>
+					</div>
+					<div class="rounded-lg bg-surface-muted p-4">
+						<p class="text-xs text-content-muted">활성 규칙</p>
+						<p class="mt-1 text-2xl font-semibold text-content">{enabledCount}</p>
+					</div>
+					<div class="rounded-lg bg-surface-muted p-4">
+						<p class="text-xs text-content-muted">column 규칙</p>
+						<p class="mt-1 text-2xl font-semibold text-content">{columnRuleCount}</p>
+					</div>
+					<div class="rounded-lg bg-surface-muted p-4">
+						<p class="text-xs text-content-muted">warning 규칙</p>
+						<p class="mt-1 text-2xl font-semibold text-content">{warningRuleCount}</p>
+					</div>
+				</div>
+			</BentoCard>
+		</div>
+
+		<div class="col-span-12 lg:col-span-6">
 			<BentoCard
 				eyebrow="현재 범위"
 				title="프로파일링 기반 품질 규칙"
@@ -296,43 +335,6 @@
 						</p>
 					</div>
 				</div>
-			</BentoCard>
-		</div>
-
-		<div class="col-span-12 lg:col-span-4">
-			<BentoCard title="요약" subtitle="저장된 규칙 현황">
-				<div class="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-1">
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="text-xs text-content-muted">전체 규칙</p>
-						<p class="mt-1 text-2xl font-semibold text-content">{entries.length}</p>
-					</div>
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="text-xs text-content-muted">활성 규칙</p>
-						<p class="mt-1 text-2xl font-semibold text-content">{enabledCount}</p>
-					</div>
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="text-xs text-content-muted">column 규칙</p>
-						<p class="mt-1 text-2xl font-semibold text-content">{columnRuleCount}</p>
-					</div>
-					<div class="rounded-lg bg-surface-muted p-4">
-						<p class="text-xs text-content-muted">warning 규칙</p>
-						<p class="mt-1 text-2xl font-semibold text-content">{warningRuleCount}</p>
-					</div>
-				</div>
-			</BentoCard>
-		</div>
-
-		<div class="col-span-12">
-			<BentoCard title="검색" subtitle="규칙 이름, 심각도, 범위, 메트릭으로 검색">
-				<SearchBar
-					placeholder="규칙 이름, 심각도, 범위, 메트릭으로 검색하세요..."
-					{searchFields}
-					bind:query={searchQuery}
-					bind:field={searchField}
-					bind:exact={searchExact}
-					onsearch={handleSearch}
-					onclear={handleSearchClear}
-				/>
 			</BentoCard>
 		</div>
 

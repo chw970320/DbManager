@@ -1,13 +1,14 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
-	import SearchBar from '$lib/components/SearchBar.svelte';
+import SearchBar from '$lib/components/SearchBar.svelte';
 	import DesignRelationPanel from '$lib/components/DesignRelationPanel.svelte';
 	import DatabaseTable from '$lib/components/DatabaseTable.svelte';
 	import DatabaseEditor from '$lib/components/DatabaseEditor.svelte';
 	import DatabaseFileManager from '$lib/components/DatabaseFileManager.svelte';
 	import BrowsePageLayout from '$lib/components/BrowsePageLayout.svelte';
-	import ActionBar from '$lib/components/ActionBar.svelte';
+import ActionBar from '$lib/components/ActionBar.svelte';
+import Icon from '$lib/components/Icon.svelte';
 	import BentoGrid from '$lib/components/BentoGrid.svelte';
 	import BentoCard from '$lib/components/BentoCard.svelte';
 	import type { DatabaseEntry, DbDesignApiResponse } from '$lib/types/database-design.js';
@@ -561,7 +562,8 @@
 			disabled={loading}
 			class="btn btn-primary rounded-xl px-6 py-3"
 		>
-			새 정의서 추가
+			<Icon name="plus" size="sm" />
+			<span>새 정의서 추가</span>
 		</button>
 		<button
 			type="button"
@@ -569,7 +571,8 @@
 			disabled={loading}
 			class="btn btn-outline rounded-xl px-6 py-3"
 		>
-			{loading ? '준비 중' : 'XLSX 다운로드'}
+			<Icon name={loading ? 'spinner' : 'download'} size="sm" />
+			<span>{loading ? '준비 중' : 'XLSX 다운로드'}</span>
 		</button>
 		<button
 			type="button"
@@ -577,7 +580,8 @@
 			disabled={loading}
 			class="btn btn-secondary rounded-xl px-6 py-3"
 		>
-			{loading ? '로딩 중' : '새로고침'}
+			<Icon name={loading ? 'spinner' : 'refresh'} size="sm" />
+			<span>{loading ? '로딩 중' : '새로고침'}</span>
 		</button>
 	</ActionBar>
 {/snippet}

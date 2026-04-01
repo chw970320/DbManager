@@ -15,16 +15,22 @@
 | `vocabulary/download/server.test.ts`       | 8개       | 완료 |
 | `vocabulary/filter-options/server.test.ts` | 9개       | 완료 |
 | `search/server.test.ts`                    | 19개      | 완료 |
-| `VocabularyEditor.test.ts`                 | 18개      | 완료 |
+| `VocabularyEditor.test.ts`                 | 19개      | 완료 |
 | `VocabularyFileManager.test.ts`            | 9개       | 완료 |
 | `browse/page.test.ts`                      | 1개       | 완료 |
-| **합계**                                   | **116개** |      |
+| **합계**                                   | **117개** |      |
 
 ---
 
 > **추가 회귀 포인트 (2026-03-12)**:
 > `vocabulary/files/mapping`은 vocabulary 화면에서도 `domain/term/database/entity/attribute/table/column` 7개 파일을 같은 공통 번들로 조회/저장해야 하며,
 > `VocabularyFileManager`는 다른 7개 파일을 모두 선택할 수 있어야 합니다.
+
+> **추가 회귀 포인트 (2026-04-01)**:
+> 브라우저가 `crypto.randomUUID`를 지원하지 않아도 `VocabularyEditor` 신규 저장은 UUID fallback으로 계속 완료되어야 합니다.
+
+> **추가 회귀 포인트 (2026-04-01)**:
+> 단어 저장/수정/삭제 직후 용어 변환기 캐시도 함께 비워져 같은 파일의 새 단어가 즉시 검색 가능해야 합니다.
 
 ## 1. vocabulary/server.test.ts (18개)
 
@@ -52,6 +58,9 @@
 | should return 400 when required fields are missing | 필수 필드 누락       | standardName, abbreviation, englishName 누락 시 400 |
 | should return 409 when abbreviation is duplicate   | 영문약어 중복        | 이미 존재하는 abbreviation 입력 시 409              |
 | should use specified filename parameter            | 파일명 파라미터 사용 | filename 쿼리 파라미터 적용 및 저장 확인            |
+
+> **회귀 확인**:
+> 생성/수정/삭제 성공 시 용어 변환기 캐시 무효화가 함께 호출되어, 같은 용어 파일에서 즉시 최신 단어집을 참조해야 합니다.
 
 ### PUT (4개)
 
@@ -253,7 +262,7 @@
 
 ---
 
-## 10. VocabularyEditor.test.ts (18개)
+## 10. VocabularyEditor.test.ts (19개)
 
 **파일 경로**: `src/lib/components/VocabularyEditor.test.ts`
 
@@ -301,6 +310,12 @@
 | ---------------------------------------------------------------- | ------------------------- | -------------------- |
 | should load domain category options on mount                     | 도메인 카테고리 로드      | API 호출 확인        |
 | should disable domain category select when isFormalWord is false | 형식단어 아닐 때 비활성화 | select disabled 상태 |
+
+### UUID Fallback (1개)
+
+| 테스트명                                                              | 설명                      | 검증 내용                                           |
+| --------------------------------------------------------------------- | ------------------------- | --------------------------------------------------- |
+| should save a new entry with uuid fallback when crypto.randomUUID is unavailable | 브라우저 UUID fallback 확인 | 저장 이벤트가 fallback UUID와 함께 정상 전달되는지 확인 |
 
 ---
 
@@ -389,3 +404,5 @@ pnpm test vocabulary --watch
 | 2025-01-09 | filename 파라미터 테스트 추가 및 validate API 수정 (113개 테스트)            |
 | 2025-01-09 | VocabularyFileManager 컴포넌트 테스트 추가 (122개 테스트)                    |
 | 2026-03-13 | 단어집 browse 좌측 검색 요약 배치 테스트 추가 (116개 테스트)                 |
+| 2026-04-01 | `crypto.randomUUID` 미지원 브라우저 fallback 회귀 테스트 추가 (117개 테스트) |
+| 2026-04-01 | 단어 저장 후 용어 변환기 최신 반영을 위한 generator 캐시 무효화 회귀 포인트 반영 |

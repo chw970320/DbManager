@@ -1,5 +1,70 @@
 # 변경 이력
 
+## 2026-04-01
+
+### 요약
+
+- 단어집에 새 단어를 저장한 직후 같은 파일의 용어 변환기에서도 바로 최신 단어를 사용합니다.
+
+### 상세 변경
+
+1. 용어 변환기 캐시 무효화 추가
+
+- 대상:
+  - `src/lib/registry/generator-cache.ts`
+  - `src/routes/api/generator/+server.ts`
+  - `src/routes/api/generator/segment/+server.ts`
+  - `src/routes/api/vocabulary/+server.ts`
+  - `src/routes/api/term/files/mapping/+server.ts`
+- 변경:
+  - 용어 변환기와 단어 조합 분석 API의 메모리 캐시를 공용 모듈로 통합
+  - 단어 저장/수정/삭제 후 generator 캐시를 함께 비워 즉시 최신 단어집을 반영
+  - 용어 파일 매핑 변경 후에도 이전 단어집 캐시가 남지 않도록 generator 캐시 무효화 연결
+
+2. 회귀 테스트/문서 동기화
+
+- 대상:
+  - `src/routes/api/vocabulary/server.test.ts`
+  - `src/routes/api/term/files/mapping/server.test.ts`
+  - `docs/tests/TERM_TEST_DESCRIPTION.md`
+  - `docs/tests/VOCABULARY_TEST_DESCRIPTION.md`
+- 변경:
+  - 단어 저장 성공 시 generator 캐시 무효화 호출 회귀 테스트 추가
+  - 용어 파일 매핑 저장 시 generator 캐시 무효화 호출 회귀 테스트 추가
+  - 관련 테스트 문서에 최신 반영 규칙을 동기화
+
+## 2026-04-01
+
+### 요약
+
+- 브라우저가 `crypto.randomUUID`를 지원하지 않아도 단어/정의서 신규 등록이 계속 동작합니다.
+
+### 상세 변경
+
+1. 클라이언트 UUID fallback 공통화
+
+- 대상:
+  - `src/lib/utils/uuid.ts`
+  - `src/lib/components/VocabularyEditor.svelte`
+  - `src/lib/components/AttributeEditor.svelte`
+  - `src/lib/components/ColumnDefEditor.svelte`
+  - `src/lib/components/DatabaseEditor.svelte`
+  - `src/lib/components/EntityEditor.svelte`
+  - `src/lib/components/TableDefEditor.svelte`
+- 변경:
+  - 브라우저에서 네이티브 `crypto.randomUUID`를 우선 사용
+  - 지원되지 않는 환경에서는 `uuid` 패키지로 안전하게 fallback
+  - 신규 등록 시 브라우저 호환성 문제로 저장이 중단되던 경로를 공통 유틸로 정리
+
+2. 회귀 테스트/문서 동기화
+
+- 대상:
+  - `src/lib/components/VocabularyEditor.test.ts`
+  - `docs/tests/VOCABULARY_TEST_DESCRIPTION.md`
+- 변경:
+  - `crypto.randomUUID`가 없는 환경에서도 단어 저장 이벤트가 정상 발생하는 회귀 테스트 추가
+  - 단어 테스트 문서에 신규 브라우저 호환 회귀 포인트 반영
+
 ## 2026-03-13
 
 ### 요약

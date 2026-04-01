@@ -32,6 +32,9 @@
 > `term/files/mapping`은 term 화면에서도 `vocabulary/domain/database/entity/attribute/table/column` 7개 파일을 같은 공통 번들로 조회/저장해야 하며,
 > `TermFileManager`는 다른 7개 파일을 모두 선택할 수 있어야 합니다.
 
+> **추가 회귀 포인트 (2026-04-01)**:
+> 단어 저장 또는 용어 파일 매핑 변경 직후 용어 변환기는 이전 generator 캐시가 아니라 최신 단어집 매핑을 즉시 사용해야 합니다.
+
 ## 1. term/server.test.ts (18개)
 
 **파일 경로**: `src/routes/api/term/server.test.ts`
@@ -179,6 +182,7 @@
 - GET - 나머지 7개 파일 기준 공통 매핑 번들 반환
 - PUT - 공통 8종 파일 매핑 저장
 - PUT - 불완전한 매핑 요청 400 처리
+- PUT - 저장 성공 시 generator 캐시 무효화
 
 ---
 
@@ -502,3 +506,4 @@ pnpm test term --watch
 | 2025-01-09 | 초기 문서 작성 (112개 테스트)                         |
 | 2026-03-12 | 영향도 preview API/Editor 테스트 추가 (118개 테스트)  |
 | 2026-03-13 | browse 파일 전환 로딩 표시 테스트 추가 (119개 테스트) |
+| 2026-04-01 | 단어집 변경/용어 파일 매핑 변경 후 generator 캐시 무효화 회귀 포인트 반영 |

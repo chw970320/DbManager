@@ -2,6 +2,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import type { TableEntry } from '$lib/types/database-design.js';
 	import { showConfirm } from '$lib/stores/confirm-store';
+	import { generateUuid } from '$lib/utils/uuid';
 
 	let props = $props<{
 		entry?: Partial<TableEntry>;
@@ -76,7 +77,7 @@
 	function handleSave() {
 		if (!validate()) return;
 		const saveData: TableEntry = {
-			id: entry.id || crypto.randomUUID(),
+			id: entry.id || generateUuid(),
 			physicalDbName: formData.physicalDbName.trim(),
 			tableOwner: formData.tableOwner.trim(),
 			subjectArea: formData.subjectArea.trim(),

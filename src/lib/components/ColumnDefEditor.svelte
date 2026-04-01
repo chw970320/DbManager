@@ -7,6 +7,7 @@
 	} from '$lib/types/column-standard-recommendation.js';
 	import { showConfirm } from '$lib/stores/confirm-store';
 	import { debounce } from '$lib/utils/debounce';
+	import { generateUuid } from '$lib/utils/uuid';
 
 	let props = $props<{
 		entry?: Partial<ColumnEntry>;
@@ -231,7 +232,7 @@
 	function handleSave() {
 		if (!validate()) return;
 		const saveData: ColumnEntry = {
-			id: entry.id || crypto.randomUUID(),
+			id: entry.id || generateUuid(),
 			scopeFlag: formData.scopeFlag.trim(),
 			subjectArea: formData.subjectArea.trim(),
 			schemaName: formData.schemaName.trim(),

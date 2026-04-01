@@ -2,6 +2,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import type { AttributeEntry } from '$lib/types/database-design.js';
 	import { showConfirm } from '$lib/stores/confirm-store';
+	import { generateUuid } from '$lib/utils/uuid';
 
 	let props = $props<{
 		entry?: Partial<AttributeEntry>;
@@ -59,7 +60,7 @@
 	function handleSave() {
 		if (!validate()) return;
 		const saveData: AttributeEntry = {
-			id: entry.id || crypto.randomUUID(),
+			id: entry.id || generateUuid(),
 			schemaName: formData.schemaName.trim(),
 			entityName: formData.entityName.trim(),
 			attributeName: formData.attributeName.trim(),

@@ -3,6 +3,14 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
 import VocabularyEditor from './VocabularyEditor.svelte';
 import type { VocabularyEntry } from '$lib/types/vocabulary';
 
+const { mockUuidV4 } = vi.hoisted(() => ({
+	mockUuidV4: vi.fn(() => 'fallback-uuid-5678')
+}));
+
+vi.mock('uuid', () => ({
+	v4: mockUuidV4
+}));
+
 const { mockShowConfirm } = vi.hoisted(() => ({
 	mockShowConfirm: vi.fn()
 }));
@@ -16,6 +24,7 @@ global.fetch = mockFetch;
 
 // Mock crypto.randomUUID
 Object.defineProperty(global, 'crypto', {
+	configurable: true,
 	value: {
 		randomUUID: vi.fn(() => 'test-uuid-1234')
 	}
@@ -287,6 +296,55 @@ describe('VocabularyEditor', () => {
 				const domainCategorySelect = screen.getByLabelText(/도메인분류명/) as HTMLSelectElement;
 				expect(domainCategorySelect).toBeDisabled();
 			});
+		});
+	});
+
+	describe('UUID Fallback', () => {
+		it('should save a new entry with uuid fallback when crypto.randomUUID is unavailable', async () => {
+			const handleSave = vi.fn();
+			const originalCrypto = global.crypto;
+			Object.defineProperty(global, 'crypto', {
+				configurable: true,
+				value: {}
+			});
+
+			try {
+				render(VocabularyEditor, {
+					props: {},
+					events: {
+						save: (event) => {
+							handleSave(event.detail);
+						}
+					}
+				});
+
+				const standardNameInput = screen.getByLabelText(/표준단어명/) as HTMLInputElement;
+				const abbreviationInput = screen.getByLabelText(/영문약어/) as HTMLInputElement;
+				const englishNameInput = screen.getByLabelText(/영문명/) as HTMLInputElement;
+
+				await fireEvent.input(standardNameInput, { target: { value: '테스트단어' } });
+				await fireEvent.input(abbreviationInput, { target: { value: 'TEST_WORD' } });
+				await fireEvent.input(englishNameInput, { target: { value: 'TestWord' } });
+				await fireEvent.click(screen.getByRole('button', { name: /저장/ }));
+
+				await waitFor(() => {
+					expect(handleSave).toHaveBeenCalledWith(
+						expect.objectContaining({
+							id: 'fallback-uuid-5678',
+							standardName: '테스트단어',
+							abbreviation: 'TEST_WORD',
+							englishName: 'TestWord'
+						})
+					);
+				});
+
+				expect(mockUuidV4).toHaveBeenCalledTimes(1);
+			} finally {
+				Object.defineProperty(global, 'crypto', {
+					configurable: true,
+					value: originalCrypto
+				});
+			}
 		});
 	});
 });

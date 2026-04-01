@@ -4,6 +4,7 @@
 	import type { VocabularyEntry } from '$lib/types/vocabulary';
 	import { addToast } from '$lib/stores/toast-store';
 	import { showConfirm } from '$lib/stores/confirm-store';
+	import { generateUuid } from '$lib/utils/uuid';
 
 	interface Props {
 		entry?: Partial<VocabularyEntry>;
@@ -224,7 +225,7 @@
 			.filter(Boolean);
 
 		const editedEntry: VocabularyEntry = {
-			id: entry.id || crypto.randomUUID(),
+			id: entry.id || generateUuid(),
 			standardName: formData.standardName.trim(),
 			abbreviation: formData.abbreviation.trim(),
 			englishName: formData.englishName.trim(),

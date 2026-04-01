@@ -2,6 +2,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import type { DatabaseEntry } from '$lib/types/database-design.js';
 	import { showConfirm } from '$lib/stores/confirm-store';
+	import { generateUuid } from '$lib/utils/uuid';
 
 	// Props
 	let props = $props<{
@@ -91,7 +92,7 @@
 		if (!validate()) return;
 
 		const saveData: DatabaseEntry = {
-			id: entry.id || crypto.randomUUID(),
+			id: entry.id || generateUuid(),
 			organizationName: formData.organizationName.trim(),
 			departmentName: formData.departmentName.trim(),
 			appliedTask: formData.appliedTask.trim(),

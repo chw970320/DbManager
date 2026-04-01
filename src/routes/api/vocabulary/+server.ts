@@ -74,6 +74,7 @@ import {
 	invalidateDataCache,
 	invalidateAllCaches
 } from '$lib/registry/cache-registry';
+import { invalidateAllGeneratorCaches } from '$lib/registry/generator-cache';
 
 import { checkEntryReferences } from '$lib/registry/mapping-registry';
 import { getDuplicateDetails } from '$lib/utils/duplicate-handler.js';
@@ -442,6 +443,7 @@ export async function POST({ request, url }: RequestEvent) {
 		vocabularyData.entries.push(entryToSave);
 		await saveVocabularyData(vocabularyData, filename);
 		invalidateCache('vocabulary', filename); // 캐시 무효화
+		invalidateAllGeneratorCaches();
 
 		return json(
 			{
@@ -547,6 +549,7 @@ export async function PUT({ request, url }: RequestEvent) {
 
 		await saveVocabularyData(vocabularyData, filename);
 		invalidateCache('vocabulary', filename); // 캐시 무효화
+		invalidateAllGeneratorCaches();
 
 		return json(
 			{
@@ -621,6 +624,7 @@ export async function DELETE({ url }: RequestEvent) {
 		vocabularyData.entries = vocabularyData.entries.filter((e) => e.id !== id);
 		await saveVocabularyData(vocabularyData, filename);
 		invalidateCache('vocabulary', filename); // 캐시 무효화
+		invalidateAllGeneratorCaches();
 
 		return json(
 			{ success: true, message: '단어가 성공적으로 삭제되었습니다.', warnings } as ApiResponse,

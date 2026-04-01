@@ -7,10 +7,15 @@ vi.mock('$lib/registry/db-design-file-mapping', () => ({
 	saveDbDesignFileMappingBundle: vi.fn()
 }));
 
+vi.mock('$lib/registry/generator-cache', () => ({
+	invalidateAllGeneratorCaches: vi.fn()
+}));
+
 import {
 	resolveDbDesignFileMappingBundle,
 	saveDbDesignFileMappingBundle
 } from '$lib/registry/db-design-file-mapping';
+import { invalidateAllGeneratorCaches } from '$lib/registry/generator-cache';
 
 const FULL_BUNDLE = {
 	vocabulary: 'vocabulary.json',
@@ -96,6 +101,7 @@ describe('Term Mapping API: /api/term/files/mapping', () => {
 			currentFilename: 'term.json',
 			mapping
 		});
+		expect(invalidateAllGeneratorCaches).toHaveBeenCalledTimes(1);
 	});
 
 	it('PUT should return 400 on invalid mapping', async () => {

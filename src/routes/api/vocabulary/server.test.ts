@@ -22,6 +22,10 @@ vi.mock('$lib/registry/cache-registry', () => ({
 	invalidateCache: vi.fn()
 }));
 
+vi.mock('$lib/registry/generator-cache', () => ({
+	invalidateAllGeneratorCaches: vi.fn()
+}));
+
 vi.mock('$lib/utils/validation.js', () => ({
 	validateForbiddenWordsAndSynonyms: vi.fn(() => null)
 }));
@@ -37,6 +41,7 @@ import {
 	listVocabularyFiles
 } from '$lib/registry/data-registry';
 import { checkEntryReferences } from '$lib/registry/mapping-registry';
+import { invalidateAllGeneratorCaches } from '$lib/registry/generator-cache';
 
 // 테스트용 Mock 데이터
 const createMockVocabularyData = (): VocabularyData => ({
@@ -226,6 +231,7 @@ describe('Vocabulary API: /api/vocabulary', () => {
 			expect(result.data).toHaveProperty('createdAt');
 			expect(result.data).toHaveProperty('updatedAt');
 			expect(saveVocabularyData).toHaveBeenCalled();
+			expect(invalidateAllGeneratorCaches).toHaveBeenCalledTimes(1);
 		});
 
 		it('should return 400 when required fields are missing', async () => {
@@ -309,6 +315,7 @@ describe('Vocabulary API: /api/vocabulary', () => {
 			expect(result.success).toBe(true);
 			expect(result.data.description).toBe('수정된 설명');
 			expect(saveVocabularyData).toHaveBeenCalled();
+			expect(invalidateAllGeneratorCaches).toHaveBeenCalledTimes(1);
 		});
 
 		it('should return 400 when id is missing', async () => {
@@ -387,6 +394,7 @@ describe('Vocabulary API: /api/vocabulary', () => {
 			expect(result.success).toBe(true);
 			expect(result.message).toContain('삭제');
 			expect(saveVocabularyData).toHaveBeenCalled();
+			expect(invalidateAllGeneratorCaches).toHaveBeenCalledTimes(1);
 		});
 
 		it('should include warnings when references exist and force is false', async () => {

@@ -9,6 +9,7 @@ import {
 	resolveDbDesignFileMappingBundle,
 	saveDbDesignFileMappingBundle
 } from '$lib/registry/db-design-file-mapping';
+import { invalidateAllGeneratorCaches } from '$lib/registry/generator-cache';
 
 function isValidMapping(mapping: unknown): mapping is Record<string, string> {
 	if (!mapping || typeof mapping !== 'object') return false;
@@ -85,6 +86,7 @@ export async function PUT({ request }: RequestEvent) {
 			currentFilename: filename,
 			mapping: extractDbDesignRelatedMapping(mapping)
 		});
+		invalidateAllGeneratorCaches();
 
 		return json(
 			{

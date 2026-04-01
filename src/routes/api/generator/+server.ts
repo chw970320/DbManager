@@ -74,24 +74,22 @@ import {
 	invalidateDataCache,
 	invalidateAllCaches
 } from '$lib/registry/cache-registry';
+import {
+	getCachedGeneratorConversionMaps,
+	getCachedGeneratorVocabulary,
+	setCachedGeneratorConversionMaps,
+	setCachedGeneratorVocabulary,
+	__clearGeneratorCacheForTest
+} from '$lib/registry/generator-cache';
 
-
-// 파일별로 캐시 관리
-const vocabularyCache: Map<string, VocabularyData> = new Map();
-const koToEnMapCache: Map<string, Map<string, string[]>> = new Map();
-const enToKoMapCache: Map<string, Map<string, string[]>> = new Map();
-
-// 테스트용 캐시 초기화 함수 (런타임 동작에는 영향 없음)
-export function __clearGeneratorCacheForTest() {
-	vocabularyCache.clear();
-	koToEnMapCache.clear();
-	enToKoMapCache.clear();
-}
+export { __clearGeneratorCacheForTest };
 
 async function initializeCache(filename: string = 'term.json') {
 	// 캐시 확인
-	if (vocabularyCache.has(filename)) {
-		return vocabularyCache.get(filename)!;
+	const cachedVocabulary = getCachedGeneratorVocabulary(filename);
+	const cachedMaps = getCachedGeneratorConversionMaps(filename);
+	if (cachedVocabulary && cachedMaps) {
+		return cachedVocabulary;
 	}
 
 	try {
@@ -106,7 +104,7 @@ async function initializeCache(filename: string = 'term.json') {
 		const vocabularyData = await loadVocabularyData(mapping.vocabulary);
 
 		// 캐시에 저장
-		vocabularyCache.set(filename, vocabularyData);
+		setCachedGeneratorVocabulary(filename, vocabularyData);
 
 		// Map 생성 및 캐시
 		const koToEnMap = new Map<string, string[]>();
@@ -126,8 +124,10 @@ async function initializeCache(filename: string = 'term.json') {
 			enToKoMap.set(enKey, enValues);
 		}
 
-		koToEnMapCache.set(filename, koToEnMap);
-		enToKoMapCache.set(filename, enToKoMap);
+		setCachedGeneratorConversionMaps(filename, {
+			koToEn: koToEnMap,
+			enToKo: enToKoMap
+		});
 
 		return vocabularyData;
 	} catch (error) {
@@ -166,7 +166,12 @@ export async function POST({ request, url }: RequestEvent) {
 		}
 
 		const sourceMap =
-			direction === 'ko-to-en' ? koToEnMapCache.get(filename)! : enToKoMapCache.get(filename)!;
+			direction === 'ko-to-en'
+				? getCachedGeneratorConversionMaps(filename)?.koToEn
+				: getCachedGeneratorConversionMaps(filename)?.enToKo;
+		if (!sourceMap) {
+			throw new Error('단어 변환 캐시를 불러올 수 없습니다.');
+		}
 		const separator = term.includes(' ') ? ' ' : '_';
 		const terms = term.split(separator);
 

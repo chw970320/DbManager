@@ -74,15 +74,14 @@ import {
 	invalidateDataCache,
 	invalidateAllCaches
 } from '$lib/registry/cache-registry';
-
-
-// --- 캐시 ---
-// 파일별로 캐시 관리: dictionaryCache[filename] = { ko: Set, en: Set }
-const dictionaryCache: Map<string, { ko: Set<string>; en: Set<string> }> = new Map();
+import {
+	getCachedGeneratorDictionary,
+	setCachedGeneratorDictionary
+} from '$lib/registry/generator-cache';
 
 async function getDictionary(filename: string = 'term.json') {
 	// 캐시 확인
-	const cached = dictionaryCache.get(filename);
+	const cached = getCachedGeneratorDictionary(filename);
 	if (cached) {
 		return cached;
 	}
@@ -103,7 +102,7 @@ async function getDictionary(filename: string = 'term.json') {
 		const dictionary = { ko, en };
 
 		// 캐시에 저장
-		dictionaryCache.set(filename, dictionary);
+		setCachedGeneratorDictionary(filename, dictionary);
 
 		return dictionary;
 	} catch (error) {

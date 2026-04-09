@@ -4,20 +4,29 @@
 
 ## 테스트 현황 요약
 
-| 테스트 파일               | 테스트 수 | 상태 |
-| ------------------------- | --------- | ---- |
-| `validation.test.ts`      | 34개      | 완료 |
-| `xlsx-parser.test.ts`     | 10개      | 완료 |
-| `cache.test.ts`           | 13개      | 완료 |
-| `file-filter.test.ts`     | 29개      | 완료 |
-| `file-selection.test.ts`  | 6개       | 완료 |
-| `test-data-reset.test.ts` | 2개       | 완료 |
-| `navigation.test.ts`      | 2개       | 완료 |
-| `debounce.test.ts`        | 8개       | 완료 |
-| `shared-file-mapping-name.test.ts` | 3개 | 완료 |
-| **합계**                  | **107개** |      |
+| 테스트 파일                          | 테스트 수 | 상태 |
+| ------------------------------------ | --------- | ---- |
+| `validation.test.ts`                 | 34개      | 완료 |
+| `xlsx-parser.test.ts`                | 10개      | 완료 |
+| `cache.test.ts`                      | 13개      | 완료 |
+| `file-filter.test.ts`                | 29개      | 완료 |
+| `file-selection.test.ts`             | 6개       | 완료 |
+| `test-data-reset.test.ts`            | 2개       | 완료 |
+| `upload-history-registry.test.ts`    | 3개       | 완료 |
+| `navigation.test.ts`                 | 2개       | 완료 |
+| `debounce.test.ts`                   | 8개       | 완료 |
+| `shared-file-mapping-name.test.ts`   | 3개       | 완료 |
+| `editor-close-guard.test.ts`         | 5개       | 완료 |
+| `cascade-update-rules.test.ts`       | 3개       | 완료 |
+| `cascade-update-plan.test.ts`        | 2개       | 완료 |
+| `cascade-update-transaction.test.ts` | 1개       | 완료 |
+| **합계**                             | **120개** |      |
 
 **참고**: `file-handler.test.ts`와 `database-design-handler.test.ts`는 복잡한 파일 시스템 의존성으로 인해 API 테스트에서 간접적으로 검증됩니다.
+
+> **추가 회귀 포인트 (2026-04-09)**:
+> `cascade-update-*` 유틸은 단어집/도메인/용어집 수정 저장 시 preview/apply가 같은 dry-run 결과를 사용해야 하며,
+> exact `_` token 치환, 비결정적 domain 추천 충돌 차단, 요청 단위 rollback이 유지되어야 합니다.
 
 ---
 
@@ -237,11 +246,11 @@ XLSX 파일 파싱 로직을 테스트합니다.
 
 공통 파일 매핑 번들의 자동 표시명 생성 규칙을 테스트합니다.
 
-| 테스트명                                                             | 설명                   | 검증 내용                                              |
-| -------------------------------------------------------------------- | ---------------------- | ------------------------------------------------------ |
-| should return a single bundle name when all file stems match         | 동일 파일군 번들명     | `bksp.json` 8종 조합이 `bksp 번들`로 요약되는지 확인   |
-| should summarize standard files separately from default design files | 표준/설계 혼합 번들명 | 표준용어 3종 커스텀 + 설계 5종 기본 조합 이름 생성 확인 |
-| should return the default shared bundle label for the built-in mapping | 기본 번들명          | 기본 파일 조합이 `기본 공통 번들`로 생성되는지 확인    |
+| 테스트명                                                               | 설명                  | 검증 내용                                               |
+| ---------------------------------------------------------------------- | --------------------- | ------------------------------------------------------- |
+| should return a single bundle name when all file stems match           | 동일 파일군 번들명    | `bksp.json` 8종 조합이 `bksp 번들`로 요약되는지 확인    |
+| should summarize standard files separately from default design files   | 표준/설계 혼합 번들명 | 표준용어 3종 커스텀 + 설계 5종 기본 조합 이름 생성 확인 |
+| should return the default shared bundle label for the built-in mapping | 기본 번들명           | 기본 파일 조합이 `기본 공통 번들`로 생성되는지 확인     |
 
 ---
 
@@ -376,14 +385,28 @@ XLSX 파일 파싱 로직을 테스트합니다.
 
 테스트용 전체 데이터 초기화 스크립트의 기준 상태 복원 동작을 테스트합니다.
 
-| 테스트명                                                                   | 설명                      | 검증 내용                                                                                                       |
-| -------------------------------------------------------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| should remove user json files and recreate the default empty files         | 기존 데이터 초기화        | 사용자 JSON 삭제, 기본 파일 빈 데이터 재생성, registry/shared mapping/design snapshots 초기화, 비대상 설정 유지 |
-| should create the reset baseline even when the data directory starts empty | 빈 데이터 디렉터리 초기화 | 디렉터리가 비어 있어도 8개 기본 파일과 registry/shared mapping/design snapshots 기준 상태 생성                  |
+| 테스트명                                                                   | 설명                      | 검증 내용                                                                                                                      |
+| -------------------------------------------------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| should remove user json files and recreate the default empty files         | 기존 데이터 초기화        | 사용자 JSON 삭제, 기본 파일 빈 데이터 재생성, registry/shared mapping/design snapshots/upload-history 초기화, 비대상 설정 유지 |
+| should create the reset baseline even when the data directory starts empty | 빈 데이터 디렉터리 초기화 | 디렉터리가 비어 있어도 8개 기본 파일과 registry/shared mapping/design snapshots 기준 상태 생성                                 |
 
 ---
 
-## 8. navigation.test.ts (2개)
+## 8. upload-history-registry.test.ts (3개)
+
+**파일 경로**: `src/lib/registry/upload-history-registry.test.ts`
+
+업로드 교체 이력 저장소의 타입별 분할 저장, prune, 복원 규칙을 테스트합니다.
+
+| 테스트명                                                      | 설명           | 검증 내용                         |
+| ------------------------------------------------------------- | -------------- | --------------------------------- |
+| 업로드 교체 직전 JSON 본문을 타입별 저장소에 저장한다         | 이력 생성      | 타입별 파일 저장, mapping 제거    |
+| 30일이 지난 이력을 prune하고 최신 순으로 반환한다             | 보존 정책/정렬 | 만료 이력 제거, 최신 순 정렬      |
+| 복원은 현재 파일 JSON 본문만 되돌리고 새 이력을 만들지 않는다 | 복원 규칙      | JSON 본문 복원, 새 history 미생성 |
+
+---
+
+## 9. navigation.test.ts (2개)
 
 **파일 경로**: `src/lib/utils/navigation.test.ts`
 
@@ -393,6 +416,22 @@ XLSX 파일 파싱 로직을 테스트합니다.
 | ----------------------------------------------------------------------- | ---------------------------- | ------------------------------------------------------------------ |
 | should resolve a grouped route to its menu group and current item       | 현재 경로의 메뉴 매칭 확인   | `/profiling/browse` 같은 경로에서 그룹/현재 메뉴를 정확히 찾음     |
 | should build breadcrumb items with sibling menu links for grouped pages | breadcrumb 파생 및 이동 목록 | `lv1`에는 동료 그룹 목록, `lv2`에는 현재 그룹의 메뉴 목록이 포함됨 |
+
+---
+
+## 9. editor-close-guard.test.ts (5개)
+
+**파일 경로**: `src/lib/utils/editor-close-guard.test.ts`
+
+입력형 Editor 모달의 공통 닫기 가드를 테스트합니다.
+
+| 테스트명                                                     | 설명               | 검증 내용                                              |
+| ------------------------------------------------------------ | ------------------ | ------------------------------------------------------ |
+| should detect pristine state for equal values                | 동일 상태 비교     | 키 순서가 달라도 dirty=false 로 판단되는지 확인        |
+| should detect dirty state when a value changes               | 변경 상태 비교     | 값이 하나라도 바뀌면 dirty=true 로 판단되는지 확인     |
+| should close immediately without confirm when pristine       | pristine 즉시 닫기 | 확인 다이얼로그 없이 `onClose`가 호출되는지 확인       |
+| should ask for confirm when dirty and only close on approval | dirty 확인 후 닫기 | 확인 거절 시 유지, 승인 시에만 닫히는지 확인           |
+| should ignore close requests while submitting                | 제출 중 닫기 차단  | 저장/제출 중에는 확인 없이 닫기 요청이 무시되는지 확인 |
 
 ---
 
@@ -411,6 +450,7 @@ pnpm test src/lib/utils/cache.test.ts
 pnpm test src/lib/utils/file-filter.test.ts
 pnpm test src/lib/utils/test-data-reset.test.ts
 pnpm test src/lib/utils/navigation.test.ts
+pnpm test src/lib/utils/editor-close-guard.test.ts
 
 # 감시 모드
 pnpm test src/lib/utils --watch
@@ -420,14 +460,15 @@ pnpm test src/lib/utils --watch
 
 ## 변경 이력
 
-| 날짜       | 변경 내용                                                 |
-| ---------- | --------------------------------------------------------- |
-| 2025-01-09 | 초기 문서 작성 (82개 테스트)                              |
-| 2026-03-11 | validation 유틸리티 테스트 확장 (98개 테스트)             |
-| 2026-03-12 | file-selection 복원 회귀 테스트 추가 (100개 테스트)       |
-| 2026-03-12 | test-data-reset 초기화 테스트 추가 (102개 테스트)         |
-| 2026-03-13 | navigation breadcrumb 유틸리티 테스트 추가 (104개 테스트) |
-| 2026-03-13 | test-data-reset에 design snapshots 초기화 반영            |
+| 날짜       | 변경 내용                                                         |
+| ---------- | ----------------------------------------------------------------- |
+| 2025-01-09 | 초기 문서 작성 (82개 테스트)                                      |
+| 2026-03-11 | validation 유틸리티 테스트 확장 (98개 테스트)                     |
+| 2026-03-12 | file-selection 복원 회귀 테스트 추가 (100개 테스트)               |
+| 2026-03-12 | test-data-reset 초기화 테스트 추가 (102개 테스트)                 |
+| 2026-03-13 | navigation breadcrumb 유틸리티 테스트 추가 (104개 테스트)         |
+| 2026-03-13 | test-data-reset에 design snapshots 초기화 반영                    |
+| 2026-04-08 | editor-close-guard 공통 모달 닫기 회귀 테스트 추가 (112개 테스트) |
 
 ---
 

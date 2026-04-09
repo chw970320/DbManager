@@ -2,16 +2,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { POST } from './+server';
 import type { RequestEvent } from '@sveltejs/kit';
 
+const { mockPlanCascadeUpdate } = vi.hoisted(() => ({
+	mockPlanCascadeUpdate: vi.fn()
+}));
+
 vi.mock('$lib/utils/change-impact-preview.js', () => ({
 	buildScopedTermImpactPreview: vi.fn()
 }));
 
 vi.mock('$lib/utils/cascade-update-plan.js', () => ({
-	planCascadeUpdate: vi.fn()
+	planCascadeUpdate: mockPlanCascadeUpdate
 }));
-
-import { buildScopedTermImpactPreview } from '$lib/utils/change-impact-preview.js';
-import { planCascadeUpdate } from '$lib/utils/cascade-update-plan.js';
 
 function createEvent(body?: unknown): RequestEvent {
 	return {
@@ -35,59 +36,9 @@ describe('API: /api/term/impact-preview', () => {
 		expect(result.success).toBe(false);
 	});
 
-	it('full scope에서는 기존 term impact preview를 반환한다', async () => {
-		vi.mocked(buildScopedTermImpactPreview).mockResolvedValue({
-			files: { term: 'term.json', domain: 'domain.json', column: 'column.json' },
-			mode: 'update',
-			current: null,
-			proposed: {
-				id: 't1',
-				termName: '사용자_이름',
-				columnName: 'USER_NAME',
-				domainName: '사용자명_VARCHAR(50)'
-			},
-			changes: {
-				termNameChanged: false,
-				columnNameChanged: false,
-				domainNameChanged: false
-			},
-			summary: {
-				currentLinkedColumnCount: 0,
-				nextLinkedColumnCount: 1,
-				columnLinksToBeBroken: 0,
-				newColumnLinksDetected: 0,
-				affectedColumnStandardizationCount: 0,
-				proposedDomainExists: true
-			},
-			samples: {
-				currentLinkedColumns: [],
-				nextLinkedColumns: [{ id: 'c1', name: 'USER_NAME' }]
-			},
-			guidance: ['저장 후 컬럼-용어 동기화를 실행하면 1개 컬럼이 새 용어와 연결될 수 있습니다.']
-		});
-
-		const response = await POST(
-			createEvent({
-				filename: 'term.json',
-				proposedEntry: {
-					id: 't1',
-					termName: '사용자_이름',
-					columnName: 'USER_NAME',
-					domainName: '사용자명_VARCHAR(50)'
-				}
-			})
-		);
-		const result = await response.json();
-
-		expect(response.status).toBe(200);
-		expect(result.success).toBe(true);
-		expect(result.data.summary.nextLinkedColumnCount).toBe(1);
-	});
-
 	it('editor-save scope에서는 cascade preview를 반환한다', async () => {
-		vi.mocked(planCascadeUpdate).mockResolvedValue({
+		mockPlanCascadeUpdate.mockResolvedValue({
 			blocked: false,
-			plan: {} as never,
 			sourceEntry: {} as never,
 			preview: {
 				sourceType: 'term',

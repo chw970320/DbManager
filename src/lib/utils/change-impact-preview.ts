@@ -1,9 +1,16 @@
 import { DEFAULT_FILENAMES, type DataType, type ReferenceCheckResult } from '$lib/types/base.js';
 import type { DomainEntry } from '$lib/types/domain.js';
 import type { TermEntry } from '$lib/types/term.js';
-import type { DomainImpactPreview, ImpactReferenceSummary, TermImpactPreview } from '$lib/types/change-impact.js';
+import type {
+	DomainImpactPreview,
+	ImpactReferenceSummary,
+	TermImpactPreview,
+	VocabularyImpactPreview
+} from '$lib/types/change-impact.js';
+import type { VocabularyEntry } from '$lib/types/vocabulary.js';
 import { resolveRelatedFilenames, checkEntryReferences } from '$lib/registry/mapping-registry.js';
 import { loadData } from '$lib/registry/data-registry.js';
+import { planVocabularyCascadeUpdate } from '$lib/utils/cascade-update-plan.js';
 import { normalizeKey } from '$lib/utils/mapping-key.js';
 
 type TermImpactParams = {
@@ -18,6 +25,14 @@ type DomainImpactParams = {
 	currentEntry?: Partial<DomainEntry> | null;
 	proposedEntry?: Partial<DomainEntry> | null;
 };
+
+type VocabularyImpactParams = {
+	filename?: string;
+	currentEntry?: Partial<VocabularyEntry> | null;
+	proposedEntry: Partial<VocabularyEntry>;
+};
+
+type ImpactScope = 'full' | 'editor-save';
 
 function countReferences(
 	references: ReferenceCheckResult['references'],
@@ -56,6 +71,85 @@ function pickDomainEntry(entry: Partial<DomainEntry> | null | undefined) {
 		dataLength: entry.dataLength?.trim() || '',
 		decimalPlaces: entry.decimalPlaces?.trim() || ''
 	};
+}
+
+function scopeDomainImpactPreview(
+	preview: DomainImpactPreview,
+	scope: ImpactScope
+): DomainImpactPreview {
+	if (scope !== 'editor-save') {
+		return preview;
+	}
+
+	const totalReferenceCount =
+		preview.summary.vocabularyReferenceCount + preview.summary.termReferenceCount;
+	const guidance = preview.guidance.filter((guide) => !guide.includes('컬럼'));
+	if (guidance.length === 0) {
+		guidance.push('이 저장 영향도는 단어집과 용어집까지만 표시하며 컬럼 정의서는 제외합니다.');
+	}
+
+	return {
+		...preview,
+		summary: {
+			...preview.summary,
+			columnReferenceCount: 0,
+			totalReferenceCount,
+			affectedColumnSyncCount: 0
+		},
+		references: preview.references.filter((reference) => reference.type !== 'column'),
+		guidance
+	};
+}
+
+function scopeTermImpactPreview(preview: TermImpactPreview, scope: ImpactScope): TermImpactPreview {
+	if (scope !== 'editor-save') {
+		return preview;
+	}
+
+	const guidance = preview.guidance.filter((guide) => !guide.includes('컬럼'));
+	if (guidance.length === 0) {
+		guidance.push('이 저장 영향도는 용어집 내부 저장 기준만 보여주며 컬럼 정의서는 제외합니다.');
+	}
+
+	return {
+		...preview,
+		summary: {
+			...preview.summary,
+			currentLinkedColumnCount: 0,
+			nextLinkedColumnCount: 0,
+			columnLinksToBeBroken: 0,
+			newColumnLinksDetected: 0,
+			affectedColumnStandardizationCount: 0
+		},
+		samples: {
+			currentLinkedColumns: [],
+			nextLinkedColumns: []
+		},
+		guidance
+	};
+}
+
+export async function buildVocabularyImpactPreview({
+	filename,
+	currentEntry,
+	proposedEntry
+}: VocabularyImpactParams): Promise<VocabularyImpactPreview> {
+	const current = currentEntry || null;
+	const proposed = proposedEntry;
+
+	if (!proposed.standardName || !proposed.abbreviation || !proposed.englishName) {
+		throw new Error(
+			'영향도 미리보기를 계산하려면 standardName, abbreviation, englishName이 필요합니다.'
+		);
+	}
+
+	const { preview } = await planVocabularyCascadeUpdate({
+		filename,
+		currentEntry,
+		proposedEntry
+	});
+
+	return preview;
 }
 
 export async function buildTermImpactPreview({
@@ -176,6 +270,13 @@ export async function buildTermImpactPreview({
 	};
 }
 
+export async function buildScopedTermImpactPreview(
+	params: TermImpactParams,
+	scope: ImpactScope
+): Promise<TermImpactPreview> {
+	return scopeTermImpactPreview(await buildTermImpactPreview(params), scope);
+}
+
 export async function buildDomainImpactPreview({
 	filename,
 	mode,
@@ -190,8 +291,7 @@ export async function buildDomainImpactPreview({
 
 	const current = pickDomainEntry(currentEntry);
 	const proposed = pickDomainEntry(proposedEntry);
-	const previewMode =
-		mode || (current ? (proposed ? 'update' : 'delete') : 'create');
+	const previewMode = mode || (current ? (proposed ? 'update' : 'delete') : 'create');
 
 	const referenceResult =
 		current && previewMode !== 'create'
@@ -275,4 +375,11 @@ export async function buildDomainImpactPreview({
 		references: [vocabularyRefs, termRefs, columnRefs],
 		guidance
 	};
+}
+
+export async function buildScopedDomainImpactPreview(
+	params: DomainImpactParams,
+	scope: ImpactScope
+): Promise<DomainImpactPreview> {
+	return scopeDomainImpactPreview(await buildDomainImpactPreview(params), scope);
 }

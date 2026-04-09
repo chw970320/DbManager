@@ -14,19 +14,23 @@
 | `domain/upload/server.test.ts`         | 5개       | 완료 |
 | `domain/download/server.test.ts`       | 6개       | 완료 |
 | `domain/filter-options/server.test.ts` | 8개       | 완료 |
-| `domain/impact-preview/server.test.ts` | 1개       | 완료 |
+| `domain/impact-preview/server.test.ts` | 2개       | 완료 |
 | `DomainEditor.test.ts`                 | 17개      | 완료 |
 | `DomainFileManager.test.ts`            | 9개       | 완료 |
 | `domain/type-mappings/server.test.ts`  | 6개       | 완료 |
 | `DomainDataTypeMappingModal.test.ts`   | 4개       | 완료 |
 | `domain/browse/page.test.ts`           | 2개       | 완료 |
-| **합계**                               | **103개** |      |
+| **합계**                               | **104개** |      |
 
 ---
 
 > **추가 회귀 포인트 (2026-03-12)**:
 > `domain/files/mapping`은 domain 화면에서도 `vocabulary/term/database/entity/attribute/table/column` 7개 파일을 같은 공통 번들로 조회/저장해야 하며,
 > `DomainFileManager`는 다른 7개 파일을 모두 선택할 수 있어야 합니다.
+
+> **추가 회귀 포인트 (2026-04-09)**:
+> `DomainEditor` 수정 모드의 기존 잠금 필드는 편집 가능해야 하며,
+> 저장 전 preview는 컬럼 정의서를 제외한 3영역 요약만 보여주고, domainCategory 변경이 모호하면 자동 반영을 차단해야 합니다.
 
 ## 1. domain/server.test.ts (21개)
 
@@ -63,6 +67,9 @@
 | should return 400 when id is missing         | ID 누락              | id 필드 없이 요청 시 400 에러            |
 | should return 404 when entry not found       | 존재하지 않는 항목   | 없는 id로 수정 시도 시 404 에러          |
 | should use specified filename parameter      | 파일명 파라미터 사용 | filename 쿼리 파라미터 적용 및 저장 확인 |
+
+> **회귀 확인**:
+> 수정 저장은 관련 단어집/용어집 자동 반영과 요청 단위 rollback을 사용합니다.
 
 ### DELETE (6개)
 
@@ -217,15 +224,16 @@
 
 ---
 
-## 8. domain/impact-preview/server.test.ts (1개)
+## 8. domain/impact-preview/server.test.ts (2개)
 
 **파일 경로**: `src/routes/api/domain/impact-preview/server.test.ts`
 
 도메인 editor 저장/삭제 전 영향도 preview API를 테스트합니다.
 
-| 테스트명                                 | 설명              | 검증 내용                     |
-| ---------------------------------------- | ----------------- | ----------------------------- |
-| 성공 시 도메인 영향도 preview를 반환한다 | preview 응답 성공 | totalReferenceCount 반환 확인 |
+| 테스트명                                           | 설명                   | 검증 내용                                   |
+| -------------------------------------------------- | ---------------------- | ------------------------------------------- |
+| full scope에서는 도메인 영향도 preview를 반환한다  | full preview 응답 성공 | totalReferenceCount 반환 확인               |
+| editor-save scope에서는 cascade preview를 반환한다 | 저장 전 preview 응답   | sourceType/sourceFilename 등 요약 반환 확인 |
 
 ---
 
@@ -258,7 +266,7 @@
 
 | 테스트명                                      | 설명                          | 검증 내용            |
 | --------------------------------------------- | ----------------------------- | -------------------- |
-| should disable domainGroup input in edit mode | 수정 모드 도메인그룹 비활성화 | domainGroup disabled |
+| should allow editing previously locked inputs in edit mode | 수정 모드 잠금 필드 편집 가능 | domainGroup, domainCategory, physicalDataType editable |
 | should show delete button in edit mode        | 수정 모드 삭제 버튼           | 삭제 버튼 표시       |
 | should not show delete button in create mode  | 생성 모드 삭제 버튼 없음      | 삭제 버튼 미표시     |
 | should show "수정" button text in edit mode   | 수정 모드 버튼 텍스트         | "수정" 텍스트 표시   |

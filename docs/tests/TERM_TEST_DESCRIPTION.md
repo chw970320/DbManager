@@ -16,15 +16,15 @@
 | `term/download/server.test.ts`       | 5개       | 완료 |
 | `term/filter-options/server.test.ts` | 7개       | 완료 |
 | `term/recommend/server.test.ts`      | 6개       | 완료 |
-| `term/impact-preview/server.test.ts` | 2개       | 완료 |
+| `term/impact-preview/server.test.ts` | 3개       | 완료 |
 | `generator/server.test.ts`           | 8개       | 완료 |
 | `TermEditor.test.ts`                 | 13개      | 완료 |
-| `TermFileManager.test.ts`            | 9개       | 완료 |
+| `TermFileManager.test.ts`            | 10개      | 완료 |
 | `TermTable.test.ts`                  | 6개       | 완료 |
-| `TermGenerator.test.ts`              | 4개       | 완료 |
+| `TermGenerator.test.ts`              | 13개      | 완료 |
 | `TermValidationPanel.test.ts`        | 6개       | 완료 |
 | `term/browse/page.test.ts`           | 1개       | 완료 |
-| **합계**                             | **119개** |      |
+| **합계**                             | **130개** |      |
 
 ---
 
@@ -34,6 +34,9 @@
 
 > **추가 회귀 포인트 (2026-04-01)**:
 > 단어 저장 또는 용어 파일 매핑 변경 직후 용어 변환기는 이전 generator 캐시가 아니라 최신 단어집 매핑을 즉시 사용해야 합니다.
+
+> **추가 회귀 포인트 (2026-04-09)**:
+> `TermEditor` 저장 전 preview는 항상 열려야 하고, 컬럼 정의서 영향 수치 대신 3영역 기준 원본/연쇄 반영 요약만 보여야 합니다.
 
 ## 1. term/server.test.ts (18개)
 
@@ -69,6 +72,9 @@
 | should update an existing entry successfully | 용어 수정 성공       | 200 응답, 매핑 상태 재계산 확인          |
 | should return 404 when entry not found       | 존재하지 않는 항목   | 없는 id로 수정 시도 시 404 에러          |
 | should use specified filename parameter      | 파일명 파라미터 사용 | filename 쿼리 파라미터 적용 및 저장 확인 |
+
+> **회귀 확인**:
+> 수정 저장은 helper 기반 preview/apply 경로를 사용하며, 컬럼 동기화는 직접 수행하지 않습니다.
 
 ### DELETE (4개)
 
@@ -278,16 +284,17 @@
 
 ---
 
-## 11. term/impact-preview/server.test.ts (2개)
+## 11. term/impact-preview/server.test.ts (3개)
 
 **파일 경로**: `src/routes/api/term/impact-preview/server.test.ts`
 
 용어 editor 저장 전 영향도 preview API를 테스트합니다.
 
-| 테스트명                              | 설명              | 검증 내용                               |
-| ------------------------------------- | ----------------- | --------------------------------------- |
-| proposedEntry가 없으면 400을 반환한다 | 필수 payload 검증 | proposedEntry 누락 시 400 에러 반환     |
-| 성공 시 영향도 preview를 반환한다     | preview 응답 성공 | summary/current/proposed 구조 반환 확인 |
+| 테스트명                                             | 설명                 | 검증 내용                                   |
+| ---------------------------------------------------- | -------------------- | ------------------------------------------- |
+| proposedEntry가 없으면 400을 반환한다                | 필수 payload 검증    | proposedEntry 누락 시 400 에러 반환         |
+| full scope에서는 기존 term impact preview를 반환한다 | full preview 응답    | 컬럼 영향 summary 구조 반환 확인            |
+| editor-save scope에서는 cascade preview를 반환한다   | 저장 전 preview 응답 | sourceType/sourceFilename 등 요약 반환 확인 |
 
 ---
 
@@ -337,7 +344,7 @@
 
 ---
 
-## 13. TermFileManager.test.ts (9개)
+## 13. TermFileManager.test.ts (10개)
 
 **파일 경로**: `src/lib/components/TermFileManager.test.ts`
 
@@ -367,9 +374,10 @@
 
 ### Upload Tab (1개)
 
-| 테스트명       | 설명         | 검증 내용      |
-| -------------- | ------------ | -------------- |
-| 업로드 탭 표시 | 업로드 탭 UI | 업로드 탭 표시 |
+| 테스트명                        | 설명                | 검증 내용                           |
+| ------------------------------- | ------------------- | ----------------------------------- |
+| 업로드 탭 표시                  | 업로드 탭 UI        | 업로드 탭 표시                      |
+| 업로드 후 현재 매핑값 자동 저장 | 업로드 후 후속 처리 | `/api/term/files/mapping` 자동 호출 |
 
 ### Domain Mapping (1개)
 
@@ -415,7 +423,7 @@
 
 ---
 
-## 15. TermGenerator.test.ts (4개)
+## 15. TermGenerator.test.ts (13개)
 
 **파일 경로**: `src/lib/components/TermGenerator.test.ts`
 
@@ -427,12 +435,37 @@
 | ---------------------------- | -------------- | ------------------------- |
 | should render generator form | 생성 폼 렌더링 | 생성 폼이 표시되는지 확인 |
 
-### Term Generation (3개)
+### Term Generation (2개)
 
 | 테스트명                                             | 설명             | 검증 내용                      |
 | ---------------------------------------------------- | ---------------- | ------------------------------ |
 | should call API when generate button is clicked      | 용어 생성 요청   | 생성 버튼 클릭 시 API 호출     |
 | should display results list when API returns results | 결과 목록 렌더링 | API 응답에 따라 결과 목록 표시 |
+
+### Interaction Stability (2개)
+
+| 테스트명                                                  | 설명                | 검증 내용                                 |
+| --------------------------------------------------------- | ------------------- | ----------------------------------------- |
+| should trigger addTerm event when combination is selected | 조합 선택 동작 유지 | 조합 선택 흐름에서도 컴포넌트가 정상 동작 |
+| should handle duplicate results without key errors        | 중복 결과 안정성    | 중복 결과가 와도 key 충돌 없이 렌더링     |
+
+### Validation (6개)
+
+| 테스트명                                                                                  | 설명                 | 검증 내용                                                   |
+| ----------------------------------------------------------------------------------------- | -------------------- | ----------------------------------------------------------- |
+| should refetch combinations and results when filename prop changes                        | 파일 전환 재조회     | 같은 입력이어도 새 용어 파일 기준으로 조합/결과를 다시 조회 |
+| should call validate API with filename parameter for each result                          | 파일명 전달 검증     | validate API가 현재 용어 파일명을 사용                      |
+| should send columnName in validate API request                                            | validation 요청 본문 | validate API body에 columnName 포함                         |
+| should handle validation API error gracefully                                             | validation 오류 응답 | 400 오류 응답이 와도 컴포넌트가 깨지지 않음                 |
+| should handle validation with multiple errors from API                                    | 복수 오류 응답       | 복수 오류 응답이 와도 컴포넌트가 깨지지 않음                |
+| should surface validation failure when validate request throws instead of keeping spinner | validation 종료 상태 | validation 예외 시 무한 spinner 대신 실패 상태로 종료       |
+
+### Copy to Clipboard (2개)
+
+| 테스트명                                     | 설명                    | 검증 내용                                     |
+| -------------------------------------------- | ----------------------- | --------------------------------------------- |
+| should handle clipboard API when available   | Clipboard API 사용 가능 | 최신 브라우저 API가 있어도 정상 렌더링/동작   |
+| should handle clipboard API when unavailable | Clipboard API fallback  | Clipboard API가 없어도 컴포넌트가 깨지지 않음 |
 
 ---
 
@@ -501,9 +534,9 @@ pnpm test term --watch
 
 ## 변경 이력
 
-| 날짜       | 변경 내용                                             |
-| ---------- | ----------------------------------------------------- |
-| 2025-01-09 | 초기 문서 작성 (112개 테스트)                         |
-| 2026-03-12 | 영향도 preview API/Editor 테스트 추가 (118개 테스트)  |
-| 2026-03-13 | browse 파일 전환 로딩 표시 테스트 추가 (119개 테스트) |
+| 날짜       | 변경 내용                                                                 |
+| ---------- | ------------------------------------------------------------------------- |
+| 2025-01-09 | 초기 문서 작성 (112개 테스트)                                             |
+| 2026-03-12 | 영향도 preview API/Editor 테스트 추가 (118개 테스트)                      |
+| 2026-03-13 | browse 파일 전환 로딩 표시 테스트 추가 (119개 테스트)                     |
 | 2026-04-01 | 단어집 변경/용어 파일 매핑 변경 후 generator 캐시 무효화 회귀 포인트 반영 |

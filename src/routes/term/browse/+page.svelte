@@ -7,6 +7,7 @@
 	import TermGenerator from '$lib/components/TermGenerator.svelte';
 	import TermValidationPanel from '$lib/components/TermValidationPanel.svelte';
 	import VocabularyEditor from '$lib/components/VocabularyEditor.svelte';
+	import ImpactConfirmDialog from '$lib/components/ImpactConfirmDialog.svelte';
 	import BrowsePageLayout from '$lib/components/BrowsePageLayout.svelte';
 	import BrowseSidebarSummary from '$lib/components/BrowseSidebarSummary.svelte';
 	import ActionBar from '$lib/components/ActionBar.svelte';
@@ -21,6 +22,7 @@
 		ValidationResult,
 		AutoFixSuggestion
 	} from '$lib/types/term.js';
+	import type { EditorSaveImpactPreview } from '$lib/types/change-impact.js';
 	import type { ApiResponse, VocabularyEntry } from '$lib/types/vocabulary.js';
 	import { resolvePreferredFilename } from '$lib/utils/file-selection';
 	import { get } from 'svelte/store';
@@ -56,6 +58,9 @@
 	let showEditor = $state(false);
 	let editorServerError = $state('');
 	let initialEntry = $state<Partial<TermEntry>>({});
+	let showImpactConfirm = $state(false);
+	let pendingSaveEntry = $state<TermEntry | null>(null);
+	let pendingImpactPreview = $state<EditorSaveImpactPreview | null>(null);
 
 	// Validation 패널 상태
 	let showValidationPanel = $state(false);
@@ -865,17 +870,49 @@
 	 */
 	async function handleSave(event: CustomEvent<TermEntry>) {
 		const editedEntry = event.detail;
+
 		loading = true;
 		editorServerError = '';
 
-		// 수정 전 데이터 저장 (히스토리 로그용)
-		const beforeEntry = initialEntry.id ? { ...initialEntry } : undefined;
+		try {
+			const previewResponse = await fetch('/api/term/impact-preview', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					filename: selectedFilename,
+					scope: 'editor-save',
+					currentEntry: initialEntry.id ? initialEntry : undefined,
+					proposedEntry: editedEntry
+				})
+			});
+
+			const previewResult: ApiResponse = await previewResponse.json();
+			if (!previewResult.success || !previewResult.data) {
+				editorServerError = previewResult.error || '저장 전 영향도 확인에 실패했습니다.';
+				return;
+			}
+
+			pendingSaveEntry = editedEntry;
+			pendingImpactPreview = previewResult.data as EditorSaveImpactPreview;
+			showImpactConfirm = true;
+		} catch (error) {
+			console.error('용어 저장 영향도 확인 중 오류:', error);
+			editorServerError = '저장 전 영향도 확인 중 오류가 발생했습니다.';
+		} finally {
+			loading = false;
+		}
+	}
+
+	async function applySave(editedEntry: TermEntry) {
+		loading = true;
+		editorServerError = '';
 
 		try {
 			const url = '/api/term';
 			const body = JSON.stringify({
 				entry: editedEntry,
-				filename: selectedFilename
+				filename: selectedFilename,
+				applyCascade: true
 			});
 
 			const response = await fetch(url, {
@@ -887,14 +924,19 @@
 			const result: ApiResponse = await response.json();
 
 			if (result.success) {
-				// 서버에서 생성된 엔트리 정보 가져오기
-				const savedEntry = result.data as TermEntry;
 				const isEditMode = !!editedEntry.id;
 
 				// 모달 닫기
 				showEditor = false;
+				showImpactConfirm = false;
+				pendingSaveEntry = null;
+				pendingImpactPreview = null;
 				editorServerError = '';
 				initialEntry = {};
+				addToast(
+					result.message || (isEditMode ? '용어를 수정했습니다.' : '용어를 추가했습니다.'),
+					'success'
+				);
 
 				// 데이터 새로고침
 				if (searchQuery) {
@@ -911,14 +953,35 @@
 				// 에러 발생 시 모달 내부에 표시
 				const errorMsg = result.error || '용어 저장에 실패했습니다.';
 				editorServerError = errorMsg;
+				showImpactConfirm = false;
+				pendingSaveEntry = null;
+				pendingImpactPreview = null;
 			}
 		} catch (error) {
 			console.error('용어 저장 중 오류:', error);
 			const errorMsg = '서버 연결 오류가 발생했습니다.';
 			editorServerError = errorMsg;
+			showImpactConfirm = false;
+			pendingSaveEntry = null;
+			pendingImpactPreview = null;
 		} finally {
 			loading = false;
 		}
+	}
+
+	async function handleImpactConfirm() {
+		if (!pendingSaveEntry) return;
+		const entry = pendingSaveEntry;
+		showImpactConfirm = false;
+		pendingSaveEntry = null;
+		pendingImpactPreview = null;
+		await applySave(entry);
+	}
+
+	function handleImpactCancel() {
+		showImpactConfirm = false;
+		pendingSaveEntry = null;
+		pendingImpactPreview = null;
 	}
 
 	/**
@@ -1065,6 +1128,15 @@
 			on:cancel={handleCancel}
 		/>
 	{/if}
+
+	<ImpactConfirmDialog
+		isOpen={showImpactConfirm}
+		preview={pendingImpactPreview}
+		isSubmitting={loading}
+		confirmText={initialEntry.id ? '수정 저장' : '저장'}
+		on:confirm={handleImpactConfirm}
+		on:cancel={handleImpactCancel}
+	/>
 
 	<!-- Validation 패널 -->
 	{#if showValidationPanel}

@@ -77,7 +77,10 @@ import {
 import { invalidateAllGeneratorCaches } from '$lib/registry/generator-cache';
 
 import { checkEntryReferences } from '$lib/registry/mapping-registry';
+import { planCascadeUpdate } from '$lib/utils/cascade-update-plan.js';
+import { applyCascadePlan } from '$lib/utils/cascade-update-transaction.js';
 import { getDuplicateDetails } from '$lib/utils/duplicate-handler.js';
+import { normalizeKey } from '$lib/utils/mapping-key.js';
 import { safeMerge } from '$lib/utils/type-guards.js';
 import { validateForbiddenWordsAndSynonyms } from '$lib/utils/validation.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -360,8 +363,12 @@ export async function GET({ url }: RequestEvent) {
  */
 export async function POST({ request, url }: RequestEvent) {
 	try {
-		const newEntry: Partial<VocabularyEntry> = await request.json();
-		const filename = url.searchParams.get('filename') || undefined;
+		const requestBody = (await request.json()) as Partial<VocabularyEntry> & {
+			applyCascade?: boolean;
+		};
+		const applyCascade = requestBody.applyCascade === true;
+		const newEntry: Partial<VocabularyEntry> = requestBody;
+		const filename = url.searchParams.get('filename') || 'vocabulary.json';
 
 		// 필수 필드 검증
 		if (!newEntry.standardName || !newEntry.abbreviation || !newEntry.englishName) {
@@ -440,16 +447,55 @@ export async function POST({ request, url }: RequestEvent) {
 			updatedAt: new Date().toISOString()
 		};
 
-		vocabularyData.entries.push(entryToSave);
-		await saveVocabularyData(vocabularyData, filename);
-		invalidateCache('vocabulary', filename); // 캐시 무효화
-		invalidateAllGeneratorCaches();
+		if (!applyCascade) {
+			vocabularyData.entries.push(entryToSave);
+			await saveVocabularyData(vocabularyData, filename);
+			invalidateCache('vocabulary', filename);
+			invalidateAllGeneratorCaches();
+
+			return json(
+				{
+					success: true,
+					data: entryToSave,
+					message: '새로운 단어가 성공적으로 추가되었습니다.'
+				} as ApiResponse,
+				{ status: 201 }
+			);
+		}
+
+		const plan = await planCascadeUpdate({
+			type: 'vocabulary',
+			filename: filename || 'vocabulary.json',
+			proposedEntry: entryToSave
+		});
+
+		if (plan.blocked) {
+			return json(
+				{
+					success: false,
+					error:
+						plan.preview.conflicts[0]?.reason ||
+						'영향도 충돌이 있어 자동 반영 저장을 진행할 수 없습니다.',
+					data: {
+						preview: plan.preview
+					},
+					message: 'Cascade update blocked'
+				} as ApiResponse,
+				{ status: 409 }
+			);
+		}
+
+		const applied = await applyCascadePlan(plan);
 
 		return json(
 			{
 				success: true,
-				data: entryToSave,
-				message: '새로운 단어가 성공적으로 추가되었습니다.'
+				data: applied.sourceEntry,
+				impact: applied.preview,
+				message:
+					applied.preview.summary.relatedChangeCount > 0
+						? `새로운 단어가 성공적으로 추가되었고 연쇄 반영 ${applied.preview.summary.relatedChangeCount}건을 함께 저장했습니다.`
+						: '새로운 단어가 성공적으로 추가되었습니다.'
 			} as ApiResponse,
 			{ status: 201 } // Created
 		);
@@ -472,8 +518,10 @@ export async function POST({ request, url }: RequestEvent) {
  */
 export async function PUT({ request, url }: RequestEvent) {
 	try {
-		const updatedEntry: VocabularyEntry = await request.json();
-		const filename = url.searchParams.get('filename') || undefined;
+		const requestBody = (await request.json()) as VocabularyEntry & { applyCascade?: boolean };
+		const applyCascade = requestBody.applyCascade === true;
+		const updatedEntry: VocabularyEntry = requestBody;
+		const filename = url.searchParams.get('filename') || 'vocabulary.json';
 
 		if (!updatedEntry.id) {
 			return json(
@@ -502,6 +550,16 @@ export async function PUT({ request, url }: RequestEvent) {
 
 		// 표준단어명이 변경되는 경우 금칙어 및 이음동의어 validation
 		const existingEntry = vocabularyData.entries[entryIndex];
+		if (!updatedEntry.standardName || !updatedEntry.abbreviation || !updatedEntry.englishName) {
+			return json(
+				{
+					success: false,
+					error: '표준단어명, 영문약어, 영문명은 필수 항목입니다.',
+					message: 'Missing required fields'
+				} as ApiResponse,
+				{ status: 400 }
+			);
+		}
 		if (updatedEntry.standardName && updatedEntry.standardName !== existingEntry.standardName) {
 			try {
 				const allVocabularyFiles = await listVocabularyFiles();
@@ -537,25 +595,82 @@ export async function PUT({ request, url }: RequestEvent) {
 			}
 		}
 
-		// 기존 데이터를 유지하면서 업데이트 (undefined 값은 무시)
-		vocabularyData.entries[entryIndex] = {
+		if (
+			updatedEntry.abbreviation &&
+			updatedEntry.abbreviation !== existingEntry.abbreviation &&
+			vocabularyData.entries.some(
+				(entry) =>
+					entry.id !== updatedEntry.id &&
+					normalizeKey(entry.abbreviation) === normalizeKey(updatedEntry.abbreviation)
+			)
+		) {
+			return json(
+				{
+					success: false,
+					error: '이미 존재하는 영문약어입니다.',
+					message: 'Duplicate abbreviation'
+				} as ApiResponse,
+				{ status: 409 }
+			);
+		}
+
+		const nextEntry: VocabularyEntry = {
 			...safeMerge(vocabularyData.entries[entryIndex], updatedEntry),
-			isDomainCategoryMapped:
-				updatedEntry.isDomainCategoryMapped ??
-				vocabularyData.entries[entryIndex].isDomainCategoryMapped ??
-				false,
+			id: existingEntry.id,
+			createdAt: existingEntry.createdAt,
 			updatedAt: new Date().toISOString()
 		};
 
-		await saveVocabularyData(vocabularyData, filename);
-		invalidateCache('vocabulary', filename); // 캐시 무효화
-		invalidateAllGeneratorCaches();
+		if (!applyCascade) {
+			vocabularyData.entries[entryIndex] = nextEntry;
+			await saveVocabularyData(vocabularyData, filename);
+			invalidateCache('vocabulary', filename);
+			invalidateAllGeneratorCaches();
+
+			return json(
+				{
+					success: true,
+					data: nextEntry,
+					message: '단어가 성공적으로 수정되었습니다.'
+				} as ApiResponse,
+				{ status: 200 }
+			);
+		}
+
+		const plan = await planCascadeUpdate({
+			type: 'vocabulary',
+			filename: filename || 'vocabulary.json',
+			currentEntry: existingEntry,
+			proposedEntry: nextEntry
+		});
+
+		if (plan.blocked) {
+			return json(
+				{
+					success: false,
+					error:
+						plan.preview.conflicts[0]?.reason ||
+						'영향도 충돌이 있어 자동 반영 저장을 진행할 수 없습니다.',
+					data: {
+						preview: plan.preview
+					},
+					message: 'Cascade update blocked'
+				} as ApiResponse,
+				{ status: 409 }
+			);
+		}
+
+		const applied = await applyCascadePlan(plan);
 
 		return json(
 			{
 				success: true,
-				data: vocabularyData.entries[entryIndex],
-				message: '단어가 성공적으로 수정되었습니다.'
+				data: applied.sourceEntry,
+				impact: applied.preview,
+				message:
+					applied.preview.summary.relatedChangeCount > 0
+						? `단어가 성공적으로 수정되었고 연쇄 반영 ${applied.preview.summary.relatedChangeCount}건을 함께 저장했습니다.`
+						: '단어가 성공적으로 수정되었습니다.'
 			} as ApiResponse,
 			{ status: 200 }
 		);
@@ -612,7 +727,11 @@ export async function DELETE({ url }: RequestEvent) {
 		let warnings: unknown[] = [];
 		if (!force) {
 			try {
-				const refCheck = await checkEntryReferences('vocabulary', entryToDelete, filename || undefined);
+				const refCheck = await checkEntryReferences(
+					'vocabulary',
+					entryToDelete,
+					filename || undefined
+				);
 				if (!refCheck.canDelete && refCheck.references?.length) {
 					warnings = refCheck.references;
 				}
@@ -642,4 +761,3 @@ export async function DELETE({ url }: RequestEvent) {
 		);
 	}
 }
-

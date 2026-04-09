@@ -1,5 +1,163 @@
 # 변경 이력
 
+## 2026-04-09
+
+### 요약
+
+- 단어집, 도메인, 용어집 수정 시 잠겨 있던 필드를 편집할 수 있게 되었고, 저장 전 영향도 확인과 3영역 내부 자동 반영/롤백이 추가되었습니다.
+- 영향도 계산과 자동 반영 범위에서 컬럼 정의서는 제외됩니다.
+
+### 상세 변경
+
+1. 3영역 수정 저장 영향도/자동 반영/롤백 추가
+
+- 대상:
+  - `src/lib/components/VocabularyEditor.svelte`
+  - `src/lib/components/DomainEditor.svelte`
+  - `src/lib/components/TermEditor.svelte`
+  - `src/lib/components/ImpactConfirmDialog.svelte`
+  - `src/routes/browse/+page.svelte`
+  - `src/routes/domain/browse/+page.svelte`
+  - `src/routes/term/browse/+page.svelte`
+  - `src/routes/api/vocabulary/+server.ts`
+  - `src/routes/api/domain/+server.ts`
+  - `src/routes/api/term/+server.ts`
+  - `src/routes/api/vocabulary/impact-preview/+server.ts`
+  - `src/routes/api/domain/impact-preview/+server.ts`
+  - `src/routes/api/term/impact-preview/+server.ts`
+  - `src/lib/utils/cascade-update-plan.ts`
+  - `src/lib/utils/cascade-update-transaction.ts`
+- 변경:
+  - 수정 모드에서 기존 잠금 필드를 편집 가능하도록 해제
+  - 수정 저장 시 영향이 0건이어도 항상 영향도 확인 다이얼로그 표시
+  - 단어집/도메인/용어집 3영역 안에서만 연쇄 자동 반영 수행
+  - 비결정적 자동 반영은 충돌로 차단
+  - 연쇄 저장 중 실패 시 요청 단위 롤백 수행
+  - 컬럼 정의서는 영향도/자동 반영 범위에서 제외
+
+2. 테스트/문서 동기화
+
+- 대상:
+  - `src/lib/components/ImpactConfirmDialog.test.ts`
+  - `src/lib/components/VocabularyEditor.test.ts`
+  - `src/lib/components/DomainEditor.test.ts`
+  - `src/lib/components/TermEditor.test.ts`
+  - `src/lib/utils/cascade-update-rules.test.ts`
+  - `src/lib/utils/cascade-update-plan.test.ts`
+  - `src/lib/utils/cascade-update-transaction.test.ts`
+  - `src/routes/api/vocabulary/impact-preview/server.test.ts`
+  - `src/routes/api/domain/impact-preview/server.test.ts`
+  - `src/routes/api/term/impact-preview/server.test.ts`
+  - `docs/specs/api-reference.md`
+  - `docs/tests/COMMON_UTILS_TEST_DESCRIPTION.md`
+  - `docs/tests/VOCABULARY_TEST_DESCRIPTION.md`
+  - `docs/tests/DOMAIN_TEST_DESCRIPTION.md`
+  - `docs/tests/TERM_TEST_DESCRIPTION.md`
+  - `README.md`
+- 변경:
+  - 수정 저장 영향도, 연쇄 자동 반영, 충돌 차단, 롤백 회귀 포인트를 테스트/문서에 반영
+
+## 2026-04-09
+
+### 요약
+
+- 파일 업로드가 단순 교체 한 가지 흐름으로 정리되었고, 업로드 교체 이력 조회/복원이 추가되었습니다.
+
+### 상세 변경
+
+1. 업로드 단일화 및 후속 매핑 자동 저장
+
+- 대상:
+  - `src/lib/components/FileUpload.svelte`
+  - `src/lib/components/*FileManager.svelte`
+  - `src/lib/utils/upload-orchestration.ts`
+- 변경:
+  - 업로드 UI에서 검증/동기화 선택을 제거하고 단순 교체만 남김
+  - 업로드 성공 후 현재 화면 매핑값을 자동 저장하도록 공통 후처리 연결
+  - 업로드 성공과 매핑 저장 실패를 분리 표시하도록 부분 성공 계약 추가
+
+2. 업로드 교체 이력/복원 및 30일 보존
+
+- 대상:
+  - `src/lib/registry/upload-history-registry.ts`
+  - `src/lib/registry/upload-history-scheduler.ts`
+  - `src/routes/api/upload-history/+server.ts`
+  - `src/routes/api/upload-history/restore/+server.ts`
+  - `src/lib/components/UploadHistoryPanel.svelte`
+  - `src/hooks.server.ts`
+- 변경:
+  - 업로드 교체 직전 JSON 본문을 타입별 settings 저장소에 기록
+  - 같은 파일의 업로드 교체 이력을 조회하고 특정 시점 JSON 본문으로 복원하는 API/UI 추가
+  - `lazy prune`를 기본 경로로, `hooks.server.ts` scheduler를 보조 경로로 사용해 30일 지난 이력 자동 삭제
+
+3. 테스트/문서 동기화
+
+- 대상:
+  - `src/lib/components/FileUpload.test.ts`
+  - `src/lib/components/VocabularyFileManager.test.ts`
+  - `src/lib/components/TermFileManager.test.ts`
+  - `src/lib/components/DatabaseFileManager.test.ts`
+  - `src/lib/registry/upload-history-registry.test.ts`
+  - `src/routes/api/upload-history/server.test.ts`
+  - `src/routes/api/upload-history/restore/server.test.ts`
+  - `docs/CONVENTIONS.md`
+  - `docs/specs/api-reference.md`
+  - `docs/specs/data-model.md`
+  - `docs/tests/COMMON_UTILS_TEST_DESCRIPTION.md`
+  - `docs/tests/DATABASE_TEST_DESCRIPTION.md`
+  - `docs/tests/TERM_TEST_DESCRIPTION.md`
+  - `docs/tests/VOCABULARY_TEST_DESCRIPTION.md`
+  - `README.md`
+- 변경:
+  - 업로드 단일화, 자동 매핑 저장, upload-history registry/API/UI, reset baseline 회귀를 테스트와 문서에 반영
+
+## 2026-04-08
+
+### 요약
+
+- 저장소 작업 가이드에 "작업 단위 완료 후 자동 커밋" 원칙이 추가되었습니다.
+
+### 상세 변경
+
+1. 자동 커밋 운영 규칙 명문화
+
+- 대상:
+  - `AGENTS.md`
+  - `docs/CONVENTIONS.md`
+  - `README.md`
+- 변경:
+  - 작업 단위가 구현, 검증, 문서/TDD 업데이트까지 끝나면 별도 커밋을 생성하도록 기본 원칙 추가
+  - 관련 없는 사용자 변경은 커밋에 섞지 않고, 안전하게 분리할 수 없으면 차단 사유를 남기도록 예외 기준 명시
+  - 사용자 명시적 지시가 있을 때만 자동 커밋 원칙을 생략하도록 README와 개발 컨벤션에 동기화
+
+## 2026-04-08
+
+### 요약
+
+- 용어 browse에서 파일을 바꿔도 용어 변환기가 새 파일 기준으로 단어 조합/변환 결과를 다시 계산합니다.
+- validation 요청이 실패해도 결과 행이 무한 spinner에 머물지 않고 실패 상태로 종료됩니다.
+
+### 상세 변경
+
+1. 용어 변환기 파일 전환/예외 처리 보강
+
+- 대상:
+  - `src/lib/components/TermGenerator.svelte`
+- 변경:
+  - `filename` prop 변경 시 기존 조합/변환/validation 상태를 초기화하고 같은 입력값이라도 새 파일 기준으로 다시 조회
+  - 조합 조회/변환/validation에 요청 세대 구분을 추가해 파일 전환 중 늦게 도착한 이전 응답이 최신 상태를 덮어쓰지 않도록 보정
+  - validation fetch 예외 시에도 각 결과를 명시적인 실패 상태로 기록해 무한 spinner를 제거
+
+2. 회귀 테스트/문서 동기화
+
+- 대상:
+  - `src/lib/components/TermGenerator.test.ts`
+  - `docs/tests/TERM_TEST_DESCRIPTION.md`
+- 변경:
+  - 파일 변경 시 generator가 새 filename으로 재조회하는 회귀 테스트 추가
+  - validation 요청 예외 시 실패 상태로 종료되는 회귀 테스트 추가
+  - term 테스트 문서의 TermGenerator 범위를 최신 테스트 구조에 맞춰 정리
+
 ## 2026-04-01
 
 ### 요약

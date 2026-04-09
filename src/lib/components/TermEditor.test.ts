@@ -80,42 +80,37 @@ describe('TermEditor', () => {
 						Promise.resolve({
 							success: true,
 							data: {
-								files: {
-									term: 'term.json',
-									domain: 'domain.json',
-									column: 'column.json'
-								},
+								sourceType: 'term',
+								sourceFilename: 'term.json',
+								sourceEntryId: 'entry-1',
+								sourceEntryName: '사용자_이름',
 								mode: 'update',
-								current: {
-									id: 'entry-1',
-									termName: '사용자_이름',
-									columnName: 'USER_NAME',
-									domainName: '사용자분류_VARCHAR(50)'
-								},
-								proposed: {
-									id: 'entry-1',
-									termName: '사용자_이름',
-									columnName: 'USER_NAME',
-									domainName: '사용자분류_VARCHAR(50)'
-								},
-								changes: {
-									termNameChanged: false,
-									columnNameChanged: false,
-									domainNameChanged: false
-								},
 								summary: {
-									currentLinkedColumnCount: 2,
-									nextLinkedColumnCount: 2,
-									columnLinksToBeBroken: 0,
-									newColumnLinksDetected: 0,
-									affectedColumnStandardizationCount: 0,
-									proposedDomainExists: true
+									sourceChangeCount: 1,
+									relatedChangeCount: 0,
+									totalChangedFiles: 1,
+									conflictCount: 0
 								},
-								samples: {
-									currentLinkedColumns: [{ id: 'c1', name: 'USER_NAME' }],
-									nextLinkedColumns: [{ id: 'c1', name: 'USER_NAME' }]
-								},
-								guidance: ['이번 수정은 컬럼 연결 키와 동기화 대상에 즉시 영향을 주지 않습니다.']
+								fileSummaries: [
+									{
+										type: 'term',
+										filename: 'term.json',
+										role: 'source',
+										changedCount: 1,
+										samples: [
+											{
+												id: 'entry-1',
+												name: '사용자_이름',
+												reason: '용어 변경사항을 저장합니다.'
+											}
+										]
+									}
+								],
+								guidance: [
+									'이번 저장은 용어집 원본 항목만 변경하며 다른 3영역 자동 반영은 없습니다.'
+								],
+								conflicts: [],
+								blocked: false
 							}
 						})
 				});
@@ -320,9 +315,13 @@ describe('TermEditor', () => {
 
 			await waitFor(() => {
 				expect(screen.getByRole('region', { name: '용어 변경 영향도' })).toBeInTheDocument();
-				expect(screen.getByText('현재 연결 컬럼')).toBeInTheDocument();
-				expect(screen.getByText('저장 후 연결 컬럼')).toBeInTheDocument();
-				expect(screen.getByText('이번 수정은 컬럼 연결 키와 동기화 대상에 즉시 영향을 주지 않습니다.')).toBeInTheDocument();
+				expect(screen.getByText('원본 저장')).toBeInTheDocument();
+				expect(screen.getByText('연쇄 반영')).toBeInTheDocument();
+				expect(
+					screen.getByText(
+						'이번 저장은 용어집 원본 항목만 변경하며 다른 3영역 자동 반영은 없습니다.'
+					)
+				).toBeInTheDocument();
 			});
 		});
 	});

@@ -75,6 +75,12 @@ http://localhost:5173/api
 
 추가 변경:
 
+- `POST /api/vocabulary/impact-preview`
+- `POST /api/domain/impact-preview`
+- `POST /api/term/impact-preview`
+  - `scope=editor-save`일 때는 컬럼 정의서를 제외한 `단어집/도메인/용어집` 3영역 저장 영향도 요약을 반환합니다.
+- `PUT /api/vocabulary`, `PUT /api/domain`, `POST /api/term`(수정 모드)
+  - 수정 저장 시 영향도 확인 후 3영역 내부 연쇄 자동 반영을 수행하며, 실패 시 전체 롤백합니다.
 - `DELETE /api/vocabulary`, `DELETE /api/domain`
   - 삭제 전 참조 검증이 `checkEntryReferences` 기반으로 통합되었습니다.
 - `GET /api/erd/generate`
@@ -104,6 +110,20 @@ http://localhost:5173/api
 - `POST /api/design-snapshots/restore`
   - 저장된 스냅샷으로 현재 8종 파일 번들을 복원합니다.
   - 복원 시 공통 파일 매핑 번들도 함께 다시 저장해 browse/ERD 흐름과 정합성을 맞춥니다.
+
+---
+
+## 최근 변경 사항 (2026-04-09)
+
+- `POST /api/upload`, `POST /api/domain/upload`, `POST /api/term/upload`, `POST /api/database/upload`, `POST /api/entity/upload`, `POST /api/attribute/upload`, `POST /api/table/upload`, `POST /api/column/upload`
+  - 업로드 UI는 단순 교체 한 가지 흐름만 사용합니다.
+  - 교체 직전 JSON 본문을 upload history로 저장합니다.
+- `GET /api/upload-history`
+  - 타입/파일 기준 업로드 교체 이력 목록을 반환합니다.
+  - 응답 전에 30일 지난 이력을 lazy prune합니다.
+- `POST /api/upload-history/restore`
+  - 선택한 업로드 교체 이력의 JSON 본문으로 현재 파일을 복원합니다.
+  - 매핑 정보는 복원하지 않습니다.
 
 ---
 
@@ -1096,6 +1116,28 @@ const data = await response.json();
 
 ---
 
+### POST /api/vocabulary/impact-preview
+
+단어 수정 저장 전 `단어집/도메인/용어집` 3영역 기준 영향도를 미리 계산합니다.
+
+#### 요청 바디
+
+```typescript
+{
+  filename?: string; // 기본값: 'vocabulary.json'
+  currentEntry?: Partial<VocabularyEntry>;
+  proposedEntry: Partial<VocabularyEntry>;
+}
+```
+
+#### 응답 메모
+
+- editor-save preview만 반환합니다.
+- 응답은 원본 저장 건수, 연쇄 반영 건수, 변경 파일 수, 충돌 수, 샘플 항목 목록을 포함합니다.
+- 충돌이 있으면 `blocked=true`이며 저장 버튼을 비활성화해야 합니다.
+
+---
+
 ### POST /api/domain/impact-preview
 
 도메인 저장/삭제 전 참조 영향도를 미리 계산합니다.
@@ -1105,6 +1147,7 @@ const data = await response.json();
 도메인 editor에서 저장 전에 현재 참조 수와 즉시 파급 범위를 확인할 때 사용합니다.
 `update` 모드에서는 단어/용어/컬럼 참조 수와 컬럼 동기화 영향 가능 건수를,
 `delete` 모드에서는 삭제 시 끊기는 참조 건수를 함께 반환합니다.
+`scope=editor-save`일 때는 컬럼 정의서를 제외한 3영역 기준 `EditorSaveImpactPreview` 요약을 반환합니다.
 
 #### 요청 바디
 
@@ -1112,6 +1155,7 @@ const data = await response.json();
 {
   filename?: string; // 기본값: 'domain.json'
   mode?: 'create' | 'update' | 'delete';
+  scope?: 'full' | 'editor-save'; // 기본값: 'full'
   currentEntry?: {
     id?: string;
     domainCategory?: string;
@@ -1131,33 +1175,38 @@ const data = await response.json();
 }
 ```
 
+#### editor-save scope 메모
+
+- `scope='editor-save'`이면 컬럼 정의서를 제외한 3영역 저장 영향도 요약을 반환합니다.
+- 이 scope에서는 `sourceChangeCount`, `relatedChangeCount`, `totalChangedFiles`, `conflictCount`와 파일별 샘플 목록을 사용합니다.
+
 #### 응답 예시
 
 ```json
 {
-  "success": true,
-  "data": {
-    "files": {
-      "domain": "domain.json",
-      "vocabulary": "vocabulary.json",
-      "term": "term.json",
-      "column": "column.json"
-    },
-    "mode": "delete",
-    "summary": {
-      "vocabularyReferenceCount": 1,
-      "termReferenceCount": 2,
-      "columnReferenceCount": 3,
-      "totalReferenceCount": 6,
-      "downstreamBreakCount": 6,
-      "affectedColumnSyncCount": 0
-    },
-    "guidance": [
-      "현재 이 도메인은 단어 1건, 용어 2건, 컬럼 3건에서 참조되고 있습니다.",
-      "삭제 시 총 6건이 미참조 또는 매핑 누락 상태가 될 수 있습니다."
-    ]
-  },
-  "message": "도메인 변경 영향도 미리보기를 생성했습니다."
+	"success": true,
+	"data": {
+		"files": {
+			"domain": "domain.json",
+			"vocabulary": "vocabulary.json",
+			"term": "term.json",
+			"column": "column.json"
+		},
+		"mode": "delete",
+		"summary": {
+			"vocabularyReferenceCount": 1,
+			"termReferenceCount": 2,
+			"columnReferenceCount": 3,
+			"totalReferenceCount": 6,
+			"downstreamBreakCount": 6,
+			"affectedColumnSyncCount": 0
+		},
+		"guidance": [
+			"현재 이 도메인은 단어 1건, 용어 2건, 컬럼 3건에서 참조되고 있습니다.",
+			"삭제 시 총 6건이 미참조 또는 매핑 누락 상태가 될 수 있습니다."
+		]
+	},
+	"message": "도메인 변경 영향도 미리보기를 생성했습니다."
 }
 ```
 
@@ -1476,19 +1525,21 @@ const data = await response.json();
 
 ### POST /api/term/impact-preview
 
-용어 저장 전 컬럼 연결 영향도를 미리 계산합니다.
+용어 저장 전 영향도를 미리 계산합니다.
 
 #### 설명
 
 용어 editor에서 입력값이 바뀔 때 호출하며, 현재 연결 컬럼 수와 저장 후 연결될 컬럼 수를 비교합니다.
 `columnName`이 바뀌면 끊기는 연결과 새 연결 후보를, `termName`/`domainName`이 바뀌면
 같은 연결을 유지한 상태에서 표준화 결과가 달라지는 컬럼 수를 반환합니다.
+`scope=editor-save`일 때는 컬럼 정의서를 제외한 3영역 기준 `EditorSaveImpactPreview` 요약을 반환합니다.
 
 #### 요청 바디
 
 ```typescript
 {
   filename?: string; // 기본값: 'term.json'
+  scope?: 'full' | 'editor-save'; // 기본값: 'full'
   currentEntry?: {
     id?: string;
     termName?: string;
@@ -1508,28 +1559,28 @@ const data = await response.json();
 
 ```json
 {
-  "success": true,
-  "data": {
-    "files": {
-      "term": "term.json",
-      "domain": "domain.json",
-      "column": "column.json"
-    },
-    "mode": "update",
-    "summary": {
-      "currentLinkedColumnCount": 2,
-      "nextLinkedColumnCount": 1,
-      "columnLinksToBeBroken": 2,
-      "newColumnLinksDetected": 1,
-      "affectedColumnStandardizationCount": 0,
-      "proposedDomainExists": true
-    },
-    "guidance": [
-      "기존 columnName과 연결된 2개 컬럼은 저장 후 이 용어 기준에서 벗어납니다.",
-      "새 columnName과 일치하는 1개 컬럼이 이후 동기화 대상이 됩니다."
-    ]
-  },
-  "message": "용어 변경 영향도 미리보기를 생성했습니다."
+	"success": true,
+	"data": {
+		"files": {
+			"term": "term.json",
+			"domain": "domain.json",
+			"column": "column.json"
+		},
+		"mode": "update",
+		"summary": {
+			"currentLinkedColumnCount": 2,
+			"nextLinkedColumnCount": 1,
+			"columnLinksToBeBroken": 2,
+			"newColumnLinksDetected": 1,
+			"affectedColumnStandardizationCount": 0,
+			"proposedDomainExists": true
+		},
+		"guidance": [
+			"기존 columnName과 연결된 2개 컬럼은 저장 후 이 용어 기준에서 벗어납니다.",
+			"새 columnName과 일치하는 1개 컬럼이 이후 동기화 대상이 됩니다."
+		]
+	},
+	"message": "용어 변경 영향도 미리보기를 생성했습니다."
 }
 ```
 
@@ -2242,6 +2293,54 @@ PostgreSQL 연결 테스트를 실행합니다.
 - 에러 코드:
   - `400`: `id` 누락
   - `404`: 대상 스냅샷 없음
+
+---
+
+## Upload History API
+
+업로드 교체 직전 JSON 본문을 파일별로 저장하고 복원하는 API입니다.
+
+### GET /api/upload-history
+
+특정 타입/파일의 업로드 교체 이력 목록을 조회합니다.
+
+- 요청 파라미터:
+  - `dataType`: `vocabulary | domain | term | database | entity | attribute | table | column`
+  - `filename`: 대상 파일명
+- 응답 핵심:
+  - `data.entries[].id`
+  - `data.entries[].filename`
+  - `data.entries[].createdAt`
+  - `data.entries[].expiresAt`
+  - `data.entries[].entryCount`
+- 동작:
+  - 응답 전에 만료 이력을 lazy prune합니다.
+
+### POST /api/upload-history/restore
+
+선택한 업로드 교체 이력으로 현재 파일 JSON 본문을 복원합니다.
+
+- 요청 바디:
+
+```json
+{
+	"dataType": "term",
+	"id": "history-1"
+}
+```
+
+#### editor-save scope 메모
+
+- `scope='editor-save'`이면 컬럼 정의서를 제외한 3영역 저장 영향도 요약을 반환합니다.
+- 이 scope에서는 용어 원본 저장과 충돌 여부만 확인하며, 컬럼 동기화 수치는 응답에서 제외됩니다.
+
+- 동작:
+  - 복원 전 lazy prune를 수행합니다.
+  - 이력에 저장된 JSON 본문만 현재 파일에 다시 저장합니다.
+  - 공통 파일 매핑과 `mapping` 정보는 복원하지 않습니다.
+- 에러 코드:
+  - `400`: `dataType` 또는 `id` 누락
+  - `404`: 대상 이력 없음
 
 ---
 

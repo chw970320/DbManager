@@ -14,11 +14,12 @@
 | `vocabulary/sync-domain/server.test.ts`    | 9개       | 완료 |
 | `vocabulary/download/server.test.ts`       | 8개       | 완료 |
 | `vocabulary/filter-options/server.test.ts` | 9개       | 완료 |
+| `vocabulary/impact-preview/server.test.ts` | 2개       | 완료 |
 | `search/server.test.ts`                    | 19개      | 완료 |
-| `VocabularyEditor.test.ts`                 | 19개      | 완료 |
-| `VocabularyFileManager.test.ts`            | 9개       | 완료 |
+| `VocabularyEditor.test.ts`                 | 22개      | 완료 |
+| `VocabularyFileManager.test.ts`            | 10개      | 완료 |
 | `browse/page.test.ts`                      | 1개       | 완료 |
-| **합계**                                   | **117개** |      |
+| **합계**                                   | **123개** |      |
 
 ---
 
@@ -31,6 +32,13 @@
 
 > **추가 회귀 포인트 (2026-04-01)**:
 > 단어 저장/수정/삭제 직후 용어 변환기 캐시도 함께 비워져 같은 파일의 새 단어가 즉시 검색 가능해야 합니다.
+
+> **추가 회귀 포인트 (2026-04-08)**:
+> `VocabularyEditor`는 배경 클릭으로 닫히지 않아야 하며, dirty 상태에서 `취소`/`닫기`를 누르면 입력 유실 확인 후에만 닫혀야 합니다.
+
+> **추가 회귀 포인트 (2026-04-09)**:
+> `VocabularyEditor` 수정 모드의 기존 잠금 필드는 편집 가능해야 하며,
+> 수정 저장 전에는 영향 0건이어도 `ImpactConfirmDialog`가 열리고, 용어명/컬럼명 exact token 치환과 domainName 자동 반영이 preview/rollback 규칙과 함께 유지되어야 합니다.
 
 ## 1. vocabulary/server.test.ts (18개)
 
@@ -70,6 +78,9 @@
 | should return 400 when id is missing         | ID 누락              | id 필드 없이 요청 시 400 에러            |
 | should return 404 when entry not found       | 존재하지 않는 항목   | 없는 id로 수정 시도 시 404 에러          |
 | should use specified filename parameter      | 파일명 파라미터 사용 | filename 쿼리 파라미터 적용 및 저장 확인 |
+
+> **회귀 확인**:
+> 수정 저장은 단순 원본 저장이 아니라 3영역 내부 연쇄 자동 반영과 rollback 가능한 저장 경로를 사용합니다.
 
 ### DELETE (4개)
 
@@ -262,7 +273,20 @@
 
 ---
 
-## 10. VocabularyEditor.test.ts (19개)
+## 9. vocabulary/impact-preview/server.test.ts (2개)
+
+**파일 경로**: `src/routes/api/vocabulary/impact-preview/server.test.ts`
+
+단어 수정 저장 전 영향도 preview API를 테스트합니다.
+
+| 테스트명                              | 설명                 | 검증 내용                                   |
+| ------------------------------------- | -------------------- | ------------------------------------------- |
+| proposedEntry가 없으면 400을 반환한다 | 필수 payload 검증    | proposedEntry 누락 시 400 반환              |
+| editor-save preview를 반환한다        | 저장 전 preview 응답 | sourceType/sourceFilename 등 요약 반환 확인 |
+
+---
+
+## 11. VocabularyEditor.test.ts (22개)
 
 **파일 경로**: `src/lib/components/VocabularyEditor.test.ts`
 
@@ -291,18 +315,21 @@
 
 | 테스트명                                     | 설명                         | 검증 내용                                        |
 | -------------------------------------------- | ---------------------------- | ------------------------------------------------ |
-| should disable core inputs in edit mode      | 수정 모드 핵심 필드 비활성화 | standardName, abbreviation, englishName disabled |
+| should keep core inputs editable in edit mode | 수정 모드 핵심 필드 편집 가능 | standardName, abbreviation, englishName editable |
 | should show delete button in edit mode       | 수정 모드 삭제 버튼          | 삭제 버튼 표시                                   |
 | should not show delete button in create mode | 생성 모드 삭제 버튼 없음     | 삭제 버튼 미표시                                 |
 | should show "수정" button text in edit mode  | 수정 모드 버튼 텍스트        | "수정" 텍스트 표시                               |
 
-### User Interactions (3개)
+### User Interactions (6개)
 
-| 테스트명                                                 | 설명                | 검증 내용                    |
-| -------------------------------------------------------- | ------------------- | ---------------------------- |
-| should have cancel button that can be clicked            | 취소 버튼 클릭 가능 | 취소 버튼 존재 및 활성화     |
-| should have close icon button that can be clicked        | 닫기 버튼 클릭 가능 | X 아이콘 버튼 존재 및 활성화 |
-| should show confirm dialog when delete button is clicked | 삭제 확인 대화상자  | confirm 호출 확인            |
+| 테스트명                                                       | 설명                | 검증 내용                             |
+| -------------------------------------------------------------- | ------------------- | ------------------------------------- |
+| should have cancel button that can be clicked                  | 취소 버튼 클릭 가능 | 취소 버튼 존재 및 활성화              |
+| should have close icon button that can be clicked              | 닫기 버튼 클릭 가능 | X 아이콘 버튼 존재 및 활성화          |
+| should show confirm dialog when delete button is clicked       | 삭제 확인 대화상자  | confirm 호출 확인                     |
+| should not dispatch cancel when backdrop is clicked            | 배경 클릭 무시      | 배경 클릭으로 cancel이 발생하지 않음  |
+| should close immediately without confirm when form is pristine | pristine 즉시 닫기  | 변경이 없으면 확인 없이 닫힘          |
+| should ask for confirmation before cancel when form is dirty   | dirty 닫기 확인     | 변경이 있으면 showConfirm 후에만 닫힘 |
 
 ### Domain Category (2개)
 
@@ -313,13 +340,13 @@
 
 ### UUID Fallback (1개)
 
-| 테스트명                                                              | 설명                      | 검증 내용                                           |
-| --------------------------------------------------------------------- | ------------------------- | --------------------------------------------------- |
+| 테스트명                                                                         | 설명                        | 검증 내용                                               |
+| -------------------------------------------------------------------------------- | --------------------------- | ------------------------------------------------------- |
 | should save a new entry with uuid fallback when crypto.randomUUID is unavailable | 브라우저 UUID fallback 확인 | 저장 이벤트가 fallback UUID와 함께 정상 전달되는지 확인 |
 
 ---
 
-## 11. VocabularyFileManager.test.ts (9개)
+## 11. VocabularyFileManager.test.ts (10개)
 
 **파일 경로**: `src/lib/components/VocabularyFileManager.test.ts`
 
@@ -349,9 +376,10 @@
 
 ### Upload Tab (1개)
 
-| 테스트명       | 설명         | 검증 내용      |
-| -------------- | ------------ | -------------- |
-| 업로드 탭 표시 | 업로드 탭 UI | 업로드 탭 표시 |
+| 테스트명                        | 설명                | 검증 내용                                 |
+| ------------------------------- | ------------------- | ----------------------------------------- |
+| 업로드 탭 표시                  | 업로드 탭 UI        | 업로드 탭 표시                            |
+| 업로드 후 현재 매핑값 자동 저장 | 업로드 후 후속 처리 | `/api/vocabulary/files/mapping` 자동 호출 |
 
 ### Domain Mapping (1개)
 
@@ -363,7 +391,7 @@
 
 ---
 
-## 12. browse/page.test.ts (1개)
+## 13. browse/page.test.ts (1개)
 
 **파일 경로**: `src/routes/browse/page.test.ts`
 
@@ -397,12 +425,13 @@ pnpm test vocabulary --watch
 
 ## 변경 이력
 
-| 날짜       | 변경 내용                                                                    |
-| ---------- | ---------------------------------------------------------------------------- |
-| 2025-01-09 | 초기 문서 작성 (64개 테스트)                                                 |
-| 2025-01-09 | sync-domain, download, filter-options, search API 테스트 추가 (105개 테스트) |
-| 2025-01-09 | filename 파라미터 테스트 추가 및 validate API 수정 (113개 테스트)            |
-| 2025-01-09 | VocabularyFileManager 컴포넌트 테스트 추가 (122개 테스트)                    |
-| 2026-03-13 | 단어집 browse 좌측 검색 요약 배치 테스트 추가 (116개 테스트)                 |
-| 2026-04-01 | `crypto.randomUUID` 미지원 브라우저 fallback 회귀 테스트 추가 (117개 테스트) |
+| 날짜       | 변경 내용                                                                        |
+| ---------- | -------------------------------------------------------------------------------- |
+| 2025-01-09 | 초기 문서 작성 (64개 테스트)                                                     |
+| 2025-01-09 | sync-domain, download, filter-options, search API 테스트 추가 (105개 테스트)     |
+| 2025-01-09 | filename 파라미터 테스트 추가 및 validate API 수정 (113개 테스트)                |
+| 2025-01-09 | VocabularyFileManager 컴포넌트 테스트 추가 (122개 테스트)                        |
+| 2026-03-13 | 단어집 browse 좌측 검색 요약 배치 테스트 추가 (116개 테스트)                     |
+| 2026-04-01 | `crypto.randomUUID` 미지원 브라우저 fallback 회귀 테스트 추가 (117개 테스트)     |
 | 2026-04-01 | 단어 저장 후 용어 변환기 최신 반영을 위한 generator 캐시 무효화 회귀 포인트 반영 |
+| 2026-04-08 | Editor 닫기 가드 회귀 테스트 추가 (120개 테스트)                                 |

@@ -40,7 +40,7 @@ describe('DomainEditor', () => {
 		mockShowConfirm.mockResolvedValue(true);
 
 		// Default fetch mock responses
-		mockFetch.mockImplementation((url: string) => {
+		mockFetch.mockImplementation((url: string, init?: RequestInit) => {
 			if (url.includes('/api/domain/validate')) {
 				return Promise.resolve({
 					ok: true,
@@ -48,68 +48,98 @@ describe('DomainEditor', () => {
 				});
 			}
 			if (url.includes('/api/domain/impact-preview')) {
+				const requestBody = init?.body ? JSON.parse(String(init.body)) : {};
+				if (requestBody.mode === 'delete') {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({
+								success: true,
+								data: {
+									files: {
+										domain: 'domain.json',
+										vocabulary: 'vocabulary.json',
+										term: 'term.json',
+										column: 'column.json'
+									},
+									mode: 'delete',
+									current: {
+										id: 'entry-1',
+										domainCategory: '사용자분류',
+										standardDomainName: '사용자분류_VARCHAR(50)',
+										physicalDataType: 'VARCHAR',
+										dataLength: '50',
+										decimalPlaces: ''
+									},
+									proposed: null,
+									changes: {
+										referenceKeyChanged: false,
+										syncSpecChanged: false
+									},
+									summary: {
+										vocabularyReferenceCount: 1,
+										termReferenceCount: 2,
+										columnReferenceCount: 0,
+										totalReferenceCount: 3,
+										downstreamBreakCount: 3,
+										affectedColumnSyncCount: 0
+									},
+									references: [],
+									guidance: []
+								}
+							})
+					});
+				}
+
 				return Promise.resolve({
 					ok: true,
 					json: () =>
 						Promise.resolve({
 							success: true,
 							data: {
-								files: {
-									domain: 'domain.json',
-									vocabulary: 'vocabulary.json',
-									term: 'term.json',
-									column: 'column.json'
-								},
+								sourceType: 'domain',
+								sourceFilename: 'domain.json',
+								sourceEntryId: 'entry-1',
+								sourceEntryName: '사용자분류_VARCHAR(50)',
 								mode: 'update',
-								current: {
-									id: 'entry-1',
-									domainCategory: '사용자분류',
-									standardDomainName: '사용자분류_VARCHAR(50)',
-									physicalDataType: 'VARCHAR',
-									dataLength: '50',
-									decimalPlaces: ''
-								},
-								proposed: {
-									id: 'entry-1',
-									domainCategory: '사용자분류',
-									standardDomainName: '사용자분류_VARCHAR(50)',
-									physicalDataType: 'VARCHAR',
-									dataLength: '50',
-									decimalPlaces: ''
-								},
-								changes: {
-									referenceKeyChanged: false,
-									syncSpecChanged: false
-								},
 								summary: {
-									vocabularyReferenceCount: 1,
-									termReferenceCount: 2,
-									columnReferenceCount: 3,
-									totalReferenceCount: 6,
-									downstreamBreakCount: 0,
-									affectedColumnSyncCount: 0
+									sourceChangeCount: 1,
+									relatedChangeCount: 2,
+									totalChangedFiles: 3,
+									conflictCount: 0
 								},
-								references: [
+								fileSummaries: [
+									{
+										type: 'domain',
+										filename: 'domain.json',
+										role: 'source',
+										changedCount: 1,
+										samples: [
+											{
+												id: 'entry-1',
+												name: '사용자분류_VARCHAR(50)',
+												reason: '도메인 변경사항을 저장합니다.'
+											}
+										]
+									},
 									{
 										type: 'vocabulary',
 										filename: 'vocabulary.json',
-										count: 1,
-										entries: [{ id: 'v1', name: '사용자' }]
+										role: 'related',
+										changedCount: 1,
+										samples: [{ id: 'v1', name: '사용자', reason: '도메인 분류명 변경 반영' }]
 									},
 									{
 										type: 'term',
 										filename: 'term.json',
-										count: 2,
-										entries: [{ id: 't1', name: '사용자_이름' }]
-									},
-									{
-										type: 'column',
-										filename: 'column.json',
-										count: 3,
-										entries: [{ id: 'c1', name: 'USER_NAME' }]
+										role: 'related',
+										changedCount: 2,
+										samples: [{ id: 't1', name: '사용자_이름', reason: '도메인명 변경 반영' }]
 									}
 								],
-								guidance: ['현재 이 도메인은 단어 1건, 용어 2건, 컬럼 3건에서 참조되고 있습니다.']
+								guidance: ['도메인명 변경에 따라 용어집 2건이 함께 조정됩니다.'],
+								conflicts: [],
+								blocked: false
 							}
 						})
 				});
@@ -222,7 +252,7 @@ describe('DomainEditor', () => {
 	});
 
 	describe('Edit Mode Behavior', () => {
-		it('should disable domainGroup input in edit mode', async () => {
+		it('should allow editing previously locked inputs in edit mode', async () => {
 			render(DomainEditor, {
 				props: {
 					entry: createMockEntry(),
@@ -232,7 +262,11 @@ describe('DomainEditor', () => {
 
 			await waitFor(() => {
 				const domainGroupInput = screen.getByLabelText(/도메인그룹/) as HTMLInputElement;
-				expect(domainGroupInput).toBeDisabled();
+				const domainCategoryInput = screen.getByLabelText(/도메인 분류명/) as HTMLInputElement;
+				const physicalDataTypeInput = screen.getByLabelText(/물리 데이터타입/) as HTMLInputElement;
+				expect(domainGroupInput).not.toBeDisabled();
+				expect(domainCategoryInput).not.toBeDisabled();
+				expect(physicalDataTypeInput).not.toBeDisabled();
 			});
 		});
 
@@ -300,7 +334,7 @@ describe('DomainEditor', () => {
 			expect(mockShowConfirm).toHaveBeenCalledWith(
 				expect.objectContaining({
 					title: '삭제 확인',
-					message: expect.stringContaining('참조 현황: 단어 1건, 용어 2건, 컬럼 3건'),
+					message: expect.stringContaining('참조 현황: 단어 1건, 용어 2건'),
 					confirmText: '삭제',
 					variant: 'danger'
 				})
@@ -317,8 +351,11 @@ describe('DomainEditor', () => {
 
 			await waitFor(() => {
 				expect(screen.getByRole('region', { name: '도메인 변경 영향도' })).toBeInTheDocument();
-				expect(screen.getByText('총 참조')).toBeInTheDocument();
-				expect(screen.getByText('현재 이 도메인은 단어 1건, 용어 2건, 컬럼 3건에서 참조되고 있습니다.')).toBeInTheDocument();
+				expect(screen.getByText('원본 저장')).toBeInTheDocument();
+				expect(screen.getByText('연쇄 반영')).toBeInTheDocument();
+				expect(
+					screen.getByText('도메인명 변경에 따라 용어집 2건이 함께 조정됩니다.')
+				).toBeInTheDocument();
 			});
 		});
 	});

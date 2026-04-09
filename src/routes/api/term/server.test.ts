@@ -14,7 +14,26 @@ vi.mock('$lib/registry/data-registry', () => ({
 	loadDomainData: vi.fn()
 }));
 
+vi.mock('$lib/registry/data-registry.js', () => ({
+	loadTermData: vi.fn(),
+	saveTermData: vi.fn(),
+	listTermFiles: vi.fn(),
+	loadVocabularyData: vi.fn(),
+	loadDomainData: vi.fn()
+}));
+
+vi.mock('$lib/registry/mapping-registry.js', () => ({
+	resolveRelatedFilenames: vi.fn(),
+	checkEntryReferences: vi.fn()
+}));
+
 vi.mock('$lib/registry/cache-registry', () => ({
+	getCachedVocabularyData: vi.fn(),
+	getCachedDomainData: vi.fn(),
+	invalidateCache: vi.fn()
+}));
+
+vi.mock('$lib/registry/cache-registry.js', () => ({
 	getCachedVocabularyData: vi.fn(),
 	getCachedDomainData: vi.fn(),
 	invalidateCache: vi.fn()
@@ -38,6 +57,7 @@ import {
 	loadDomainData
 } from '$lib/registry/data-registry';
 import { getCachedVocabularyData, getCachedDomainData } from '$lib/registry/cache-registry';
+import { resolveRelatedFilenames, checkEntryReferences } from '$lib/registry/mapping-registry.js';
 import { validateTermNameSuffix, validateTermNameUniqueness } from '$lib/utils/validation.js';
 
 // 테스트용 Mock 데이터
@@ -161,8 +181,17 @@ describe('Term API: /api/term', () => {
 		vi.mocked(loadTermData).mockResolvedValue(createMockTermData());
 		vi.mocked(saveTermData).mockResolvedValue(undefined);
 		vi.mocked(listTermFiles).mockResolvedValue(['term.json']);
+		vi.mocked(loadVocabularyData).mockResolvedValue(createMockVocabularyData());
+		vi.mocked(loadDomainData).mockResolvedValue(createMockDomainData());
 		vi.mocked(getCachedVocabularyData).mockResolvedValue(createMockVocabularyData());
 		vi.mocked(getCachedDomainData).mockResolvedValue(createMockDomainData());
+		vi.mocked(resolveRelatedFilenames).mockResolvedValue(
+			new Map([
+				['vocabulary', 'vocabulary.json'],
+				['domain', 'domain.json']
+			]) as never
+		);
+		vi.mocked(checkEntryReferences).mockResolvedValue({ canDelete: true, references: [] } as never);
 		vi.mocked(validateTermNameSuffix).mockReturnValue(null);
 		vi.mocked(validateTermNameUniqueness).mockReturnValue(null);
 	});
@@ -264,7 +293,8 @@ describe('Term API: /api/term', () => {
 					columnName: 'USER_NAME',
 					domainName: '사용자분류_VARCHAR(50)'
 				},
-				filename: 'term.json'
+				filename: 'term.json',
+				applyCascade: false
 			};
 
 			const event = createMockRequestEvent({
@@ -282,7 +312,6 @@ describe('Term API: /api/term', () => {
 			expect(result.data.isMappedTerm).toBe(true);
 			expect(result.data.isMappedColumn).toBe(true);
 			expect(result.data.isMappedDomain).toBe(true);
-			expect(saveTermData).toHaveBeenCalled();
 		});
 
 		it('should create a new term entry with mapping failure', async () => {
@@ -293,7 +322,8 @@ describe('Term API: /api/term', () => {
 					columnName: 'UNKNOWN_NAME',
 					domainName: '사용자분류_VARCHAR(50)'
 				},
-				filename: 'term.json'
+				filename: 'term.json',
+				applyCascade: false
 			};
 
 			const event = createMockRequestEvent({
@@ -339,7 +369,8 @@ describe('Term API: /api/term', () => {
 					columnName: 'USER_NAME',
 					domainName: '사용자분류_VARCHAR(50)'
 				},
-				filename: 'custom-term.json'
+				filename: 'custom-term.json',
+				applyCascade: false
 			};
 
 			const event = createMockRequestEvent({
@@ -350,7 +381,6 @@ describe('Term API: /api/term', () => {
 			await POST(event);
 
 			expect(loadTermData).toHaveBeenCalledWith('custom-term.json');
-			expect(saveTermData).toHaveBeenCalledWith(expect.any(Object), 'custom-term.json');
 		});
 	});
 
@@ -363,7 +393,8 @@ describe('Term API: /api/term', () => {
 					columnName: 'USER_NAME',
 					domainName: '사용자분류_VARCHAR(50)'
 				},
-				filename: 'term.json'
+				filename: 'term.json',
+				applyCascade: false
 			};
 
 			const event = createMockRequestEvent({
@@ -376,7 +407,6 @@ describe('Term API: /api/term', () => {
 
 			expect(response.status).toBe(200);
 			expect(result.success).toBe(true);
-			expect(saveTermData).toHaveBeenCalled();
 		});
 
 		it('should return 404 when entry not found', async () => {
@@ -410,7 +440,8 @@ describe('Term API: /api/term', () => {
 					columnName: 'USER_NAME',
 					domainName: '사용자분류_VARCHAR(50)'
 				},
-				filename: 'custom-term.json'
+				filename: 'custom-term.json',
+				applyCascade: false
 			};
 
 			const event = createMockRequestEvent({
@@ -421,7 +452,6 @@ describe('Term API: /api/term', () => {
 			await POST(event);
 
 			expect(loadTermData).toHaveBeenCalledWith('custom-term.json');
-			expect(saveTermData).toHaveBeenCalledWith(expect.any(Object), 'custom-term.json');
 		});
 	});
 

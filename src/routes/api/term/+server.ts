@@ -76,6 +76,8 @@ import {
 } from '$lib/registry/cache-registry';
 
 import { checkEntryReferences } from '$lib/registry/mapping-registry';
+import { planCascadeUpdate } from '$lib/utils/cascade-update-plan.js';
+import { applyCascadePlan } from '$lib/utils/cascade-update-transaction.js';
 import { validateTermNameSuffix, validateTermNameUniqueness } from '$lib/utils/validation.js';
 
 /**
@@ -463,7 +465,7 @@ export async function GET({ url }: RequestEvent) {
 export async function POST({ request }: RequestEvent) {
 	try {
 		const body = await request.json();
-		const { entry, filename = 'term.json' } = body;
+		const { entry, filename = 'term.json', applyCascade = true } = body;
 
 		if (!entry || !entry.termName || !entry.columnName || !entry.domainName) {
 			return json(
@@ -592,31 +594,73 @@ export async function POST({ request }: RequestEvent) {
 				);
 			}
 
-			// 기존 항목 업데이트
-			termData.entries[entryIndex] = {
+			const nextEntry: TermEntry = {
 				...termData.entries[entryIndex],
 				termName: entry.termName.trim(),
 				columnName: entry.columnName.trim(),
 				domainName: entry.domainName.trim(),
-				isMappedTerm: mappingResult.isMappedTerm,
-				isMappedColumn: mappingResult.isMappedColumn,
-				isMappedDomain: mappingResult.isMappedDomain,
-				unmappedTermParts:
-					mappingResult.unmappedTermParts.length > 0 ? mappingResult.unmappedTermParts : undefined,
-				unmappedColumnParts:
-					mappingResult.unmappedColumnParts.length > 0
-						? mappingResult.unmappedColumnParts
-						: undefined,
 				updatedAt: new Date().toISOString()
 			};
 
-			termData.lastUpdated = new Date().toISOString();
-			await saveTermData(termData, filename);
-			invalidateCache('term', filename); // 캐시 무효화
+			if (!applyCascade) {
+				termData.entries[entryIndex] = {
+					...termData.entries[entryIndex],
+					termName: entry.termName.trim(),
+					columnName: entry.columnName.trim(),
+					domainName: entry.domainName.trim(),
+					isMappedTerm: mappingResult.isMappedTerm,
+					isMappedColumn: mappingResult.isMappedColumn,
+					isMappedDomain: mappingResult.isMappedDomain,
+					unmappedTermParts:
+						mappingResult.unmappedTermParts.length > 0
+							? mappingResult.unmappedTermParts
+							: undefined,
+					unmappedColumnParts:
+						mappingResult.unmappedColumnParts.length > 0
+							? mappingResult.unmappedColumnParts
+							: undefined,
+					updatedAt: new Date().toISOString()
+				};
+				termData.lastUpdated = new Date().toISOString();
+				await saveTermData(termData, filename);
+				invalidateCache('term', filename);
+
+				return json({
+					success: true,
+					data: termData.entries[entryIndex],
+					message: 'Term updated successfully'
+				} as ApiResponse);
+			}
+
+			const plan = await planCascadeUpdate({
+				type: 'term',
+				filename,
+				currentEntry: termData.entries[entryIndex],
+				proposedEntry: nextEntry
+			});
+
+			if (plan.blocked) {
+				return json(
+					{
+						success: false,
+						error:
+							plan.preview.conflicts[0]?.reason ||
+							'영향도 충돌이 있어 자동 반영 저장을 진행할 수 없습니다.',
+						data: {
+							preview: plan.preview
+						},
+						message: 'Cascade update blocked'
+					} as ApiResponse,
+					{ status: 409 }
+				);
+			}
+
+			const applied = await applyCascadePlan(plan);
 
 			return json({
 				success: true,
-				data: termData.entries[entryIndex],
+				data: applied.sourceEntry,
+				impact: applied.preview,
 				message: 'Term updated successfully'
 			} as ApiResponse);
 		} else {
@@ -639,16 +683,50 @@ export async function POST({ request }: RequestEvent) {
 				updatedAt: new Date().toISOString()
 			};
 
-			termData.entries.push(newEntry);
-			termData.totalCount = termData.entries.length;
-			termData.lastUpdated = new Date().toISOString();
+			if (!applyCascade) {
+				termData.entries.push(newEntry);
+				termData.totalCount = termData.entries.length;
+				termData.lastUpdated = new Date().toISOString();
 
-			await saveTermData(termData, filename);
-			invalidateCache('term', filename); // 캐시 무효화
+				await saveTermData(termData, filename);
+				invalidateCache('term', filename);
+
+				return json({
+					success: true,
+					data: newEntry,
+					message: 'Term added successfully'
+				} as ApiResponse);
+			}
+
+			const plan = await planCascadeUpdate({
+				type: 'term',
+				filename,
+				currentEntry: null,
+				proposedEntry: newEntry
+			});
+
+			if (plan.blocked) {
+				return json(
+					{
+						success: false,
+						error:
+							plan.preview.conflicts[0]?.reason ||
+							'영향도 충돌이 있어 자동 반영 저장을 진행할 수 없습니다.',
+						data: {
+							preview: plan.preview
+						},
+						message: 'Cascade update blocked'
+					} as ApiResponse,
+					{ status: 409 }
+				);
+			}
+
+			const applied = await applyCascadePlan(plan);
 
 			return json({
 				success: true,
-				data: newEntry,
+				data: applied.sourceEntry,
+				impact: applied.preview,
 				message: 'Term added successfully'
 			} as ApiResponse);
 		}
@@ -731,6 +809,3 @@ export async function DELETE({ request }: RequestEvent) {
 		);
 	}
 }
-
-
-

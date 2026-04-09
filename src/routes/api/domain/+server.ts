@@ -76,6 +76,8 @@ import {
 } from '$lib/registry/cache-registry';
 import { checkEntryReferences } from '$lib/registry/mapping-registry';
 import { loadDomainDataTypeMappingData } from '$lib/registry/domain-data-type-mapping-registry';
+import { planCascadeUpdate } from '$lib/utils/cascade-update-plan.js';
+import { applyCascadePlan } from '$lib/utils/cascade-update-transaction.js';
 import { safeMerge } from '$lib/utils/type-guards.js';
 
 import { generateStandardDomainName, validateDomainNameUniqueness } from '$lib/utils/validation.js';
@@ -452,6 +454,7 @@ export async function POST({ request, url }: RequestEvent) {
 	try {
 		const filename = url.searchParams.get('filename') || 'domain.json';
 		const body = await request.json();
+		const applyCascade = body.applyCascade !== false;
 		const entryData = body;
 
 		// 필수 필드 검증 (standardDomainName은 자동 생성되므로 제외)
@@ -529,19 +532,52 @@ export async function POST({ request, url }: RequestEvent) {
 			updatedAt: now
 		};
 
-		// 데이터에 추가
-		domainData.entries.push(newEntry);
-		domainData.lastUpdated = now;
-		domainData.totalCount = domainData.entries.length;
+		if (!applyCascade) {
+			domainData.entries.push(newEntry);
+			domainData.totalCount = domainData.entries.length;
+			domainData.lastUpdated = now;
+			await saveDomainData(domainData, filename);
+			invalidateCache('domain', filename);
 
-		// 저장
-		await saveDomainData(domainData, filename);
-		invalidateCache('domain', filename);
+			return json(
+				{
+					success: true,
+					data: newEntry,
+					message: '도메인이 성공적으로 추가되었습니다.'
+				} as ApiResponse,
+				{ status: 201 }
+			);
+		}
+
+		const plan = await planCascadeUpdate({
+			type: 'domain',
+			filename,
+			proposedEntry: newEntry
+		});
+
+		if (plan.blocked) {
+			return json(
+				{
+					success: false,
+					error:
+						plan.preview.conflicts[0]?.reason ||
+						'영향도 충돌이 있어 자동 반영 저장을 진행할 수 없습니다.',
+					data: {
+						preview: plan.preview
+					},
+					message: 'Cascade update blocked'
+				},
+				{ status: 409 }
+			);
+		}
+
+		const applied = await applyCascadePlan(plan);
 
 		return json(
 			{
 				success: true,
-				data: newEntry,
+				data: applied.sourceEntry,
+				impact: applied.preview,
 				message: '도메인이 성공적으로 추가되었습니다.'
 			} as ApiResponse,
 			{ status: 201 }
@@ -576,6 +612,7 @@ export async function PUT({ request, url }: RequestEvent) {
 	try {
 		const filename = url.searchParams.get('filename') || 'domain.json';
 		const body = await request.json();
+		const applyCascade = body.applyCascade !== false;
 		const { id, ...updateFields } = body;
 
 		// ID가 없거나 빈 문자열인 경우 에러
@@ -636,18 +673,52 @@ export async function PUT({ request, url }: RequestEvent) {
 			}
 		}
 
-		// 데이터 수정 (undefined 값은 무시, 도메인명은 자동 생성된 값 사용)
-		domainData.entries[entryIndex] = {
+		const nextEntry: DomainEntry = {
 			...safeMerge(domainData.entries[entryIndex], updateFields),
-			standardDomainName: generatedDomainName, // 자동 생성된 도메인명 사용
+			standardDomainName: generatedDomainName,
 			updatedAt: new Date().toISOString()
 		};
 
-		await saveDomainData(domainData, filename);
-		invalidateCache('domain', filename); // 캐시 무효화
+		if (!applyCascade) {
+			domainData.entries[entryIndex] = nextEntry;
+			await saveDomainData(domainData, filename);
+			invalidateCache('domain', filename);
+
+			return json({ success: true, data: nextEntry, message: '도메인 수정 완료' }, { status: 200 });
+		}
+
+		const plan = await planCascadeUpdate({
+			type: 'domain',
+			filename,
+			currentEntry: existingEntry,
+			proposedEntry: nextEntry
+		});
+
+		if (plan.blocked) {
+			return json(
+				{
+					success: false,
+					error:
+						plan.preview.conflicts[0]?.reason ||
+						'영향도 충돌이 있어 자동 반영 저장을 진행할 수 없습니다.',
+					data: {
+						preview: plan.preview
+					},
+					message: 'Cascade update blocked'
+				},
+				{ status: 409 }
+			);
+		}
+
+		const applied = await applyCascadePlan(plan);
 
 		return json(
-			{ success: true, data: domainData.entries[entryIndex], message: '도메인 수정 완료' },
+			{
+				success: true,
+				data: applied.sourceEntry,
+				impact: applied.preview,
+				message: '도메인 수정 완료'
+			},
 			{ status: 200 }
 		);
 	} catch (error) {
@@ -709,6 +780,3 @@ export async function DELETE({ url }: RequestEvent) {
 		);
 	}
 }
-
-
-

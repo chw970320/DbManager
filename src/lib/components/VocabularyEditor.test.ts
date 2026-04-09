@@ -186,7 +186,7 @@ describe('VocabularyEditor', () => {
 	});
 
 	describe('Edit Mode Behavior', () => {
-		it('should disable standardName, abbreviation, englishName inputs in edit mode', async () => {
+		it('should allow editing previously locked inputs in edit mode', async () => {
 			render(VocabularyEditor, {
 				props: {
 					entry: createMockEntry(),
@@ -198,10 +198,14 @@ describe('VocabularyEditor', () => {
 				const standardNameInput = screen.getByLabelText(/표준단어명/) as HTMLInputElement;
 				const abbreviationInput = screen.getByLabelText(/영문약어/) as HTMLInputElement;
 				const englishNameInput = screen.getByLabelText(/영문명/) as HTMLInputElement;
+				const synonymsInput = screen.getByLabelText(/이음동의어/) as HTMLInputElement;
+				const forbiddenWordsInput = screen.getByLabelText(/금칙어/) as HTMLInputElement;
 
-				expect(standardNameInput).toBeDisabled();
-				expect(abbreviationInput).toBeDisabled();
-				expect(englishNameInput).toBeDisabled();
+				expect(standardNameInput).not.toBeDisabled();
+				expect(abbreviationInput).not.toBeDisabled();
+				expect(englishNameInput).not.toBeDisabled();
+				expect(synonymsInput).not.toBeDisabled();
+				expect(forbiddenWordsInput).not.toBeDisabled();
 			});
 		});
 
@@ -273,6 +277,64 @@ describe('VocabularyEditor', () => {
 				})
 			);
 		});
+
+		it('should not dispatch cancel when backdrop is clicked', async () => {
+			const handleCancel = vi.fn();
+			const { container } = render(VocabularyEditor, {
+				props: {},
+				events: {
+					cancel: () => handleCancel()
+				}
+			});
+
+			const backdrop = container.firstElementChild as HTMLElement;
+			await fireEvent.click(backdrop);
+
+			expect(handleCancel).not.toHaveBeenCalled();
+			expect(mockShowConfirm).not.toHaveBeenCalled();
+		});
+
+		it('should close immediately without confirm when form is pristine', async () => {
+			const handleCancel = vi.fn();
+			render(VocabularyEditor, {
+				props: {},
+				events: {
+					cancel: () => handleCancel()
+				}
+			});
+
+			await fireEvent.click(screen.getByRole('button', { name: /취소/ }));
+
+			expect(handleCancel).toHaveBeenCalledTimes(1);
+			expect(mockShowConfirm).not.toHaveBeenCalled();
+		});
+
+		it('should ask for confirmation before cancel when form is dirty', async () => {
+			mockShowConfirm.mockResolvedValue(false);
+			const handleCancel = vi.fn();
+			render(VocabularyEditor, {
+				props: {},
+				events: {
+					cancel: () => handleCancel()
+				}
+			});
+
+			await fireEvent.input(screen.getByLabelText(/표준단어명/), {
+				target: { value: '테스트단어' }
+			});
+
+			await fireEvent.click(screen.getByRole('button', { name: /취소/ }));
+
+			expect(mockShowConfirm).toHaveBeenCalledWith(
+				expect.objectContaining({
+					title: '작성 취소 확인',
+					message: '작성 중인 내용이 사라집니다. 닫을까요?',
+					confirmText: '닫기',
+					cancelText: '계속 작성'
+				})
+			);
+			expect(handleCancel).not.toHaveBeenCalled();
+		});
 	});
 
 	describe('Domain Category', () => {
@@ -289,12 +351,12 @@ describe('VocabularyEditor', () => {
 			});
 		});
 
-		it('should disable domain category select when isFormalWord is false', async () => {
+		it('should keep domain category select enabled when isFormalWord is false', async () => {
 			render(VocabularyEditor, { props: {} });
 
 			await waitFor(() => {
 				const domainCategorySelect = screen.getByLabelText(/도메인분류명/) as HTMLSelectElement;
-				expect(domainCategorySelect).toBeDisabled();
+				expect(domainCategorySelect).not.toBeDisabled();
 			});
 		});
 	});

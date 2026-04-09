@@ -6,6 +6,7 @@
 	import DomainEditor from '$lib/components/DomainEditor.svelte';
 	import DomainDataTypeMappingModal from '$lib/components/DomainDataTypeMappingModal.svelte';
 	import DomainValidationPanel from '$lib/components/DomainValidationPanel.svelte';
+	import ImpactConfirmDialog from '$lib/components/ImpactConfirmDialog.svelte';
 	import BrowsePageLayout from '$lib/components/BrowsePageLayout.svelte';
 	import BrowseSidebarSummary from '$lib/components/BrowseSidebarSummary.svelte';
 	import ActionBar from '$lib/components/ActionBar.svelte';
@@ -13,12 +14,14 @@
 	import BentoGrid from '$lib/components/BentoGrid.svelte';
 	import BentoCard from '$lib/components/BentoCard.svelte';
 	import type { DomainEntry, DomainApiResponse } from '$lib/types/domain.js';
+	import type { EditorSaveImpactPreview } from '$lib/types/change-impact.js';
 	import type { DomainDataTypeMappingLike } from '$lib/utils/domain-name';
 	import { DEFAULT_DOMAIN_DATA_TYPE_MAPPINGS } from '$lib/utils/domain-name';
 	import { resolvePreferredFilename } from '$lib/utils/file-selection';
 	import { get } from 'svelte/store';
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { domainDataStore as domainStore } from '$lib/stores/unified-store';
+	import { addToast } from '$lib/stores/toast-store';
 	import { filterDomainFiles, isSystemDomainFile } from '$lib/utils/file-filter';
 	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
 
@@ -53,6 +56,9 @@
 	let showEditor = $state(false);
 	let editorServerError = $state('');
 	let currentEditingEntry = $state<DomainEntry | null>(null);
+	let showImpactConfirm = $state(false);
+	let pendingSaveEntry = $state<DomainEntry | null>(null);
+	let pendingImpactPreview = $state<EditorSaveImpactPreview | null>(null);
 	let showValidationPanel = $state(false);
 	let validationLoading = $state(false);
 	let validationResults = $state<{
@@ -570,6 +576,43 @@
 	 */
 	async function handleSave(event: CustomEvent<DomainEntry>) {
 		const editedEntry = event.detail;
+
+		loading = true;
+		editorServerError = '';
+
+		try {
+			const previewResponse = await fetch('/api/domain/impact-preview', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					filename: selectedFilename,
+					scope: 'editor-save',
+					currentEntry: currentEditingEntry || undefined,
+					proposedEntry: editedEntry,
+					mode: currentEditingEntry ? 'update' : 'create'
+				})
+			});
+
+			const previewResult: DomainApiResponse = await previewResponse.json();
+			if (!previewResult.success || !previewResult.data) {
+				editorServerError = previewResult.error || '저장 전 영향도 확인에 실패했습니다.';
+				return;
+			}
+
+			pendingSaveEntry = editedEntry;
+			pendingImpactPreview = previewResult.data as EditorSaveImpactPreview;
+			showImpactConfirm = true;
+		} catch (error) {
+			console.error('도메인 저장 영향도 확인 중 오류:', error);
+			editorServerError = '저장 전 영향도 확인 중 오류가 발생했습니다.';
+		} finally {
+			loading = false;
+		}
+	}
+
+	async function applySave(editedEntry: DomainEntry) {
 		loading = true;
 		editorServerError = '';
 
@@ -585,7 +628,10 @@
 				headers: {
 					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify(editedEntry)
+				body: JSON.stringify({
+					...editedEntry,
+					applyCascade: true
+				})
 			});
 
 			const result: DomainApiResponse = await response.json();
@@ -593,8 +639,15 @@
 			if (result.success && result.data) {
 				// 모달 닫기
 				showEditor = false;
+				showImpactConfirm = false;
+				pendingSaveEntry = null;
+				pendingImpactPreview = null;
 				editorServerError = '';
 				currentEditingEntry = null;
+				addToast(
+					result.message || (isEditMode ? '도메인을 수정했습니다.' : '도메인을 추가했습니다.'),
+					'success'
+				);
 				// 데이터 새로고침
 				await loadDomainData();
 			} else {
@@ -603,14 +656,35 @@
 					result.error ||
 					(isEditMode ? '도메인 수정에 실패했습니다.' : '도메인 추가에 실패했습니다.');
 				editorServerError = errorMsg;
+				showImpactConfirm = false;
+				pendingSaveEntry = null;
+				pendingImpactPreview = null;
 			}
 		} catch (error) {
 			console.error(isEditMode ? '도메인 수정 중 오류:' : '도메인 추가 중 오류:', error);
 			const errorMsg = '서버 연결 오류가 발생했습니다.';
 			editorServerError = errorMsg;
+			showImpactConfirm = false;
+			pendingSaveEntry = null;
+			pendingImpactPreview = null;
 		} finally {
 			loading = false;
 		}
+	}
+
+	async function handleImpactConfirm() {
+		if (!pendingSaveEntry) return;
+		const entry = pendingSaveEntry;
+		showImpactConfirm = false;
+		pendingSaveEntry = null;
+		pendingImpactPreview = null;
+		await applySave(entry);
+	}
+
+	function handleImpactCancel() {
+		showImpactConfirm = false;
+		pendingSaveEntry = null;
+		pendingImpactPreview = null;
 	}
 
 	/**
@@ -806,6 +880,15 @@
 			on:cancel={handleCancel}
 		/>
 	{/if}
+
+	<ImpactConfirmDialog
+		isOpen={showImpactConfirm}
+		preview={pendingImpactPreview}
+		isSubmitting={loading}
+		confirmText={currentEditingEntry ? '수정 저장' : '저장'}
+		on:confirm={handleImpactConfirm}
+		on:cancel={handleImpactCancel}
+	/>
 
 	<DomainDataTypeMappingModal
 		isOpen={isDataTypeMappingOpen}

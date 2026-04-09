@@ -5,9 +5,11 @@
 	import { get } from 'svelte/store';
 	import { termDataStore as termStore } from '$lib/stores/unified-store';
 	import type { TermEntry } from '$lib/types/term';
-	import type { TermImpactPreview } from '$lib/types/change-impact.js';
+	import type { EditorSaveImpactPreview } from '$lib/types/change-impact.js';
 	import { debounce } from '$lib/utils/debounce';
+	import { requestEditorClose } from '$lib/utils/editor-close-guard';
 	import { addToast } from '$lib/stores/toast-store';
+	import EditorSaveImpactSummary from '$lib/components/EditorSaveImpactSummary.svelte';
 
 	// Props
 	interface Props {
@@ -46,7 +48,7 @@
 
 	// Form state
 	let isSubmitting = $state(false);
-	let impactPreview = $state<TermImpactPreview | null>(null);
+	let impactPreview = $state<EditorSaveImpactPreview | null>(null);
 	let impactLoading = $state(false);
 	let impactError = $state('');
 	let impactRequestToken = 0;
@@ -71,6 +73,14 @@
 	let termNameInput: HTMLInputElement | undefined;
 	let columnNameInput: HTMLInputElement | undefined;
 	let domainNameInput: HTMLInputElement | undefined;
+
+	function createInitialFormData() {
+		return {
+			termName: entry.termName || '',
+			columnName: entry.columnName || '',
+			domainName: entry.domainName || ''
+		};
+	}
 
 	// Update formData when entry prop changes
 	$effect(() => {
@@ -113,11 +123,7 @@
 		void formData.columnName;
 		void formData.domainName;
 
-		if (
-			!formData.termName.trim() ||
-			!formData.columnName.trim() ||
-			!formData.domainName.trim()
-		) {
+		if (!formData.termName.trim() || !formData.columnName.trim() || !formData.domainName.trim()) {
 			impactPreview = null;
 			impactError = '';
 			return;
@@ -413,6 +419,7 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					filename,
+					scope: 'editor-save',
 					currentEntry: buildCurrentEntry(),
 					proposedEntry
 				})
@@ -427,7 +434,7 @@
 				throw new Error(result.error || '용어 영향도 미리보기를 불러오지 못했습니다.');
 			}
 
-			impactPreview = result.data as TermImpactPreview;
+			impactPreview = result.data as EditorSaveImpactPreview;
 			return impactPreview;
 		} catch (err) {
 			if (requestToken !== impactRequestToken) {
@@ -626,14 +633,12 @@
 
 	// Handle cancel
 	function handleCancel() {
-		dispatch('cancel');
-	}
-
-	// Handle background click
-	function handleBackgroundClick(event: MouseEvent) {
-		if (event.target === event.currentTarget) {
-			handleCancel();
-		}
+		return requestEditorClose({
+			initialValue: createInitialFormData(),
+			currentValue: { ...formData },
+			onClose: () => dispatch('cancel'),
+			isSubmitting
+		});
 	}
 
 	// Close suggestions when clicking outside
@@ -658,31 +663,19 @@
 
 <svelte:window onclick={handleClickOutside} onkeydown={handleKeydown} />
 
-<div
-	class="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-50"
-	onclick={handleBackgroundClick}
-	role="button"
-	tabindex="0"
-	aria-label="배경을 클릭하거나 Esc 키로 닫기"
-	onkeydown={(event) => {
-		// 입력 필드에서의 스페이스/엔터는 모달을 닫지 않도록 방지
-		const target = event.target as HTMLElement;
-		const isFormElement =
-			target.tagName === 'INPUT' ||
-			target.tagName === 'TEXTAREA' ||
-			target.tagName === 'SELECT' ||
-			target.isContentEditable;
-
-		// 오버레이 자체에 포커스가 있을 때만 키보드로 닫기 처리
-		if (!isFormElement && event.currentTarget === event.target) {
-			if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
+<div class="fixed inset-0 z-[60] flex items-center justify-center bg-black bg-opacity-50">
+	<div
+		class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl"
+		role="dialog"
+		aria-modal="true"
+		tabindex="-1"
+		onkeydown={(event) => {
+			if (event.key === 'Escape') {
 				event.preventDefault();
-				handleCancel();
+				void handleCancel();
 			}
-		}
-	}}
->
-	<div class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl">
+		}}
+	>
 		<div class="flex flex-shrink-0 items-center justify-between border-b p-6">
 			<h2 class="text-xl font-bold text-gray-900">{isEditMode ? '용어 수정' : '새 용어 추가'}</h2>
 			<button
@@ -869,119 +862,21 @@
 					{/if}
 				</div>
 
-				<div class="rounded-xl border border-sky-200 bg-sky-50/70 p-4" role="region" aria-label="용어 변경 영향도">
-					<div class="mb-3 flex items-start justify-between gap-3">
-						<div>
-							<h3 class="text-sm font-semibold text-sky-900">변경 영향도</h3>
-							<p class="mt-1 text-xs text-sky-800">
-								저장 전에 컬럼 연결과 표준화 파급을 미리 계산합니다.
-							</p>
-						</div>
-						<button
-							type="button"
-							class="rounded-md border border-sky-300 bg-white px-3 py-1.5 text-xs font-medium text-sky-800 hover:bg-sky-100 disabled:cursor-not-allowed disabled:opacity-50"
-							disabled={
-								impactLoading ||
-								!formData.termName.trim() ||
-								!formData.columnName.trim() ||
-								!formData.domainName.trim()
-							}
-							onclick={() => void loadImpactPreview()}
-						>
-							{impactLoading ? '계산 중...' : '다시 계산'}
-						</button>
-					</div>
-
-					{#if impactLoading}
-						<p class="text-xs text-sky-800">입력값 기준 영향도를 계산하는 중입니다.</p>
-					{:else if impactPreview}
-						<div class="grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
-							<div class="rounded-lg border border-white/70 bg-white px-3 py-2">
-								<div class="text-slate-500">현재 연결 컬럼</div>
-								<div class="mt-1 text-base font-semibold text-slate-900">
-									{impactPreview.summary.currentLinkedColumnCount}
-								</div>
-							</div>
-							<div class="rounded-lg border border-white/70 bg-white px-3 py-2">
-								<div class="text-slate-500">저장 후 연결 컬럼</div>
-								<div class="mt-1 text-base font-semibold text-slate-900">
-									{impactPreview.summary.nextLinkedColumnCount}
-								</div>
-							</div>
-							<div class="rounded-lg border border-white/70 bg-white px-3 py-2">
-								<div class="text-slate-500">도메인 존재 여부</div>
-								<div class="mt-1 text-base font-semibold {impactPreview.summary.proposedDomainExists ? 'text-emerald-700' : 'text-rose-700'}">
-									{impactPreview.summary.proposedDomainExists ? '정상' : '누락'}
-								</div>
-							</div>
-							{#if impactPreview.summary.columnLinksToBeBroken > 0}
-								<div class="rounded-lg border border-rose-200 bg-white px-3 py-2">
-									<div class="text-rose-600">끊기는 컬럼 연결</div>
-									<div class="mt-1 text-base font-semibold text-rose-700">
-										{impactPreview.summary.columnLinksToBeBroken}
-									</div>
-								</div>
-							{/if}
-							{#if impactPreview.summary.newColumnLinksDetected > 0}
-								<div class="rounded-lg border border-emerald-200 bg-white px-3 py-2">
-									<div class="text-emerald-600">새 연결 후보</div>
-									<div class="mt-1 text-base font-semibold text-emerald-700">
-										{impactPreview.summary.newColumnLinksDetected}
-									</div>
-								</div>
-							{/if}
-							{#if impactPreview.summary.affectedColumnStandardizationCount > 0}
-								<div class="rounded-lg border border-amber-200 bg-white px-3 py-2">
-									<div class="text-amber-700">표준화 영향 컬럼</div>
-									<div class="mt-1 text-base font-semibold text-amber-800">
-										{impactPreview.summary.affectedColumnStandardizationCount}
-									</div>
-								</div>
-							{/if}
-						</div>
-
-						<div class="mt-3 space-y-2">
-							{#each impactPreview.guidance as guide (guide)}
-								<div class="rounded-lg border border-sky-100 bg-white/80 px-3 py-2 text-xs text-slate-700">
-									{guide}
-								</div>
-							{/each}
-						</div>
-
-						{#if impactPreview.samples.currentLinkedColumns.length > 0 || impactPreview.samples.nextLinkedColumns.length > 0}
-							<div class="mt-3 grid gap-2 sm:grid-cols-2">
-								{#if impactPreview.samples.currentLinkedColumns.length > 0}
-									<div class="rounded-lg border border-white/70 bg-white px-3 py-2 text-xs">
-										<div class="font-medium text-slate-800">현재 연결 컬럼 예시</div>
-										<div class="mt-2 flex flex-wrap gap-2">
-											{#each impactPreview.samples.currentLinkedColumns as column (column.id)}
-												<span class="rounded-full bg-slate-100 px-2 py-1 text-slate-700">
-													{column.name}
-												</span>
-											{/each}
-										</div>
-									</div>
-								{/if}
-								{#if impactPreview.samples.nextLinkedColumns.length > 0}
-									<div class="rounded-lg border border-white/70 bg-white px-3 py-2 text-xs">
-										<div class="font-medium text-slate-800">저장 후 연결 컬럼 예시</div>
-										<div class="mt-2 flex flex-wrap gap-2">
-											{#each impactPreview.samples.nextLinkedColumns as column (column.id)}
-												<span class="rounded-full bg-emerald-50 px-2 py-1 text-emerald-700">
-													{column.name}
-												</span>
-											{/each}
-										</div>
-									</div>
-								{/if}
-							</div>
-						{/if}
-					{:else if impactError}
-						<p class="text-xs text-rose-700">{impactError}</p>
-					{:else}
-						<p class="text-xs text-sky-800">필수 항목을 채우면 저장 전 영향도를 자동으로 계산합니다.</p>
-					{/if}
-				</div>
+				<EditorSaveImpactSummary
+					preview={impactPreview}
+					loading={impactLoading}
+					error={impactError}
+					regionLabel="용어 변경 영향도"
+					title="변경 영향도"
+					description="저장 전에 용어와 연관된 3영역 자동 반영 범위를 확인합니다."
+					emptyMessage="필수 항목을 채우면 저장 전 영향도를 자동으로 계산합니다."
+					refreshable={true}
+					refreshDisabled={!formData.termName.trim() ||
+						!formData.columnName.trim() ||
+						!formData.domainName.trim()}
+					accent="sky"
+					on:refresh={() => void loadImpactPreview()}
+				/>
 
 				<!-- 버튼 그룹 -->
 				<div class="flex justify-end border-t border-gray-200 pt-4">

@@ -2,13 +2,15 @@
 	import { createEventDispatcher } from 'svelte';
 	import { tick } from 'svelte';
 	import type { DomainEntry } from '$lib/types/domain';
-	import type { DomainImpactPreview } from '$lib/types/change-impact.js';
+	import type { DomainImpactPreview, EditorSaveImpactPreview } from '$lib/types/change-impact.js';
 	import type { DomainDataTypeMappingLike } from '$lib/utils/domain-name';
 	import { debounce } from '$lib/utils/debounce';
+	import { requestEditorClose } from '$lib/utils/editor-close-guard';
 	import { generateStandardDomainName } from '$lib/utils/validation';
 	import { v4 as uuidv4 } from 'uuid';
 	import { addToast } from '$lib/stores/toast-store';
 	import { showConfirm } from '$lib/stores/confirm-store';
+	import EditorSaveImpactSummary from '$lib/components/EditorSaveImpactSummary.svelte';
 
 	// Props
 	interface Props {
@@ -69,10 +71,26 @@
 
 	// Form state
 	let isSubmitting = $state(false);
-	let impactPreview = $state<DomainImpactPreview | null>(null);
+	let impactPreview = $state<EditorSaveImpactPreview | null>(null);
 	let impactLoading = $state(false);
 	let impactError = $state('');
 	let impactRequestToken = 0;
+
+	function createInitialFormData() {
+		return {
+			domainGroup: entry.domainGroup || '',
+			domainCategory: entry.domainCategory || '',
+			physicalDataType: entry.physicalDataType || '',
+			dataLength: entry.dataLength || '',
+			decimalPlaces: entry.decimalPlaces || '',
+			measurementUnit: entry.measurementUnit || '',
+			revision: entry.revision || '',
+			description: entry.description || '',
+			storageFormat: entry.storageFormat || '',
+			displayFormat: entry.displayFormat || '',
+			allowedValues: entry.allowedValues || ''
+		};
+	}
 
 	// Update formData when entry prop changes
 	$effect(() => {
@@ -146,7 +164,11 @@
 		void formData.decimalPlaces;
 		void generatedDomainName;
 
-		if (!formData.domainGroup.trim() || !formData.domainCategory.trim() || !formData.physicalDataType.trim()) {
+		if (
+			!formData.domainGroup.trim() ||
+			!formData.domainCategory.trim() ||
+			!formData.physicalDataType.trim()
+		) {
 			impactPreview = null;
 			impactError = '';
 			return;
@@ -190,10 +212,7 @@
 		};
 	}
 
-	async function requestImpactPreview(
-		mode?: 'create' | 'update' | 'delete',
-		updateState = true
-	) {
+	async function requestImpactPreview(mode?: 'create' | 'update' | 'delete', updateState = true) {
 		const requestToken = updateState ? ++impactRequestToken : impactRequestToken;
 		if (updateState) {
 			impactLoading = true;
@@ -206,6 +225,7 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					filename,
+					scope: mode === 'delete' ? 'full' : 'editor-save',
 					mode: mode || (isEditMode ? 'update' : 'create'),
 					currentEntry: buildCurrentEntry(),
 					proposedEntry: mode === 'delete' ? undefined : buildPreviewEntry()
@@ -221,7 +241,7 @@
 				throw new Error(result.error || '도메인 영향도 미리보기를 불러오지 못했습니다.');
 			}
 
-			const preview = result.data as DomainImpactPreview;
+			const preview = result.data as EditorSaveImpactPreview;
 			if (updateState) {
 				impactPreview = preview;
 			}
@@ -246,6 +266,28 @@
 
 	async function loadImpactPreview() {
 		return requestImpactPreview();
+	}
+
+	async function requestDeleteImpactPreview() {
+		try {
+			const response = await fetch('/api/domain/impact-preview', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					filename,
+					mode: 'delete',
+					currentEntry: buildCurrentEntry()
+				})
+			});
+			const result = await response.json();
+			if (!response.ok || !result.success || !result.data) {
+				throw new Error(result.error || '도메인 영향도 미리보기를 불러오지 못했습니다.');
+			}
+			return result.data as DomainImpactPreview;
+		} catch (error) {
+			console.warn('도메인 삭제 영향도 미리보기 로드 실패:', error);
+			return null;
+		}
 	}
 
 	// Handle save
@@ -351,7 +393,12 @@
 
 	// Handle cancel
 	function handleCancel() {
-		dispatch('cancel');
+		return requestEditorClose({
+			initialValue: createInitialFormData(),
+			currentValue: { ...formData },
+			onClose: () => dispatch('cancel'),
+			isSubmitting
+		});
 	}
 
 	// Handle delete
@@ -360,10 +407,11 @@
 			return;
 		}
 
-		const deletePreview = await requestImpactPreview('delete', false);
+		const deletePreview = await requestDeleteImpactPreview();
 		const deleteMessage =
-			deletePreview && deletePreview.summary.totalReferenceCount > 0
-				? `정말로 이 항목을 삭제하시겠습니까?\n\n참조 현황: 단어 ${deletePreview.summary.vocabularyReferenceCount}건, 용어 ${deletePreview.summary.termReferenceCount}건, 컬럼 ${deletePreview.summary.columnReferenceCount}건`
+			deletePreview &&
+			deletePreview.summary.vocabularyReferenceCount + deletePreview.summary.termReferenceCount > 0
+				? `정말로 이 항목을 삭제하시겠습니까?\n\n참조 현황: 단어 ${deletePreview.summary.vocabularyReferenceCount}건, 용어 ${deletePreview.summary.termReferenceCount}건`
 				: '정말로 이 항목을 삭제하시겠습니까?';
 
 		const confirmed = await showConfirm({
@@ -394,24 +442,16 @@
 		}
 	}
 
-	// Handle background click
-	function handleBackgroundClick(event: MouseEvent) {
-		// 배경을 클릭했을 때만 모달 닫기 (이벤트 타켓이 배경 div인 경우)
-		if (event.target === event.currentTarget) {
-			handleCancel();
-		}
-	}
-
 	function handleKeydown(event: KeyboardEvent) {
 		if (event.key === 'Escape') {
-			handleCancel();
+			event.preventDefault();
+			void handleCancel();
 		}
 	}
 </script>
 
 <div
 	class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-	onclick={handleBackgroundClick}
 	onkeydown={handleKeydown}
 	role="dialog"
 	aria-modal="true"
@@ -479,9 +519,6 @@
 					<div>
 						<label for="domainGroup" class="mb-1 block text-sm font-medium text-gray-900">
 							도메인그룹 <span class="text-red-700">*</span>
-							{#if isEditMode}
-								<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
-							{/if}
 						</label>
 						<input
 							id="domainGroup"
@@ -490,17 +527,10 @@
 							placeholder="예: 공통표준도메인그룹명"
 							class="input"
 							class:input-error={errors.domainGroup}
-							class:bg-gray-50={isEditMode}
-							disabled={isSubmitting || isEditMode}
-							readonly={isEditMode}
+							disabled={isSubmitting}
 						/>
 						{#if errors.domainGroup}
 							<p class="text-error mt-1 text-sm">{errors.domainGroup}</p>
-						{/if}
-						{#if isEditMode}
-							<p class="mt-1 text-xs text-gray-500">
-								도메인그룹은 validation 처리되는 값으로 수정할 수 없습니다.
-							</p>
 						{/if}
 					</div>
 
@@ -508,9 +538,6 @@
 					<div>
 						<label for="domainCategory" class="mb-1 block text-sm font-medium text-gray-900">
 							도메인 분류명 <span class="text-red-700">*</span>
-							{#if isEditMode}
-								<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
-							{/if}
 						</label>
 						<input
 							id="domainCategory"
@@ -519,17 +546,10 @@
 							placeholder="예: 공통표준도메인분류명"
 							class="input"
 							class:input-error={errors.domainCategory}
-							class:bg-gray-50={isEditMode}
-							disabled={isSubmitting || isEditMode}
-							readonly={isEditMode}
+							disabled={isSubmitting}
 						/>
 						{#if errors.domainCategory}
 							<p class="text-error mt-1 text-sm">{errors.domainCategory}</p>
-						{/if}
-						{#if isEditMode}
-							<p class="mt-1 text-xs text-gray-500">
-								도메인 분류명은 validation 처리되는 값으로 수정할 수 없습니다.
-							</p>
 						{/if}
 					</div>
 
@@ -537,9 +557,7 @@
 					<div>
 						<label for="standardDomainName" class="mb-1 block text-sm font-medium text-gray-900">
 							표준 도메인명 <span class="text-red-700">*</span>
-							<span class="ml-2 text-xs font-normal text-gray-500"
-								>(자동 생성{#if isEditMode}, 수정 불가{/if})</span
-							>
+							<span class="ml-2 text-xs font-normal text-gray-500">(자동 생성)</span>
 						</label>
 						<div
 							class="rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-sm text-gray-700"
@@ -547,11 +565,7 @@
 							{generatedDomainName || '(입력 필요)'}
 						</div>
 						<p class="mt-1 text-xs text-gray-500">
-							{#if isEditMode}
-								표준 도메인명은 validation 처리되는 값으로 수정할 수 없습니다.
-							{:else}
-								도메인분류명, 데이터타입 매핑약어, 데이터길이, 소수점자리수로 자동 생성됩니다.
-							{/if}
+							도메인분류명, 데이터타입 매핑약어, 데이터길이, 소수점자리수로 자동 생성됩니다.
 						</p>
 					</div>
 
@@ -559,9 +573,6 @@
 					<div>
 						<label for="physicalDataType" class="mb-1 block text-sm font-medium text-gray-900">
 							물리 데이터타입 <span class="text-red-700">*</span>
-							{#if isEditMode}
-								<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
-							{/if}
 						</label>
 						<input
 							id="physicalDataType"
@@ -570,22 +581,14 @@
 							placeholder="예: VARCHAR, NUMBER 등"
 							class="input"
 							class:input-error={errors.physicalDataType}
-							class:bg-gray-50={isEditMode}
-							disabled={isSubmitting || isEditMode}
-							readonly={isEditMode}
+							disabled={isSubmitting}
 						/>
 						{#if errors.physicalDataType}
 							<p class="text-error mt-1 text-sm">{errors.physicalDataType}</p>
 						{/if}
-						{#if isEditMode}
-							<p class="mt-1 text-xs text-gray-500">
-								물리 데이터타입은 validation 처리되는 값으로 수정할 수 없습니다.
-							</p>
-						{:else}
-							<p class="mt-1 text-xs text-gray-500">
-								데이터타입별 약어는 도메인 목록의 "데이터타입 매핑" 팝업에서 관리합니다.
-							</p>
-						{/if}
+						<p class="mt-1 text-xs text-gray-500">
+							데이터타입별 약어는 도메인 목록의 "데이터타입 매핑" 팝업에서 관리합니다.
+						</p>
 					</div>
 				</div>
 
@@ -597,9 +600,6 @@
 					<div>
 						<label for="dataLength" class="mb-1 block text-sm font-medium text-gray-900">
 							데이터 길이
-							{#if isEditMode}
-								<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
-							{/if}
 						</label>
 						<input
 							id="dataLength"
@@ -607,24 +607,14 @@
 							bind:value={formData.dataLength}
 							placeholder="예: 255"
 							class="input"
-							class:bg-gray-50={isEditMode}
-							disabled={isSubmitting || isEditMode}
-							readonly={isEditMode}
+							disabled={isSubmitting}
 						/>
-						{#if isEditMode}
-							<p class="mt-1 text-xs text-gray-500">
-								데이터 길이는 validation 처리되는 값으로 수정할 수 없습니다.
-							</p>
-						{/if}
 					</div>
 
 					<!-- 소수점자리수 -->
 					<div>
 						<label for="decimalPlaces" class="mb-1 block text-sm font-medium text-gray-900">
 							소수점자리수
-							{#if isEditMode}
-								<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
-							{/if}
 						</label>
 						<input
 							id="decimalPlaces"
@@ -632,15 +622,8 @@
 							bind:value={formData.decimalPlaces}
 							placeholder="예: 2"
 							class="input"
-							class:bg-gray-50={isEditMode}
-							disabled={isSubmitting || isEditMode}
-							readonly={isEditMode}
+							disabled={isSubmitting}
 						/>
-						{#if isEditMode}
-							<p class="mt-1 text-xs text-gray-500">
-								소수점자리수는 validation 처리되는 값으로 수정할 수 없습니다.
-							</p>
-						{/if}
 					</div>
 
 					<!-- 측정단위 -->
@@ -739,114 +722,21 @@
 					</div>
 				</div>
 
-				<div class="rounded-xl border border-amber-200 bg-amber-50/70 p-4" role="region" aria-label="도메인 변경 영향도">
-					<div class="mb-3 flex items-start justify-between gap-3">
-						<div>
-							<h3 class="text-sm font-semibold text-amber-900">변경 영향도</h3>
-							<p class="mt-1 text-xs text-amber-800">
-								저장 또는 삭제 전에 downstream 참조 수를 확인합니다.
-							</p>
-						</div>
-						<button
-							type="button"
-							class="rounded-md border border-amber-300 bg-white px-3 py-1.5 text-xs font-medium text-amber-900 hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
-							disabled={
-								impactLoading ||
-								!formData.domainGroup.trim() ||
-								!formData.domainCategory.trim() ||
-								!formData.physicalDataType.trim()
-							}
-							onclick={() => void loadImpactPreview()}
-						>
-							{impactLoading ? '계산 중...' : '다시 계산'}
-						</button>
-					</div>
-
-					{#if impactLoading}
-						<p class="text-xs text-amber-800">참조 수와 변경 영향을 계산하는 중입니다.</p>
-					{:else if impactPreview}
-						<div class="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
-							<div class="rounded-lg border border-white/70 bg-white px-3 py-2">
-								<div class="text-slate-500">단어 참조</div>
-								<div class="mt-1 text-base font-semibold text-slate-900">
-									{impactPreview.summary.vocabularyReferenceCount}
-								</div>
-							</div>
-							<div class="rounded-lg border border-white/70 bg-white px-3 py-2">
-								<div class="text-slate-500">용어 참조</div>
-								<div class="mt-1 text-base font-semibold text-slate-900">
-									{impactPreview.summary.termReferenceCount}
-								</div>
-							</div>
-							<div class="rounded-lg border border-white/70 bg-white px-3 py-2">
-								<div class="text-slate-500">컬럼 참조</div>
-								<div class="mt-1 text-base font-semibold text-slate-900">
-									{impactPreview.summary.columnReferenceCount}
-								</div>
-							</div>
-							<div class="rounded-lg border border-white/70 bg-white px-3 py-2">
-								<div class="text-slate-500">총 참조</div>
-								<div class="mt-1 text-base font-semibold {impactPreview.summary.totalReferenceCount > 0 ? 'text-amber-800' : 'text-emerald-700'}">
-									{impactPreview.summary.totalReferenceCount}
-								</div>
-							</div>
-						</div>
-
-						{#if impactPreview.summary.downstreamBreakCount > 0 || impactPreview.summary.affectedColumnSyncCount > 0}
-							<div class="mt-2 grid gap-2 text-xs sm:grid-cols-2">
-								{#if impactPreview.summary.downstreamBreakCount > 0}
-									<div class="rounded-lg border border-rose-200 bg-white px-3 py-2">
-										<div class="text-rose-600">참조 끊김 가능 건수</div>
-										<div class="mt-1 text-base font-semibold text-rose-700">
-											{impactPreview.summary.downstreamBreakCount}
-										</div>
-									</div>
-								{/if}
-								{#if impactPreview.summary.affectedColumnSyncCount > 0}
-									<div class="rounded-lg border border-blue-200 bg-white px-3 py-2">
-										<div class="text-blue-600">컬럼 동기화 영향</div>
-										<div class="mt-1 text-base font-semibold text-blue-700">
-											{impactPreview.summary.affectedColumnSyncCount}
-										</div>
-									</div>
-								{/if}
-							</div>
-						{/if}
-
-						<div class="mt-3 space-y-2">
-							{#each impactPreview.guidance as guide (guide)}
-								<div class="rounded-lg border border-amber-100 bg-white/80 px-3 py-2 text-xs text-slate-700">
-									{guide}
-								</div>
-							{/each}
-						</div>
-
-						{#if impactPreview.references.some((reference) => reference.count > 0)}
-							<div class="mt-3 grid gap-2 sm:grid-cols-3">
-								{#each impactPreview.references as reference (reference.type)}
-									{#if reference.count > 0}
-										<div class="rounded-lg border border-white/70 bg-white px-3 py-2 text-xs">
-											<div class="font-medium text-slate-800">
-												{reference.type.toUpperCase()} · {reference.count}건
-											</div>
-											<div class="mt-2 flex flex-wrap gap-2">
-												{#each reference.entries as item (item.id)}
-													<span class="rounded-full bg-slate-100 px-2 py-1 text-slate-700">
-														{item.name}
-													</span>
-												{/each}
-											</div>
-										</div>
-									{/if}
-								{/each}
-							</div>
-						{/if}
-					{:else if impactError}
-						<p class="text-xs text-rose-700">{impactError}</p>
-					{:else}
-						<p class="text-xs text-amber-800">필수 항목을 채우면 참조 수와 변경 영향을 자동으로 계산합니다.</p>
-					{/if}
-				</div>
+				<EditorSaveImpactSummary
+					preview={impactPreview}
+					loading={impactLoading}
+					error={impactError}
+					regionLabel="도메인 변경 영향도"
+					title="변경 영향도"
+					description="저장 전에 도메인과 연관된 3영역 자동 반영 범위를 확인합니다."
+					emptyMessage="필수 항목을 채우면 저장 전 영향도를 자동으로 계산합니다."
+					refreshable={true}
+					refreshDisabled={!formData.domainGroup.trim() ||
+						!formData.domainCategory.trim() ||
+						!formData.physicalDataType.trim()}
+					accent="amber"
+					on:refresh={() => void loadImpactPreview()}
+				/>
 
 				<!-- 버튼 그룹 -->
 				<div class="flex justify-between border-t border-gray-200 pt-4">

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import { tick } from 'svelte';
+	import { requestEditorClose } from '$lib/utils/editor-close-guard';
 	import type { VocabularyEntry } from '$lib/types/vocabulary';
 	import { addToast } from '$lib/stores/toast-store';
 	import { showConfirm } from '$lib/stores/confirm-store';
@@ -48,6 +49,19 @@
 	let isSubmitting = $state(false);
 	let domainCategoryOptions = $state<string[]>([]);
 	let isLoadingDomainCategories = $state(false);
+
+	function createInitialFormData() {
+		return {
+			standardName: entry.standardName || '',
+			abbreviation: entry.abbreviation || '',
+			englishName: entry.englishName || '',
+			description: entry.description || '',
+			domainCategory: entry.domainCategory || '',
+			isFormalWord: entry.isFormalWord ?? false,
+			synonyms: entry.synonyms?.join(', ') || '',
+			forbiddenWords: entry.forbiddenWords?.join(', ') || ''
+		};
+	}
 
 	// Input refs for focus management
 	let standardNameInput: HTMLInputElement | undefined;
@@ -174,10 +188,10 @@
 							body: JSON.stringify({
 								standardName,
 								abbreviation: formData.abbreviation.trim(),
-							entryId: entry.id // 수정 모드인 경우 현재 entry ID 전달
-						})
-					}
-				);
+								entryId: entry.id // 수정 모드인 경우 현재 entry ID 전달
+							})
+						}
+					);
 
 					const validationResult = await validationResponse.json().catch(() => null);
 					if (!validationResponse.ok || !validationResult?.success) {
@@ -243,13 +257,23 @@
 	}
 
 	function handleCancel() {
-		dispatch('cancel');
+		return requestEditorClose({
+			initialValue: createInitialFormData(),
+			currentValue: { ...formData },
+			onClose: () => dispatch('cancel'),
+			isSubmitting
+		});
 	}
 
 	async function handleDelete() {
 		if (!entry.id) return;
 
-		const confirmed = await showConfirm({ title: '삭제 확인', message: '정말로 이 항목을 삭제하시겠습니까?', confirmText: '삭제', variant: 'danger' });
+		const confirmed = await showConfirm({
+			title: '삭제 확인',
+			message: '정말로 이 항목을 삭제하시겠습니까?',
+			confirmText: '삭제',
+			variant: 'danger'
+		});
 		if (confirmed) {
 			const entryToDelete: VocabularyEntry = {
 				id: entry.id,
@@ -267,29 +291,22 @@
 			dispatch('delete', entryToDelete);
 		}
 	}
-
-	function handleBackgroundClick(event: MouseEvent) {
-		if (event.target === event.currentTarget) {
-			handleCancel();
-		}
-	}
 </script>
 
-<div
-	class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-	role="button"
-	tabindex="-1"
-	aria-label="배경 닫기"
-	onclick={handleBackgroundClick}
-	onkeydown={(e) => e.key === 'Escape' && handleCancel()}
->
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
 	<div
 		class="flex max-h-[90vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl"
 		role="dialog"
 		aria-modal="true"
 		tabindex="-1"
 		onclick={(e) => e.stopPropagation()}
-		onkeydown={(e) => e.stopPropagation()}
+		onkeydown={(e) => {
+			e.stopPropagation();
+			if (e.key === 'Escape') {
+				e.preventDefault();
+				void handleCancel();
+			}
+		}}
 	>
 		<div class="flex flex-shrink-0 items-center justify-between border-b p-6">
 			<div>
@@ -344,9 +361,6 @@
 						<div>
 							<label for="standardName" class="mb-1 block text-sm font-medium text-gray-900">
 								표준단어명 <span class="text-red-700">*</span>
-								{#if isEditMode}
-									<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
-								{/if}
 							</label>
 							<input
 								id="standardName"
@@ -354,29 +368,19 @@
 								type="text"
 								class="input"
 								class:input-error={errors.standardName}
-								class:bg-gray-50={isEditMode}
 								bind:value={formData.standardName}
 								placeholder="예: 사용자"
-								disabled={isSubmitting || isEditMode}
-								readonly={isEditMode}
+								disabled={isSubmitting}
 								required
 							/>
 							{#if errors.standardName}
 								<p class="text-error mt-1 text-sm">{errors.standardName}</p>
-							{/if}
-							{#if isEditMode}
-								<p class="mt-1 text-xs text-gray-500">
-									표준단어명은 validation 처리되는 값으로 수정할 수 없습니다.
-								</p>
 							{/if}
 						</div>
 
 						<div>
 							<label for="abbreviation" class="mb-1 block text-sm font-medium text-gray-900">
 								영문약어 <span class="text-red-700">*</span>
-								{#if isEditMode}
-									<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
-								{/if}
 							</label>
 							<input
 								id="abbreviation"
@@ -384,29 +388,19 @@
 								type="text"
 								class="input"
 								class:input-error={errors.abbreviation}
-								class:bg-gray-50={isEditMode}
 								bind:value={formData.abbreviation}
 								placeholder="예: user"
-								disabled={isSubmitting || isEditMode}
-								readonly={isEditMode}
+								disabled={isSubmitting}
 								required
 							/>
 							{#if errors.abbreviation}
 								<p class="text-error mt-1 text-sm">{errors.abbreviation}</p>
-							{/if}
-							{#if isEditMode}
-								<p class="mt-1 text-xs text-gray-500">
-									영문약어는 validation 처리되는 값으로 수정할 수 없습니다.
-								</p>
 							{/if}
 						</div>
 
 						<div>
 							<label for="englishName" class="mb-1 block text-sm font-medium text-gray-900">
 								영문명 <span class="text-red-700">*</span>
-								{#if isEditMode}
-									<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
-								{/if}
 							</label>
 							<input
 								id="englishName"
@@ -414,58 +408,38 @@
 								type="text"
 								class="input"
 								class:input-error={errors.englishName}
-								class:bg-gray-50={isEditMode}
 								bind:value={formData.englishName}
 								placeholder="예: User"
-								disabled={isSubmitting || isEditMode}
-								readonly={isEditMode}
+								disabled={isSubmitting}
 								required
 							/>
 							{#if errors.englishName}
 								<p class="text-error mt-1 text-sm">{errors.englishName}</p>
 							{/if}
-							{#if isEditMode}
-								<p class="mt-1 text-xs text-gray-500">
-									영문명은 validation 처리되는 값으로 수정할 수 없습니다.
-								</p>
-							{/if}
 						</div>
 						<div>
 							<label for="isFormalWord" class="mb-1 block text-sm font-medium text-gray-900">
 								형식단어 여부
-								{#if isEditMode && !allowEditFormalWordAndDomain}
-									<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
-								{/if}
 							</label>
 							<div class="flex items-center space-x-2">
 								<input
 									id="isFormalWord"
 									type="checkbox"
 									bind:checked={formData.isFormalWord}
-									disabled={isSubmitting || (isEditMode && !allowEditFormalWordAndDomain)}
-									readonly={isEditMode && !allowEditFormalWordAndDomain}
+									disabled={isSubmitting}
 								/>
 								<label for="isFormalWord" class="text-sm text-gray-700">
 									형식단어 여부 (Y: 체크, N: 미체크)
 								</label>
 							</div>
-							{#if isEditMode && !allowEditFormalWordAndDomain}
-								<p class="mt-1 text-xs text-gray-500">
-									형식단어 여부는 validation 처리되는 값으로 수정할 수 없습니다.
-								</p>
-							{:else if !isEditMode || allowEditFormalWordAndDomain}
-								<p class="mt-1 text-xs text-gray-500">
-									형식단어 여부가 Y인 경우에만 도메인분류명을 선택할 수 있습니다.
-								</p>
-							{/if}
+							<p class="mt-1 text-xs text-gray-500">
+								형식단어 여부와 도메인분류명은 저장 전 영향도 확인 후 함께 반영됩니다.
+							</p>
 						</div>
 						<div>
 							<label for="domainCategory" class="mb-1 block text-sm font-medium text-gray-900">
 								도메인분류명
 								<span class="ml-2 text-xs font-normal text-gray-500">(선택만 가능)</span>
-								{#if isEditMode && !allowEditFormalWordAndDomain}
-									<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
-								{/if}
 							</label>
 							{#if isLoadingDomainCategories}
 								<div class="input bg-gray-50">
@@ -475,12 +449,8 @@
 								<select
 									id="domainCategory"
 									class="input"
-									class:bg-gray-50={(isEditMode && !allowEditFormalWordAndDomain) ||
-										!formData.isFormalWord}
 									bind:value={formData.domainCategory}
-									disabled={isSubmitting ||
-										(isEditMode && !allowEditFormalWordAndDomain) ||
-										!formData.isFormalWord}
+									disabled={isSubmitting}
 								>
 									<option value="">선택 안 함</option>
 									{#each domainCategoryOptions as option (option)}
@@ -488,19 +458,9 @@
 									{/each}
 								</select>
 							{/if}
-							{#if isEditMode && !allowEditFormalWordAndDomain}
-								<p class="mt-1 text-xs text-gray-500">
-									도메인분류명은 validation 처리되는 값으로 수정할 수 없습니다.
-								</p>
-							{:else if !formData.isFormalWord}
-								<p class="mt-1 text-xs text-amber-600">
-									형식단어 여부를 Y로 설정해야 도메인분류명을 선택할 수 있습니다.
-								</p>
-							{:else}
-								<p class="mt-1 text-xs text-gray-500">
-									도메인 데이터에서 등록된 도메인분류명만 선택할 수 있습니다.
-								</p>
-							{/if}
+							<p class="mt-1 text-xs text-gray-500">
+								도메인 데이터에서 등록된 도메인분류명만 선택할 수 있습니다.
+							</p>
 						</div>
 					</div>
 				</div>
@@ -524,49 +484,30 @@
 						<div>
 							<label for="synonyms" class="mb-1 block text-sm font-medium text-gray-900">
 								이음동의어 (쉼표 구분)
-								{#if isEditMode}
-									<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
-								{/if}
 							</label>
 							<input
 								id="synonyms"
 								type="text"
 								class="input"
-								class:bg-gray-50={isEditMode}
 								bind:value={formData.synonyms}
 								placeholder="예: 고객, 사용자"
-								disabled={isSubmitting || isEditMode}
-								readonly={isEditMode}
+								disabled={isSubmitting}
 							/>
-							{#if isEditMode}
-								<p class="mt-1 text-xs text-gray-500">
-									이음동의어는 validation 처리되는 값으로 수정할 수 없습니다.
-								</p>
-							{/if}
 						</div>
 						<div>
 							<label for="forbiddenWords" class="mb-1 block text-sm font-medium text-gray-900">
 								금칙어 (쉼표 구분)
-								{#if isEditMode}
-									<span class="ml-2 text-xs font-normal text-gray-500">(수정 불가)</span>
-								{/if}
 							</label>
 							<input
 								id="forbiddenWords"
 								type="text"
 								class="input"
-								class:bg-gray-50={isEditMode}
 								bind:value={formData.forbiddenWords}
 								placeholder="예: 테스트, 샘플"
-								disabled={isSubmitting || isEditMode}
-								readonly={isEditMode}
+								disabled={isSubmitting}
 							/>
 							<p class="mt-1 text-xs text-gray-500">
-								{#if isEditMode}
-									금칙어는 validation 처리되는 값으로 수정할 수 없습니다.
-								{:else}
-									이 단어집 파일에만 적용되는 금칙어 목록입니다.
-								{/if}
+								이 단어집 파일에만 적용되는 금칙어 목록입니다.
 							</p>
 						</div>
 					</div>

@@ -6,6 +6,7 @@
 	import VocabularyEditor from '$lib/components/VocabularyEditor.svelte';
 	import VocabularyValidationPanel from '$lib/components/VocabularyValidationPanel.svelte';
 	import VocabularyFileManager from '$lib/components/VocabularyFileManager.svelte';
+	import ImpactConfirmDialog from '$lib/components/ImpactConfirmDialog.svelte';
 	import BrowsePageLayout from '$lib/components/BrowsePageLayout.svelte';
 	import BrowseSidebarSummary from '$lib/components/BrowseSidebarSummary.svelte';
 	import ActionBar from '$lib/components/ActionBar.svelte';
@@ -13,9 +14,11 @@
 	import BentoGrid from '$lib/components/BentoGrid.svelte';
 	import BentoCard from '$lib/components/BentoCard.svelte';
 	import type { VocabularyEntry, ApiResponse } from '$lib/types/vocabulary.js';
+	import type { EditorSaveImpactPreview } from '$lib/types/change-impact.js';
 	import { get } from 'svelte/store';
 	import { vocabularyDataStore as vocabularyStore } from '$lib/stores/unified-store';
 	import { settingsStore } from '$lib/stores/settings-store';
+	import { addToast } from '$lib/stores/toast-store';
 	import { filterVocabularyFiles, isSystemVocabularyFile } from '$lib/utils/file-filter';
 	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
 
@@ -56,6 +59,9 @@
 	let isFileManagerOpen = $state(false);
 	let currentEditingEntry = $state<VocabularyEntry | null>(null);
 	let showValidationPanel = $state(false);
+	let showImpactConfirm = $state(false);
+	let pendingSaveEntry = $state<VocabularyEntry | null>(null);
+	let pendingImpactPreview = $state<EditorSaveImpactPreview | null>(null);
 	let validationLoading = $state(false);
 	let validationResults = $state<{
 		totalCount: number;
@@ -536,8 +542,49 @@
 	 */
 	async function handleSave(event: CustomEvent<VocabularyEntry>) {
 		const newEntry = event.detail;
+
 		loading = true;
-		editorServerError = ''; // 에러 상태 초기화
+		editorServerError = '';
+
+		try {
+			const previewResponse = await fetch('/api/vocabulary/impact-preview', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify({
+					filename: selectedFilename,
+					scope: 'editor-save',
+					currentEntry: currentEditingEntry || undefined,
+					proposedEntry: newEntry
+				})
+			});
+
+			const previewResult: ApiResponse = await previewResponse.json();
+			if (!previewResult.success || !previewResult.data) {
+				editorServerError = previewResult.error || '저장 전 영향도 확인에 실패했습니다.';
+				return;
+			}
+
+			pendingSaveEntry = newEntry;
+			pendingImpactPreview =
+				typeof previewResult.data === 'object' &&
+				previewResult.data !== null &&
+				'editorSaveImpact' in previewResult.data
+					? (previewResult.data.editorSaveImpact as EditorSaveImpactPreview)
+					: (previewResult.data as EditorSaveImpactPreview);
+			showImpactConfirm = true;
+		} catch (error) {
+			console.error('단어 저장 영향도 확인 중 오류:', error);
+			editorServerError = '저장 전 영향도 확인 중 오류가 발생했습니다.';
+		} finally {
+			loading = false;
+		}
+	}
+
+	async function applySave(entry: VocabularyEntry) {
+		loading = true;
+		editorServerError = '';
 
 		const isEditMode = !!currentEditingEntry;
 
@@ -549,7 +596,10 @@
 				headers: {
 					'Content-Type': 'application/json'
 				},
-				body: JSON.stringify(newEntry)
+				body: JSON.stringify({
+					...entry,
+					applyCascade: true
+				})
 			});
 
 			const result: ApiResponse = await response.json();
@@ -567,6 +617,10 @@
 				showEditor = false;
 				editorServerError = ''; // 에러 상태 초기화
 				currentEditingEntry = null;
+				addToast(
+					result.message || (isEditMode ? '단어를 수정했습니다.' : '단어를 추가했습니다.'),
+					'success'
+				);
 				// 데이터 새로고침 (성공한 경우에만)
 				await loadVocabularyData();
 			} else {
@@ -583,6 +637,21 @@
 		} finally {
 			loading = false;
 		}
+	}
+
+	async function handleImpactConfirm() {
+		if (!pendingSaveEntry) return;
+		const entry = pendingSaveEntry;
+		showImpactConfirm = false;
+		pendingSaveEntry = null;
+		pendingImpactPreview = null;
+		await applySave(entry);
+	}
+
+	function handleImpactCancel() {
+		showImpactConfirm = false;
+		pendingSaveEntry = null;
+		pendingImpactPreview = null;
 	}
 
 	/**
@@ -860,6 +929,15 @@
 			}}
 		/>
 	{/if}
+
+	<ImpactConfirmDialog
+		isOpen={showImpactConfirm}
+		preview={pendingImpactPreview}
+		isSubmitting={loading}
+		confirmText={currentEditingEntry ? '수정 저장' : '저장'}
+		on:confirm={handleImpactConfirm}
+		on:cancel={handleImpactCancel}
+	/>
 
 	{#if showValidationPanel}
 		<VocabularyValidationPanel

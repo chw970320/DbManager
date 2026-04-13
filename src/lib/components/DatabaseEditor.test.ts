@@ -3,16 +3,19 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
 import DatabaseEditor from './DatabaseEditor.svelte';
 import type { DatabaseEntry } from '$lib/types/database-design';
 
+const { mockShowConfirm } = vi.hoisted(() => ({
+	mockShowConfirm: vi.fn()
+}));
+vi.mock('$lib/stores/confirm-store', () => ({
+	showConfirm: mockShowConfirm
+}));
+
 // Mock crypto.randomUUID
 Object.defineProperty(global, 'crypto', {
 	value: {
 		randomUUID: vi.fn(() => 'test-uuid-1234')
 	}
 });
-
-// Mock alert and confirm
-global.alert = vi.fn();
-global.confirm = vi.fn(() => true);
 
 // 테스트용 Mock 데이터
 const createMockEntry = (): Partial<DatabaseEntry> => ({
@@ -35,6 +38,7 @@ const createMockEntry = (): Partial<DatabaseEntry> => ({
 describe('DatabaseEditor', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mockShowConfirm.mockResolvedValue(true);
 	});
 
 	describe('Rendering', () => {
@@ -165,6 +169,66 @@ describe('DatabaseEditor', () => {
 				const deleteButton = screen.queryByRole('button', { name: /삭제/ });
 				expect(deleteButton).not.toBeInTheDocument();
 			});
+		});
+	});
+
+	describe('Close Guard', () => {
+		it('배경 클릭으로는 닫히지 않는다', async () => {
+			const handleCancel = vi.fn();
+			const { container } = render(DatabaseEditor, {
+				props: {},
+				events: {
+					cancel: () => handleCancel()
+				}
+			});
+
+			const backdrop = container.firstElementChild as HTMLElement;
+			await fireEvent.click(backdrop);
+
+			expect(handleCancel).not.toHaveBeenCalled();
+			expect(mockShowConfirm).not.toHaveBeenCalled();
+		});
+
+		it('변경사항이 없으면 취소 시 바로 닫힌다', async () => {
+			const handleCancel = vi.fn();
+			render(DatabaseEditor, {
+				props: {},
+				events: {
+					cancel: () => handleCancel()
+				}
+			});
+
+			await fireEvent.click(screen.getByRole('button', { name: /취소/ }));
+
+			expect(handleCancel).toHaveBeenCalledTimes(1);
+			expect(mockShowConfirm).not.toHaveBeenCalled();
+		});
+
+		it('변경사항이 있으면 취소 전에 확인을 요구한다', async () => {
+			mockShowConfirm.mockResolvedValue(false);
+			const handleCancel = vi.fn();
+			render(DatabaseEditor, {
+				props: {},
+				events: {
+					cancel: () => handleCancel()
+				}
+			});
+
+			await fireEvent.input(screen.getByPlaceholderText(/기관명 입력/), {
+				target: { value: '기관1' }
+			});
+
+			await fireEvent.click(screen.getByRole('button', { name: /취소/ }));
+
+			expect(mockShowConfirm).toHaveBeenCalledWith(
+				expect.objectContaining({
+					title: '작성 취소 확인',
+					message: '작성 중인 내용이 사라집니다. 닫을까요?',
+					confirmText: '닫기',
+					cancelText: '계속 작성'
+				})
+			);
+			expect(handleCancel).not.toHaveBeenCalled();
 		});
 	});
 });

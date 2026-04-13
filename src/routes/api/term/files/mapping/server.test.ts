@@ -38,6 +38,7 @@ function createMockRequestEvent(options: {
 	method?: string;
 	body?: unknown;
 	searchParams?: Record<string, string>;
+	fetchImpl?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 }): RequestEvent {
 	const url = new URL('http://localhost/api/term/files/mapping');
 	if (options.searchParams) {
@@ -51,7 +52,17 @@ function createMockRequestEvent(options: {
 		method: options.method || 'GET'
 	} as unknown as Request;
 
-	return { url, request } as RequestEvent;
+	return {
+		url,
+		request,
+		fetch:
+			(options.fetchImpl ||
+				(async () =>
+					new Response(JSON.stringify({ success: true, data: { updated: 0 } }), {
+						status: 200,
+						headers: { 'Content-Type': 'application/json' }
+					}))) as RequestEvent['fetch']
+	} as RequestEvent;
 }
 
 describe('Term Mapping API: /api/term/files/mapping', () => {
@@ -74,6 +85,15 @@ describe('Term Mapping API: /api/term/files/mapping', () => {
 	});
 
 	it('PUT should save the shared mapping bundle', async () => {
+		const fetchMock = vi.fn(async () =>
+			new Response(
+				JSON.stringify({
+					success: true,
+					data: { updated: 7 }
+				}),
+				{ status: 200, headers: { 'Content-Type': 'application/json' } }
+			)
+		);
 		const mapping = {
 			vocabulary: 'vocabulary-b.json',
 			domain: 'domain-b.json',
@@ -86,6 +106,7 @@ describe('Term Mapping API: /api/term/files/mapping', () => {
 		const response = await PUT(
 			createMockRequestEvent({
 				method: 'PUT',
+				fetchImpl: fetchMock,
 				body: {
 					filename: 'term.json',
 					mapping
@@ -102,6 +123,20 @@ describe('Term Mapping API: /api/term/files/mapping', () => {
 			mapping
 		});
 		expect(invalidateAllGeneratorCaches).toHaveBeenCalledTimes(1);
+		expect(result.data.saved).toBe(true);
+		expect(result.data.autoSync.success).toBe(true);
+		expect(fetchMock).toHaveBeenCalledWith(
+			'/api/term/sync',
+			expect.objectContaining({ method: 'POST', body: expect.any(String) })
+		);
+		const fetchCall = fetchMock.mock.calls[0] as unknown as
+			| [string, RequestInit | undefined]
+			| undefined;
+		const requestBody = JSON.parse(String(fetchCall?.[1]?.body ?? '{}'));
+		expect(requestBody).toMatchObject({
+			apply: true,
+			filename: 'term.json'
+		});
 	});
 
 	it('PUT should return 400 on invalid mapping', async () => {

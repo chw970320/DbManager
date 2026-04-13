@@ -90,6 +90,7 @@ import {
 } from '$lib/utils/type-guards.js';
 import { normalizeUploadPostProcessMode, runUploadPostProcess } from '$lib/utils/upload-postprocess.js';
 import { classifyUploadParseError, noValidDataUploadError } from '$lib/utils/upload-error.js';
+import { captureUploadReplaceHistory } from '$lib/registry/upload-history-registry';
 
 /**
  * 도메인 업로드 정보 조회 API
@@ -173,13 +174,10 @@ export async function POST({ request, fetch }: RequestEvent) {
 		const buffer = Buffer.from(arrayBuffer);
 
 		// 기존 데이터와 병합 (replace 옵션 확인)
-		const replaceExisting = getOptionalBoolean(formData, 'replace');
+		const replaceExisting = getOptionalBoolean(formData, 'replace', true) || true;
 		const filename = getOptionalString(formData, 'filename', 'domain.json');
-		const postProcessMode = normalizeUploadPostProcessMode(
-			getOptionalString(formData, 'postProcessMode', 'none')
-		);
-		// validation 옵션 확인 (기본값: true - 검증 교체 모드)
-		const performValidation = getOptionalBoolean(formData, 'validation', true);
+		const postProcessMode = normalizeUploadPostProcessMode('none');
+		const performValidation = false;
 
 		// xlsx 파일 파싱 (교체 모드일 때는 파일 내 중복 체크 건너뛰기)
 		let parsedEntries: DomainEntry[];
@@ -269,6 +267,9 @@ export async function POST({ request, fetch }: RequestEvent) {
 		let finalData: DomainData;
 
 		try {
+			if (replaceExisting) {
+				await captureUploadReplaceHistory('domain', filename);
+			}
 			finalData = await mergeDomainData(parsedEntries, replaceExisting, filename);
 		} catch (mergeError) {
 			return json(

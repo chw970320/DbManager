@@ -2,6 +2,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import type { EntityEntry } from '$lib/types/database-design.js';
 	import { showConfirm } from '$lib/stores/confirm-store';
+	import { requestEditorClose } from '$lib/utils/editor-close-guard';
 	import { generateUuid } from '$lib/utils/uuid';
 
 	let props = $props<{
@@ -33,6 +34,18 @@
 
 	let errors = $state<Record<string, string>>({});
 	let isSubmitting = $state(false);
+
+	function createInitialFormData() {
+		return {
+			logicalDbName: entry.logicalDbName || '',
+			schemaName: entry.schemaName || '',
+			entityName: entry.entityName || '',
+			entityDescription: entry.entityDescription || '',
+			primaryIdentifier: entry.primaryIdentifier || '',
+			superTypeEntityName: entry.superTypeEntityName || '',
+			tableKoreanName: entry.tableKoreanName || ''
+		};
+	}
 
 	$effect(() => {
 		formData.logicalDbName = entry.logicalDbName || '';
@@ -74,7 +87,12 @@
 
 	async function handleDelete() {
 		if (!entry.id) return;
-		const confirmed = await showConfirm({ title: '삭제 확인', message: '정말로 이 항목을 삭제하시겠습니까?', confirmText: '삭제', variant: 'danger' });
+		const confirmed = await showConfirm({
+			title: '삭제 확인',
+			message: '정말로 이 항목을 삭제하시겠습니까?',
+			confirmText: '삭제',
+			variant: 'danger'
+		});
 		if (confirmed) {
 			const entryToDelete: EntityEntry = {
 				id: entry.id,
@@ -94,19 +112,23 @@
 		}
 	}
 	function handleCancel() {
-		dispatch('cancel');
-	}
-	function handleBackdropClick(event: MouseEvent) {
-		if (event.target === event.currentTarget) handleCancel();
+		return requestEditorClose({
+			initialValue: createInitialFormData(),
+			currentValue: { ...formData },
+			onClose: () => dispatch('cancel'),
+			isSubmitting
+		});
 	}
 	function handleKeydown(event: KeyboardEvent) {
-		if (event.key === 'Escape') handleCancel();
+		if (event.key === 'Escape') {
+			event.preventDefault();
+			void handleCancel();
+		}
 	}
 </script>
 
 <div
 	class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-	onclick={handleBackdropClick}
 	onkeydown={handleKeydown}
 	role="dialog"
 	aria-modal="true"

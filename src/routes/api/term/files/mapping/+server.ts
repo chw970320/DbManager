@@ -10,6 +10,7 @@ import {
 	saveDbDesignFileMappingBundle
 } from '$lib/registry/db-design-file-mapping';
 import { invalidateAllGeneratorCaches } from '$lib/registry/generator-cache';
+import { createAutoSyncSummary, runAutoSyncStep } from '$lib/utils/auto-sync';
 
 function isValidMapping(mapping: unknown): mapping is Record<string, string> {
 	if (!mapping || typeof mapping !== 'object') return false;
@@ -51,7 +52,7 @@ export async function GET({ url }: RequestEvent) {
 	}
 }
 
-export async function PUT({ request }: RequestEvent) {
+export async function PUT({ request, fetch }: RequestEvent) {
 	try {
 		const body = (await request.json()) as {
 			filename?: string;
@@ -87,14 +88,33 @@ export async function PUT({ request }: RequestEvent) {
 			mapping: extractDbDesignRelatedMapping(mapping)
 		});
 		invalidateAllGeneratorCaches();
+		const autoSyncStep = await runAutoSyncStep(fetch, {
+			id: 'termSync',
+			label: '용어 매핑 자동 반영',
+			endpoint: '/api/term/sync',
+			body: {
+				apply: true,
+				filename
+			}
+		});
+		const autoSync = createAutoSyncSummary({
+			steps: [autoSyncStep],
+			successSummary: '매핑 저장과 용어 자동 반영이 완료되었습니다.',
+			failureSummary: '매핑 저장은 완료되었지만 용어 자동 반영 일부가 실패했습니다.',
+			retryHint: '/api/term/sync 재실행으로 자동 반영을 복구할 수 있습니다.'
+		});
 
 		return json(
 			{
 				success: true,
 				data: {
-					mapping: result.currentMapping
+					mapping: result.currentMapping,
+					saved: true,
+					autoSync
 				},
-				message: 'Term mapping saved successfully'
+				message: autoSync.success
+					? 'Term mapping saved and auto-synced successfully'
+					: 'Term mapping saved with auto-sync warnings'
 			} as ApiResponse,
 			{ status: 200 }
 		);

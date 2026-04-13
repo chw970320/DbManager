@@ -72,30 +72,12 @@
 			};
 		};
 	};
-	type AlignmentSyncPayload = {
-		mode: 'preview' | 'apply';
-		applied: boolean;
-		steps: {
-			relation?: { data?: RelationSyncPayload };
-			column?: { data?: { updated?: number } };
-			validation?: { data?: UnifiedValidationPayload };
-		};
-		summary: {
-			appliedVocabularyUpdates?: number;
-			appliedTermUpdates?: number;
-			appliedRelationUpdates: number;
-			appliedColumnUpdates: number;
-			remainingTermFailed: number;
-			relationUnmatchedCount: number;
-			totalIssues: number;
-		};
-	};
 
 	let {
 		currentType,
 		currentFilename,
 		fileMapping,
-		onApplied
+		onApplied: _onApplied
 	}: {
 		currentType: DefinitionType;
 		currentFilename: string;
@@ -109,7 +91,6 @@
 	let validationData = $state<RelationValidationPayload | null>(null);
 	let unifiedValidationData = $state<UnifiedValidationPayload | null>(null);
 	let syncData = $state<RelationSyncPayload | null>(null);
-	let alignmentSyncData = $state<AlignmentSyncPayload | null>(null);
 	let lastLoadedKey = $state('');
 	let showSyncDetails = $state(false);
 	let collapsed = $state(true);
@@ -293,12 +274,11 @@
 		}
 	}
 
-	async function runSync(apply: boolean) {
+	async function runSyncPreview() {
 		syncing = true;
 		error = null;
 		try {
-			alignmentSyncData = null;
-			const body: Record<string, string | boolean> = { apply };
+			const body: Record<string, string | boolean> = { apply: false };
 			const params = buildFileParams();
 			for (const type of definitionTypes) {
 				const paramName = currentFileParamName(type);
@@ -316,7 +296,7 @@
 			const result = (await response.json()) as DbDesignApiResponse<RelationSyncPayload>;
 
 			if (!result.success || !result.data) {
-				error = result.error || '관계 동기화 실행에 실패했습니다.';
+				error = result.error || '관계 보정 미리보기에 실패했습니다.';
 				return;
 			}
 
@@ -327,71 +307,9 @@
 				validation: result.data.validationAfter
 			};
 
-			if (apply && result.data.counts.appliedTotalUpdates > 0 && onApplied) {
-				await onApplied();
-			}
 		} catch (err) {
-			console.error('관계 동기화 오류:', err);
-			error = err instanceof Error ? err.message : '관계 동기화 중 오류가 발생했습니다.';
-		} finally {
-			syncing = false;
-		}
-	}
-
-	async function runStandardAlignment() {
-		syncing = true;
-		error = null;
-		try {
-			const body: Record<string, string | boolean> = { apply: true };
-			const params = buildFileParams();
-			for (const type of definitionTypes) {
-				const paramName = currentFileParamName(type);
-				const filename = params.get(paramName);
-				if (filename) {
-					body[paramName] = filename;
-				}
-			}
-			for (const type of Object.keys(systemParamNames) as SystemFileType[]) {
-				const paramName = systemParamNames[type];
-				const filename = params.get(paramName);
-				if (filename) {
-					body[paramName] = filename;
-				}
-			}
-
-			const response = await fetch('/api/alignment/sync', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(body)
-			});
-			const result = (await response.json()) as DbDesignApiResponse<AlignmentSyncPayload>;
-			if (!result.success || !result.data) {
-				error = result.error || '표준 순서 실행에 실패했습니다.';
-				return;
-			}
-			alignmentSyncData = result.data;
-
-			if (result.data.steps.relation?.data) {
-				syncData = result.data.steps.relation.data;
-				validationData = {
-					files: result.data.steps.relation.data.files,
-					validation: result.data.steps.relation.data.validationAfter
-				};
-			}
-
-			if (result.data.steps.validation?.data) {
-				unifiedValidationData = result.data.steps.validation.data;
-			} else {
-				await loadUnifiedValidation();
-			}
-
-			showSyncDetails = false;
-			if (onApplied) {
-				await onApplied();
-			}
-		} catch (err) {
-			console.error('표준 순서 실행 오류:', err);
-			error = err instanceof Error ? err.message : '표준 순서 실행 중 오류가 발생했습니다.';
+			console.error('관계 보정 미리보기 오류:', err);
+			error = err instanceof Error ? err.message : '관계 보정 미리보기 중 오류가 발생했습니다.';
 		} finally {
 			syncing = false;
 		}
@@ -409,7 +327,6 @@
 		if (nextKey === lastLoadedKey) return;
 		lastLoadedKey = nextKey;
 		syncData = null;
-		alignmentSyncData = null;
 		showSyncDetails = false;
 		void loadAllValidations();
 	});
@@ -471,7 +388,7 @@
 	{/if}
 
 	{#if !collapsed}
-		<div class="flex items-center gap-2 mb-3">
+		<div class="mb-3 flex items-center gap-2">
 			<button
 				type="button"
 				onclick={loadAllValidations}
@@ -482,27 +399,11 @@
 			</button>
 			<button
 				type="button"
-				onclick={runStandardAlignment}
-				disabled={loading || syncing}
-				class="rounded-md border border-indigo-300 bg-indigo-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50"
-			>
-				{syncing ? '실행 중...' : '표준 순서 실행'}
-			</button>
-			<button
-				type="button"
-				onclick={() => runSync(false)}
+				onclick={runSyncPreview}
 				disabled={loading || syncing}
 				class="rounded-md border border-blue-300 bg-white px-3 py-1.5 text-xs font-medium text-blue-700 transition-colors hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
 			>
 				보정 미리보기
-			</button>
-			<button
-				type="button"
-				onclick={() => runSync(true)}
-				disabled={loading || syncing}
-				class="rounded-md border border-blue-400 bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-			>
-				{syncing ? '실행 중...' : '자동 보정 실행'}
 			</button>
 		</div>
 
@@ -519,25 +420,11 @@
 			</div>
 		</div>
 		<div class="rounded border border-indigo-100 bg-indigo-50/40 px-2 py-1 text-indigo-900">
-			<div class="font-medium text-indigo-800">표준 순서 실행 (통합 정합화)</div>
+			<div class="font-medium text-indigo-800">자동 반영 정책</div>
 			<div>
-				1) 단어집-도메인 동기화, 2) 용어 매핑 동기화, 3) 5개 정의서 관계 보정, 4) 컬럼-용어/도메인 보정,
-				5) 통합 정합성 리포트 재검증 순으로 일괄 실행합니다.
+				파일 매핑 저장, CRUD, 업로드 같은 쓰기 작업에서 표준/관계 보정은 자동 반영됩니다. 이 패널은 결과 진단과
+				미리보기 확인 용도로만 사용합니다.
 			</div>
-			<div class="text-indigo-700">
-				반영 범위: 단어집/용어/테이블/컬럼 파일 전체 정합화 결과와 잔여 이슈를 함께 갱신합니다.
-			</div>
-		</div>
-		<div class="rounded border border-blue-100 bg-blue-50/40 px-2 py-1 text-blue-900">
-			<div class="font-medium text-blue-800">자동 보정 실행 (관계 보정 전용)</div>
-			<div>
-				연관관계 필드만 반영합니다. 테이블 `relatedEntityName`, 컬럼
-				`schemaName`/`tableEnglishName`/`relatedEntityName`만 교정 대상입니다.
-			</div>
-			<div class="text-blue-700">단어집/용어 매핑 보정이나 컬럼 표준 필드 보정은 포함되지 않습니다.</div>
-		</div>
-		<div class="rounded border border-rose-100 bg-rose-50/30 px-2 py-1 text-rose-800">
-			주의: 표준 순서 실행은 단계별 저장 후 다음 단계로 진행됩니다. 중간 단계 실패 시 이전 단계 반영값은 유지될 수 있습니다.
 		</div>
 	</div>
 
@@ -654,32 +541,11 @@
 		</div>
 	{/if}
 
-	{#if alignmentSyncData}
-		<div class="mt-3 rounded-lg border border-indigo-200 bg-indigo-50/80 p-3 text-xs">
-			<div class="mb-1 font-semibold text-indigo-800">표준 순서 실행 결과 해석</div>
-			<div class="grid grid-cols-2 gap-1 text-indigo-900 sm:grid-cols-4">
-				<div>단어집 보정: {alignmentSyncData.summary.appliedVocabularyUpdates || 0}</div>
-				<div>용어 보정: {alignmentSyncData.summary.appliedTermUpdates || 0}</div>
-				<div>관계 보정: {alignmentSyncData.summary.appliedRelationUpdates}</div>
-				<div>컬럼 보정: {alignmentSyncData.summary.appliedColumnUpdates}</div>
-			</div>
-			<div class="mt-1 text-indigo-900">
-				잔여 이슈: 관계 미매칭 {alignmentSyncData.summary.relationUnmatchedCount}건, 용어 실패 {alignmentSyncData.summary.remainingTermFailed}건, 총 {alignmentSyncData.summary.totalIssues}건
-			</div>
-			{#if alignmentSyncData.summary.totalIssues > 0}
-				<div class="mt-2 rounded border border-indigo-200 bg-white px-2 py-1 text-[11px] text-gray-700">
-					자동 보정 대상이 아닌 값 불일치(마스터 누락, 명칭 표기 차이, 다중 후보 충돌)는 수동 정리가 필요합니다.
-					우선 `TABLE_COLUMN`, `ENTITY_TABLE`, `ENTITY_ATTRIBUTE` 순으로 정리하세요.
-				</div>
-			{/if}
-		</div>
-	{/if}
-
 	{#if syncData}
 		<div class="mt-3 rounded-lg border border-blue-200 bg-white p-3 text-xs">
 			<div class="mb-1 flex items-center justify-between">
 				<div class="font-semibold text-blue-700">
-					최근 동기화 결과 ({syncData.mode === 'apply' ? '실행' : '미리보기'})
+					보정 미리보기 결과
 				</div>
 				<button
 					type="button"
@@ -700,9 +566,7 @@
 			</div>
 			{#if syncData.validationAfter.totals.unmatched > 0}
 				<div class="mt-2 rounded border border-blue-100 bg-blue-50/40 px-2 py-1 text-[11px] text-blue-900">
-					{syncData.mode === 'preview'
-						? '미리보기 기준으로도 미매칭이 남습니다. 자동 보정 후보가 없는 항목은 수동 교정이 필요합니다.'
-						: '자동 보정 후에도 미매칭이 남습니다. 아래 미해결 원인에서 수동 조치 항목을 확인하세요.'}
+					미리보기 기준으로도 미매칭이 남습니다. 자동 보정 후보가 없는 항목은 수동 교정이 필요합니다.
 				</div>
 			{/if}
 

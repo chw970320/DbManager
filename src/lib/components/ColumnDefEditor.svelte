@@ -7,6 +7,7 @@
 	} from '$lib/types/column-standard-recommendation.js';
 	import { showConfirm } from '$lib/stores/confirm-store';
 	import { debounce } from '$lib/utils/debounce';
+	import { requestEditorClose } from '$lib/utils/editor-close-guard';
 	import { generateUuid } from '$lib/utils/uuid';
 
 	let props = $props<{
@@ -58,6 +59,34 @@
 	let recommendationLoading = $state(false);
 	let recommendationError = $state('');
 	let recommendationRequestToken = 0;
+
+	function createInitialFormData() {
+		return {
+			scopeFlag: entry.scopeFlag || '',
+			subjectArea: entry.subjectArea || '',
+			schemaName: entry.schemaName || '',
+			tableEnglishName: entry.tableEnglishName || '',
+			columnEnglishName: entry.columnEnglishName || '',
+			columnKoreanName: entry.columnKoreanName || '',
+			columnDescription: entry.columnDescription || '',
+			relatedEntityName: entry.relatedEntityName || '',
+			domainName: entry.domainName || '',
+			dataType: entry.dataType || '',
+			dataLength: entry.dataLength || '',
+			dataDecimalLength: entry.dataDecimalLength || '',
+			dataFormat: entry.dataFormat || '',
+			notNullFlag: entry.notNullFlag || '',
+			pkInfo: entry.pkInfo || '',
+			fkInfo: entry.fkInfo || '',
+			indexName: entry.indexName || '',
+			indexOrder: entry.indexOrder || '',
+			akInfo: entry.akInfo || '',
+			constraint: entry.constraint || '',
+			personalInfoFlag: entry.personalInfoFlag || '',
+			encryptionFlag: entry.encryptionFlag || '',
+			publicFlag: entry.publicFlag || ''
+		};
+	}
 
 	const recommendationFieldLabels: Record<ColumnStandardRecommendationField, string> = {
 		columnKoreanName: '컬럼한글명',
@@ -138,13 +167,17 @@
 		return Object.keys(newErrors).length === 0;
 	}
 
-	function getRecommendationStatusLabel(status?: ColumnStandardRecommendationPreview['summary']['status']) {
+	function getRecommendationStatusLabel(
+		status?: ColumnStandardRecommendationPreview['summary']['status']
+	) {
 		if (status === 'aligned') return '표준 일치';
 		if (status === 'recommended') return '추천값 있음';
 		return '매핑 없음';
 	}
 
-	function getRecommendationStatusClass(status?: ColumnStandardRecommendationPreview['summary']['status']) {
+	function getRecommendationStatusClass(
+		status?: ColumnStandardRecommendationPreview['summary']['status']
+	) {
 		if (status === 'aligned') {
 			return 'border-emerald-200 bg-emerald-50 text-emerald-700';
 		}
@@ -264,7 +297,12 @@
 
 	async function handleDelete() {
 		if (!entry.id) return;
-		const confirmed = await showConfirm({ title: '삭제 확인', message: '정말로 이 항목을 삭제하시겠습니까?', confirmText: '삭제', variant: 'danger' });
+		const confirmed = await showConfirm({
+			title: '삭제 확인',
+			message: '정말로 이 항목을 삭제하시겠습니까?',
+			confirmText: '삭제',
+			variant: 'danger'
+		});
 		if (confirmed) {
 			const entryToDelete: ColumnEntry = {
 				id: entry.id,
@@ -301,19 +339,23 @@
 		}
 	}
 	function handleCancel() {
-		dispatch('cancel');
-	}
-	function handleBackdropClick(event: MouseEvent) {
-		if (event.target === event.currentTarget) handleCancel();
+		return requestEditorClose({
+			initialValue: createInitialFormData(),
+			currentValue: { ...formData },
+			onClose: () => dispatch('cancel'),
+			isSubmitting
+		});
 	}
 	function handleKeydown(event: KeyboardEvent) {
-		if (event.key === 'Escape') handleCancel();
+		if (event.key === 'Escape') {
+			event.preventDefault();
+			void handleCancel();
+		}
 	}
 </script>
 
 <div
 	class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-	onclick={handleBackdropClick}
 	onkeydown={handleKeydown}
 	role="dialog"
 	aria-modal="true"
@@ -432,7 +474,9 @@
 								<div class="flex flex-wrap items-center gap-2">
 									<h3 class="text-sm font-semibold text-slate-900">표준 추천</h3>
 									<span
-										class="rounded-full border px-2.5 py-1 text-[11px] font-medium {getRecommendationStatusClass(standardRecommendation?.summary.status)}"
+										class="rounded-full border px-2.5 py-1 text-[11px] font-medium {getRecommendationStatusClass(
+											standardRecommendation?.summary.status
+										)}"
 									>
 										{getRecommendationStatusLabel(standardRecommendation?.summary.status)}
 									</span>
@@ -464,7 +508,8 @@
 								<div class="rounded-lg border border-white/70 bg-white px-3 py-2">
 									<div class="text-slate-500">도메인 해석</div>
 									<div
-										class="mt-1 text-base font-semibold {standardRecommendation.summary.domainResolved
+										class="mt-1 text-base font-semibold {standardRecommendation.summary
+											.domainResolved
 											? 'text-emerald-700'
 											: 'text-amber-700'}"
 									>
@@ -507,7 +552,9 @@
 											<p class="mt-1 text-slate-500">
 												{standardRecommendation.matchedDomain.physicalDataType || '-'}
 												{#if standardRecommendation.matchedDomain.dataLength}
-													({standardRecommendation.matchedDomain.dataLength}{#if standardRecommendation.matchedDomain.decimalPlaces}, {standardRecommendation.matchedDomain.decimalPlaces}{/if})
+													({standardRecommendation.matchedDomain
+														.dataLength}{#if standardRecommendation.matchedDomain.decimalPlaces}, {standardRecommendation
+															.matchedDomain.decimalPlaces}{/if})
 												{/if}
 											</p>
 										{:else if standardRecommendation.matchedTerm?.domainName}
@@ -538,9 +585,7 @@
 							{#if standardRecommendation.changes.length > 0}
 								<div class="mt-3 space-y-2">
 									<div class="flex items-center justify-between gap-3">
-										<div class="text-xs font-medium text-slate-700">
-											적용 가능한 추천값
-										</div>
+										<div class="text-xs font-medium text-slate-700">적용 가능한 추천값</div>
 										<button
 											type="button"
 											class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
@@ -580,7 +625,9 @@
 
 							<div class="mt-3 space-y-2">
 								{#each standardRecommendation.guidance as guide (guide)}
-									<div class="rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-xs text-slate-700">
+									<div
+										class="rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-xs text-slate-700"
+									>
 										{guide}
 									</div>
 								{/each}
@@ -632,7 +679,9 @@
 								? 'border-red-500'
 								: 'border-gray-300'}"
 							placeholder="도메인명"
-						/>{#if errors.domainName}<p class="mt-1 text-xs text-red-500">{errors.domainName}</p>{/if}
+						/>{#if errors.domainName}<p class="mt-1 text-xs text-red-500">
+								{errors.domainName}
+							</p>{/if}
 					</div>
 					<div>
 						<label for="dataType" class="mb-1 block text-sm font-medium text-gray-700"

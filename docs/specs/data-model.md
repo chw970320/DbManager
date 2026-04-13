@@ -1876,6 +1876,70 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 
 ---
 
+## 17. UploadHistoryEntry / UploadHistoryData (업로드 교체 이력)
+
+### 개요
+
+파일 업로드 교체 직전 JSON 본문만 파일별로 저장하는 경량 복구 모델입니다.
+설계 번들 전체를 다루는 `DesignSnapshot`과 달리, 업로드로 교체된 단일 파일 본문만 보관합니다.
+
+**파일 위치:** `src/lib/types/upload-history.ts`
+
+**저장 경로:** `static/data/settings/upload-history/<dataType>.json`
+
+### UploadHistoryEntry
+
+| 필드명      | 타입               | 필수 | 설명 |
+| ----------- | ------------------ | ---- | ---- |
+| `id`        | `string`           | ✅   | 고유 식별자 |
+| `dataType`  | `DataType`         | ✅   | 대상 타입 |
+| `filename`  | `string`           | ✅   | 당시 교체 대상 파일명 |
+| `reason`    | `'upload-replace'` | ✅   | 생성 사유 |
+| `createdAt` | `string`           | ✅   | 이력 생성 시각 |
+| `expiresAt` | `string`           | ✅   | 이력 만료 시각 (기본 30일) |
+| `content`   | `DataTypeMap[T]`   | ✅   | 교체 직전 JSON 본문 |
+
+### UploadHistorySummaryEntry
+
+목록/복원 응답에서 `content`를 제외하고 요약 메타데이터만 전달하는 타입입니다.
+
+| 필드명       | 타입     | 설명 |
+| ------------ | -------- | ---- |
+| `entryCount` | `number` | 저장된 JSON 본문의 엔트리 수 |
+| 나머지 필드  | `UploadHistoryEntry`와 동일 | `content` 제외 메타데이터 |
+
+### UploadHistoryData
+
+| 필드명        | 타입                   | 필수 | 설명 |
+| ------------- | ---------------------- | ---- | ---- |
+| `entries`     | `UploadHistoryEntry[]` | ✅   | 타입별 업로드 이력 목록 |
+| `lastUpdated` | `string`               | ✅   | 마지막 수정 시각 |
+| `totalCount`  | `number`               | ✅   | 저장된 이력 수 |
+
+### 저장/복원 규칙
+
+1. 저장 대상
+   - 업로드 교체 직전 JSON 본문만 저장합니다.
+   - 일반 CRUD 저장은 이력을 만들지 않습니다.
+2. 저장 내용
+   - 런타임 `mapping` 필드는 제거하고 실제 데이터 본문만 저장합니다.
+   - 저장소는 타입별 파일로 분할해 락 경합과 파일 비대화를 줄입니다.
+3. 보존 정책
+   - 기본 보존 기간은 30일입니다.
+   - `GET /api/upload-history`, `POST /api/upload-history/restore`, 업로드 API 진입 시 lazy prune를 수행합니다.
+   - `hooks.server.ts` scheduler는 보조 best-effort 경로입니다.
+4. 복원 규칙
+   - 복원은 현재 파일 JSON 본문만 다시 씁니다.
+   - 공통 파일 매핑과 `mapping` 정보는 복원하지 않습니다.
+   - 복원 자체는 새 upload history 엔트리를 만들지 않습니다.
+
+### 관련 API 엔드포인트
+
+- **GET** `/api/upload-history`
+- **POST** `/api/upload-history/restore`
+
+---
+
 ## 공통 패턴
 
 ### Entry → Data 패턴

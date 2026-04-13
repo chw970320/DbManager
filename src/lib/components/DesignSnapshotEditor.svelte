@@ -4,6 +4,7 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import { ALL_DATA_TYPES, DATA_TYPE_LABELS } from '$lib/types/base.js';
 	import type { SharedFileMappingBundleEntry } from '$lib/types/shared-file-mapping.js';
+	import { requestEditorClose } from '$lib/utils/editor-close-guard';
 	import { getSharedFileMappingBundleDisplayName } from '$lib/utils/shared-file-mapping-name.js';
 
 	export type DesignSnapshotEditorSubmitDetail = {
@@ -78,7 +79,16 @@
 	}
 
 	function handleClose() {
-		onclose?.();
+		return requestEditorClose({
+			initialValue: {
+				bundleId: getInitialBundleId(),
+				name: '',
+				description: ''
+			},
+			currentValue: { ...formData },
+			onClose: () => onclose?.(),
+			isSubmitting
+		});
 	}
 
 	$effect(() => {
@@ -108,14 +118,10 @@
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby="design-snapshot-editor-title"
-		onclick={(event) => {
-			if (event.target === event.currentTarget) {
-				handleClose();
-			}
-		}}
 		onkeydown={(event) => {
 			if (event.key === 'Escape') {
-				handleClose();
+				event.preventDefault();
+				void handleClose();
 			}
 		}}
 		tabindex="-1"
@@ -222,7 +228,9 @@
 									<p class="text-xs font-medium text-content-secondary">포함되는 파일</p>
 									<div class="mt-3 flex flex-wrap gap-2">
 										{#each ALL_DATA_TYPES as type (type)}
-											<span class="rounded-full bg-surface px-3 py-1 text-xs text-content-secondary">
+											<span
+												class="rounded-full bg-surface px-3 py-1 text-xs text-content-secondary"
+											>
 												{DATA_TYPE_LABELS[type]} · {selectedBundle.files[type]}
 											</span>
 										{/each}
@@ -235,9 +243,7 @@
 			</div>
 
 			<div class="flex items-center justify-end gap-2 border-t border-border px-6 py-4">
-				<button type="button" class="btn btn-secondary" onclick={handleClose}>
-					취소
-				</button>
+				<button type="button" class="btn btn-secondary" onclick={handleClose}> 취소 </button>
 				<button
 					type="button"
 					class="btn btn-primary"

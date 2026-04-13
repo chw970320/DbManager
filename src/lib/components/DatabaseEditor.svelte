@@ -2,6 +2,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import type { DatabaseEntry } from '$lib/types/database-design.js';
 	import { showConfirm } from '$lib/stores/confirm-store';
+	import { requestEditorClose } from '$lib/utils/editor-close-guard';
 	import { generateUuid } from '$lib/utils/uuid';
 
 	// Props
@@ -40,6 +41,22 @@
 	// 유효성 검증 상태
 	let errors = $state<Record<string, string>>({});
 	let isSubmitting = $state(false);
+
+	function createInitialFormData() {
+		return {
+			organizationName: entry.organizationName || '',
+			departmentName: entry.departmentName || '',
+			appliedTask: entry.appliedTask || '',
+			relatedLaw: entry.relatedLaw || '',
+			logicalDbName: entry.logicalDbName || '',
+			physicalDbName: entry.physicalDbName || '',
+			buildDate: entry.buildDate || '',
+			dbDescription: entry.dbDescription || '',
+			dbmsInfo: entry.dbmsInfo || '',
+			osInfo: entry.osInfo || '',
+			exclusionReason: entry.exclusionReason || ''
+		};
+	}
 
 	// 폼 데이터 초기화
 	$effect(() => {
@@ -117,7 +134,12 @@
 	async function handleDelete() {
 		if (!entry.id) return;
 
-		const confirmed = await showConfirm({ title: '삭제 확인', message: '정말로 이 항목을 삭제하시겠습니까?', confirmText: '삭제', variant: 'danger' });
+		const confirmed = await showConfirm({
+			title: '삭제 확인',
+			message: '정말로 이 항목을 삭제하시겠습니까?',
+			confirmText: '삭제',
+			variant: 'danger'
+		});
 		if (confirmed) {
 			const entryToDelete: DatabaseEntry = {
 				id: entry.id,
@@ -143,16 +165,12 @@
 	 * 취소 핸들러
 	 */
 	function handleCancel() {
-		dispatch('cancel');
-	}
-
-	/**
-	 * 배경 클릭 핸들러
-	 */
-	function handleBackdropClick(event: MouseEvent) {
-		if (event.target === event.currentTarget) {
-			handleCancel();
-		}
+		return requestEditorClose({
+			initialValue: createInitialFormData(),
+			currentValue: { ...formData },
+			onClose: () => dispatch('cancel'),
+			isSubmitting
+		});
 	}
 
 	/**
@@ -160,7 +178,8 @@
 	 */
 	function handleKeydown(event: KeyboardEvent) {
 		if (event.key === 'Escape') {
-			handleCancel();
+			event.preventDefault();
+			void handleCancel();
 		}
 	}
 </script>
@@ -168,7 +187,6 @@
 <!-- 모달 백드롭 -->
 <div
 	class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-	onclick={handleBackdropClick}
 	onkeydown={handleKeydown}
 	role="dialog"
 	aria-modal="true"

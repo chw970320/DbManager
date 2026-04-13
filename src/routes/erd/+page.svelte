@@ -43,23 +43,6 @@
 		validationBefore: DesignRelationValidationResult;
 		validationAfter: DesignRelationValidationResult;
 	}
-	interface AlignmentSyncResult {
-		mode: 'preview' | 'apply';
-		applied: boolean;
-		steps: {
-			relation?: { data?: RelationSyncResult };
-			column?: { data?: { updated?: number } };
-		};
-		summary: {
-			appliedVocabularyUpdates: number;
-			appliedTermUpdates: number;
-			appliedRelationUpdates: number;
-			appliedColumnUpdates: number;
-			remainingTermFailed: number;
-			relationUnmatchedCount: number;
-			totalIssues: number;
-		};
-	}
 
 	let erdData = $state<ERDDataWithValidation | null>(null);
 	let loading = $state(true);
@@ -80,15 +63,6 @@
 	let unifiedValidationSummary = $state<UnifiedValidationSummary | null>(null);
 	let unifiedValidationLoading = $state(false);
 	let unifiedValidationError = $state<string | null>(null);
-	let alignmentFlowLoading = $state(false);
-	let alignmentFlowError = $state<string | null>(null);
-	let alignmentFlowResult = $state<{
-		appliedVocabularyUpdates: number;
-		appliedTermUpdates: number;
-		appliedRelationUpdates: number;
-		appliedColumnUpdates: number;
-		remainingTermFailed: number;
-	} | null>(null);
 
 	// 매핑 통계 계산
 	let mappingStats = $derived(() => {
@@ -282,42 +256,7 @@
 		await loadUnifiedValidationSummary();
 	}
 
-	async function handleStandardAlignmentFlow() {
-		alignmentFlowLoading = true;
-		alignmentFlowError = null;
-		alignmentFlowResult = null;
-		try {
-			const response = await fetch('/api/alignment/sync', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ apply: true })
-			});
-			const result: DbDesignApiResponse<AlignmentSyncResult> = await response.json();
-			if (!result.success || !result.data) {
-				throw new Error(result.error || '통합 정합화 실행 중 오류가 발생했습니다.');
-			}
-			if (result.data.steps.relation?.data) {
-				relationSyncResult = result.data.steps.relation.data;
-			}
-
-			await handleRefresh();
-			alignmentFlowResult = {
-				appliedVocabularyUpdates: result.data.summary.appliedVocabularyUpdates || 0,
-				appliedTermUpdates: result.data.summary.appliedTermUpdates || 0,
-				appliedRelationUpdates: result.data.summary.appliedRelationUpdates || 0,
-				appliedColumnUpdates: result.data.summary.appliedColumnUpdates || 0,
-				remainingTermFailed: result.data.summary.remainingTermFailed || 0
-			};
-		} catch (err) {
-			console.error('표준 정합화 순서 실행 오류:', err);
-			alignmentFlowError =
-				err instanceof Error ? err.message : '표준 정합화 실행 중 오류가 발생했습니다.';
-		} finally {
-			alignmentFlowLoading = false;
-		}
-	}
-
-	async function handleRelationSync(apply: boolean) {
+	async function handleRelationSyncPreview() {
 		relationSyncLoading = true;
 		relationSyncError = null;
 
@@ -325,24 +264,20 @@
 			const response = await fetch('/api/erd/relations/sync', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ apply })
+				body: JSON.stringify({ apply: false })
 			});
 			const result: DbDesignApiResponse<RelationSyncResult> = await response.json();
 
 			if (!result.success || !result.data) {
-				relationSyncError = result.error || '관계 동기화 실행 중 오류가 발생했습니다.';
+				relationSyncError = result.error || '관계 보정 미리보기 실행 중 오류가 발생했습니다.';
 				return;
 			}
 
 			relationSyncResult = result.data;
-
-			if (apply && result.data.counts.appliedTotalUpdates > 0) {
-				handleRefresh();
-			}
 		} catch (err) {
-			console.error('관계 동기화 오류:', err);
+			console.error('관계 보정 미리보기 오류:', err);
 			relationSyncError =
-				err instanceof Error ? err.message : '관계 동기화 실행 중 오류가 발생했습니다.';
+				err instanceof Error ? err.message : '관계 보정 미리보기 실행 중 오류가 발생했습니다.';
 		} finally {
 			relationSyncLoading = false;
 		}
@@ -703,18 +638,11 @@
 										검사 {erdData.relationValidation.totals.totalChecked}건
 									</span>
 									<button
-										onclick={() => handleRelationSync(false)}
+										onclick={handleRelationSyncPreview}
 										disabled={relationSyncLoading}
 										class="rounded border border-amber-300 bg-white px-2 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
 									>
 										보정 미리보기
-									</button>
-									<button
-										onclick={() => handleRelationSync(true)}
-										disabled={relationSyncLoading}
-										class="rounded border border-blue-300 bg-blue-600 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-									>
-										자동 보정 실행
 									</button>
 								</div>
 							</div>
@@ -789,17 +717,10 @@
 							<div class="flex items-center gap-2">
 								<button
 									onclick={() => loadUnifiedValidationSummary()}
-									disabled={unifiedValidationLoading || alignmentFlowLoading}
+									disabled={unifiedValidationLoading || relationSyncLoading}
 									class="rounded border border-indigo-300 bg-white px-2 py-1 text-xs font-medium text-indigo-700 transition-colors hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
 								>
 									통합 재검증
-								</button>
-								<button
-									onclick={handleStandardAlignmentFlow}
-									disabled={alignmentFlowLoading || relationSyncLoading}
-									class="rounded border border-blue-300 bg-blue-600 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-								>
-									표준 순서 실행
 								</button>
 							</div>
 						</div>
@@ -856,9 +777,8 @@
 							</div>
 						{/if}
 						<p class="text-xs text-indigo-700">
-							권장 실행 순서: <code>vocabulary sync-domain(apply=true)</code> ->
-							<code>term sync(apply=true)</code> -> <code>relations sync(apply=true)</code> ->
-							<code>column sync-term(apply=true)</code> -> <code>validation/report</code>
+							파일 매핑 저장, CRUD, 업로드 경로에서 자동 정합화가 실행됩니다. 이 패널은 상태 확인과
+							미리보기 진단 중심으로 사용하세요.
 						</p>
 						{#if unifiedValidationLoading}
 							<div class="mt-2 text-xs text-indigo-700">통합 진단 요약을 불러오는 중...</div>
@@ -868,22 +788,6 @@
 								class="mt-2 rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700"
 							>
 								{unifiedValidationError}
-							</div>
-						{/if}
-						{#if alignmentFlowError}
-							<div
-								class="mt-2 rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700"
-							>
-								{alignmentFlowError}
-							</div>
-						{/if}
-						{#if alignmentFlowResult}
-							<div class="mt-2 rounded border border-blue-200 bg-white p-2 text-xs text-gray-700">
-								<div>단어집 반영: {alignmentFlowResult.appliedVocabularyUpdates}</div>
-								<div>용어 반영: {alignmentFlowResult.appliedTermUpdates}</div>
-								<div>관계 반영: {alignmentFlowResult.appliedRelationUpdates}</div>
-								<div>컬럼 반영: {alignmentFlowResult.appliedColumnUpdates}</div>
-								<div>재검증 실패(용어계): {alignmentFlowResult.remainingTermFailed}</div>
 							</div>
 						{/if}
 					</div>

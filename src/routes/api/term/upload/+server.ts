@@ -92,6 +92,7 @@ import {
 } from '$lib/utils/type-guards.js';
 import { normalizeUploadPostProcessMode, runUploadPostProcess } from '$lib/utils/upload-postprocess.js';
 import { classifyUploadParseError, noValidDataUploadError } from '$lib/utils/upload-error.js';
+import { captureUploadReplaceHistory } from '$lib/registry/upload-history-registry';
 
 
 /**
@@ -242,13 +243,10 @@ export async function POST({ request, fetch }: RequestEvent) {
 		const buffer = Buffer.from(arrayBuffer);
 
 		// 기존 데이터와 병합 (replace 옵션 확인)
-		const replaceExisting = getOptionalBoolean(formData, 'replace');
+		const replaceExisting = getOptionalBoolean(formData, 'replace', true) || true;
 		const filename = getOptionalString(formData, 'filename', 'term.json');
-		const postProcessMode = normalizeUploadPostProcessMode(
-			getOptionalString(formData, 'postProcessMode', 'none')
-		);
-		// validation 옵션 확인 (기본값: true - 검증 교체 모드)
-		const performValidation = getOptionalBoolean(formData, 'validation', true);
+		const postProcessMode = normalizeUploadPostProcessMode('none');
+		const performValidation = false;
 
 		// 용어 파일의 매핑 정보 로드
 		const termData = await loadTermData(filename);
@@ -429,6 +427,9 @@ export async function POST({ request, fetch }: RequestEvent) {
 		let finalData: TermData;
 
 		try {
+			if (replaceExisting) {
+				await captureUploadReplaceHistory('term', filename);
+			}
 			finalData = await mergeTermData(termEntries, replaceExisting, filename);
 		} catch (mergeError) {
 			return json(

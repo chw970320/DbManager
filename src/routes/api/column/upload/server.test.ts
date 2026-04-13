@@ -17,6 +17,10 @@ vi.mock('$lib/utils/database-design-xlsx-parser.js', () => ({
 	parseColumnXlsxToJson: vi.fn()
 }));
 
+vi.mock('$lib/registry/upload-history-registry', () => ({
+	captureUploadReplaceHistory: vi.fn()
+}));
+
 vi.mock('$lib/utils/type-guards.js', () => ({
 	getRequiredFile: vi.fn(),
 	getOptionalString: vi.fn((formData, key, defaultValue) => {
@@ -39,6 +43,7 @@ import { loadColumnData, mergeColumnData } from '$lib/registry/data-registry';
 import { validateXlsxFile } from '$lib/utils/validation.js';
 import { parseColumnXlsxToJson } from '$lib/utils/database-design-xlsx-parser.js';
 import { getRequiredFile } from '$lib/utils/type-guards.js';
+import { captureUploadReplaceHistory } from '$lib/registry/upload-history-registry';
 
 // 테스트용 Mock 데이터
 const createMockColumnData = (): ColumnData => ({
@@ -100,6 +105,15 @@ describe('Column Upload API: /api/column/upload', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		vi.mocked(loadColumnData).mockResolvedValue(createMockColumnData());
+		vi.mocked(captureUploadReplaceHistory).mockResolvedValue({
+			id: 'history-1',
+			dataType: 'column',
+			filename: 'column.json',
+			reason: 'upload-replace',
+			createdAt: '2024-01-01T00:00:00.000Z',
+			expiresAt: '2024-02-01T00:00:00.000Z',
+			entryCount: 0
+		});
 	});
 
 	describe('GET', () => {
@@ -172,6 +186,7 @@ describe('Column Upload API: /api/column/upload', () => {
 			expect(response.status).toBe(200);
 			expect(result.success).toBe(true);
 			expect(result.data.uploadedCount).toBe(1);
+			expect(captureUploadReplaceHistory).toHaveBeenCalledWith('column', 'column.json');
 		});
 
 		it('should return 400 for invalid content type', async () => {

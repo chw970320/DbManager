@@ -15,10 +15,10 @@
 | `database/upload/server.test.ts`         | 4              | 9              | 완료                      |
 | `database/download/server.test.ts`       | 2              | 6              | 완료                      |
 | `database/filter-options/server.test.ts` | 3              | 8              | 완료                      |
-| `DatabaseEditor.test.ts`                 | 4              | 13             | 작성완료 (일부 수정 필요) |
+| `DatabaseEditor.test.ts`                 | 7              | 12             | 작성완료                  |
 | `DatabaseTable.test.ts`                  | 4              | 8              | 작성완료                  |
-| `DatabaseFileManager.test.ts`            | 4              | 10             | 작성완료 (환경 설정 필요) |
-| **합계**                                 | **33**         | **85**         |                           |
+| `DatabaseFileManager.test.ts`            | 4              | 11             | 작성완료 (환경 설정 필요) |
+| **합계**                                 | **36**         | **89**         |                           |
 
 > **중요**: 데이터베이스 관련 모든 API/컴포넌트는 **현재 선택된 database 파일(`filename`)을 기준으로만** 동작해야 합니다.
 >
@@ -174,6 +174,10 @@
   - 저장 버튼 클릭 시 `save` 이벤트 발생 + payload 구조 확인
 - 삭제 이벤트
   - 삭제 버튼 클릭 → confirm 처리 → `delete` 이벤트 발생
+- 닫기 가드
+  - 배경 클릭으로 닫히지 않는지 확인
+  - pristine 상태 취소는 즉시 닫히는지 확인
+  - dirty 상태 취소는 `showConfirm` 확인 후에만 닫히는지 확인
 
 > **중요**:
 >
@@ -250,13 +254,13 @@
 
 - GET: 필터 옵션 조회 성공, 고유값만 반환, filename 파라미터, 기본 파일명 사용, 데이터 로드 실패 처리, 필터 옵션 정렬 확인, 빈 entries 배열 처리, Nullable 필드에 빈값 옵션 포함
 
-### 4.2 컴포넌트 테스트 (26개 테스트, 일부 수정 필요)
+### 4.2 컴포넌트 테스트 (30개 테스트)
 
-✅ **`DatabaseEditor.test.ts`** (13개 테스트)
+✅ **`DatabaseEditor.test.ts`** (12개 테스트)
 
 - Rendering: 생성 모드 제목, 수정 모드 제목, 필수 필드 라벨, 엔트리 데이터로 폼 채우기, 서버 에러 메시지
 - Form Validation: 필수 필드 비활성화, 필수 필드 활성화, 필수 필드 누락 에러
-- Events: save 이벤트, delete 이벤트, cancel 이벤트
+- Close Guard: 배경 클릭 무시, pristine 취소 즉시 닫기, dirty 취소 확인 다이얼로그
 - Edit Mode: 삭제 버튼 표시/미표시
 
 ⚠️ **`DatabaseTable.test.ts`** (8개 테스트)
@@ -267,13 +271,14 @@
 - Row Click: entryclick 이벤트 (일부 수정 필요)
 - Filtering: 필터 옵션 UI, 필터 적용
 
-⚠️ **`DatabaseFileManager.test.ts`** (10개 테스트)
+⚠️ **`DatabaseFileManager.test.ts`** (11개 테스트)
 
 - Rendering: 모달 열기, 파일 목록 표시
 - File Operations: 새 파일 생성, 파일 이름 변경, 파일 삭제
 - Selected File: 선택된 파일 강조, change 이벤트
 - Selected File: 업로드 대상 파일 기본값이 현재 선택 파일과 동기화되는지 확인
 - Upload Tab: 업로드 탭 표시
+- Upload Tab: 업로드 후 현재 매핑값 자동 저장
 
 > **참고**: 컴포넌트 테스트는 작성되었으나, 일부는 실제 컴포넌트 구조에 맞게 수정이 필요합니다. 특히 DatabaseFileManager는 `$app/environment` import 문제로 테스트 환경 설정이 필요합니다.
 

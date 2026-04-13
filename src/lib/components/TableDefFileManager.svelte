@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { createEventDispatcher, untrack } from 'svelte';
 	import FileUpload from './FileUpload.svelte';
+	import UploadHistoryPanel from './UploadHistoryPanel.svelte';
 	import DbDesignFileMappingFields from './DbDesignFileMappingFields.svelte';
 	import type { DbDesignApiResponse, DbDesignUploadResult } from '$lib/types/database-design';
 	import { tableDataStore as tableStore } from '$lib/stores/unified-store';
@@ -14,6 +15,7 @@
 		mergeDbDesignRelatedMapping,
 		type DbDesignDefinitionType
 	} from '$lib/utils/db-design-file-mapping';
+	import { completeUploadWithMappingSave } from '$lib/utils/upload-orchestration';
 
 	interface Props {
 		isOpen?: boolean;
@@ -48,6 +50,7 @@
 
 	// 매핑 관련 상태
 	const currentType: DbDesignDefinitionType = 'table';
+	const mappingEndpoint = '/api/table/files/mapping';
 	let dbDesignFileOptions = $state(createEmptyDbDesignFileOptions(currentType));
 	let selectedDbDesignMapping = $state(createDbDesignRelatedMapping(currentType));
 	let isMappingLoading = $state(false);
@@ -362,9 +365,29 @@
 
 	async function handleUploadSuccess(detail: UploadSuccessDetail) {
 		const { result } = detail;
-		successMessage = result.message || '업로드가 완료되었습니다.';
-		await new Promise((resolve) => setTimeout(resolve, 300));
+		const uploadFlow = await completeUploadWithMappingSave({
+			fetchFn: fetch,
+			mappingEndpoint,
+			filename: selectedUploadFile,
+			mapping: selectedDbDesignMapping as Record<string, string>,
+			uploadMessage: result.message || '업로드가 완료되었습니다.'
+		});
+
+		successMessage = uploadFlow.successMessage || '';
+		error = uploadFlow.errorMessage || '';
 		await loadFiles();
+		await loadMappingInfo(selectedUploadFile);
+		dispatch('change');
+	}
+
+	async function handleHistoryRestored(
+		event: CustomEvent<{ entry: { filename: string; createdAt: string } }>
+	) {
+		const { entry } = event.detail;
+		error = '';
+		successMessage = `${entry.filename} 파일을 ${new Date(entry.createdAt).toLocaleString('ko-KR')} 시점으로 복원했습니다.`;
+		await loadFiles();
+		await loadMappingInfo(selectedUploadFile);
 		dispatch('change');
 	}
 
@@ -752,6 +775,13 @@
 								onuploadcomplete={handleUploadComplete}
 							/>
 						</div>
+
+						<UploadHistoryPanel
+							dataType="table"
+							filename={selectedUploadFile}
+							disabled={isSubmitting}
+							on:restored={handleHistoryRestored}
+						/>
 					</div>
 				{/if}
 			</div>

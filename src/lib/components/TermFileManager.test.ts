@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import TermFileManager from './TermFileManager.svelte';
 
 // Mock fetch API
@@ -23,6 +23,10 @@ vi.mock('$lib/stores/settings-store', () => ({
 		}),
 		update: vi.fn()
 	}
+}));
+
+vi.mock('$lib/stores/confirm-store', () => ({
+	showConfirm: vi.fn().mockResolvedValue(true)
 }));
 
 vi.mock('$lib/utils/file-filter', () => ({
@@ -65,6 +69,45 @@ describe('TermFileManager', () => {
 						Promise.resolve({
 							success: true,
 							data: ['domain.json']
+						})
+				});
+			}
+			if (url.includes('/api/term/files/mapping')) {
+				return Promise.resolve({
+					ok: true,
+					json: () =>
+						Promise.resolve({
+							success: true,
+							data: {
+								mapping: {
+									vocabulary: 'vocabulary.json',
+									domain: 'domain.json',
+									database: 'database.json',
+									entity: 'entity.json',
+									attribute: 'attribute.json',
+									table: 'table.json',
+									column: 'column.json'
+								}
+							}
+						})
+				});
+			}
+			if (url.includes('/api/upload-history')) {
+				return Promise.resolve({
+					ok: true,
+					json: () => Promise.resolve({ success: true, data: { entries: [] } })
+				});
+			}
+			if (url.includes('/api/term/upload')) {
+				return Promise.resolve({
+					ok: true,
+					json: () =>
+						Promise.resolve({
+							success: true,
+							data: {
+								success: true,
+								message: '용어 업로드 완료'
+							}
 						})
 				});
 			}
@@ -238,6 +281,118 @@ describe('TermFileManager', () => {
 
 			await waitFor(() => {
 				// 업로드 탭이 표시되는지 확인 (실제 컴포넌트 구조에 따라 조정)
+			});
+		});
+
+		it('업로드 후 현재 매핑값을 자동 저장한다', async () => {
+			mockFetch.mockImplementation((url: string, options?: RequestInit) => {
+				if (url.includes('/api/upload-history')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ success: true, data: { entries: [] } })
+					});
+				}
+				if (url.includes('/api/term/files/mapping') && options?.method === 'PUT') {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({
+								success: true,
+								data: {
+									autoSync: {
+										success: true,
+										summary: '매핑 저장과 자동 반영이 완료되었습니다.'
+									}
+								}
+							})
+					});
+				}
+				if (url.includes('/api/term/files/mapping')) {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({
+								success: true,
+								data: {
+									mapping: {
+										vocabulary: 'vocabulary.json',
+										domain: 'domain.json',
+										database: 'database.json',
+										entity: 'entity.json',
+										attribute: 'attribute.json',
+										table: 'table.json',
+										column: 'column.json'
+									}
+								}
+							})
+					});
+				}
+				if (url.includes('/api/vocabulary/files')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ success: true, data: ['vocabulary.json'] })
+					});
+				}
+				if (url.includes('/api/domain/files')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ success: true, data: ['domain.json'] })
+					});
+				}
+				if (url.includes('/api/term/files')) {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({
+								success: true,
+								data: ['term.json', 'custom-term.json']
+							})
+					});
+				}
+				if (url.includes('/api/term/upload')) {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({
+								success: true,
+								data: {
+									success: true,
+									message: '용어 업로드 완료'
+								}
+							})
+					});
+				}
+				return Promise.resolve({
+					ok: true,
+					json: () => Promise.resolve({ success: true, data: [] })
+				});
+			});
+
+			render(TermFileManager, {
+				props: {
+					isOpen: true,
+					currentFilename: 'custom-term.json'
+				}
+			});
+
+			await fireEvent.click(screen.getByRole('button', { name: '파일 업로드' }));
+
+			const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+			const file = new File(['xlsx'], 'sample.xlsx', {
+				type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+			});
+			await fireEvent.change(input, {
+				target: {
+					files: [file]
+				}
+			});
+			await fireEvent.click(screen.getByRole('button', { name: '업로드' }));
+
+			await waitFor(() => {
+				expect(mockFetch).toHaveBeenCalledWith(
+					'/api/term/files/mapping',
+					expect.objectContaining({ method: 'PUT' })
+				);
 			});
 		});
 	});

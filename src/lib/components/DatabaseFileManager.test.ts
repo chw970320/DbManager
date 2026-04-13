@@ -35,6 +35,10 @@ vi.mock('$lib/stores/settings-store', () => ({
 	}
 }));
 
+vi.mock('$lib/stores/confirm-store', () => ({
+	showConfirm: vi.fn().mockResolvedValue(true)
+}));
+
 describe('DatabaseFileManager', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -315,6 +319,97 @@ describe('DatabaseFileManager', () => {
 
 			await waitFor(() => {
 				// 업로드 탭이 표시되는지 확인 (실제 컴포넌트 구조에 따라 조정)
+			});
+		});
+
+		it('업로드 후 현재 매핑값을 자동 저장한다', async () => {
+			mockFetch.mockImplementation((url: string, options?: RequestInit) => {
+				if (url.includes('/api/upload-history')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ success: true, data: { entries: [] } })
+					});
+				}
+				if (url.includes('/api/database/files/mapping') && options?.method === 'PUT') {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ success: true, data: {} })
+					});
+				}
+				if (url.includes('/api/database/files/mapping')) {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({
+								success: true,
+								data: {
+									mapping: {
+										vocabulary: 'vocabulary.json',
+										domain: 'domain.json',
+										term: 'term.json',
+										entity: 'entity.json',
+										attribute: 'attribute.json',
+										table: 'table.json',
+										column: 'column.json'
+									}
+								}
+							})
+					});
+				}
+				if (url.includes('/api/database/upload')) {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({
+								success: true,
+								data: {
+									success: true,
+									message: 'DB 정의서 업로드 완료'
+								}
+							})
+					});
+				}
+				if (url.includes('/api/') && url.includes('/files')) {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({
+								success: true,
+								data: ['database.json', 'custom-database.json']
+							})
+					});
+				}
+				return Promise.resolve({
+					ok: true,
+					json: () => Promise.resolve({ success: true, data: [] })
+				});
+			});
+
+			render(DatabaseFileManager, {
+				props: {
+					isOpen: true,
+					currentFilename: 'custom-database.json'
+				}
+			});
+
+			await fireEvent.click(screen.getByRole('button', { name: '파일 업로드' }));
+
+			const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+			const file = new File(['xlsx'], 'sample.xlsx', {
+				type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+			});
+			await fireEvent.change(input, {
+				target: {
+					files: [file]
+				}
+			});
+			await fireEvent.click(screen.getByRole('button', { name: '업로드' }));
+
+			await waitFor(() => {
+				expect(mockFetch).toHaveBeenCalledWith(
+					'/api/database/files/mapping',
+					expect.objectContaining({ method: 'PUT' })
+				);
 			});
 		});
 	});

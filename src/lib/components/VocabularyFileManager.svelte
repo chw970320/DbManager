@@ -2,12 +2,13 @@
 	import { createEventDispatcher, untrack } from 'svelte';
 	import { get } from 'svelte/store';
 	import FileUpload from './FileUpload.svelte';
+	import UploadHistoryPanel from './UploadHistoryPanel.svelte';
 	import DbDesignFileMappingFields from './DbDesignFileMappingFields.svelte';
 	import type { ApiResponse, UploadResult } from '$lib/types/vocabulary';
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { filterVocabularyFiles } from '$lib/utils/file-filter';
 	import { resolvePreferredFilename } from '$lib/utils/file-selection';
-	import { vocabularyDataStore, domainDataStore } from '$lib/stores/unified-store';
+	import { vocabularyDataStore } from '$lib/stores/unified-store';
 	import { showConfirm } from '$lib/stores/confirm-store';
 	import {
 		createDbDesignRelatedMapping,
@@ -16,6 +17,7 @@
 		getDbDesignSelectableTypes,
 		type DbDesignDefinitionType
 	} from '$lib/utils/db-design-file-mapping';
+	import { completeUploadWithMappingSave } from '$lib/utils/upload-orchestration';
 
 	interface Props {
 		isOpen?: boolean;
@@ -49,6 +51,7 @@
 	type UploadErrorDetail = { error: string };
 
 	const currentType: DbDesignDefinitionType = 'vocabulary';
+	const mappingEndpoint = '/api/vocabulary/files/mapping';
 	let dbDesignFileOptions = $state(createEmptyDbDesignFileOptions(currentType));
 	let selectedDbDesignMapping = $state(createDbDesignRelatedMapping(currentType));
 	let currentMappingFile = $state<string | null>(null);
@@ -143,10 +146,7 @@
 		}
 	}
 
-	async function saveMappingInfo(
-		filename = currentMappingFile,
-		showSuccess = true
-	): Promise<boolean> {
+	async function saveMappingInfo(filename = currentMappingFile): Promise<boolean> {
 		if (!filename) {
 			error = '매핑할 파일을 선택하세요.';
 			return false;
@@ -154,9 +154,8 @@
 
 		isSubmitting = true;
 		error = '';
-		if (showSuccess) {
-			successMessage = '';
-		}
+		successMessage = '';
+		warningMessage = '';
 
 		try {
 			const response = await fetch('/api/vocabulary/files/mapping', {
@@ -173,65 +172,21 @@
 				error = result.error || '매핑 정보 저장에 실패했습니다.';
 				return false;
 			}
+			const autoSync = (result.data as { autoSync?: { success?: boolean; summary?: string } } | undefined)
+				?.autoSync;
 
 			currentMappingFile = filename;
-			if (showSuccess) {
+			if (autoSync?.success === false) {
 				successMessage = '매핑 정보가 저장되었습니다.';
-				dispatch('change');
+				warningMessage = autoSync.summary || '자동 반영 일부가 실패했습니다.';
+			} else {
+				successMessage = autoSync?.summary || '매핑 정보가 저장되었습니다.';
 			}
+			dispatch('change');
 			return true;
 		} catch (_err) {
 			error = '매핑 정보 저장 중 오류가 발생했습니다.';
 			return false;
-		} finally {
-			isSubmitting = false;
-		}
-	}
-
-	async function handleDomainSync() {
-		const { selectedFilename } = get(vocabularyDataStore);
-		const vocabFile = currentMappingFile || selectedUploadFile || currentFilename || selectedFilename;
-
-		if (!vocabFile) {
-			error = '단어집 파일을 선택하세요.';
-			return;
-		}
-
-		const saved = await saveMappingInfo(vocabFile, false);
-		if (!saved) {
-			return;
-		}
-
-		isSubmitting = true;
-		error = '';
-		successMessage = '';
-
-		try {
-			const domainFilename = selectedDbDesignMapping.domain || 'domain.json';
-			domainDataStore.set({ selectedFilename: domainFilename });
-
-			const response = await fetch('/api/vocabulary/sync-domain', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					vocabularyFilename: vocabFile,
-					domainFilename
-				})
-			});
-			const result: ApiResponse = await response.json();
-
-			if (response.ok && result.success) {
-				successMessage =
-					(result.message as string) ||
-					`동기화 완료 (matched: ${(result.data as Record<string, unknown>)?.matched ?? 0})`;
-				await loadFiles();
-				dispatch('change');
-			} else {
-				error = result.error || '동기화에 실패했습니다.';
-			}
-		} catch (syncError) {
-			console.error('동기화 오류:', syncError);
-			error = '동기화 중 오류가 발생했습니다.';
 		} finally {
 			isSubmitting = false;
 		}
@@ -420,9 +375,31 @@
 
 	async function handleUploadSuccess(detail: UploadSuccessDetail) {
 		const { result } = detail;
-		successMessage = result.message || '업로드가 완료되었습니다.';
-		await new Promise((resolve) => setTimeout(resolve, 300));
+		const uploadFlow = await completeUploadWithMappingSave({
+			fetchFn: fetch,
+			mappingEndpoint,
+			filename: selectedUploadFile,
+			mapping: selectedDbDesignMapping as Record<string, string>,
+			uploadMessage: result.message || '업로드가 완료되었습니다.'
+		});
+
+		successMessage = uploadFlow.successMessage || '';
+		warningMessage = uploadFlow.warningMessage || '';
+		error = uploadFlow.errorMessage || '';
 		await loadFiles();
+		await loadMappingInfo(selectedUploadFile);
+		dispatch('change');
+	}
+
+	async function handleHistoryRestored(
+		event: CustomEvent<{ entry: { filename: string; createdAt: string } }>
+	) {
+		const { entry } = event.detail;
+		error = '';
+		warningMessage = '';
+		successMessage = `${entry.filename} 파일을 ${new Date(entry.createdAt).toLocaleString('ko-KR')} 시점으로 복원했습니다.`;
+		await loadFiles();
+		await loadMappingInfo(selectedUploadFile);
 		dispatch('change');
 	}
 
@@ -767,22 +744,13 @@
 										{/if}
 									</p>
 								</div>
-								<div class="flex gap-2">
-									<button
-										onclick={() => saveMappingInfo()}
-										class="rounded-md bg-slate-600 px-3 py-2 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-50"
-										disabled={isSubmitting || isMappingLoading || !currentMappingFile}
-									>
-										매핑 저장
-									</button>
-									<button
-										onclick={handleDomainSync}
-										class="rounded-md bg-green-600 px-3 py-2 text-xs font-medium text-white hover:bg-green-700 disabled:opacity-50"
-										disabled={isSubmitting || isMappingLoading || !currentMappingFile}
-									>
-										{isSubmitting ? '동기화 중...' : '매핑 저장 후 동기화'}
-									</button>
-								</div>
+								<button
+									onclick={() => saveMappingInfo()}
+									class="rounded-md bg-slate-600 px-3 py-2 text-xs font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+									disabled={isSubmitting || isMappingLoading || !currentMappingFile}
+								>
+									매핑 저장
+								</button>
 							</div>
 							<DbDesignFileMappingFields
 								{currentType}
@@ -825,6 +793,13 @@
 								onuploadcomplete={handleUploadComplete}
 							/>
 						</div>
+
+						<UploadHistoryPanel
+							dataType="vocabulary"
+							filename={selectedUploadFile}
+							disabled={isSubmitting || files.length === 0}
+							on:restored={handleHistoryRestored}
+						/>
 					</div>
 				{/if}
 			</div>

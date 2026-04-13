@@ -2,6 +2,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import FormField from '$lib/components/FormField.svelte';
 	import Icon from '$lib/components/Icon.svelte';
+	import { requestEditorClose } from '$lib/utils/editor-close-guard';
 	import type {
 		DataSourceConnectionTestResult,
 		DataSourceInput,
@@ -52,6 +53,21 @@
 	});
 
 	const isEditMode = $derived(Boolean(entry?.id));
+
+	function createInitialFormData() {
+		return {
+			name: entry?.name ?? '',
+			description: entry?.description ?? '',
+			host: entry?.config.host ?? '',
+			port: entry?.config.port ?? 5432,
+			database: entry?.config.database ?? '',
+			schema: entry?.config.schema ?? 'public',
+			username: entry?.config.username ?? '',
+			password: '',
+			ssl: entry?.config.ssl ?? false,
+			connectionTimeoutSeconds: entry?.config.connectionTimeoutSeconds ?? 5
+		};
+	}
 
 	function hydrateForm() {
 		formData.name = entry?.name ?? '';
@@ -148,7 +164,12 @@
 	}
 
 	function handleClose() {
-		dispatch('close');
+		return requestEditorClose({
+			initialValue: createInitialFormData(),
+			currentValue: { ...formData },
+			onClose: () => dispatch('close'),
+			isSubmitting: isSubmitting || isTesting
+		});
 	}
 
 	$effect(() => {
@@ -172,14 +193,10 @@
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby="data-source-editor-title"
-		onclick={(event) => {
-			if (event.target === event.currentTarget) {
-				handleClose();
-			}
-		}}
 		onkeydown={(event) => {
 			if (event.key === 'Escape') {
-				handleClose();
+				event.preventDefault();
+				void handleClose();
 			}
 		}}
 		tabindex="-1"

@@ -9,6 +9,7 @@ import {
 	resolveDbDesignFileMappingBundle,
 	saveDbDesignFileMappingBundle
 } from '$lib/registry/db-design-file-mapping';
+import { createAutoSyncSummary, runAutoSyncStep } from '$lib/utils/auto-sync';
 
 function isValidMapping(mapping: unknown): mapping is Record<string, string> {
 	if (!mapping || typeof mapping !== 'object') return false;
@@ -50,7 +51,7 @@ export async function GET({ url }: RequestEvent) {
 	}
 }
 
-export async function PUT({ request }: RequestEvent) {
+export async function PUT({ request, fetch }: RequestEvent) {
 	try {
 		const body = (await request.json()) as {
 			filename?: string;
@@ -85,14 +86,34 @@ export async function PUT({ request }: RequestEvent) {
 			currentFilename: filename,
 			mapping: extractDbDesignRelatedMapping(mapping)
 		});
+		const autoSyncStep = await runAutoSyncStep(fetch, {
+			id: 'vocabularySyncDomain',
+			label: '단어집-도메인 자동 반영',
+			endpoint: '/api/vocabulary/sync-domain',
+			body: {
+				apply: true,
+				vocabularyFilename: filename,
+				domainFilename: result.bundle.domain || mapping.domain || 'domain.json'
+			}
+		});
+		const autoSync = createAutoSyncSummary({
+			steps: [autoSyncStep],
+			successSummary: '매핑 저장과 단어집-도메인 자동 반영이 완료되었습니다.',
+			failureSummary: '매핑 저장은 완료되었지만 단어집-도메인 자동 반영 일부가 실패했습니다.',
+			retryHint: '/api/vocabulary/sync-domain 재실행으로 자동 반영을 복구할 수 있습니다.'
+		});
 
 		return json(
 			{
 				success: true,
 				data: {
-					mapping: result.currentMapping
+					mapping: result.currentMapping,
+					saved: true,
+					autoSync
 				},
-				message: 'Vocabulary mapping saved successfully'
+				message: autoSync.success
+					? 'Vocabulary mapping saved and auto-synced successfully'
+					: 'Vocabulary mapping saved with auto-sync warnings'
 			} as ApiResponse,
 			{ status: 200 }
 		);

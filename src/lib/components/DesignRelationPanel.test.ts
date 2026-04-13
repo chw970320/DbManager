@@ -161,7 +161,7 @@ describe('DesignRelationPanel', () => {
 		});
 	});
 
-	it('should execute apply sync and call onApplied callback', async () => {
+	it('should load sync preview results without apply execution callback', async () => {
 		const onApplied = vi.fn().mockResolvedValue(undefined);
 		vi.stubGlobal(
 			'fetch',
@@ -176,9 +176,6 @@ describe('DesignRelationPanel', () => {
 				.mockResolvedValueOnce({
 					json: async () => createSyncResponse()
 				})
-				.mockResolvedValueOnce({
-					json: async () => createUnifiedResponse()
-				})
 		);
 
 		render(DesignRelationPanel, {
@@ -191,14 +188,14 @@ describe('DesignRelationPanel', () => {
 
 		const expandButton = await screen.findByRole('button', { name: '펼치기' });
 		expandButton.click();
-		const applyButton = await screen.findByRole('button', { name: '자동 보정 실행' });
-		applyButton.click();
+		const previewButton = await screen.findByRole('button', { name: '보정 미리보기' });
+		previewButton.click();
 
 		await waitFor(() => {
-			expect(screen.getByText('최근 동기화 결과 (실행)')).toBeInTheDocument();
+			expect(screen.getByText('보정 미리보기 결과')).toBeInTheDocument();
 			expect(screen.getByText('실제 반영: 3')).toBeInTheDocument();
 			expect(screen.getByText('정합성 변화: 3 -> 1')).toBeInTheDocument();
-			expect(onApplied).toHaveBeenCalledTimes(1);
+			expect(onApplied).not.toHaveBeenCalled();
 		});
 	});
 

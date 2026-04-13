@@ -17,6 +17,10 @@ vi.mock('$lib/utils/database-design-xlsx-parser.js', () => ({
 	parseDatabaseXlsxToJson: vi.fn()
 }));
 
+vi.mock('$lib/registry/upload-history-registry', () => ({
+	captureUploadReplaceHistory: vi.fn()
+}));
+
 vi.mock('$lib/utils/type-guards.js', () => ({
 	getRequiredFile: vi.fn(),
 	getOptionalString: vi.fn((formData, key, defaultValue) => {
@@ -39,6 +43,7 @@ import { loadDatabaseData, mergeDatabaseData } from '$lib/registry/data-registry
 import { validateXlsxFile } from '$lib/utils/validation.js';
 import { parseDatabaseXlsxToJson } from '$lib/utils/database-design-xlsx-parser.js';
 import { getRequiredFile } from '$lib/utils/type-guards.js';
+import { captureUploadReplaceHistory } from '$lib/registry/upload-history-registry';
 
 // 테스트용 Mock 데이터
 const createMockDatabaseData = (): DatabaseData => ({
@@ -118,6 +123,15 @@ describe('Database Upload API: /api/database/upload', () => {
 		vi.clearAllMocks();
 		vi.mocked(loadDatabaseData).mockResolvedValue(createMockDatabaseData());
 		vi.mocked(mergeDatabaseData).mockResolvedValue(createMockDatabaseData());
+		vi.mocked(captureUploadReplaceHistory).mockResolvedValue({
+			id: 'history-1',
+			dataType: 'database',
+			filename: 'database.json',
+			reason: 'upload-replace',
+			createdAt: '2024-01-01T00:00:00.000Z',
+			expiresAt: '2024-02-01T00:00:00.000Z',
+			entryCount: 0
+		});
 	});
 
 	describe('GET', () => {
@@ -178,9 +192,10 @@ describe('Database Upload API: /api/database/upload', () => {
 			expect(response.status).toBe(200);
 			expect(result.success).toBe(true);
 			expect(result.data.uploadedCount).toBe(1);
+			expect(captureUploadReplaceHistory).toHaveBeenCalledWith('database', 'database.json');
 			expect(mergeDatabaseData).toHaveBeenCalledWith(
 				expect.arrayContaining([expect.any(Object)]),
-				false,
+				true,
 				'database.json'
 			);
 		});
@@ -217,7 +232,7 @@ describe('Database Upload API: /api/database/upload', () => {
 			expect(result.success).toBe(true);
 			expect(mergeDatabaseData).toHaveBeenCalledWith(
 				expect.any(Array),
-				false,
+				true,
 				'custom-database.json'
 			);
 		});

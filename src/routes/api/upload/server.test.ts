@@ -18,6 +18,10 @@ vi.mock('$lib/utils/xlsx-parser.js', () => ({
 	parseXlsxToJson: vi.fn()
 }));
 
+vi.mock('$lib/registry/upload-history-registry', () => ({
+	captureUploadReplaceHistory: vi.fn()
+}));
+
 vi.mock('$lib/utils/type-guards.js', () => ({
 	getRequiredFile: vi.fn(),
 	getOptionalString: vi.fn((formData, key, defaultValue) => {
@@ -44,6 +48,7 @@ import {
 import { validateXlsxFile } from '$lib/utils/validation.js';
 import { parseXlsxToJson } from '$lib/utils/xlsx-parser.js';
 import { getRequiredFile } from '$lib/utils/type-guards.js';
+import { captureUploadReplaceHistory } from '$lib/registry/upload-history-registry';
 
 const createMockVocabularyData = (): VocabularyData => ({
 	entries: [],
@@ -101,6 +106,15 @@ describe('Upload API: /api/upload', () => {
 			lastUpdated: '2024-01-01T00:00:00.000Z',
 			totalCount: 1
 		});
+		vi.mocked(captureUploadReplaceHistory).mockResolvedValue({
+			id: 'history-1',
+			dataType: 'vocabulary',
+			filename: 'vocabulary.json',
+			reason: 'upload-replace',
+			createdAt: '2024-01-01T00:00:00.000Z',
+			expiresAt: '2024-02-01T00:00:00.000Z',
+			entryCount: 0
+		});
 	});
 
 	it('GET should return upload metadata', async () => {
@@ -146,6 +160,7 @@ describe('Upload API: /api/upload', () => {
 		expect(response.status).toBe(200);
 		expect(result.success).toBe(true);
 		expect(validateXlsxFile).toHaveBeenCalledWith(mockFile);
+		expect(captureUploadReplaceHistory).toHaveBeenCalledWith('vocabulary', 'vocabulary.json');
 		expect(mergeVocabularyData).toHaveBeenCalled();
 	});
 });

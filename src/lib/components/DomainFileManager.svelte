@@ -2,6 +2,7 @@
 	import { createEventDispatcher, untrack } from 'svelte';
 	import { get } from 'svelte/store';
 	import FileUpload from './FileUpload.svelte';
+	import UploadHistoryPanel from './UploadHistoryPanel.svelte';
 	import DbDesignFileMappingFields from './DbDesignFileMappingFields.svelte';
 	import type { ApiResponse, UploadResult } from '$lib/types/vocabulary';
 	import { settingsStore } from '$lib/stores/settings-store';
@@ -16,6 +17,7 @@
 		getDbDesignSelectableTypes,
 		type DbDesignDefinitionType
 	} from '$lib/utils/db-design-file-mapping';
+	import { completeUploadWithMappingSave } from '$lib/utils/upload-orchestration';
 
 	interface Props {
 		isOpen?: boolean;
@@ -49,6 +51,7 @@
 	type UploadErrorDetail = { error: string };
 
 	const currentType: DbDesignDefinitionType = 'domain';
+	const mappingEndpoint = '/api/domain/files/mapping';
 	let dbDesignFileOptions = $state(createEmptyDbDesignFileOptions(currentType));
 	let selectedDbDesignMapping = $state(createDbDesignRelatedMapping(currentType));
 	let currentMappingFile = $state<string | null>(null);
@@ -370,9 +373,31 @@
 
 	async function handleUploadSuccess(detail: UploadSuccessDetail) {
 		const { result } = detail;
-		successMessage = result.message || '업로드가 완료되었습니다.';
-		await new Promise((resolve) => setTimeout(resolve, 300));
+		const uploadFlow = await completeUploadWithMappingSave({
+			fetchFn: fetch,
+			mappingEndpoint,
+			filename: selectedUploadFile,
+			mapping: selectedDbDesignMapping as Record<string, string>,
+			uploadMessage: result.message || '업로드가 완료되었습니다.'
+		});
+
+		successMessage = uploadFlow.successMessage || '';
+		warningMessage = uploadFlow.warningMessage || '';
+		error = uploadFlow.errorMessage || '';
 		await loadFiles();
+		await loadMappingInfo(selectedUploadFile);
+		dispatch('change');
+	}
+
+	async function handleHistoryRestored(
+		event: CustomEvent<{ entry: { filename: string; createdAt: string } }>
+	) {
+		const { entry } = event.detail;
+		error = '';
+		warningMessage = '';
+		successMessage = `${entry.filename} 파일을 ${new Date(entry.createdAt).toLocaleString('ko-KR')} 시점으로 복원했습니다.`;
+		await loadFiles();
+		await loadMappingInfo(selectedUploadFile);
 		dispatch('change');
 	}
 
@@ -768,6 +793,13 @@
 								onuploadcomplete={handleUploadComplete}
 							/>
 						</div>
+
+						<UploadHistoryPanel
+							dataType="domain"
+							filename={selectedUploadFile}
+							disabled={isSubmitting || files.length === 0}
+							on:restored={handleHistoryRestored}
+						/>
 					</div>
 				{/if}
 			</div>

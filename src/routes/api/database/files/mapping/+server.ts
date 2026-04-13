@@ -9,6 +9,7 @@ import {
 	resolveDbDesignFileMappingBundle,
 	saveDbDesignFileMappingBundle
 } from '$lib/registry/db-design-file-mapping';
+import { createAutoSyncSummary, runAutoSyncStep } from '$lib/utils/auto-sync';
 
 function isValidMapping(mapping: unknown): mapping is Record<string, string> {
 	if (!mapping || typeof mapping !== 'object') return false;
@@ -50,7 +51,7 @@ export async function GET({ url }: RequestEvent) {
 	}
 }
 
-export async function PUT({ request }: RequestEvent) {
+export async function PUT({ request, fetch }: RequestEvent) {
 	try {
 		const body = (await request.json()) as {
 			filename?: string;
@@ -85,14 +86,41 @@ export async function PUT({ request }: RequestEvent) {
 			currentFilename: filename,
 			mapping: extractDbDesignRelatedMapping(mapping)
 		});
+		const autoSyncStep = await runAutoSyncStep(fetch, {
+			id: 'designAlignment',
+			label: 'DB 설계 자동 정합화',
+			endpoint: '/api/alignment/sync',
+			body: {
+				apply: true,
+				vocabularyFilename: result.bundle.vocabulary,
+				termFilename: result.bundle.term,
+				domainFilename: result.bundle.domain,
+				databaseFile: result.bundle.database,
+				entityFile: result.bundle.entity,
+				attributeFile: result.bundle.attribute,
+				tableFile: result.bundle.table,
+				columnFile: result.bundle.column,
+				columnFilename: result.bundle.column
+			}
+		});
+		const autoSync = createAutoSyncSummary({
+			steps: [autoSyncStep],
+			successSummary: '매핑 저장과 DB 설계 자동 정합화가 완료되었습니다.',
+			failureSummary: '매핑 저장은 완료되었지만 DB 설계 자동 정합화 일부가 실패했습니다.',
+			retryHint: '/api/alignment/sync 재실행으로 자동 반영을 복구할 수 있습니다.'
+		});
 
 		return json(
 			{
 				success: true,
 				data: {
-					mapping: result.currentMapping
+					mapping: result.currentMapping,
+					saved: true,
+					autoSync
 				},
-				message: 'Database mapping saved successfully'
+				message: autoSync.success
+					? 'Database mapping saved and auto-synced successfully'
+					: 'Database mapping saved with auto-sync warnings'
 			} satisfies DbDesignApiResponse,
 			{ status: 200 }
 		);

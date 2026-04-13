@@ -85,6 +85,7 @@ import {
 } from '$lib/utils/type-guards.js';
 import { normalizeUploadPostProcessMode, runUploadPostProcess } from '$lib/utils/upload-postprocess.js';
 import { classifyUploadParseError, noValidDataUploadError } from '$lib/utils/upload-error.js';
+import { captureUploadReplaceHistory } from '$lib/registry/upload-history-registry';
 
 export async function GET({ url }: RequestEvent) {
 	try {
@@ -151,11 +152,9 @@ export async function POST({ request, fetch }: RequestEvent) {
 		}
 
 		const buffer = Buffer.from(await file.arrayBuffer());
-		const replaceExisting = getOptionalBoolean(formData, 'replace');
+		const replaceExisting = getOptionalBoolean(formData, 'replace', true) || true;
 		const filename = getOptionalString(formData, 'filename', 'table.json');
-		const postProcessMode = normalizeUploadPostProcessMode(
-			getOptionalString(formData, 'postProcessMode', 'none')
-		);
+		const postProcessMode = normalizeUploadPostProcessMode('none');
 
 		let parsedEntries: TableEntry[];
 		try {
@@ -184,6 +183,9 @@ export async function POST({ request, fetch }: RequestEvent) {
 			);
 		}
 
+		if (replaceExisting) {
+			await captureUploadReplaceHistory('table', filename);
+		}
 		const finalData = await mergeTableData(parsedEntries, replaceExisting, filename);
 		const postProcess = await runUploadPostProcess({
 			fetch,

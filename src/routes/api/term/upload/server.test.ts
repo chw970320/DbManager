@@ -31,6 +31,10 @@ vi.mock('$lib/registry/cache-registry', () => ({
 	invalidateCache: vi.fn()
 }));
 
+vi.mock('$lib/registry/upload-history-registry', () => ({
+	captureUploadReplaceHistory: vi.fn()
+}));
+
 vi.mock('uuid', () => ({
 	v4: vi.fn(() => 'test-uuid-1234')
 }));
@@ -65,6 +69,7 @@ import {
 import { parseTermXlsxToJson } from '$lib/utils/xlsx-parser.js';
 import { getRequiredFile } from '$lib/utils/type-guards.js';
 import { getCachedVocabularyData, getCachedDomainData } from '$lib/registry/cache-registry';
+import { captureUploadReplaceHistory } from '$lib/registry/upload-history-registry';
 
 // 테스트용 Mock 데이터
 const createMockTermData = (): TermData => ({
@@ -143,6 +148,15 @@ describe('Term Upload API: /api/term/upload', () => {
 		vi.mocked(validateTermNameMapping).mockReturnValue(null);
 		vi.mocked(validateColumnNameMapping).mockReturnValue(null);
 		vi.mocked(validateDomainNameMapping).mockReturnValue(null);
+		vi.mocked(captureUploadReplaceHistory).mockResolvedValue({
+			id: 'history-1',
+			dataType: 'term',
+			filename: 'term.json',
+			reason: 'upload-replace',
+			createdAt: '2024-01-01T00:00:00.000Z',
+			expiresAt: '2024-02-01T00:00:00.000Z',
+			entryCount: 0
+		});
 	});
 
 	describe('GET', () => {
@@ -194,6 +208,7 @@ describe('Term Upload API: /api/term/upload', () => {
 			expect(response.status).toBe(200);
 			expect(result.success).toBe(true);
 			expect(result.data.uploadedCount).toBe(1);
+			expect(captureUploadReplaceHistory).toHaveBeenCalledWith('term', 'term.json');
 		});
 
 		it('should return 400 for invalid content type', async () => {

@@ -2,6 +2,7 @@
 	import { createEventDispatcher } from 'svelte';
 	import FormField from '$lib/components/FormField.svelte';
 	import Icon from '$lib/components/Icon.svelte';
+	import { requestEditorClose } from '$lib/utils/editor-close-guard';
 	import type {
 		QualityRuleEntry,
 		QualityRuleInput,
@@ -76,6 +77,22 @@
 	const isEditMode = $derived(Boolean(entry?.id));
 	const availableMetrics = $derived(metricOptions[formData.scope]);
 
+	function createInitialFormData() {
+		return {
+			name: entry?.name ?? '',
+			description: entry?.description ?? '',
+			enabled: entry?.enabled ?? true,
+			severity: entry?.severity ?? 'warning',
+			scope: entry?.scope ?? 'column',
+			metric: entry?.metric ?? ((entry?.scope ?? 'column') === 'table' ? 'rowCount' : 'nullRatio'),
+			operator: entry?.operator ?? 'lte',
+			threshold: entry?.threshold ?? ((entry?.scope ?? 'column') === 'table' ? 1 : 0.05),
+			schemaPattern: entry?.target.schemaPattern ?? '',
+			tablePattern: entry?.target.tablePattern ?? '',
+			columnPattern: entry?.target.columnPattern ?? ''
+		};
+	}
+
 	function hydrateForm() {
 		formData.name = entry?.name ?? '';
 		formData.description = entry?.description ?? '';
@@ -142,7 +159,12 @@
 	}
 
 	function handleClose() {
-		dispatch('close');
+		return requestEditorClose({
+			initialValue: createInitialFormData(),
+			currentValue: { ...formData },
+			onClose: () => dispatch('close'),
+			isSubmitting
+		});
 	}
 
 	$effect(() => {
@@ -173,14 +195,10 @@
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby="quality-rule-editor-title"
-		onclick={(event) => {
-			if (event.target === event.currentTarget) {
-				handleClose();
-			}
-		}}
 		onkeydown={(event) => {
 			if (event.key === 'Escape') {
-				handleClose();
+				event.preventDefault();
+				void handleClose();
 			}
 		}}
 		tabindex="-1"

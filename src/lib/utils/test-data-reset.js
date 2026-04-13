@@ -172,6 +172,7 @@ const REGISTRY_FILENAME = 'registry.json';
 const SETTINGS_DIRNAME = 'settings';
 const SHARED_FILE_MAPPINGS_FILENAME = 'shared-file-mappings.json';
 const DESIGN_SNAPSHOTS_FILENAME = 'design-snapshots.json';
+const UPLOAD_HISTORY_DIRNAME = 'upload-history';
 
 /**
  * @param {string} timestamp
@@ -275,6 +276,9 @@ export async function resetTestData(options = {}) {
 
 	const designSnapshotsPath = join(settingsDir, DESIGN_SNAPSHOTS_FILENAME);
 	await writeJson(designSnapshotsPath, createEmptyData(timestamp));
+
+	const uploadHistoryDir = join(settingsDir, UPLOAD_HISTORY_DIRNAME);
+	await rm(uploadHistoryDir, { recursive: true, force: true });
 
 	return {
 		dataDir,

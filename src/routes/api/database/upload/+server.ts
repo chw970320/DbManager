@@ -85,6 +85,7 @@ import {
 } from '$lib/utils/type-guards.js';
 import { normalizeUploadPostProcessMode, runUploadPostProcess } from '$lib/utils/upload-postprocess.js';
 import { classifyUploadParseError, noValidDataUploadError } from '$lib/utils/upload-error.js';
+import { captureUploadReplaceHistory } from '$lib/registry/upload-history-registry';
 
 /**
  * 데이터베이스 정의서 업로드 정보 조회 API
@@ -165,11 +166,9 @@ export async function POST({ request, fetch }: RequestEvent) {
 		const arrayBuffer = await file.arrayBuffer();
 		const buffer = Buffer.from(arrayBuffer);
 
-		const replaceExisting = getOptionalBoolean(formData, 'replace');
+		const replaceExisting = getOptionalBoolean(formData, 'replace', true) || true;
 		const filename = getOptionalString(formData, 'filename', 'database.json');
-		const postProcessMode = normalizeUploadPostProcessMode(
-			getOptionalString(formData, 'postProcessMode', 'none')
-		);
+		const postProcessMode = normalizeUploadPostProcessMode('none');
 
 		let parsedEntries: DatabaseEntry[];
 		try {
@@ -202,6 +201,9 @@ export async function POST({ request, fetch }: RequestEvent) {
 
 		let finalData: DatabaseData;
 		try {
+			if (replaceExisting) {
+				await captureUploadReplaceHistory('database', filename);
+			}
 			finalData = await mergeDatabaseData(parsedEntries, replaceExisting, filename);
 		} catch (mergeError) {
 			return json(

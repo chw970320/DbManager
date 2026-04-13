@@ -128,6 +128,26 @@ describe('resetTestData', () => {
 			),
 			'utf-8'
 		);
+		const uploadHistoryDir = join(settingsDir, 'upload-history');
+		await mkdir(uploadHistoryDir, { recursive: true });
+		await writeFile(
+			join(uploadHistoryDir, 'term.json'),
+			JSON.stringify(
+				{
+					entries: [
+						{
+							id: 'history-1',
+							filename: 'term.json'
+						}
+					],
+					lastUpdated: '2026-03-11T00:00:00.000Z',
+					totalCount: 1
+				},
+				null,
+				2
+			),
+			'utf-8'
+		);
 
 		const result = await resetTestData({
 			dataDir: tempDir,
@@ -213,6 +233,7 @@ describe('resetTestData', () => {
 			lastUpdated: FIXED_TIMESTAMP,
 			totalCount: 0
 		});
+		await expect(readJson(join(settingsDir, 'upload-history', 'term.json'))).rejects.toBeTruthy();
 	});
 
 	it('should create the reset baseline even when the data directory starts empty', async () => {

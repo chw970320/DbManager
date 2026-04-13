@@ -29,6 +29,8 @@
 		onuploadcomplete: () => void;
 	} = $props();
 
+	void replaceExisting;
+
 	// 상태 변수
 	let files = $state<FileList | null>(null);
 	let uploading = $state(false);
@@ -36,9 +38,6 @@
 	let dragOver = $state(false);
 	let uploadResult = $state('');
 	let errorMessage = $state('');
-	let selectedMode = $state<'validated-replace' | 'validated-sync-replace' | 'simple-replace'>(
-		replaceExisting ? 'validated-replace' : 'simple-replace'
-	);
 
 	// 파생 상태
 	let dragoverClass = $derived(
@@ -130,23 +129,13 @@
 			return;
 		}
 
-		// 모드별 확인 메시지
-		const modeMessages: Record<string, string> = {
-			'simple-replace': `기존 ${contentType}이 완전히 삭제되고 새로운 데이터로 교체됩니다. 히스토리도 초기화됩니다. 파일 백업을 권장합니다.`,
-			'validated-replace': `기존 ${contentType}이 완전히 삭제되고 새로운 데이터로 교체됩니다. 데이터 검증 후 업로드됩니다. 히스토리도 초기화됩니다.`,
-			'validated-sync-replace': `기존 ${contentType}을 완전히 삭제하고 새로운 데이터로 교체합니다. 검증 후 연관 데이터 동기화까지 수행됩니다.`
-		};
-
-		const message = modeMessages[selectedMode];
-		if (message) {
-			const confirmed = await showConfirm({
-				title: '교체 확인',
-				message,
-				confirmText: '교체',
-				variant: 'danger'
-			});
-			if (!confirmed) return;
-		}
+		const confirmed = await showConfirm({
+			title: '교체 확인',
+			message: `기존 ${contentType}이 완전히 삭제되고 새로운 데이터로 교체됩니다. 파일 교체 이력이 저장되며, 현재 화면의 매핑값이 후속 저장에 사용됩니다.`,
+			confirmText: '교체',
+			variant: 'danger'
+		});
+		if (!confirmed) return;
 
 		const file = files[0];
 		uploading = true;
@@ -161,20 +150,10 @@
 			// FormData 생성
 			const formData = new FormData();
 			formData.append('file', file);
-			// 두 모드 모두 교체 모드이므로 replace는 항상 true
+			// 업로드는 단일 교체 경로만 지원한다.
 			formData.append('replace', 'true');
-			// validation 파라미터 추가: 검증 교체 모드일 때만 true
-			formData.append(
-				'validation',
-				(selectedMode === 'validated-replace' || selectedMode === 'validated-sync-replace').toString()
-			);
-			const postProcessMode =
-				selectedMode === 'validated-sync-replace'
-					? 'validate-sync'
-					: selectedMode === 'validated-replace'
-						? 'validate-only'
-						: 'none';
-			formData.append('postProcessMode', postProcessMode);
+			formData.append('validation', 'false');
+			formData.append('postProcessMode', 'none');
 			if (filename) {
 				formData.append('filename', filename);
 			}
@@ -243,61 +222,12 @@
 
 <!-- 파일 업로드 컴포넌트 -->
 <div class="shadow%-md mx-auto w-full rounded-lg bg-white p-6">
-	<!-- 업로드 모드 선택 -->
 	<div class="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
-		<h3 class="mb-3 text-sm font-semibold text-gray-700">업로드 모드 선택</h3>
-		<div class="space-y-3">
-			<label class="flex cursor-pointer items-start space-x-3">
-				<input
-					type="radio"
-					name="uploadMode"
-					value="validated-replace"
-					bind:group={selectedMode}
-					class="mt-0.5 h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
-					{disabled}
-				/>
-				<div class="flex-1">
-					<div class="text-sm font-medium text-gray-900">검증 교체 모드</div>
-					<div class="text-xs text-gray-600">
-						기존 {contentType}을 완전히 삭제하고 새로운 데이터로 교체합니다. 데이터 검증 후
-						업로드됩니다. 히스토리도 초기화됩니다.
-					</div>
-				</div>
-			</label>
-			<label class="flex cursor-pointer items-start space-x-3">
-				<input
-					type="radio"
-					name="uploadMode"
-					value="validated-sync-replace"
-					bind:group={selectedMode}
-					class="mt-0.5 h-4 w-4 border-gray-300 text-indigo-600 focus:ring-indigo-500"
-					{disabled}
-				/>
-				<div class="flex-1">
-					<div class="text-sm font-medium text-gray-900">검증+동기화 교체 모드</div>
-					<div class="text-xs text-gray-600">
-						기존 {contentType} 교체 후 유효성 검사와 연관 동기화를 연속 수행합니다.
-					</div>
-				</div>
-			</label>
-			<label class="flex cursor-pointer items-start space-x-3">
-				<input
-					type="radio"
-					name="uploadMode"
-					value="simple-replace"
-					bind:group={selectedMode}
-					class="mt-0.5 h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
-					{disabled}
-				/>
-				<div class="flex-1">
-					<div class="text-sm font-medium text-gray-900">단순 교체 모드</div>
-					<div class="text-xs text-gray-600">
-						기존 {contentType}을 완전히 삭제하고 새로운 데이터로 교체합니다. 검증 없이 바로
-						교체됩니다. 히스토리도 초기화됩니다. 파일 백업을 권장합니다.
-					</div>
-				</div>
-			</label>
-		</div>
+		<h3 class="mb-2 text-sm font-semibold text-gray-700">단순 교체 업로드</h3>
+		<p class="text-xs leading-5 text-gray-600">
+			기존 {contentType}을 완전히 삭제하고 새로운 데이터로 교체합니다. 업로드 직전 파일 내용은
+			복원 가능한 이력으로 저장되며, 이후 현재 화면의 매핑값이 자동 저장됩니다.
+		</p>
 	</div>
 
 	<!-- 드래그앤드롭 영역 -->

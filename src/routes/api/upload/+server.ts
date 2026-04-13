@@ -15,6 +15,7 @@ import { validateForbiddenWordsAndSynonyms, validateXlsxFile } from '$lib/utils/
 import type { ApiResponse, UploadResult, VocabularyData, VocabularyEntry } from '$lib/types/vocabulary';
 import { normalizeUploadPostProcessMode, runUploadPostProcess } from '$lib/utils/upload-postprocess.js';
 import { classifyUploadParseError } from '$lib/utils/upload-error.js';
+import { captureUploadReplaceHistory } from '$lib/registry/upload-history-registry';
 
 /**
  * 파일 업로드 및 처리 API
@@ -59,12 +60,9 @@ export async function POST({ request, fetch }: RequestEvent) {
 		const buffer = Buffer.from(arrayBuffer);
 
 		// 기존 데이터와 병합 (replace 옵션 확인)
-		const replaceExisting = getOptionalBoolean(formData, 'replace');
-		const postProcessMode = normalizeUploadPostProcessMode(
-			getOptionalString(formData, 'postProcessMode', 'none')
-		);
-		// validation 옵션 확인 (기본값: true - 검증 교체 모드)
-		const performValidation = getOptionalBoolean(formData, 'validation', true);
+		const replaceExisting = getOptionalBoolean(formData, 'replace', true) || true;
+		const postProcessMode = normalizeUploadPostProcessMode('none');
+		const performValidation = false;
 
 		// xlsx 파일 파싱 (교체 모드일 때는 파일 내 중복 체크 건너뛰기)
 		let parsedEntries: VocabularyEntry[];
@@ -133,6 +131,9 @@ export async function POST({ request, fetch }: RequestEvent) {
 		let finalData: VocabularyData;
 
 		try {
+			if (replaceExisting) {
+				await captureUploadReplaceHistory('vocabulary', filename);
+			}
 			finalData = await mergeVocabularyData(parsedEntries, replaceExisting, filename);
 		} catch (mergeError) {
 			return json(

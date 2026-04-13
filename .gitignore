@@ -26,6 +26,7 @@ vite.config.ts.timestamp-*
 # local workspace
 references
 .claude
+.omx
 
 # static data
 /static/data

@@ -33,6 +33,8 @@
 - For DB, Entity, Attribute, Table, and Column features, align overlapping UX and behavior with the existing Vocabulary, Domain, and Term flows unless the user asks for a deliberate change.
 - Any change to behavior, API, UX, workflow, validation, or data model must include updates to the relevant files under `docs/` in the same task.
 - When a change materially affects repository-level guidance, contributors' first-run understanding, or feature summaries, update `README.md` in the same task.
+- When a coherent work unit is fully implemented, verified, and documented, create a separate Git commit for that work unit before moving on unless the user explicitly says not to commit.
+- Keep each work-unit commit scoped to the relevant files only. Do not mix unrelated user changes into the commit; if clean separation is not possible, report the blocker explicitly.
 - Commit messages for this repository must always be written in Korean.
 - Immediately before every commit, re-check the repository commit-message rule and ensure the actual commit subject/body are written in Korean.
 - Default to working directly on `main`. Do not create a separate branch unless the user explicitly asks for it or the work clearly requires temporary isolation.

@@ -167,6 +167,71 @@ describe('TermGenerator', () => {
 	});
 
 	describe('Validation', () => {
+		it('should refetch combinations and results when filename prop changes', async () => {
+			mockFetch.mockImplementation((url: string) => {
+				const filename = new URL(url, 'http://localhost').searchParams.get('filename');
+
+				if (url.includes('/api/generator/segment')) {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({
+								success: true,
+								segments: filename === 'beta.json' ? ['회원_이름'] : ['사용자_이름'],
+								forbiddenWordInfo: null
+							})
+					});
+				}
+
+				if (url.includes('/api/term/validate')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ success: true })
+					});
+				}
+
+				if (url.includes('/api/generator')) {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({
+								success: true,
+								results: filename === 'beta.json' ? ['MEMBER_NAME'] : ['USER_NAME'],
+								hasMultiple: false
+							})
+					});
+				}
+
+				return Promise.resolve({
+					ok: false,
+					json: () => Promise.resolve({ success: false })
+				});
+			});
+
+			const { rerender } = render(TermGenerator, { props: { filename: 'alpha.json' } });
+
+			const input = screen.getByPlaceholderText(/한글 약어 입력/) as HTMLInputElement;
+			await fireEvent.input(input, { target: { value: '사용자이름' } });
+
+			await waitFor(() => {
+				expect(screen.getByText('USER_NAME')).toBeInTheDocument();
+			});
+
+			await rerender({ filename: 'beta.json' });
+
+			await waitFor(() => {
+				expect(
+					mockFetch.mock.calls.some(
+						([callUrl]) =>
+							callUrl?.toString().includes('/api/generator/segment?filename=beta.json')
+					)
+				).toBe(true);
+				expect(screen.getByText('MEMBER_NAME')).toBeInTheDocument();
+			});
+
+			expect(screen.queryByText('USER_NAME')).not.toBeInTheDocument();
+		});
+
 		it('should call validate API with filename parameter for each result', async () => {
 			// Given: filename prop이 있는 컴포넌트
 			const filename = 'test-term.json';
@@ -362,6 +427,53 @@ describe('TermGenerator', () => {
 				{ timeout: 3000 }
 			);
 			expect(screen.getByPlaceholderText(/한글 약어 입력/)).toBeInTheDocument();
+		});
+
+		it('should surface validation failure when validate request throws instead of keeping spinner', async () => {
+			mockFetch.mockImplementation((url: string) => {
+				if (url.includes('/api/generator/segment')) {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({
+								success: true,
+								segments: ['사용자_이름'],
+								forbiddenWordInfo: null
+							})
+					});
+				}
+
+				if (url.includes('/api/generator')) {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({
+								success: true,
+								results: ['USER_NAME'],
+								hasMultiple: false
+							})
+					});
+				}
+
+				if (url.includes('/api/term/validate')) {
+					return Promise.reject(new Error('network failure'));
+				}
+
+				return Promise.resolve({
+					ok: false,
+					json: () => Promise.resolve({ success: false })
+				});
+			});
+
+			render(TermGenerator, { props: { filename: 'test-term.json' } });
+
+			const input = screen.getByPlaceholderText(/한글 약어 입력/) as HTMLInputElement;
+			await fireEvent.input(input, { target: { value: '사용자_이름' } });
+
+			await waitFor(() => {
+				expect(screen.getByText('USER_NAME')).toBeInTheDocument();
+				expect(screen.getByLabelText('Validation 실패')).toBeInTheDocument();
+			});
 		});
 	});
 

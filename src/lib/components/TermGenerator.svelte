@@ -31,6 +31,8 @@
 	let validationResults = $state<
 		Map<string, { isValid: boolean; errors?: Array<{ type: string; message: string }>; error?: string }>
 	>(new Map());
+	let combinationRequestVersion = 0;
+	let conversionRequestVersion = 0;
 
 	// 검색 입력 필드 참조
 	let searchInput: HTMLInputElement | undefined;
@@ -41,19 +43,42 @@
 	}>();
 
 	// --- Effects ---
-	$effect(() => {
-		void sourceTerm;
-		debouncedFindCombinations();
-	});
+	function invalidateInFlightRequests() {
+		combinationRequestVersion += 1;
+		conversionRequestVersion += 1;
+	}
 
-	async function findCombinations() {
+	function resetGeneratorState() {
 		segmentsList = [];
 		selectedSegment = '';
 		finalResults = [];
 		error = null;
 		forbiddenWordInfo = null;
+		validationResults = new Map();
+		isLoadingCombinations = false;
+		isLoadingResult = false;
+		copiedResults = new Set();
+	}
+
+	$effect(() => {
+		void sourceTerm;
+		void filename;
+		debouncedFindCombinations.cancel();
+		invalidateInFlightRequests();
+		resetGeneratorState();
 
 		if (!sourceTerm.trim()) {
+			return;
+		}
+
+		debouncedFindCombinations();
+	});
+
+	async function findCombinations() {
+		const requestVersion = ++combinationRequestVersion;
+		const currentTerm = sourceTerm.trim();
+
+		if (!currentTerm) {
 			return;
 		}
 
@@ -64,31 +89,45 @@
 				{
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({ term: sourceTerm, direction })
+					body: JSON.stringify({ term: currentTerm, direction })
 				}
 			);
+
+			if (requestVersion !== combinationRequestVersion) {
+				return;
+			}
+
 			if (!response.ok) {
 				const errorData = await response.json();
 				throw new Error(errorData.error || `HTTP error: ${response.status}`);
 			}
 			const data = await response.json();
+			if (requestVersion !== combinationRequestVersion) {
+				return;
+			}
 			segmentsList = data.segments || [];
 			forbiddenWordInfo = data.forbiddenWordInfo || null;
 
 			// 첫 번째 항목 자동 선택
 			if (segmentsList.length > 0) {
-				convertToFinal(segmentsList[0]);
+				await convertToFinal(segmentsList[0]);
 			}
 		} catch (e: unknown) {
+			if (requestVersion !== combinationRequestVersion) {
+				return;
+			}
 			error = e instanceof Error ? e.message : '알 수 없는 오류가 발생했습니다.';
 		} finally {
-			isLoadingCombinations = false;
+			if (requestVersion === combinationRequestVersion) {
+				isLoadingCombinations = false;
+			}
 		}
 	}
 
 	async function convertToFinal(segment: string) {
 		// 사용자가 수동으로 선택한 경우 pending된 debounce 호출 취소
 		debouncedFindCombinations.cancel();
+		const requestVersion = ++conversionRequestVersion;
 
 		error = null;
 		validationResults = new Map();
@@ -96,6 +135,7 @@
 		if (!segment) {
 			finalResults = [];
 			selectedSegment = '';
+			isLoadingResult = false;
 			return;
 		}
 
@@ -113,25 +153,36 @@
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ term: segment, direction })
 			});
+			if (requestVersion !== conversionRequestVersion) {
+				return;
+			}
 			if (!response.ok) {
 				const errorData = await response.json();
 				throw new Error(errorData.error || `HTTP error: ${response.status}`);
 			}
 			const data = await response.json();
+			if (requestVersion !== conversionRequestVersion) {
+				return;
+			}
 			// 성공적으로 데이터를 받은 후에만 결과 업데이트
 			finalResults = data.results || [];
 
 			// 각 결과에 대해 접미사 validation 수행
 			if (finalResults.length > 0) {
-				await validateSegmentResults(segment);
+				await validateSegmentResults(segment, requestVersion);
 			}
 		} catch (err) {
+			if (requestVersion !== conversionRequestVersion) {
+				return;
+			}
 			const errorMsg = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
 			error = errorMsg;
 			finalResults = []; // 에러 시에만 결과 초기화
 			console.error('Final conversion error:', err);
 		} finally {
-			isLoadingResult = false;
+			if (requestVersion === conversionRequestVersion) {
+				isLoadingResult = false;
+			}
 		}
 	}
 
@@ -139,7 +190,7 @@
 	 * 각 변환 결과에 대해 개별적으로 validation 수행
 	 * validate-all API와 동일한 수준의 검증 (용어명 매핑, 컬럼명 매핑, 순서 검증, 접미사 검증, 중복 검증)
 	 */
-	async function validateSegmentResults(segment: string) {
+	async function validateSegmentResults(segment: string, requestVersion: number) {
 		if (!finalResults || finalResults.length === 0) {
 			return;
 		}
@@ -156,6 +207,11 @@
 		}
 
 		// 각 결과에 대해 개별적으로 validation 수행
+		const nextValidationResults = new Map<
+			string,
+			{ isValid: boolean; errors?: Array<{ type: string; message: string }>; error?: string }
+		>();
+
 		for (const columnName of finalResults) {
 			if (!columnName || !columnName.trim()) {
 				continue;
@@ -177,16 +233,20 @@
 					}
 				);
 
+				if (requestVersion !== conversionRequestVersion) {
+					return;
+				}
+
 				if (response.ok) {
 					const result = await response.json();
 					if (result.success) {
 						// validation 통과
-						validationResults.set(resultKey, { isValid: true });
+						nextValidationResults.set(resultKey, { isValid: true });
 					} else {
 						// validation 실패 - API에서 반환된 오류 메시지 및 상세 오류 목록 사용
 						const errorMessage = result.error || result.message || 'Validation 확인 실패';
 						const errors = result.data?.errors || [];
-						validationResults.set(resultKey, {
+						nextValidationResults.set(resultKey, {
 							isValid: false,
 							error: errorMessage,
 							errors: errors
@@ -201,24 +261,30 @@
 							errorData.message ||
 							`Validation 확인 실패 (HTTP ${response.status})`;
 						const errors = errorData.data?.errors || [];
-						validationResults.set(resultKey, {
+						nextValidationResults.set(resultKey, {
 							isValid: false,
 							error: errorMessage,
 							errors: errors
 						});
 					} catch {
 						// JSON 파싱 실패 시 기본 메시지 사용
-						validationResults.set(resultKey, {
+						nextValidationResults.set(resultKey, {
 							isValid: false,
 							error: `Validation 확인 실패 (HTTP ${response.status})`
 						});
 					}
 				}
 			} catch (err) {
-				// 네트워크 오류 등 예외 상황은 조용히 처리 (validation은 선택적 기능)
+				nextValidationResults.set(resultKey, {
+					isValid: false,
+					error: err instanceof Error ? err.message : 'Validation 확인 실패'
+				});
+			} finally {
+				if (requestVersion === conversionRequestVersion) {
+					validationResults = new Map(nextValidationResults);
+				}
 			}
 		}
-		validationResults = new Map(validationResults); // 반응성 트리거
 	}
 
 	/**

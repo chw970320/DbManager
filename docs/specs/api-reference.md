@@ -200,6 +200,17 @@ http://localhost:5173/api
 
 ---
 
+## 최근 변경 사항 (2026-05-21)
+
+- `GET /api/erd/render`
+  - 테이블 정의서와 컬럼 정의서를 기준으로 Graphviz SVG/PNG ERD 이미지를 생성합니다.
+  - Mermaid 런타임 렌더링 대신 서버의 `dot` CLI를 사용합니다.
+  - `mode=logical|physical`, `format=svg|png`를 지원합니다.
+  - 필터는 `subjectArea`, `schema`, `q`/`tableSearch`, `scopeFlag`, `tableIds`, `includeExternalReferences`를 지원합니다.
+  - Graphviz가 설치되어 있지 않거나 렌더링이 실패하면 설치/진단 안내가 포함된 JSON 오류를 반환합니다.
+
+---
+
 ## Vocabulary API
 
 ### GET /api/vocabulary
@@ -2357,6 +2368,34 @@ ERD 노드/엣지/매핑 데이터를 생성합니다.
   - `tableIds`, `includeRelated`
 - 응답 추가 정보:
   - `data.relationValidation` (5개 정의서 연관관계 정합성 요약)
+
+### GET /api/erd/render
+
+Graphviz 기반 ERD 이미지를 생성합니다. 이 API는 Mermaid 코드가 아니라 실제 이미지 응답을 반환하므로, 화면 미리보기와 다운로드에 모두 사용할 수 있습니다.
+
+- 주요 파라미터:
+  - `databaseFile`, `entityFile`, `attributeFile`, `tableFile`, `columnFile`
+  - `mode`: `logical`(기본값) 또는 `physical`
+  - `format`: `svg`(기본값) 또는 `png`
+  - `subjectArea`: 주제영역 필터. 쉼표로 여러 값을 전달할 수 있습니다.
+  - `schema`: schema 필터. 쉼표로 여러 값을 전달할 수 있습니다.
+  - `q` 또는 `tableSearch`: 테이블 영문명/한글명 검색어
+  - `scopeFlag`: 사업범위여부 필터 (`Y`, `N` 등)
+  - `tableIds`: 테이블 ID 직접 선택 필터
+  - `includeExternalReferences`: 필터 밖 FK 참조 테이블 포함 여부. 기본값 `true`
+  - `download`: `true`면 `Content-Disposition: attachment`로 응답
+- 성공 응답:
+  - `format=svg`: `image/svg+xml; charset=utf-8`
+  - `format=png`: `image/png`
+- 오류 응답:
+  - 잘못된 `mode`/`format`: 400 JSON
+  - Graphviz 미설치 또는 렌더 실패: 500 JSON. `message`에 설치/진단 안내 포함
+
+예시:
+
+```bash
+curl "http://localhost:5173/api/erd/render?mode=logical&format=svg&subjectArea=회원&schema=bksp&scopeFlag=Y&includeExternalReferences=true"
+```
 
 ### GET /api/erd/tables
 

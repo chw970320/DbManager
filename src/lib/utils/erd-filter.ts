@@ -20,9 +20,9 @@ export interface ERDFilterOptions {
 	tableIds?: string[];
 	/** 관련 엔터티/속성 포함 여부 (기본값: true) */
 	includeRelated?: boolean;
-	/** 최대 노드 수 (Mermaid 텍스트 크기 제한 방지) */
+	/** 최대 노드 수 */
 	maxNodes?: number;
-	/** 최대 엣지 수 (Mermaid 텍스트 크기 제한 방지) */
+	/** 최대 엣지 수 */
 	maxEdges?: number;
 }
 

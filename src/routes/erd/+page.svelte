@@ -53,6 +53,12 @@
 	let selectedTableIds = $state<Set<string>>(new Set());
 	let selectionMode: 'single' | 'multi' = $state('multi');
 	let tableSearchQuery = $state('');
+	let graphvizSubjectAreaFilter = $state('');
+	let graphvizSchemaFilter = $state('');
+	let graphvizTableSearchQuery = $state('');
+	let graphvizScopeFlagFilter = $state('');
+	let graphvizMode: 'logical' | 'physical' = $state('logical');
+	let includeExternalReferences = $state(true);
 	let showTableSelector = $state(false);
 	let includeRelated = $state(true);
 	let loadingTables = $state(false);
@@ -211,6 +217,28 @@
 		showTableSelector = false;
 	}
 
+	function getGraphvizRenderUrl(format: 'svg' | 'png', download = false): string {
+		const params = new URLSearchParams();
+		params.set('format', format);
+		params.set('mode', graphvizMode);
+		params.set('includeExternalReferences', includeExternalReferences.toString());
+		if (download) params.set('download', 'true');
+		if (selectedTableIds.size > 0) params.set('tableIds', Array.from(selectedTableIds).join(','));
+		if (graphvizSubjectAreaFilter.trim()) {
+			params.set('subjectArea', graphvizSubjectAreaFilter.trim());
+		}
+		if (graphvizSchemaFilter.trim()) {
+			params.set('schema', graphvizSchemaFilter.trim());
+		}
+		if (graphvizTableSearchQuery.trim()) {
+			params.set('q', graphvizTableSearchQuery.trim());
+		}
+		if (graphvizScopeFlagFilter.trim()) {
+			params.set('scopeFlag', graphvizScopeFlagFilter.trim());
+		}
+		return `/api/erd/render?${params.toString()}`;
+	}
+
 	async function loadUnifiedValidationSummary(termFilename = 'term.json') {
 		unifiedValidationLoading = true;
 		unifiedValidationError = null;
@@ -364,6 +392,103 @@
 			</div>
 		</div>
 	</header>
+
+	<!-- Graphviz ERD 필터 패널 -->
+	<div class="border-b border-gray-200 bg-slate-50 px-4 py-4 sm:px-6 lg:px-8">
+		<div class="grid grid-cols-1 gap-3 lg:grid-cols-6">
+			<div>
+				<label for="graphvizMode" class="mb-1 block text-xs font-medium text-gray-700">
+					표시 모드
+				</label>
+				<select
+					id="graphvizMode"
+					bind:value={graphvizMode}
+					class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+				>
+					<option value="logical">논리 이미지</option>
+					<option value="physical">물리 이미지</option>
+				</select>
+			</div>
+			<div>
+				<label for="subjectAreaFilter" class="mb-1 block text-xs font-medium text-gray-700">
+					주제영역
+				</label>
+				<input
+					id="subjectAreaFilter"
+					type="text"
+					placeholder="예: 회원,주문"
+					bind:value={graphvizSubjectAreaFilter}
+					class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+				/>
+			</div>
+			<div>
+				<label for="schemaFilter" class="mb-1 block text-xs font-medium text-gray-700">schema</label>
+				<input
+					id="schemaFilter"
+					type="text"
+					placeholder="예: bksp"
+					bind:value={graphvizSchemaFilter}
+					class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+				/>
+			</div>
+			<div>
+				<label for="erdTableSearch" class="mb-1 block text-xs font-medium text-gray-700">
+					테이블명 검색
+				</label>
+				<input
+					id="erdTableSearch"
+					type="text"
+					placeholder="영문/한글"
+					bind:value={graphvizTableSearchQuery}
+					class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+				/>
+			</div>
+			<div>
+				<label for="scopeFlagFilter" class="mb-1 block text-xs font-medium text-gray-700">
+					사업범위여부
+				</label>
+				<select
+					id="scopeFlagFilter"
+					bind:value={graphvizScopeFlagFilter}
+					class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+				>
+					<option value="">전체</option>
+					<option value="Y">사업범위</option>
+					<option value="N">사업범위 외</option>
+				</select>
+			</div>
+			<div class="flex flex-col justify-end gap-2">
+				<label class="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+					<input
+						type="checkbox"
+						bind:checked={includeExternalReferences}
+						class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+					/>
+					FK 외부참조 포함
+				</label>
+				<div class="flex gap-2">
+					<a
+						href={getGraphvizRenderUrl('svg', true)}
+						download
+						class="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-center text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50"
+					>
+						SVG
+					</a>
+					<a
+						href={getGraphvizRenderUrl('png', true)}
+						download
+						class="flex-1 rounded-lg bg-blue-600 px-3 py-2 text-center text-xs font-medium text-white transition-colors hover:bg-blue-700"
+					>
+						PNG
+					</a>
+				</div>
+			</div>
+		</div>
+		<p class="mt-2 text-xs text-slate-600">
+			Graphviz 기반 이미지 생성은 현재 테이블 정의서와 컬럼 정의서를 기준으로 동작합니다. Mermaid 복구와
+			인터랙티브 편집은 이 화면에서 사용하지 않습니다.
+		</p>
+	</div>
 
 	<!-- 테이블 선택 패널 -->
 	{#if showTableSelector}
@@ -835,7 +960,13 @@
 				</div>
 			</div>
 		{:else if erdData}
-			<ERDViewer {erdData} />
+			<ERDViewer
+				{erdData}
+				mode={graphvizMode}
+				renderUrl={getGraphvizRenderUrl('svg')}
+				svgDownloadUrl={getGraphvizRenderUrl('svg', true)}
+				pngDownloadUrl={getGraphvizRenderUrl('png', true)}
+			/>
 		{:else}
 			<div class="flex h-full items-center justify-center">
 				<div class="text-center">

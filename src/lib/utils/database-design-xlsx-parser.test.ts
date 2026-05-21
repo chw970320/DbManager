@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { parseColumnXlsxToJson } from './database-design-xlsx-parser';
+import { parseColumnXlsxToJson, parseTableXlsxToJson } from './database-design-xlsx-parser';
 
 vi.mock('xlsx-js-style', () => ({
 	default: {
@@ -143,5 +143,66 @@ describe('database-design-xlsx-parser', () => {
 		expect(result[0].dataLength).toBe('20');
 		expect(result[0].pkInfo).toBe('PK01');
 		expect(result[0].domainName).toBe('명V20');
+	});
+
+	it('BKSP 테이블 정의서의 순번/schema/공백 포함 헤더를 필드에 매핑한다', () => {
+		const sheet = { __sheet: '테이블' };
+
+		vi.mocked(XLSX.read).mockReturnValue({
+			SheetNames: ['테이블'],
+			Sheets: {
+				테이블: sheet
+			}
+		} as ReturnType<typeof XLSX.read>);
+
+		vi.mocked(XLSX.utils.sheet_to_json).mockReturnValue([
+			[
+				'순번',
+				'물리DB명',
+				'테이블소유자',
+				'주제영역',
+				'schema',
+				'테이블 영문명',
+				'테이블한글명',
+				'테이블 유형',
+				'관련엔터티명',
+				'테이블 설명',
+				'업무분류체계',
+				'보존 기간',
+				'테이블 볼륨',
+				'발생주기',
+				'공개/비공개 여부',
+				'비공개 사유',
+				'개방데이터목록'
+			],
+			[
+				1,
+				'BKSP',
+				'OWNER',
+				'생물종',
+				'bksp',
+				'TBL_BIOSPC_BSC',
+				'생물종기본',
+				'기본',
+				'생물종',
+				'생물종 기본 테이블',
+				'업무',
+				'10년',
+				'1000',
+				'월',
+				'공개',
+				'-',
+				'Y'
+			]
+		] as string[][]);
+
+		const result = parseTableXlsxToJson(Buffer.from('mock-xlsx'));
+
+		expect(result).toHaveLength(1);
+		expect(result[0].schemaName).toBe('bksp');
+		expect(result[0].tableEnglishName).toBe('TBL_BIOSPC_BSC');
+		expect(result[0].tableKoreanName).toBe('생물종기본');
+		expect(result[0].tableType).toBe('기본');
+		expect(result[0].retentionPeriod).toBe('10년');
 	});
 });

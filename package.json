@@ -83,7 +83,6 @@
 		]
 	},
 	"dependencies": {
-		"mermaid": "^11.12.2",
 		"pg": "^8.20.0",
 		"svelte-copy-to-clipboard": "^0.2.5",
 		"uuid": "^11.1.0",

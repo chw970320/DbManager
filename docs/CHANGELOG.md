@@ -1,5 +1,53 @@
 # 변경 이력
 
+## 2026-05-21
+
+### 요약
+
+- ERD 화면이 Mermaid 런타임 대신 Graphviz 기반 SVG/PNG 이미지 생성으로 전환되었습니다.
+- 주제영역, schema, 테이블명 검색, 사업범위여부, FK 외부참조 포함/제외 필터를 지원합니다.
+- BKSP 테이블 정의서 형식의 `순번/schema/테이블 영문명` 헤더 매핑을 보정했습니다.
+
+### 상세 변경
+
+1. Graphviz ERD 모델/API/UI 추가
+
+- 대상:
+  - `src/lib/utils/erd-graphviz-model.ts`
+  - `src/lib/utils/graphviz-dot.ts`
+  - `src/lib/server/graphviz-renderer.ts`
+  - `src/routes/api/erd/render/+server.ts`
+  - `src/lib/components/ERDViewer.svelte`
+  - `src/routes/erd/+page.svelte`
+- 변경:
+  - 테이블 정의서와 컬럼 정의서를 `schemaName + tableEnglishName` 기준으로 조인해 ERD 모델 생성
+  - 논리/물리 모드와 SVG/PNG 렌더링 API 제공
+  - Graphviz `dot` CLI 누락/실패 시 설치 안내가 포함된 오류 응답 제공
+  - ERD 화면에 Graphviz 미리보기, 필터, SVG/PNG 다운로드 연결
+
+2. 테이블 정의서 업로드 매핑 보정
+
+- 대상:
+  - `src/lib/utils/database-design-xlsx-parser.ts`
+- 변경:
+  - `순번`, `schema`, `테이블 영문명`, `테이블 유형`, `공개/비공개 여부`처럼 공백/영문이 섞인 헤더를 헤더명 기준으로 매핑
+  - 기존 `번호`, `스키마명`, `테이블영문명` 형식도 계속 지원
+
+3. 런타임 의존성/문서/테스트 동기화
+
+- 대상:
+  - `Dockerfile`
+  - `package.json`, `pnpm-lock.yaml`
+  - `docs/specs/api-reference.md`
+  - `docs/specs/data-model.md`
+  - `docs/tests/ERD_TEST_DESCRIPTION.md`
+  - `docs/USER_GUIDE.md`
+  - `README.md`
+- 변경:
+  - Docker 런타임에 `graphviz`와 CJK 폰트 설치
+  - Mermaid npm 런타임 의존성 제거
+  - ERD Graphviz API/데이터 모델/사용법/검증 문서 반영
+
 ## 2026-04-09
 
 ### 요약

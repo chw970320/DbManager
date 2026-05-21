@@ -20,6 +20,10 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
+# Graphviz is required by /api/erd/render to generate SVG/PNG ERD images.
+# Noto CJK fonts keep Korean logical names readable in rendered diagrams.
+RUN apk add --no-cache graphviz font-noto-cjk
+
 # Copy built artifacts and dependencies
 COPY --from=builder /app/build ./build
 COPY --from=builder /app/node_modules ./node_modules

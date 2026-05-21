@@ -1940,6 +1940,51 @@ const isMappedDomain = domainMap.has(domainName.trim().toLowerCase());
 
 ---
 
+## 18. Graphviz ERD 런타임 모델
+
+Graphviz ERD는 저장 파일을 새로 만들지 않는 런타임 모델입니다. `TableEntry`와 `ColumnEntry`를 조합해 `/api/erd/render` 요청 시점에 DOT를 만들고, 서버의 Graphviz `dot` CLI로 SVG/PNG 이미지를 생성합니다.
+
+### 조인 기준
+
+- 테이블 노드: `TableEntry`
+- 컬럼 행: `ColumnEntry`
+- 기본 조인 키: 정규화된 `schemaName + tableEnglishName`
+- 테이블 논리명: `TableEntry.tableKoreanName`
+- 컬럼 논리명: `ColumnEntry.columnKoreanName`
+- 물리명: `schemaName.tableEnglishName`, `columnEnglishName`
+
+### 필터 모델
+
+`GraphvizERDFilterOptions`는 저장 데이터가 아니라 렌더 요청 파라미터입니다.
+
+| 필드명 | 타입 | 설명 |
+| --- | --- | --- |
+| `tableIds` | `string[]` | 특정 테이블 ID만 렌더링 |
+| `subjectAreas` | `string[]` | `TableEntry.subjectArea` 기준 주제영역 필터 |
+| `schemas` | `string[]` | schema 대소문자 무시 필터 |
+| `tableSearch` | `string` | 테이블 영문명/한글명 부분 검색 |
+| `scopeFlags` | `string[]` | 컬럼 정의서의 `scopeFlag`를 테이블 단위로 해석한 사업범위여부 필터 |
+| `includeExternalReferences` | `boolean` | 필터 밖 FK 참조 테이블을 외부 노드로 포함할지 여부 |
+
+### 사업범위여부 해석
+
+`scopeFlag`는 컬럼 정의서 필드이므로 테이블 단위 저장 필드는 없습니다. ERD 모델은 같은 테이블의 컬럼 중 첫 번째 비어 있지 않은 `scopeFlag`를 표시값으로 사용하고, `Y/YES/TRUE/1/O/예/대상/포함` 중 하나가 있으면 사업범위 테이블로 판단합니다.
+
+### FK 관계 해석
+
+- `ColumnEntry.fkInfo`가 비어 있거나 `Y/YES/TRUE`만 있으면 참조 대상 정보가 없다고 보고 관계 edge를 만들지 않습니다.
+- `schema.table.column`, `table.column`, `table:column` 형식을 우선 파싱합니다.
+- 참조 대상 컬럼이 현재 필터 밖에 있고 `includeExternalReferences=true`이면 대상 테이블을 `isExternal=true` 외부 노드로 포함합니다.
+- 참조 대상 컬럼/테이블을 찾지 못하면 모델 warning에 기록하고 렌더링은 가능한 범위에서 계속합니다.
+
+### 렌더 출력
+
+- DOT 노드는 HTML-like table label을 사용해 테이블명, 주제영역, 사업범위, 컬럼명, 타입, `PK/FK/NN` 배지를 표시합니다.
+- `/api/erd/render?format=svg`는 SVG 이미지, `format=png`는 PNG 이미지를 반환합니다.
+- Docker 실행 환경은 `graphviz`와 CJK 폰트를 포함해야 하며, 로컬 실행 환경은 별도 Graphviz 설치가 필요합니다.
+
+---
+
 ## 공통 패턴
 
 ### Entry → Data 패턴

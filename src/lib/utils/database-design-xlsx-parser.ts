@@ -63,6 +63,31 @@ function normalizeHeaderText(value: string | number | undefined): string {
 		.toLowerCase();
 }
 
+function createHeaderIndexMap(headerRow: string[]): Map<string, number> {
+	const headerIndexMap = new Map<string, number>();
+	headerRow.forEach((header, index) => {
+		const normalized = normalizeHeaderText(header);
+		if (normalized && !headerIndexMap.has(normalized)) {
+			headerIndexMap.set(normalized, index);
+		}
+	});
+	return headerIndexMap;
+}
+
+function getHeaderMappedValue(
+	row: string[],
+	headerIndexMap: Map<string, number>,
+	aliases: string[]
+): string | number | undefined {
+	for (const alias of aliases) {
+		const index = headerIndexMap.get(normalizeHeaderText(alias));
+		if (index !== undefined) {
+			return row[index];
+		}
+	}
+	return undefined;
+}
+
 /**
  * 여러 시트 중 필수 헤더를 포함한 시트를 선택해 2D 배열로 반환
  */
@@ -571,7 +596,11 @@ export function parseTableXlsxToJson(
 	skipDuplicates: boolean = true
 ): TableEntry[] {
 	try {
-		const rawData = parseWorkbookToArray(fileBuffer);
+		const rawData = parseWorkbookToArrayByRequiredHeaders(fileBuffer, [
+			'테이블영문명',
+			'테이블한글명'
+		]);
+		const headerIndexMap = createHeaderIndexMap(rawData[0] || []);
 		const dataRows = rawData.slice(1);
 		const entries: TableEntry[] = [];
 		const seenKeys = skipDuplicates ? new Set<string>() : null;
@@ -580,25 +609,57 @@ export function parseTableXlsxToJson(
 			const row = dataRows[i];
 			if (isEmptyRow(row)) continue;
 
-			// 컬럼 매핑 (번호 열 없음): A=물리DB명, B=테이블소유자, C=주제영역, D=스키마명, E=테이블영문명, F=테이블한글명,
-			// G=테이블유형, H=관련엔터티명, I=테이블설명, J=업무분류체계, K=보존기간, L=테이블볼륨,
-			// M=발생주기, N=공개/비공개여부, O=비공개사유, P=개방데이터목록
-			const physicalDbName = parseOptionalText(row[0]);
-			const tableOwner = parseOptionalText(row[1]);
-			const subjectArea = parseOptionalText(row[2]);
-			const schemaName = parseOptionalText(row[3]);
-			const tableEnglishName = parseOptionalText(row[4]);
-			const tableKoreanName = parseOptionalText(row[5]);
-			const tableType = parseOptionalText(row[6]);
-			const relatedEntityName = parseOptionalText(row[7]);
-			const tableDescription = parseOptionalText(row[8]);
-			const businessClassification = parseRequiredText(row[9]);
-			const retentionPeriod = parseOptionalText(row[10]);
-			const tableVolume = parseRequiredText(row[11]);
-			const occurrenceCycle = parseOptionalText(row[12]);
-			const publicFlag = parseOptionalText(row[13]);
-			const nonPublicReason = parseRequiredText(row[14]);
-			const openDataList = parseRequiredText(row[15]);
+			// 헤더 기반 매핑:
+			// - 기존 내보내기 형식: 번호, 물리DB명, 테이블소유자, 주제영역, 스키마명, 테이블영문명...
+			// - BKSP 테이블정의서 형식: 순번, 물리DB명, 테이블소유자, 주제영역, schema, 테이블 영문명...
+			const physicalDbName = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['물리DB명'])
+			);
+			const tableOwner = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['테이블소유자'])
+			);
+			const subjectArea = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['주제영역'])
+			);
+			const schemaName = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['스키마명', 'schema'])
+			);
+			const tableEnglishName = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['테이블영문명', '테이블 영문명'])
+			);
+			const tableKoreanName = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['테이블한글명', '테이블 한글명'])
+			);
+			const tableType = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['테이블유형', '테이블 유형'])
+			);
+			const relatedEntityName = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['관련엔터티명', '관련 엔터티명'])
+			);
+			const tableDescription = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['테이블설명', '테이블 설명'])
+			);
+			const businessClassification = parseRequiredText(
+				getHeaderMappedValue(row, headerIndexMap, ['업무분류체계'])
+			);
+			const retentionPeriod = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['보존기간', '보존 기간'])
+			);
+			const tableVolume = parseRequiredText(
+				getHeaderMappedValue(row, headerIndexMap, ['테이블볼륨', '테이블 볼륨'])
+			);
+			const occurrenceCycle = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['발생주기'])
+			);
+			const publicFlag = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['공개/비공개여부', '공개/비공개 여부'])
+			);
+			const nonPublicReason = parseRequiredText(
+				getHeaderMappedValue(row, headerIndexMap, ['비공개사유', '비공개 사유'])
+			);
+			const openDataList = parseRequiredText(
+				getHeaderMappedValue(row, headerIndexMap, ['개방데이터목록'])
+			);
 
 			// 중복 체크
 			if (skipDuplicates && seenKeys) {

@@ -82,11 +82,61 @@ import {
 
 import { generateERDData } from '$lib/utils/erd-generator.js';
 import { validateDesignRelations } from '$lib/utils/design-relation-validator.js';
+import { loadDesignRelationContext } from '$lib/utils/design-relation-context.js';
 import {
-	getAnyExplicitDefinitionFile,
-	loadDesignRelationContext
-} from '$lib/utils/design-relation-context.js';
+	getErdFileContextInputFromUrl,
+	resolveErdFileContext
+} from '$lib/utils/erd-file-context.js';
 import type { ERDFilterOptions } from '$lib/utils/erd-filter.js';
+
+function parseListParam(url: URL, ...names: string[]): string[] {
+	return names
+		.flatMap((name) => url.searchParams.getAll(name))
+		.flatMap((value) => value.split(','))
+		.map((value) => value.trim())
+		.filter(Boolean);
+}
+
+function parseBooleanParam(value: string | null, defaultValue: boolean): boolean {
+	if (value === null) return defaultValue;
+	return !['false', '0', 'no', 'n', 'off'].includes(value.trim().toLowerCase());
+}
+
+function createFilterOptions(url: URL): ERDFilterOptions | undefined {
+	const tableIds = parseListParam(url, 'tableIds');
+	const subjectAreas = parseListParam(url, 'subjectArea', 'subjectAreas');
+	const schemas = parseListParam(url, 'schema', 'schemas');
+	const tableSearch = (
+		url.searchParams.get('q') ||
+		url.searchParams.get('tableSearch') ||
+		''
+	).trim();
+	const scopeFlags = parseListParam(url, 'scopeFlag', 'scopeFlags', 'businessScope');
+	const includeRelated = parseBooleanParam(url.searchParams.get('includeRelated'), true);
+	const includeExternalReferences = parseBooleanParam(
+		url.searchParams.get('includeExternalReferences'),
+		true
+	);
+	const hasFilter =
+		tableIds.length > 0 ||
+		subjectAreas.length > 0 ||
+		schemas.length > 0 ||
+		tableSearch.length > 0 ||
+		scopeFlags.length > 0 ||
+		!includeExternalReferences;
+
+	if (!hasFilter) return undefined;
+
+	return {
+		tableIds,
+		includeRelated,
+		subjectAreas,
+		schemas,
+		tableSearch,
+		scopeFlags,
+		includeExternalReferences
+	};
+}
 
 /**
  * ERD 생성 API
@@ -95,21 +145,16 @@ import type { ERDFilterOptions } from '$lib/utils/erd-filter.js';
 export async function GET({ url }: RequestEvent) {
 	try {
 		// 쿼리 파라미터에서 파일명들 가져오기 (선택적)
-		const databaseFile = url.searchParams.get('databaseFile') || undefined;
-		const entityFile = url.searchParams.get('entityFile') || undefined;
-		const attributeFile = url.searchParams.get('attributeFile') || undefined;
-		const tableFile = url.searchParams.get('tableFile') || undefined;
-		const columnFile = url.searchParams.get('columnFile') || undefined;
-		const domainFile = url.searchParams.get('domainFile') || undefined;
-
-		const hasExplicitFile = getAnyExplicitDefinitionFile({
+		const fileContext = await resolveErdFileContext(getErdFileContextInputFromUrl(url));
+		const {
 			databaseFile,
 			entityFile,
 			attributeFile,
 			tableFile,
 			columnFile,
-			domainFile
-		});
+			domainFile,
+			vocabularyFile
+		} = fileContext.files;
 		const { context } = await loadDesignRelationContext({
 			databaseFile,
 			entityFile,
@@ -117,25 +162,13 @@ export async function GET({ url }: RequestEvent) {
 			tableFile,
 			columnFile,
 			domainFile,
+			vocabularyFile,
 			includeDomain: true,
 			includeVocabularyMap: true,
-			fallbackToFirstWhenMissing: !hasExplicitFile
+			fallbackToFirstWhenMissing: !fileContext.hasExplicitFile
 		});
 
-		// 필터 옵션 파라미터 파싱
-		const tableIdsParam = url.searchParams.get('tableIds');
-		const includeRelatedParam = url.searchParams.get('includeRelated');
-
-		const filterOptions: ERDFilterOptions | undefined =
-			tableIdsParam && tableIdsParam.trim() !== ''
-				? {
-						tableIds: tableIdsParam
-							.split(',')
-							.map((id) => id.trim())
-							.filter((id) => id.length > 0),
-						includeRelated: includeRelatedParam !== 'false'
-					}
-				: undefined;
+		const filterOptions = createFilterOptions(url);
 
 		// ERD 데이터 생성
 		const erdData = generateERDData(context, filterOptions);
@@ -163,4 +196,3 @@ export async function GET({ url }: RequestEvent) {
 		);
 	}
 }
-

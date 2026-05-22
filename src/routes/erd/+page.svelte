@@ -1,9 +1,12 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import Breadcrumb from '$lib/components/Breadcrumb.svelte';
+	import BrowsePageLayout from '$lib/components/BrowsePageLayout.svelte';
+	import ColumnDefFileManager from '$lib/components/ColumnDefFileManager.svelte';
 	import ERDViewer from '$lib/components/ERDViewer.svelte';
 	import type { ERDData } from '$lib/types/erd-mapping.js';
 	import type { DbDesignApiResponse } from '$lib/types/database-design.js';
+	import { settingsStore } from '$lib/stores/settings-store';
+	import { filterColumnFiles } from '$lib/utils/file-filter';
 	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
 	import type {
 		DesignRelationSyncPreview,
@@ -16,6 +19,9 @@
 		tableKoreanName?: string;
 		schemaName?: string;
 		physicalDbName?: string;
+		subjectArea?: string;
+		scopeFlag?: string;
+		inBusinessScope?: boolean;
 	}
 	interface ERDDataWithValidation extends ERDData {
 		relationValidation?: DesignRelationValidationResult;
@@ -43,23 +49,33 @@
 		validationBefore: DesignRelationValidationResult;
 		validationAfter: DesignRelationValidationResult;
 	}
+	type ColumnMappingResult = {
+		mapping?: Record<string, string>;
+	};
 
 	let erdData = $state<ERDDataWithValidation | null>(null);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
 
-	// 테이블 선택 관련 상태
+	let allColumnFiles = $state<string[]>([]);
+	let columnFiles = $state<string[]>([]);
+	let selectedColumnFile = $state('column.json');
+	let showColumnSystemFiles = $state(false);
+	let isFileManagerOpen = $state(false);
+	let mappingLoading = $state(false);
+	let mappingError = $state<string | null>(null);
+	let mappedTableFile = $state<string | null>(null);
+	let definitionMapping = $state<Record<string, string>>({});
+
 	let tables = $state<ERDTableInfo[]>([]);
 	let selectedTableIds = $state<Set<string>>(new Set());
-	let selectionMode: 'single' | 'multi' = $state('multi');
+	let subjectAreaFilter = $state('');
+	let schemaFilter = $state('');
 	let tableSearchQuery = $state('');
-	let graphvizSubjectAreaFilter = $state('');
-	let graphvizSchemaFilter = $state('');
-	let graphvizTableSearchQuery = $state('');
-	let graphvizScopeFlagFilter = $state('');
-	let graphvizMode: 'logical' | 'physical' = $state('logical');
+	let debouncedTableSearchQuery = $state('');
+	let scopeFlagFilter = $state('');
+	let displayMode: 'logical' | 'physical' = $state('logical');
 	let includeExternalReferences = $state(true);
-	let showTableSelector = $state(false);
 	let includeRelated = $state(true);
 	let loadingTables = $state(false);
 	let showMappingSummary = $state(false);
@@ -70,17 +86,19 @@
 	let unifiedValidationLoading = $state(false);
 	let unifiedValidationError = $state<string | null>(null);
 
-	// 매핑 통계 계산
+	let filterRefreshTimer: ReturnType<typeof setTimeout> | null = null;
+	let tableRequestSeq = 0;
+	let erdRequestSeq = 0;
+
 	let mappingStats = $derived(() => {
 		if (!erdData) return null;
-		const stats = {
+		return {
 			databases: erdData.nodes.filter((n) => n.type === 'database').length,
 			entities: erdData.nodes.filter((n) => n.type === 'entity').length,
 			attributes: erdData.nodes.filter((n) => n.type === 'attribute').length,
 			tables: erdData.nodes.filter((n) => n.type === 'table').length,
 			columns: erdData.nodes.filter((n) => n.type === 'column').length,
 			domains: erdData.nodes.filter((n) => n.type === 'domain').length,
-			// 매핑별 카운트
 			dbEntity: erdData.mappings.filter(
 				(m) => m.sourceType === 'database' && m.targetType === 'entity'
 			).length,
@@ -118,51 +136,156 @@
 				(m) => m.sourceType === 'column' && m.targetType === 'domain'
 			).length
 		};
-		return stats;
 	});
 
-	// 필터링된 테이블 목록
+	let subjectAreaOptions = $derived(() => uniqueSorted(tables.map((table) => table.subjectArea)));
+	let schemaOptions = $derived(() => uniqueSorted(tables.map((table) => table.schemaName)));
 	let filteredTables = $derived(() => {
-		if (!tableSearchQuery.trim()) return tables;
-		const query = tableSearchQuery.toLowerCase();
-		return tables.filter(
-			(table) =>
-				table.tableEnglishName?.toLowerCase().includes(query) ||
-				table.tableKoreanName?.toLowerCase().includes(query) ||
-				table.schemaName?.toLowerCase().includes(query)
-		);
+		const query = tableSearchQuery.trim().toLowerCase();
+		return tables.filter((table) => {
+			const subjectMatches =
+				!subjectAreaFilter || table.subjectArea === subjectAreaFilter;
+			const schemaMatches = !schemaFilter || table.schemaName === schemaFilter;
+			const scopeMatches =
+				!scopeFlagFilter ||
+				(scopeFlagFilter === 'Y' && table.inBusinessScope) ||
+				(scopeFlagFilter === 'N' && !table.inBusinessScope);
+			const queryMatches =
+				!query ||
+				[table.tableEnglishName, table.tableKoreanName, table.schemaName, table.subjectArea]
+					.filter((value): value is string => Boolean(value))
+					.some((value) => value.toLowerCase().includes(query));
+			return subjectMatches && schemaMatches && scopeMatches && queryMatches;
+		});
 	});
+
+	function uniqueSorted(values: Array<string | undefined>): string[] {
+		return Array.from(
+			new Set(values.map((value) => value?.trim()).filter(Boolean) as string[])
+		).sort((a, b) => a.localeCompare(b, 'ko', { sensitivity: 'base' }));
+	}
+
+	function refreshColumnFileList(files = allColumnFiles) {
+		columnFiles = filterColumnFiles(files, showColumnSystemFiles);
+	}
+
+	function buildErdParams(options: { format?: 'svg' | 'png'; download?: boolean } = {}) {
+		const params = new URLSearchParams();
+		if (options.format) params.set('format', options.format);
+		if (options.format) params.set('mode', displayMode);
+		params.set('includeExternalReferences', includeExternalReferences.toString());
+		params.set('includeRelated', includeRelated.toString());
+		if (options.download) params.set('download', 'true');
+		if (selectedColumnFile.trim()) params.set('columnFile', selectedColumnFile.trim());
+		if (mappedTableFile?.trim()) params.set('tableFile', mappedTableFile.trim());
+		if (selectedTableIds.size > 0) params.set('tableIds', Array.from(selectedTableIds).join(','));
+		if (subjectAreaFilter.trim())
+			params.set('subjectArea', subjectAreaFilter.trim());
+		if (schemaFilter.trim()) params.set('schema', schemaFilter.trim());
+		if (debouncedTableSearchQuery.trim()) params.set('q', debouncedTableSearchQuery.trim());
+		if (scopeFlagFilter.trim()) params.set('scopeFlag', scopeFlagFilter.trim());
+		return params;
+	}
+
+	function getErdRenderUrl(format: 'svg' | 'png', download = false): string {
+		return `/api/erd/render?${buildErdParams({ format, download }).toString()}`;
+	}
+
+	function getGenerateUrl(): string {
+		const params = buildErdParams();
+		return `/api/erd/generate${params.toString() ? `?${params.toString()}` : ''}`;
+	}
+
+	function getTablesUrl(): string {
+		const params = new URLSearchParams();
+		if (selectedColumnFile.trim()) params.set('columnFile', selectedColumnFile.trim());
+		if (mappedTableFile?.trim()) params.set('tableFile', mappedTableFile.trim());
+		return `/api/erd/tables${params.toString() ? `?${params.toString()}` : ''}`;
+	}
+
+	async function loadColumnFiles() {
+		const response = await fetch('/api/column/files');
+		const result: DbDesignApiResponse<string[]> = await response.json();
+		if (!result.success || !result.data) return;
+
+		allColumnFiles = result.data;
+		refreshColumnFileList(result.data);
+		const availableFiles = columnFiles.length > 0 ? columnFiles : result.data;
+		if (availableFiles.length > 0 && !availableFiles.includes(selectedColumnFile)) {
+			selectedColumnFile = availableFiles[0];
+		}
+	}
+
+	async function loadColumnMapping(filename = selectedColumnFile) {
+		if (!filename) return;
+		mappingLoading = true;
+		mappingError = null;
+		try {
+			const response = await fetch(
+				`/api/column/files/mapping?filename=${encodeURIComponent(filename)}`
+			);
+			const result: DbDesignApiResponse<ColumnMappingResult> = await response.json();
+
+			if (!result.success || !result.data?.mapping) {
+				definitionMapping = {};
+				mappedTableFile = null;
+				mappingError = result.error || '컬럼 정의서 매핑을 불러오지 못했습니다.';
+				return;
+			}
+
+			definitionMapping = result.data.mapping;
+			mappedTableFile = result.data.mapping.table || null;
+		} catch (err) {
+			console.error('컬럼 정의서 매핑 로드 오류:', err);
+			definitionMapping = {};
+			mappedTableFile = null;
+			mappingError =
+				err instanceof Error ? err.message : '컬럼 정의서 매핑 로드 중 오류가 발생했습니다.';
+		} finally {
+			mappingLoading = false;
+		}
+	}
+
+	function normalizeFiltersAfterTableLoad() {
+		const subjects = subjectAreaOptions();
+		const schemas = schemaOptions();
+		if (subjectAreaFilter && !subjects.includes(subjectAreaFilter)) {
+			subjectAreaFilter = '';
+		}
+		if (schemaFilter && !schemas.includes(schemaFilter)) {
+			schemaFilter = '';
+		}
+		const validIds = new Set(tables.map((table) => table.id));
+		selectedTableIds = new Set(Array.from(selectedTableIds).filter((id) => validIds.has(id)));
+	}
 
 	async function loadTables() {
+		const requestSeq = ++tableRequestSeq;
 		loadingTables = true;
 		try {
-			const response = await fetch('/api/erd/tables');
+			const response = await fetch(getTablesUrl());
 			const result: DbDesignApiResponse<ERDTableInfo[]> = await response.json();
+			if (requestSeq !== tableRequestSeq) return;
 
 			if (result.success && result.data) {
 				tables = result.data;
+				normalizeFiltersAfterTableLoad();
 			}
 		} catch (err) {
 			console.error('테이블 목록 로드 오류:', err);
 		} finally {
-			loadingTables = false;
+			if (requestSeq === tableRequestSeq) loadingTables = false;
 		}
 	}
 
-	async function loadERDData(tableIds?: string[]) {
+	async function loadERDData() {
+		const requestSeq = ++erdRequestSeq;
 		loading = true;
 		error = null;
-
 		try {
-			const params = new URLSearchParams();
-			if (tableIds && tableIds.length > 0) {
-				params.set('tableIds', tableIds.join(','));
-				params.set('includeRelated', includeRelated.toString());
-			}
-
-			const url = `/api/erd/generate${params.toString() ? `?${params.toString()}` : ''}`;
-			const response = await fetch(url);
+			const response = await fetch(getGenerateUrl());
 			const result: DbDesignApiResponse<ERDDataWithValidation> = await response.json();
+			if (requestSeq !== erdRequestSeq) return;
 
 			if (result.success && result.data) {
 				erdData = result.data;
@@ -173,73 +296,72 @@
 			console.error('ERD 로드 오류:', err);
 			error = err instanceof Error ? err.message : 'ERD 데이터를 불러오는 중 오류가 발생했습니다.';
 		} finally {
-			loading = false;
+			if (requestSeq === erdRequestSeq) loading = false;
 		}
+	}
+
+	async function reloadForColumnFile() {
+		selectedTableIds = new Set();
+		subjectAreaFilter = '';
+		schemaFilter = '';
+		tableSearchQuery = '';
+		debouncedTableSearchQuery = '';
+		scopeFlagFilter = '';
+		relationSyncResult = null;
+		await loadColumnMapping(selectedColumnFile);
+		await loadTables();
+		await loadERDData();
+	}
+
+	function refreshErdImmediately() {
+		debouncedTableSearchQuery = tableSearchQuery;
+		void loadERDData();
+	}
+
+	function scheduleTableSearchRefresh() {
+		if (filterRefreshTimer) clearTimeout(filterRefreshTimer);
+		filterRefreshTimer = setTimeout(() => {
+			debouncedTableSearchQuery = tableSearchQuery;
+			void loadERDData();
+		}, 250);
 	}
 
 	function handleTableToggle(tableId: string) {
-		if (selectionMode === 'single') {
-			selectedTableIds.clear();
-			selectedTableIds.add(tableId);
+		if (selectedTableIds.has(tableId)) {
+			selectedTableIds.delete(tableId);
 		} else {
-			if (selectedTableIds.has(tableId)) {
-				selectedTableIds.delete(tableId);
-			} else {
-				selectedTableIds.add(tableId);
-			}
+			selectedTableIds.add(tableId);
 		}
-		// 반응성을 위해 새 Set 생성
 		selectedTableIds = new Set(selectedTableIds);
+		refreshErdImmediately();
 	}
 
 	function handleSelectAll() {
-		if (selectionMode === 'single') return;
-		selectedTableIds = new Set(filteredTables().map((t) => t.id));
+		selectedTableIds = new Set(filteredTables().map((table) => table.id));
+		refreshErdImmediately();
 	}
 
 	function handleDeselectAll() {
 		selectedTableIds = new Set();
+		refreshErdImmediately();
 	}
 
-	function handleGenerateERD() {
-		if (selectedTableIds.size === 0) {
-			// 전체 보기
-			loadERDData();
-		} else {
-			loadERDData(Array.from(selectedTableIds));
-		}
-		showTableSelector = false;
+	async function handleFileSelect(filename: string) {
+		if (selectedColumnFile === filename) return;
+		selectedColumnFile = filename;
+		await reloadForColumnFile();
 	}
 
-	function handleViewAll() {
-		selectedTableIds = new Set();
-		loadERDData();
-		showTableSelector = false;
+	async function handleRefresh() {
+		await loadColumnMapping(selectedColumnFile);
+		await loadTables();
+		await loadERDData();
+		await loadUnifiedValidationSummary();
 	}
 
-	function getGraphvizRenderUrl(format: 'svg' | 'png', download = false): string {
-		const params = new URLSearchParams();
-		params.set('format', format);
-		params.set('mode', graphvizMode);
-		params.set('includeExternalReferences', includeExternalReferences.toString());
-		if (download) params.set('download', 'true');
-		if (selectedTableIds.size > 0) params.set('tableIds', Array.from(selectedTableIds).join(','));
-		if (graphvizSubjectAreaFilter.trim()) {
-			params.set('subjectArea', graphvizSubjectAreaFilter.trim());
-		}
-		if (graphvizSchemaFilter.trim()) {
-			params.set('schema', graphvizSchemaFilter.trim());
-		}
-		if (graphvizTableSearchQuery.trim()) {
-			params.set('q', graphvizTableSearchQuery.trim());
-		}
-		if (graphvizScopeFlagFilter.trim()) {
-			params.set('scopeFlag', graphvizScopeFlagFilter.trim());
-		}
-		return `/api/erd/render?${params.toString()}`;
-	}
-
-	async function loadUnifiedValidationSummary(termFilename = 'term.json') {
+	async function loadUnifiedValidationSummary(
+		termFilename = definitionMapping.term || 'term.json'
+	) {
 		unifiedValidationLoading = true;
 		unifiedValidationError = null;
 		try {
@@ -275,24 +397,18 @@
 		}
 	}
 
-	async function handleRefresh() {
-		if (selectedTableIds.size === 0) {
-			await loadERDData();
-		} else {
-			await loadERDData(Array.from(selectedTableIds));
-		}
-		await loadUnifiedValidationSummary();
-	}
-
 	async function handleRelationSyncPreview() {
 		relationSyncLoading = true;
 		relationSyncError = null;
-
 		try {
 			const response = await fetch('/api/erd/relations/sync', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ apply: false })
+				body: JSON.stringify({
+					apply: false,
+					columnFile: selectedColumnFile,
+					tableFile: mappedTableFile ?? undefined
+				})
 			});
 			const result: DbDesignApiResponse<RelationSyncResult> = await response.json();
 
@@ -312,613 +428,437 @@
 	}
 
 	onMount(() => {
-		loadTables();
-		loadERDData();
-		loadUnifiedValidationSummary();
+		const unsubscribe = settingsStore.subscribe((settings) => {
+			showColumnSystemFiles = settings.showColumnSystemFiles ?? false;
+			refreshColumnFileList();
+		});
+
+		void (async () => {
+			await loadColumnFiles();
+			await reloadForColumnFile();
+			await loadUnifiedValidationSummary();
+		})();
+
+		return () => {
+			unsubscribe();
+			if (filterRefreshTimer) clearTimeout(filterRefreshTimer);
+		};
 	});
 </script>
 
 <svelte:head>
 	<title>ERD 다이어그램 - DbManager</title>
-	<meta name="description" content="데이터베이스 ERD 다이어그램을 생성하고 시각화합니다." />
+	<meta
+		name="description"
+		content="컬럼 정의서와 매핑된 테이블 정의서를 기준으로 ERD 이미지를 생성합니다."
+	/>
 </svelte:head>
 
-<div class="flex h-screen flex-col">
-	<!-- 페이지 헤더 -->
-	<header class="border-b border-gray-200 bg-white px-4 py-4 sm:px-6 lg:px-8">
-		<Breadcrumb items={getNavigationBreadcrumbItems('/erd')} />
-		<div class="flex items-center justify-between">
-			<div>
-				<h1 class="text-2xl font-bold text-gray-900">ERD 다이어그램</h1>
-				<p class="mt-1 text-sm text-gray-600">
-					등록된 DB, 엔터티, 속성, 테이블, 컬럼 데이터를 기반으로 ERD를 생성합니다.
-				</p>
-			</div>
-			<div class="flex gap-2">
+{#snippet sidebar()}
+	<div class="space-y-4">
+		<section
+			aria-label="ERD 컬럼 정의서 파일 선택"
+			class="rounded-2xl border border-border bg-surface/95 p-4 shadow-xl backdrop-blur-md dark:bg-surface/90"
+		>
+			<div class="mb-4 flex items-center justify-between">
+				<h2 class="text-lg font-bold text-gray-900">정의서 파일</h2>
 				<button
-					onclick={() => {
-						showMappingSummary = !showMappingSummary;
-					}}
-					class="rounded-lg border px-4 py-2 text-sm font-medium transition-colors {showMappingSummary
-						? 'border-indigo-300 bg-indigo-50 text-indigo-700'
-						: 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}"
+					type="button"
+					onclick={() => (isFileManagerOpen = true)}
+					class="text-gray-500 hover:text-blue-600"
+					title="파일 관리"
+					aria-label="파일 관리"
 				>
-					연관관계 요약
-				</button>
-				<button
-					onclick={() => {
-						showTableSelector = !showTableSelector;
-					}}
-					class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
-				>
-					테이블 선택
-				</button>
-				<button
-					onclick={handleRefresh}
-					disabled={loading}
-					class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-				>
-					{#if loading}
-						<span class="flex items-center gap-2">
-							<svg
-								class="h-4 w-4 animate-spin"
-								fill="none"
-								stroke="currentColor"
-								viewBox="0 0 24 24"
-							>
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-								/>
-							</svg>
-							생성 중...
-						</span>
-					{:else}
-						<span class="flex items-center gap-2">
-							<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									stroke-width="2"
-									d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-								/>
-							</svg>
-							새로고침
-						</span>
-					{/if}
+					<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+						/>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+						/>
+					</svg>
 				</button>
 			</div>
-		</div>
-	</header>
+			<div class="space-y-2">
+				{#each columnFiles as file (file)}
+					<button
+						type="button"
+						onclick={() => handleFileSelect(file)}
+						class="w-full rounded-lg px-4 py-2 text-left text-sm font-medium transition-colors duration-200 {selectedColumnFile ===
+						file
+							? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200'
+							: 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}"
+					>
+						{file}
+					</button>
+				{/each}
+				{#if columnFiles.length === 0}
+					<div class="px-4 py-2 text-sm text-gray-500">파일이 없습니다.</div>
+				{/if}
+			</div>
+		</section>
 
-	<!-- Graphviz ERD 필터 패널 -->
-	<div class="border-b border-gray-200 bg-slate-50 px-4 py-4 sm:px-6 lg:px-8">
-		<div class="grid grid-cols-1 gap-3 lg:grid-cols-6">
-			<div>
-				<label for="graphvizMode" class="mb-1 block text-xs font-medium text-gray-700">
-					표시 모드
-				</label>
-				<select
-					id="graphvizMode"
-					bind:value={graphvizMode}
-					class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-				>
-					<option value="logical">논리 이미지</option>
-					<option value="physical">물리 이미지</option>
-				</select>
+		<section
+			aria-label="ERD 매핑 기준"
+			class="rounded-2xl border border-border bg-surface/95 p-4 shadow-xl backdrop-blur-md dark:bg-surface/90"
+		>
+			<h2 class="mb-3 text-sm font-semibold text-gray-900">매핑 기준</h2>
+			<div class="space-y-2 text-xs text-gray-600">
+				<div class="rounded-lg bg-gray-50 p-2">
+					<div class="font-medium text-gray-500">컬럼 정의서</div>
+					<div class="mt-1 break-all font-semibold text-gray-900">{selectedColumnFile}</div>
+				</div>
+				<div class="rounded-lg bg-gray-50 p-2">
+					<div class="font-medium text-gray-500">매핑된 테이블 정의서</div>
+					<div class="mt-1 break-all font-semibold text-gray-900">
+						{#if mappingLoading}
+							확인 중...
+						{:else if mappedTableFile}
+							{mappedTableFile}
+						{:else}
+							매핑 없음
+						{/if}
+					</div>
+				</div>
+				{#if mappingError}
+					<p class="rounded-lg border border-amber-200 bg-amber-50 p-2 text-amber-700">
+						{mappingError}
+					</p>
+				{/if}
+				<p class="text-gray-500">설정 버튼에서 정의서 매핑을 확인하고 수정할 수 있습니다.</p>
 			</div>
-			<div>
-				<label for="subjectAreaFilter" class="mb-1 block text-xs font-medium text-gray-700">
-					주제영역
-				</label>
-				<input
-					id="subjectAreaFilter"
-					type="text"
-					placeholder="예: 회원,주문"
-					bind:value={graphvizSubjectAreaFilter}
-					class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-				/>
-			</div>
-			<div>
-				<label for="schemaFilter" class="mb-1 block text-xs font-medium text-gray-700">schema</label>
-				<input
-					id="schemaFilter"
-					type="text"
-					placeholder="예: bksp"
-					bind:value={graphvizSchemaFilter}
-					class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-				/>
-			</div>
-			<div>
-				<label for="erdTableSearch" class="mb-1 block text-xs font-medium text-gray-700">
-					테이블명 검색
-				</label>
-				<input
-					id="erdTableSearch"
-					type="text"
-					placeholder="영문/한글"
-					bind:value={graphvizTableSearchQuery}
-					class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-				/>
-			</div>
-			<div>
-				<label for="scopeFlagFilter" class="mb-1 block text-xs font-medium text-gray-700">
-					사업범위여부
-				</label>
-				<select
-					id="scopeFlagFilter"
-					bind:value={graphvizScopeFlagFilter}
-					class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-				>
-					<option value="">전체</option>
-					<option value="Y">사업범위</option>
-					<option value="N">사업범위 외</option>
-				</select>
-			</div>
-			<div class="flex flex-col justify-end gap-2">
+		</section>
+
+		<section
+			aria-label="ERD 조회 조건"
+			class="rounded-2xl border border-border bg-surface/95 p-4 shadow-xl backdrop-blur-md dark:bg-surface/90"
+		>
+			<h2 class="mb-3 text-sm font-semibold text-gray-900">조회 조건</h2>
+			<div class="space-y-3">
+				<div>
+					<label for="displayMode" class="mb-1 block text-xs font-medium text-gray-700"
+						>표시 모드</label
+					>
+					<select
+						id="displayMode"
+						bind:value={displayMode}
+						class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+					>
+						<option value="logical">논리 이미지</option>
+						<option value="physical">물리 이미지</option>
+					</select>
+				</div>
+				<div>
+					<label for="subjectAreaFilter" class="mb-1 block text-xs font-medium text-gray-700"
+						>주제영역</label
+					>
+					<select
+						id="subjectAreaFilter"
+						bind:value={subjectAreaFilter}
+						onchange={refreshErdImmediately}
+						class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+					>
+						<option value="">전체</option>
+						{#each subjectAreaOptions() as subjectArea (subjectArea)}
+							<option value={subjectArea}>{subjectArea}</option>
+						{/each}
+					</select>
+				</div>
+				<div>
+					<label for="schemaFilter" class="mb-1 block text-xs font-medium text-gray-700"
+						>schema</label
+					>
+					<select
+						id="schemaFilter"
+						bind:value={schemaFilter}
+						onchange={refreshErdImmediately}
+						class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+					>
+						<option value="">전체</option>
+						{#each schemaOptions() as schemaName (schemaName)}
+							<option value={schemaName}>{schemaName}</option>
+						{/each}
+					</select>
+				</div>
+				<div>
+					<label for="erdTableSearch" class="mb-1 block text-xs font-medium text-gray-700"
+						>테이블명 검색</label
+					>
+					<input
+						id="erdTableSearch"
+						type="text"
+						placeholder="영문/한글/schema"
+						bind:value={tableSearchQuery}
+						oninput={scheduleTableSearchRefresh}
+						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+					/>
+				</div>
+				<div>
+					<label for="scopeFlagFilter" class="mb-1 block text-xs font-medium text-gray-700"
+						>사업범위여부</label
+					>
+					<select
+						id="scopeFlagFilter"
+						bind:value={scopeFlagFilter}
+						onchange={refreshErdImmediately}
+						class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+					>
+						<option value="">전체</option>
+						<option value="Y">사업범위</option>
+						<option value="N">사업범위 외</option>
+					</select>
+				</div>
 				<label class="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
 					<input
 						type="checkbox"
 						bind:checked={includeExternalReferences}
+						onchange={refreshErdImmediately}
 						class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
 					/>
 					FK 외부참조 포함
 				</label>
-				<div class="flex gap-2">
-					<a
-						href={getGraphvizRenderUrl('svg', true)}
-						download
-						class="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-center text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50"
-					>
-						SVG
-					</a>
-					<a
-						href={getGraphvizRenderUrl('png', true)}
-						download
-						class="flex-1 rounded-lg bg-blue-600 px-3 py-2 text-center text-xs font-medium text-white transition-colors hover:bg-blue-700"
-					>
-						PNG
-					</a>
-				</div>
-			</div>
-		</div>
-	</div>
-
-	<!-- 테이블 선택 패널 -->
-	{#if showTableSelector}
-		<div class="border-b border-gray-200 bg-gray-50 px-4 py-4 sm:px-6 lg:px-8">
-			<div class="space-y-4">
-				<!-- 선택 모드 및 옵션 -->
-				<div class="flex flex-wrap items-center gap-4">
-					<div class="flex items-center gap-2">
-						<span class="text-sm font-medium text-gray-700">선택 모드:</span>
-						<label class="flex cursor-pointer items-center gap-2">
-							<input
-								type="radio"
-								name="selectionMode"
-								value="single"
-								bind:group={selectionMode}
-								class="h-4 w-4 text-blue-600 focus:ring-blue-500"
-							/>
-							<span class="text-sm text-gray-700">단일 선택</span>
-						</label>
-						<label class="flex cursor-pointer items-center gap-2">
-							<input
-								type="radio"
-								name="selectionMode"
-								value="multi"
-								bind:group={selectionMode}
-								class="h-4 w-4 text-blue-600 focus:ring-blue-500"
-							/>
-							<span class="text-sm text-gray-700">다중 선택</span>
-						</label>
-					</div>
-					<div class="flex items-center gap-2">
-						<input
-							type="checkbox"
-							id="includeRelated"
-							bind:checked={includeRelated}
-							class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-						/>
-						<label for="includeRelated" class="cursor-pointer text-sm text-gray-700">
-							관련 엔터티/속성 포함
-						</label>
-					</div>
-				</div>
-
-				<!-- 검색 및 선택 버튼 -->
-				<div class="flex flex-wrap items-center gap-2">
+				<label class="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
 					<input
-						type="text"
-						placeholder="테이블명으로 검색..."
-						bind:value={tableSearchQuery}
-						class="min-w-[200px] flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+						type="checkbox"
+						bind:checked={includeRelated}
+						onchange={refreshErdImmediately}
+						class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
 					/>
-					{#if selectionMode === 'multi'}
-						<button
-							onclick={handleSelectAll}
-							class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
-						>
-							전체 선택
-						</button>
-						<button
-							onclick={handleDeselectAll}
-							class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
-						>
-							전체 해제
-						</button>
-					{/if}
-					<button
-						onclick={handleGenerateERD}
-						disabled={loading || (selectionMode === 'single' && selectedTableIds.size === 0)}
-						class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-					>
-						ERD 생성
-					</button>
-					<button
-						onclick={handleViewAll}
-						class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
-					>
-						전체 보기
-					</button>
-				</div>
+					관련 논리 정의 포함
+				</label>
+			</div>
+		</section>
 
-				<!-- 선택된 테이블 표시 -->
-				{#if selectedTableIds.size > 0}
-					<div class="flex flex-wrap items-center gap-2">
-						<span class="text-sm font-medium text-gray-700"
-							>선택됨 ({selectedTableIds.size}개):</span
-						>
-						{#each Array.from(selectedTableIds) as tableId (tableId)}
-							{@const table = tables.find((t) => t.id === tableId)}
-							{#if table}
-								<span
-									class="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800"
-								>
-									{table.tableEnglishName || table.tableKoreanName || tableId}
-									<button
-										onclick={() => handleTableToggle(tableId)}
-										class="text-blue-600 hover:text-blue-800"
-									>
-										×
-									</button>
-								</span>
-							{/if}
+		<section
+			aria-label="ERD 테이블 다중 선택"
+			class="rounded-2xl border border-border bg-surface/95 p-4 shadow-xl backdrop-blur-md dark:bg-surface/90"
+		>
+			<div class="mb-3 flex items-center justify-between gap-2">
+				<h2 class="text-sm font-semibold text-gray-900">테이블 선택</h2>
+				<span class="text-xs text-gray-500">{selectedTableIds.size}개 선택</span>
+			</div>
+			<div class="mb-3 flex gap-2">
+				<button
+					type="button"
+					onclick={handleSelectAll}
+					class="flex-1 rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+				>
+					전체 선택
+				</button>
+				<button
+					type="button"
+					onclick={handleDeselectAll}
+					class="flex-1 rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+				>
+					전체 해제
+				</button>
+			</div>
+			<div class="max-h-80 overflow-y-auto rounded-lg border border-gray-200 bg-white">
+				{#if loadingTables}
+					<div class="flex items-center justify-center p-4 text-sm text-gray-500">
+						테이블 로딩 중...
+					</div>
+				{:else if filteredTables().length === 0}
+					<div class="p-4 text-center text-sm text-gray-500">조건에 맞는 테이블이 없습니다.</div>
+				{:else}
+					<div class="divide-y divide-gray-200">
+						{#each filteredTables() as table (table.id)}
+							<label class="flex cursor-pointer items-start gap-3 px-3 py-2 hover:bg-gray-50">
+								<input
+									type="checkbox"
+									checked={selectedTableIds.has(table.id)}
+									onchange={() => handleTableToggle(table.id)}
+									class="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+								/>
+								<div class="min-w-0 flex-1">
+									<div class="truncate text-sm font-medium text-gray-900">
+										{table.tableEnglishName || '이름 없음'}
+									</div>
+									<div class="mt-0.5 truncate text-xs text-gray-500">
+										{table.tableKoreanName || '-'} · {table.schemaName || '-'} · {table.subjectArea ||
+											'-'}
+									</div>
+								</div>
+							</label>
 						{/each}
 					</div>
 				{/if}
-
-				<!-- 테이블 목록 -->
-				<div class="max-h-64 overflow-y-auto rounded-lg border border-gray-200 bg-white">
-					{#if loadingTables}
-						<div class="flex items-center justify-center p-4">
-							<div
-								class="h-6 w-6 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"
-							></div>
-						</div>
-					{:else if filteredTables().length === 0}
-						<div class="p-4 text-center text-sm text-gray-500">테이블이 없습니다.</div>
-					{:else}
-						<div class="divide-y divide-gray-200">
-							{#each filteredTables() as table (table.id)}
-								<label class="flex cursor-pointer items-center gap-3 px-4 py-2 hover:bg-gray-50">
-									<input
-										type={selectionMode === 'single' ? 'radio' : 'checkbox'}
-										name={selectionMode === 'single' ? 'tableSelect' : undefined}
-										checked={selectedTableIds.has(table.id)}
-										onchange={() => handleTableToggle(table.id)}
-										class="h-4 w-4 text-blue-600 focus:ring-blue-500"
-									/>
-									<div class="flex-1">
-										<div class="text-sm font-medium text-gray-900">
-											{table.tableEnglishName || '이름 없음'}
-										</div>
-										{#if table.tableKoreanName || table.schemaName}
-											<div class="text-xs text-gray-500">
-												{#if table.tableKoreanName}
-													{table.tableKoreanName}
-												{/if}
-												{#if table.schemaName}
-													{#if table.tableKoreanName}
-														·
-													{/if}
-													스키마: {table.schemaName}
-												{/if}
-											</div>
-										{/if}
-									</div>
-								</label>
-							{/each}
-						</div>
-					{/if}
-				</div>
 			</div>
-		</div>
-	{/if}
+		</section>
 
-	<!-- 연관관계 요약 패널 -->
+		<section
+			aria-label="ERD 이미지 다운로드"
+			class="rounded-2xl border border-border bg-surface/95 p-4 shadow-xl backdrop-blur-md dark:bg-surface/90"
+		>
+			<h2 class="mb-3 text-sm font-semibold text-gray-900">이미지 다운로드</h2>
+			<div class="flex gap-2">
+				<a
+					href={getErdRenderUrl('svg', true)}
+					download
+					class="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-center text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50"
+				>
+					SVG
+				</a>
+				<a
+					href={getErdRenderUrl('png', true)}
+					download
+					class="flex-1 rounded-lg bg-blue-600 px-3 py-2 text-center text-xs font-medium text-white transition-colors hover:bg-blue-700"
+				>
+					PNG
+				</a>
+			</div>
+		</section>
+	</div>
+{/snippet}
+
+{#snippet actions()}
+	<button
+		type="button"
+		onclick={() => (showMappingSummary = !showMappingSummary)}
+		class="rounded-lg border px-4 py-2 text-sm font-medium transition-colors {showMappingSummary
+			? 'border-indigo-300 bg-indigo-50 text-indigo-700'
+			: 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}"
+	>
+		연관관계 요약
+	</button>
+	<button
+		type="button"
+		onclick={handleRefresh}
+		disabled={loading}
+		class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+	>
+		{loading ? '생성 중...' : '새로고침'}
+	</button>
+{/snippet}
+
+<BrowsePageLayout
+	title="ERD 다이어그램"
+	description={`현재 컬럼 정의서: ${selectedColumnFile}`}
+	breadcrumbItems={getNavigationBreadcrumbItems('/erd')}
+	sidebarSurface="plain"
+	{sidebar}
+	{actions}
+>
+	<ColumnDefFileManager
+		isOpen={isFileManagerOpen}
+		currentFilename={selectedColumnFile}
+		on:close={() => (isFileManagerOpen = false)}
+		on:change={async () => {
+			await loadColumnFiles();
+			await reloadForColumnFile();
+		}}
+	/>
+
 	{#if showMappingSummary && erdData}
 		{@const stats = mappingStats()}
 		{#if stats}
-			<div class="border-b border-gray-200 bg-white px-4 py-4 sm:px-6 lg:px-8">
-				<div class="space-y-4">
-					<h3 class="text-sm font-semibold text-gray-900">데이터 연관관계 요약</h3>
-
-					<!-- 노드 통계 -->
-					<div class="grid grid-cols-3 gap-3 sm:grid-cols-6">
-						<div class="rounded-lg border border-blue-200 bg-blue-50 p-2 text-center">
-							<div class="text-lg font-bold text-blue-700">{stats.databases}</div>
-							<div class="text-xs text-blue-600">데이터베이스</div>
-						</div>
-						<div class="rounded-lg border border-green-200 bg-green-50 p-2 text-center">
-							<div class="text-lg font-bold text-green-700">{stats.entities}</div>
-							<div class="text-xs text-green-600">엔터티</div>
-						</div>
-						<div class="rounded-lg border border-teal-200 bg-teal-50 p-2 text-center">
-							<div class="text-lg font-bold text-teal-700">{stats.attributes}</div>
-							<div class="text-xs text-teal-600">속성</div>
-						</div>
-						<div class="rounded-lg border border-purple-200 bg-purple-50 p-2 text-center">
-							<div class="text-lg font-bold text-purple-700">{stats.tables}</div>
-							<div class="text-xs text-purple-600">테이블</div>
-						</div>
-						<div class="rounded-lg border border-orange-200 bg-orange-50 p-2 text-center">
-							<div class="text-lg font-bold text-orange-700">{stats.columns}</div>
-							<div class="text-xs text-orange-600">컬럼</div>
-						</div>
-						<div class="rounded-lg border border-pink-200 bg-pink-50 p-2 text-center">
-							<div class="text-lg font-bold text-pink-700">{stats.domains}</div>
-							<div class="text-xs text-pink-600">도메인</div>
-						</div>
+			<section class="mb-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+				<div class="mb-3 flex items-center justify-between">
+					<h2 class="text-sm font-semibold text-gray-900">데이터 연관관계 요약</h2>
+					<button
+						type="button"
+						onclick={handleRelationSyncPreview}
+						disabled={relationSyncLoading}
+						class="rounded border border-amber-300 bg-white px-2 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+					>
+						{relationSyncLoading ? '확인 중...' : '보정 미리보기'}
+					</button>
+				</div>
+				<div class="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3 lg:grid-cols-6">
+					<div class="rounded-lg border border-blue-200 bg-blue-50 p-2 text-center">
+						<div class="font-bold text-blue-700">{stats.databases}</div>
+						<div class="text-xs text-blue-600">데이터베이스</div>
 					</div>
-
-					<!-- 매핑 관계 상세 -->
-					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-						<!-- 논리적 계층 -->
-						<div class="rounded-lg border border-gray-200 p-3">
-							<h4 class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
-								논리적 계층
-							</h4>
-							<div class="space-y-1 text-sm">
-								<div class="flex justify-between">
-									<span class="text-gray-600">DB → 엔터티</span>
-									<span class="font-medium text-gray-900">{stats.dbEntity}건</span>
-								</div>
-								<div class="flex justify-between">
-									<span class="text-gray-600">엔터티 → 속성</span>
-									<span class="font-medium text-gray-900">{stats.entityAttribute}건</span>
-								</div>
-								<div class="flex justify-between">
-									<span class="text-gray-600">엔터티 상속</span>
-									<span class="font-medium text-gray-900">{stats.entityInheritance}건</span>
-								</div>
-								<div class="flex justify-between">
-									<span class="text-gray-600">속성 → 엔터티 참조</span>
-									<span class="font-medium text-gray-900">{stats.attributeEntityRef}건</span>
-								</div>
-							</div>
-						</div>
-
-						<!-- 물리적 계층 -->
-						<div class="rounded-lg border border-gray-200 p-3">
-							<h4 class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
-								물리적 계층
-							</h4>
-							<div class="space-y-1 text-sm">
-								<div class="flex justify-between">
-									<span class="text-gray-600">DB → 테이블</span>
-									<span class="font-medium text-gray-900">{stats.dbTable}건</span>
-								</div>
-								<div class="flex justify-between">
-									<span class="text-gray-600">테이블 → 컬럼</span>
-									<span class="font-medium text-gray-900">{stats.tableColumn}건</span>
-								</div>
-								<div class="flex justify-between">
-									<span class="text-gray-600">컬럼 FK 관계</span>
-									<span class="font-medium text-gray-900">{stats.columnFK}건</span>
-								</div>
-							</div>
-						</div>
-
-						<!-- 논리-물리 / 도메인 계층 -->
-						<div class="rounded-lg border border-gray-200 p-3">
-							<h4 class="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-500">
-								논리-물리 / 도메인
-							</h4>
-							<div class="space-y-1 text-sm">
-								<div class="flex justify-between">
-									<span class="text-gray-600">테이블 → 엔터티</span>
-									<span class="font-medium text-gray-900">{stats.tableEntity}건</span>
-								</div>
-								<div class="flex justify-between">
-									<span class="text-gray-600">컬럼 → 엔터티</span>
-									<span class="font-medium text-gray-900">{stats.columnEntity}건</span>
-								</div>
-								<div class="flex justify-between">
-									<span class="text-gray-600">속성 → 컬럼</span>
-									<span class="font-medium text-gray-900">{stats.attributeColumn}건</span>
-								</div>
-								<div class="flex justify-between">
-									<span class="text-gray-600">컬럼 → 도메인</span>
-									<span class="font-medium text-gray-900">{stats.columnDomain}건</span>
-								</div>
-							</div>
-						</div>
+					<div class="rounded-lg border border-green-200 bg-green-50 p-2 text-center">
+						<div class="font-bold text-green-700">{stats.entities}</div>
+						<div class="text-xs text-green-600">엔터티</div>
 					</div>
-
-					{#if erdData.relationValidation}
-						<div class="rounded-lg border border-amber-200 bg-amber-50 p-3">
-							<div class="mb-2 flex items-center justify-between">
-								<h4 class="text-xs font-semibold uppercase tracking-wider text-amber-700">
-									5개 정의서 정합성
-								</h4>
-								<div class="flex items-center gap-2">
-									<span class="text-xs text-amber-700">
-										검사 {erdData.relationValidation.totals.totalChecked}건
-									</span>
-									<button
-										onclick={handleRelationSyncPreview}
-										disabled={relationSyncLoading}
-										class="rounded border border-amber-300 bg-white px-2 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
-									>
-										보정 미리보기
-									</button>
-								</div>
-							</div>
-							<div class="mb-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
-								<div class="rounded border border-green-200 bg-white p-2 text-center">
-									<div class="font-semibold text-green-700">
-										{erdData.relationValidation.totals.matched}
-									</div>
-									<div class="text-xs text-green-600">매칭</div>
-								</div>
-								<div class="rounded border border-red-200 bg-white p-2 text-center">
-									<div class="font-semibold text-red-700">
-										{erdData.relationValidation.totals.errorCount}
-									</div>
-									<div class="text-xs text-red-600">오류</div>
-								</div>
-								<div class="rounded border border-yellow-200 bg-white p-2 text-center">
-									<div class="font-semibold text-yellow-700">
-										{erdData.relationValidation.totals.warningCount}
-									</div>
-									<div class="text-xs text-yellow-600">경고</div>
-								</div>
-								<div class="rounded border border-gray-200 bg-white p-2 text-center">
-									<div class="font-semibold text-gray-700">
-										{erdData.relationValidation.totals.unmatched}
-									</div>
-									<div class="text-xs text-gray-600">총 미매칭</div>
-								</div>
-							</div>
-							<div class="grid grid-cols-1 gap-1 text-xs text-gray-700 sm:grid-cols-2">
-								{#each erdData.relationValidation.summaries as summary (summary.relationId)}
-									<div class="flex items-center justify-between rounded bg-white px-2 py-1">
-										<span>{summary.relationName}</span>
-										<span
-											class={summary.severity === 'error'
-												? 'font-medium text-red-700'
-												: 'font-medium text-yellow-700'}>{summary.unmatched}</span
-										>
-									</div>
-								{/each}
-							</div>
-							{#if relationSyncError}
-								<div
-									class="mt-2 rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700"
-								>
-									{relationSyncError}
-								</div>
-							{/if}
-							{#if relationSyncResult}
-								<div class="mt-2 rounded border border-blue-200 bg-white p-2 text-xs text-gray-700">
-									<div class="mb-1 font-semibold text-blue-700">
-										최근 동기화 결과 ({relationSyncResult.mode === 'apply' ? '실행' : '미리보기'})
-									</div>
-									<div class="grid grid-cols-2 gap-1 sm:grid-cols-4">
-										<div>후보 테이블: {relationSyncResult.counts.tableCandidates}</div>
-										<div>후보 컬럼: {relationSyncResult.counts.columnCandidates}</div>
-										<div>
-											추천(속성→컬럼): {relationSyncResult.counts.attributeColumnSuggestions}
-										</div>
-										<div>실제 반영: {relationSyncResult.counts.appliedTotalUpdates}</div>
-									</div>
-								</div>
-							{/if}
-						</div>
-					{/if}
-
-					<div class="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
-						<div class="mb-2 flex items-center justify-between">
-							<h4 class="text-xs font-semibold uppercase tracking-wider text-indigo-700">
-								통합 정합성 요약
-							</h4>
-							<div class="flex items-center gap-2">
-								<button
-									onclick={() => loadUnifiedValidationSummary()}
-									disabled={unifiedValidationLoading || relationSyncLoading}
-									class="rounded border border-indigo-300 bg-white px-2 py-1 text-xs font-medium text-indigo-700 transition-colors hover:bg-indigo-100 disabled:cursor-not-allowed disabled:opacity-50"
-								>
-									통합 재검증
-								</button>
-							</div>
-						</div>
-						<div class="mb-2 grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
-							<div class="rounded border border-amber-200 bg-white p-2 text-center">
-								<div class="font-semibold text-amber-700">
-									{unifiedValidationSummary
-										? unifiedValidationSummary.relationUnmatchedCount
-										: erdData.relationValidation
-											? erdData.relationValidation.totals.unmatched
-											: 0}
-								</div>
-								<div class="text-xs text-amber-600">관계 미매칭</div>
-							</div>
-							<div class="rounded border border-rose-200 bg-white p-2 text-center">
-								<div class="font-semibold text-rose-700">
-									{unifiedValidationSummary ? unifiedValidationSummary.termFailedCount : 0}
-								</div>
-								<div class="text-xs text-rose-600">용어계 실패</div>
-							</div>
-							<div class="rounded border border-green-200 bg-white p-2 text-center">
-								<div class="font-semibold text-green-700">
-									{unifiedValidationSummary ? unifiedValidationSummary.termPassedCount : 0}
-								</div>
-								<div class="text-xs text-green-600">용어계 통과</div>
-							</div>
-							<div class="rounded border border-gray-200 bg-white p-2 text-center">
-								<div class="font-semibold text-gray-700">
-									{unifiedValidationSummary ? unifiedValidationSummary.totalIssues : 0}
-								</div>
-								<div class="text-xs text-gray-600">통합 이슈</div>
-							</div>
-						</div>
-						{#if unifiedValidationSummary}
-							<div class="mb-2 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
-								<div class="rounded border border-red-200 bg-white p-1 text-center text-red-700">
-									Error {unifiedValidationSummary.errorCount}
-								</div>
-								<div
-									class="rounded border border-yellow-200 bg-white p-1 text-center text-yellow-700"
-								>
-									Auto-fixable {unifiedValidationSummary.autoFixableCount}
-								</div>
-								<div
-									class="rounded border border-amber-200 bg-white p-1 text-center text-amber-700"
-								>
-									Warning {unifiedValidationSummary.warningCount}
-								</div>
-								<div
-									class="rounded border border-slate-200 bg-white p-1 text-center text-slate-700"
-								>
-									Info {unifiedValidationSummary.infoCount}
-								</div>
-							</div>
-						{/if}
-						<p class="text-xs text-indigo-700">
-							파일 매핑 저장, CRUD, 업로드 경로에서 자동 정합화가 실행됩니다. 이 패널은 상태 확인과
-							미리보기 진단 중심으로 사용하세요.
-						</p>
-						{#if unifiedValidationLoading}
-							<div class="mt-2 text-xs text-indigo-700">통합 진단 요약을 불러오는 중...</div>
-						{/if}
-						{#if unifiedValidationError}
-							<div
-								class="mt-2 rounded border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700"
-							>
-								{unifiedValidationError}
-							</div>
-						{/if}
+					<div class="rounded-lg border border-teal-200 bg-teal-50 p-2 text-center">
+						<div class="font-bold text-teal-700">{stats.attributes}</div>
+						<div class="text-xs text-teal-600">속성</div>
+					</div>
+					<div class="rounded-lg border border-purple-200 bg-purple-50 p-2 text-center">
+						<div class="font-bold text-purple-700">{stats.tables}</div>
+						<div class="text-xs text-purple-600">테이블</div>
+					</div>
+					<div class="rounded-lg border border-orange-200 bg-orange-50 p-2 text-center">
+						<div class="font-bold text-orange-700">{stats.columns}</div>
+						<div class="text-xs text-orange-600">컬럼</div>
+					</div>
+					<div class="rounded-lg border border-pink-200 bg-pink-50 p-2 text-center">
+						<div class="font-bold text-pink-700">{stats.domains}</div>
+						<div class="text-xs text-pink-600">도메인</div>
 					</div>
 				</div>
-			</div>
+
+				{#if erdData.relationValidation}
+					<div
+						class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800"
+					>
+						5개 정의서 정합성: 검사 {erdData.relationValidation.totals.totalChecked}건 · 매칭
+						{erdData.relationValidation.totals.matched}건 · 오류
+						{erdData.relationValidation.totals.errorCount}건 · 경고
+						{erdData.relationValidation.totals.warningCount}건
+					</div>
+				{/if}
+
+				{#if relationSyncError}
+					<div class="mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+						{relationSyncError}
+					</div>
+				{/if}
+				{#if relationSyncResult}
+					<div
+						class="mt-3 rounded border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800"
+					>
+						최근 동기화 결과: 후보 테이블 {relationSyncResult.counts.tableCandidates}건 · 후보 컬럼
+						{relationSyncResult.counts.columnCandidates}건 · 추천
+						{relationSyncResult.counts.attributeColumnSuggestions}건
+					</div>
+				{/if}
+
+				<div
+					class="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-xs text-indigo-800"
+				>
+					<div class="mb-1 flex items-center justify-between">
+						<span class="font-semibold">통합 정합성 요약</span>
+						<button
+							type="button"
+							onclick={() => loadUnifiedValidationSummary()}
+							disabled={unifiedValidationLoading}
+							class="rounded border border-indigo-300 bg-white px-2 py-1 font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-50"
+						>
+							재검증
+						</button>
+					</div>
+					{#if unifiedValidationSummary}
+						관계 미매칭 {unifiedValidationSummary.relationUnmatchedCount}건 · 용어계 실패
+						{unifiedValidationSummary.termFailedCount}건 · 전체 이슈
+						{unifiedValidationSummary.totalIssues}건
+					{:else if unifiedValidationLoading}
+						통합 진단 요약을 불러오는 중...
+					{:else}
+						요약 정보가 없습니다.
+					{/if}
+					{#if unifiedValidationError}
+						<div class="mt-2 rounded border border-red-200 bg-red-50 px-2 py-1 text-red-700">
+							{unifiedValidationError}
+						</div>
+					{/if}
+				</div>
+			</section>
 		{/if}
 	{/if}
 
-	<!-- ERD 뷰어 -->
-	<div class="flex-1 overflow-hidden">
+	<div
+		class="h-[calc(100vh-13rem)] min-h-[560px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
+	>
 		{#if loading}
 			<div class="flex h-full items-center justify-center">
 				<div class="text-center">
@@ -932,22 +872,10 @@
 		{:else if error}
 			<div class="flex h-full items-center justify-center">
 				<div class="max-w-md rounded-lg border border-red-200 bg-red-50 p-6 text-center">
-					<svg
-						class="mx-auto h-12 w-12 text-red-600"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-						/>
-					</svg>
-					<h3 class="mt-4 text-lg font-semibold text-red-800">오류 발생</h3>
+					<h3 class="text-lg font-semibold text-red-800">오류 발생</h3>
 					<p class="mt-2 text-sm text-red-600">{error}</p>
 					<button
+						type="button"
 						onclick={handleRefresh}
 						class="mt-4 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-700"
 					>
@@ -956,31 +884,16 @@
 				</div>
 			</div>
 		{:else if erdData}
-			<ERDViewer
-				{erdData}
-				renderUrl={getGraphvizRenderUrl('svg')}
-			/>
+			<ERDViewer {erdData} renderUrl={getErdRenderUrl('svg')} />
 		{:else}
 			<div class="flex h-full items-center justify-center">
 				<div class="text-center">
-					<svg
-						class="mx-auto h-12 w-12 text-gray-600"
-						fill="none"
-						stroke="currentColor"
-						viewBox="0 0 24 24"
-					>
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="2"
-							d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-						/>
-					</svg>
-					<h3 class="mt-4 text-lg font-semibold text-gray-900">ERD 데이터 없음</h3>
+					<h3 class="text-lg font-semibold text-gray-900">ERD 데이터 없음</h3>
 					<p class="mt-2 text-sm text-gray-600">
-						ERD를 생성하려면 DB, 엔터티, 속성, 테이블, 컬럼 데이터가 필요합니다.
+						ERD를 생성하려면 컬럼 정의서와 매핑된 테이블 정의서가 필요합니다.
 					</p>
 					<button
+						type="button"
 						onclick={handleRefresh}
 						class="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
 					>
@@ -990,4 +903,4 @@
 			</div>
 		{/if}
 	</div>
-</div>
+</BrowsePageLayout>

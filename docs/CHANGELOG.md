@@ -4,6 +4,50 @@
 
 ### 요약
 
+- ERD 화면의 조건/파일 선택을 컬럼 정의서 기준 좌측 제어판으로 통합했습니다.
+- ERD API가 `columnFile`만 받아도 공통 파일 매핑으로 관련 정의서와 테이블 정의서를 해석하도록 보강했습니다.
+
+### 상세 변경
+
+1. ERD 좌측 제어판 전환
+
+- 대상:
+  - `src/routes/erd/+page.svelte`
+- 변경:
+  - `BrowsePageLayout`의 `sidebarSurface="plain"` 패턴으로 ERD 제어 영역 통합
+  - 컬럼 정의서 파일만 직접 선택하고, 테이블 정의서는 매핑된 파일명을 읽기 전용으로 표시
+  - 주제영역/schema를 `전체` 포함 단일 selectbox로 변경
+  - 테이블명 검색, 테이블 다중 선택, 사업범위여부, FK 외부참조 포함/제외, SVG/PNG 다운로드를 좌측 제어판으로 이동
+  - 기존 상단 필터 패널과 수동 `ERD 생성` 버튼 제거
+
+2. ERD API 파일 매핑/필터 계약 보강
+
+- 대상:
+  - `src/lib/utils/erd-file-context.ts`
+  - `src/lib/utils/erd-filter.ts`
+  - `src/routes/api/erd/tables/+server.ts`
+  - `src/routes/api/erd/render/+server.ts`
+  - `src/routes/api/erd/generate/+server.ts`
+  - `src/routes/api/erd/relations/sync/+server.ts`
+- 변경:
+  - `columnFile` 기준 공통 파일 매핑으로 `tableFile`과 관련 정의서를 서버에서 해석
+  - `/api/erd/tables` 응답에 주제영역/사업범위 정보를 포함
+  - `/api/erd/generate`가 렌더 API와 같은 주제영역/schema/검색/사업범위/FK 외부참조 필터 계약을 처리
+
+3. 테스트/문서 갱신
+
+- 대상:
+  - `src/lib/utils/erd-file-context.test.ts`
+  - `src/routes/erd/page-source.test.ts`
+  - `src/routes/api/erd/tables/server.test.ts`
+  - `src/routes/api/erd/render/server.test.ts`
+  - `src/routes/api/erd/generate/server.test.ts`
+  - `docs/USER_GUIDE.md`
+  - `docs/specs/api-reference.md`
+  - `docs/tests/ERD_TEST_DESCRIPTION.md`
+
+### 요약
+
 - ERD 화면에서 렌더러 기술명 노출과 중복 헤더를 제거했습니다.
 - ERD 이미지 렌더링 폰트 스택을 서비스 기본 폰트 우선순위와 맞췄습니다.
 

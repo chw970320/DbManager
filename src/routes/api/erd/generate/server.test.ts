@@ -11,6 +11,10 @@ vi.mock('$lib/registry/cache-registry', () => ({
 	getCachedData: vi.fn()
 }));
 
+vi.mock('$lib/registry/db-design-file-mapping', () => ({
+	resolveDbDesignFileMappingBundle: vi.fn()
+}));
+
 vi.mock('$lib/utils/erd-generator.js', () => ({
 	generateERDData: vi.fn()
 }));
@@ -21,6 +25,7 @@ vi.mock('$lib/utils/design-relation-validator.js', () => ({
 
 import { loadData, listFiles } from '$lib/registry/data-registry';
 import { getCachedData } from '$lib/registry/cache-registry';
+import { resolveDbDesignFileMappingBundle } from '$lib/registry/db-design-file-mapping';
 import { generateERDData } from '$lib/utils/erd-generator.js';
 import { validateDesignRelations } from '$lib/utils/design-relation-validator.js';
 
@@ -55,6 +60,16 @@ describe('API: /api/erd/generate', () => {
 		});
 
 		vi.mocked(loadData).mockResolvedValue({ entries: [], lastUpdated: '', totalCount: 0 });
+		vi.mocked(resolveDbDesignFileMappingBundle).mockResolvedValue({
+			vocabulary: 'mapped-vocabulary.json',
+			domain: 'mapped-domain.json',
+			term: 'mapped-term.json',
+			database: 'mapped-database.json',
+			entity: 'mapped-entity.json',
+			attribute: 'mapped-attribute.json',
+			table: 'mapped-table.json',
+			column: 'custom-column.json'
+		});
 		vi.mocked(getCachedData).mockResolvedValue({
 			entries: [],
 			lastUpdated: '',
@@ -150,6 +165,21 @@ describe('API: /api/erd/generate', () => {
 			expect(loadData).toHaveBeenCalledWith('entity', 'custom-entity.json');
 		});
 
+		it('should resolve mapped definition files from columnFile parameter', async () => {
+			const requestEvent = createMockRequestEvent({
+				searchParams: { columnFile: 'custom-column.json' }
+			});
+			await GET(requestEvent);
+
+			expect(resolveDbDesignFileMappingBundle).toHaveBeenCalledWith('column', 'custom-column.json');
+			expect(loadData).toHaveBeenCalledWith('database', 'mapped-database.json');
+			expect(loadData).toHaveBeenCalledWith('entity', 'mapped-entity.json');
+			expect(loadData).toHaveBeenCalledWith('attribute', 'mapped-attribute.json');
+			expect(loadData).toHaveBeenCalledWith('table', 'mapped-table.json');
+			expect(loadData).toHaveBeenCalledWith('column', 'custom-column.json');
+			expect(getCachedData).toHaveBeenCalledWith('vocabulary', 'mapped-vocabulary.json');
+		});
+
 		it('should use first files when no parameters provided', async () => {
 			const requestEvent = createMockRequestEvent({});
 			await GET(requestEvent);
@@ -177,6 +207,32 @@ describe('API: /api/erd/generate', () => {
 			await GET(requestEvent);
 
 			expect(generateERDData).toHaveBeenCalledWith(expect.any(Object), undefined);
+		});
+
+		it('should pass Graphviz-aligned filters to ERD data generation', async () => {
+			const requestEvent = createMockRequestEvent({
+				searchParams: {
+					subjectArea: '회원',
+					schema: 'bksp',
+					q: '고객',
+					scopeFlag: 'Y',
+					includeExternalReferences: 'false',
+					tableIds: 'table-1,table-2'
+				}
+			});
+			await GET(requestEvent);
+
+			expect(generateERDData).toHaveBeenCalledWith(
+				expect.any(Object),
+				expect.objectContaining({
+					tableIds: ['table-1', 'table-2'],
+					subjectAreas: ['회원'],
+					schemas: ['bksp'],
+					tableSearch: '고객',
+					scopeFlags: ['Y'],
+					includeExternalReferences: false
+				})
+			);
 		});
 
 		it('should include vocabulary mappings when available', async () => {

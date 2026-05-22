@@ -20,10 +20,186 @@ export interface ERDFilterOptions {
 	tableIds?: string[];
 	/** 관련 엔터티/속성 포함 여부 (기본값: true) */
 	includeRelated?: boolean;
+	/** 주제영역 필터 */
+	subjectAreas?: string[];
+	/** 스키마 필터 */
+	schemas?: string[];
+	/** 테이블명/한글명/schema 검색어 */
+	tableSearch?: string;
+	/** 사업범위여부 필터 */
+	scopeFlags?: string[];
+	/** Graphviz FK 외부참조 포함 여부와 같은 URL 계약 유지용 */
+	includeExternalReferences?: boolean;
 	/** 최대 노드 수 */
 	maxNodes?: number;
 	/** 최대 엣지 수 */
 	maxEdges?: number;
+}
+
+function normalizeText(value: string | undefined | null): string {
+	return (value ?? '').trim();
+}
+
+function normalizeKey(value: string | undefined | null): string {
+	const text = normalizeText(value);
+	return text === '-' ? '' : text.toLowerCase();
+}
+
+function normalizeList(values: string[] | undefined): string[] {
+	return (values ?? [])
+		.flatMap((value) => value.split(','))
+		.map((value) => normalizeText(value))
+		.filter((value) => value.length > 0);
+}
+
+function createTableKey(
+	schemaName: string | undefined,
+	tableEnglishName: string | undefined
+): string {
+	return `${normalizeKey(schemaName)}|${normalizeKey(tableEnglishName)}`;
+}
+
+function isPositiveFlag(value: string | undefined): boolean {
+	const normalized = normalizeKey(value);
+	return ['y', 'yes', 'true', '1', 'o', '예', '대상', '포함'].includes(normalized);
+}
+
+function isNegativeFlag(value: string | undefined): boolean {
+	const normalized = normalizeKey(value);
+	return ['n', 'no', 'false', '0', 'x', '아니오', '제외'].includes(normalized);
+}
+
+function resolveSubjectArea(table: TableEntry, columns: ColumnEntry[]): string | undefined {
+	return (
+		table.subjectArea ?? columns.find((column) => normalizeKey(column.subjectArea))?.subjectArea
+	);
+}
+
+function resolveBusinessScope(columns: ColumnEntry[]): boolean {
+	return columns.some((column) => isPositiveFlag(column.scopeFlag));
+}
+
+function matchesText(value: string | undefined, expectedValues: string[]): boolean {
+	if (expectedValues.length === 0) return true;
+	const normalizedValue = normalizeKey(value);
+	return expectedValues.some((expected) => normalizeKey(expected) === normalizedValue);
+}
+
+function matchesSearch(table: TableEntry, subjectArea: string | undefined, query: string): boolean {
+	if (!query) return true;
+	const normalizedQuery = query.toLowerCase();
+	return [table.schemaName, table.tableEnglishName, table.tableKoreanName, subjectArea]
+		.filter((value): value is string => Boolean(value))
+		.some((value) => value.toLowerCase().includes(normalizedQuery));
+}
+
+function matchesScope(columns: ColumnEntry[], scopeFlags: string[]): boolean {
+	if (scopeFlags.length === 0) return true;
+
+	const normalizedFilters = scopeFlags.map((value) => normalizeKey(value));
+	const wantsPositive = normalizedFilters.some((value) => isPositiveFlag(value));
+	const wantsNegative = normalizedFilters.some((value) => isNegativeFlag(value));
+
+	if (wantsPositive || wantsNegative) {
+		const inBusinessScope = resolveBusinessScope(columns);
+		return (wantsPositive && inBusinessScope) || (wantsNegative && !inBusinessScope);
+	}
+
+	return columns.some((column) => normalizedFilters.includes(normalizeKey(column.scopeFlag)));
+}
+
+type ForeignKeyReference = {
+	schemaName?: string;
+	tableEnglishName?: string;
+	columnEnglishName?: string;
+};
+
+function parseForeignKeyReference(column: ColumnEntry): ForeignKeyReference | undefined {
+	const fkInfo = normalizeText(column.fkInfo);
+	if (!fkInfo || ['y', 'yes', 'true'].includes(fkInfo.toLowerCase())) return undefined;
+
+	const firstReference = fkInfo
+		.split(/[;,\n]/)
+		.map((part) => part.trim())
+		.find(Boolean);
+	if (!firstReference) return undefined;
+
+	const parts = firstReference
+		.replace(/[`"'[\]{}()]/g, ' ')
+		.replace(/->|=>/g, '.')
+		.replace(/\s+/g, ' ')
+		.trim()
+		.split(/[.:]/)
+		.map((part) => part.trim())
+		.filter(Boolean);
+
+	if (parts.length >= 3) {
+		return {
+			schemaName: parts[parts.length - 3],
+			tableEnglishName: parts[parts.length - 2],
+			columnEnglishName: parts[parts.length - 1]
+		};
+	}
+
+	if (parts.length === 2) {
+		return {
+			schemaName: column.schemaName,
+			tableEnglishName: parts[0],
+			columnEnglishName: parts[1]
+		};
+	}
+
+	if (parts.length === 1) {
+		return {
+			schemaName: column.schemaName,
+			tableEnglishName: column.tableEnglishName,
+			columnEnglishName: parts[0]
+		};
+	}
+
+	return undefined;
+}
+
+function findReferencedColumn(
+	reference: ForeignKeyReference,
+	columns: ColumnEntry[]
+): ColumnEntry | undefined {
+	const referenceSchema = normalizeKey(reference.schemaName);
+	const referenceTable = normalizeKey(reference.tableEnglishName);
+	const referenceColumn = normalizeKey(reference.columnEnglishName);
+
+	return columns.find((candidate) => {
+		const schemaMatches = !referenceSchema || normalizeKey(candidate.schemaName) === referenceSchema;
+		const tableMatches = !referenceTable || normalizeKey(candidate.tableEnglishName) === referenceTable;
+		const columnMatches =
+			!referenceColumn || normalizeKey(candidate.columnEnglishName) === referenceColumn;
+		return schemaMatches && tableMatches && columnMatches;
+	});
+}
+
+function collectExternalReferencedTableKeys(
+	sourceTableKeys: Set<string>,
+	columns: ColumnEntry[],
+	tableKeys: Set<string>
+): Set<string> {
+	const externalTableKeys = new Set<string>();
+
+	for (const column of columns) {
+		if (!sourceTableKeys.has(createTableKey(column.schemaName, column.tableEnglishName))) continue;
+
+		const reference = parseForeignKeyReference(column);
+		if (!reference) continue;
+
+		const targetColumn = findReferencedColumn(reference, columns);
+		if (!targetColumn) continue;
+
+		const targetTableKey = createTableKey(targetColumn.schemaName, targetColumn.tableEnglishName);
+		if (!tableKeys.has(targetTableKey) || sourceTableKeys.has(targetTableKey)) continue;
+
+		externalTableKeys.add(targetTableKey);
+	}
+
+	return externalTableKeys;
 }
 
 /**
@@ -33,38 +209,100 @@ export function filterMappingContext(
 	context: MappingContext,
 	filterOptions: ERDFilterOptions
 ): MappingContext {
-	const { tableIds, includeRelated = true } = filterOptions;
+	const {
+		tableIds,
+		includeRelated = true,
+		subjectAreas,
+		schemas,
+		tableSearch,
+		scopeFlags,
+		includeExternalReferences = true
+	} = filterOptions;
+	const normalizedTableIds = normalizeList(tableIds);
+	const normalizedSubjectAreas = normalizeList(subjectAreas);
+	const normalizedSchemas = normalizeList(schemas);
+	const normalizedTableSearch = normalizeText(tableSearch);
+	const normalizedScopeFlags = normalizeList(scopeFlags);
 
 	// 필터 옵션이 없으면 전체 반환
-	if (!tableIds || tableIds.length === 0) {
+	if (
+		normalizedTableIds.length === 0 &&
+		normalizedSubjectAreas.length === 0 &&
+		normalizedSchemas.length === 0 &&
+		normalizedTableSearch.length === 0 &&
+		normalizedScopeFlags.length === 0
+	) {
 		return context;
 	}
 
-	const selectedTableIds = new Set(tableIds);
+	const columnsByTableKey = new Map<string, ColumnEntry[]>();
+	for (const column of context.columns) {
+		const key = createTableKey(column.schemaName, column.tableEnglishName);
+		if (key === '|') continue;
+		const columns = columnsByTableKey.get(key) ?? [];
+		columns.push(column);
+		columnsByTableKey.set(key, columns);
+	}
+
+	const selectedTableIds = new Set(normalizedTableIds);
 
 	// 선택된 테이블 필터링
-	const filteredTables = context.tables.filter((table) => selectedTableIds.has(table.id));
+	const filteredTables = context.tables.filter((table) => {
+		const columns =
+			columnsByTableKey.get(createTableKey(table.schemaName, table.tableEnglishName)) ?? [];
+		const subjectArea = resolveSubjectArea(table, columns);
+		return (
+			(normalizedTableIds.length === 0 || selectedTableIds.has(table.id)) &&
+			matchesText(subjectArea, normalizedSubjectAreas) &&
+			matchesText(table.schemaName, normalizedSchemas) &&
+			matchesSearch(table, subjectArea, normalizedTableSearch) &&
+			matchesScope(columns, normalizedScopeFlags)
+		);
+	});
+
+	const allTableKeys = new Set(
+		context.tables
+			.map((table) => createTableKey(table.schemaName, table.tableEnglishName))
+			.filter((key) => key !== '|')
+	);
 
 	// 선택된 테이블의 이름 집합 생성 (스키마명 + 테이블영문명)
-	const selectedTableKeys = new Set<string>();
-	for (const table of filteredTables) {
-		if (table.schemaName && table.tableEnglishName) {
-			selectedTableKeys.add(`${table.schemaName}|${table.tableEnglishName}`);
+	const selectedTableKeys = new Set(
+		filteredTables
+			.map((table) => createTableKey(table.schemaName, table.tableEnglishName))
+			.filter((key) => key !== '|')
+	);
+
+	const finalTableKeys = new Set(selectedTableKeys);
+	if (includeExternalReferences) {
+		for (const key of collectExternalReferencedTableKeys(
+			selectedTableKeys,
+			context.columns,
+			allTableKeys
+		)) {
+			finalTableKeys.add(key);
 		}
 	}
 
 	// 선택된 테이블의 컬럼 필터링
 	const filteredColumns = context.columns.filter((column) => {
 		if (!column.schemaName || !column.tableEnglishName) return false;
-		const key = `${column.schemaName}|${column.tableEnglishName}`;
-		return selectedTableKeys.has(key);
+		const key = createTableKey(column.schemaName, column.tableEnglishName);
+		return finalTableKeys.has(key);
 	});
+
+	const finalFilteredTables =
+		finalTableKeys.size === selectedTableKeys.size
+			? filteredTables
+			: context.tables.filter((table) =>
+					finalTableKeys.has(createTableKey(table.schemaName, table.tableEnglishName))
+				);
 
 	// 관련 엔터티 이름 수집
 	const relatedEntityNames = new Set<string>();
 	if (includeRelated) {
 		// 테이블의 relatedEntityName
-		for (const table of filteredTables) {
+		for (const table of finalFilteredTables) {
 			if (table.relatedEntityName && table.relatedEntityName.trim() !== '-') {
 				relatedEntityNames.add(table.relatedEntityName.trim());
 			}
@@ -119,7 +357,7 @@ export function filterMappingContext(
 
 	// Database는 선택된 테이블의 physicalDbName과 연결된 것만 포함
 	const selectedDbNames = new Set<string>();
-	for (const table of filteredTables) {
+	for (const table of finalFilteredTables) {
 		if (table.physicalDbName && table.physicalDbName.trim() !== '-') {
 			selectedDbNames.add(table.physicalDbName.trim());
 		}
@@ -150,7 +388,7 @@ export function filterMappingContext(
 		databases: filteredDatabases,
 		entities: filteredEntities,
 		attributes: filteredAttributes,
-		tables: filteredTables,
+		tables: finalFilteredTables,
 		columns: filteredColumns,
 		domains: context.domains, // 도메인은 매핑 후 필터링
 		vocabularyMap: context.vocabularyMap,

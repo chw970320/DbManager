@@ -3,20 +3,29 @@ import { GET } from './+server';
 import type { RequestEvent } from '@sveltejs/kit';
 import { renderGraphvizDot, GraphvizNotAvailableError } from '$lib/server/graphviz-renderer.js';
 import { buildGraphvizERDModel } from '$lib/utils/erd-graphviz-model.js';
+import { loadDesignRelationContext } from '$lib/utils/design-relation-context.js';
+import { resolveDbDesignFileMappingBundle } from '$lib/registry/db-design-file-mapping';
 
-vi.mock('$lib/utils/design-relation-context.js', () => ({
-	getAnyExplicitDefinitionFile: vi.fn(() => false),
-	loadDesignRelationContext: vi.fn(async () => ({
-		context: {
-			databases: [],
-			entities: [],
-			attributes: [],
-			tables: [],
-			columns: [],
-			domains: []
-		},
-		files: {}
-	}))
+vi.mock('$lib/utils/design-relation-context.js', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('$lib/utils/design-relation-context.js')>();
+	return {
+		...actual,
+		loadDesignRelationContext: vi.fn(async () => ({
+			context: {
+				databases: [],
+				entities: [],
+				attributes: [],
+				tables: [],
+				columns: [],
+				domains: []
+			},
+			files: {}
+		}))
+	};
+});
+
+vi.mock('$lib/registry/db-design-file-mapping', () => ({
+	resolveDbDesignFileMappingBundle: vi.fn()
 }));
 
 vi.mock('$lib/utils/erd-graphviz-model.js', async (importOriginal) => {
@@ -68,6 +77,16 @@ describe('API: /api/erd/render', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		vi.mocked(renderGraphvizDot).mockResolvedValue(Buffer.from('<svg/>'));
+		vi.mocked(resolveDbDesignFileMappingBundle).mockResolvedValue({
+			vocabulary: 'mapped-vocabulary.json',
+			domain: 'mapped-domain.json',
+			term: 'mapped-term.json',
+			database: 'mapped-database.json',
+			entity: 'mapped-entity.json',
+			attribute: 'mapped-attribute.json',
+			table: 'mapped-table.json',
+			column: 'custom-column.json'
+		});
 	});
 
 	it('기본 요청은 SVG 이미지를 반환한다', async () => {
@@ -117,6 +136,22 @@ describe('API: /api/erd/render', () => {
 				tableSearch: '고객',
 				scopeFlags: ['Y'],
 				includeExternalReferences: false
+			})
+		);
+	});
+
+	it('columnFile만 전달되어도 매핑된 정의서 파일로 컨텍스트를 로드한다', async () => {
+		await GET(createMockRequestEvent({ columnFile: 'custom-column.json' }));
+
+		expect(resolveDbDesignFileMappingBundle).toHaveBeenCalledWith('column', 'custom-column.json');
+		expect(loadDesignRelationContext).toHaveBeenCalledWith(
+			expect.objectContaining({
+				databaseFile: 'mapped-database.json',
+				entityFile: 'mapped-entity.json',
+				attributeFile: 'mapped-attribute.json',
+				tableFile: 'mapped-table.json',
+				columnFile: 'custom-column.json',
+				fallbackToFirstWhenMissing: false
 			})
 		);
 	});

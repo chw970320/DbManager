@@ -211,6 +211,69 @@ describe('erd-filter', () => {
 			expect(filtered.vocabularyMap).toBe(vocabularyMap);
 			expect(filtered.domainMap).toBe(domainMap);
 		});
+
+		it('should include FK external reference tables only when requested', () => {
+			const context: MappingContext = {
+				...createMockContext(),
+				entities: [],
+				attributes: [],
+				tables: [
+					{
+						...createMockTable(),
+						id: 'table-order',
+						tableEnglishName: 'orders',
+						tableKoreanName: '주문',
+						subjectArea: 'ORDER'
+					},
+					{
+						...createMockTable(),
+						id: 'table-user',
+						tableEnglishName: 'users',
+						tableKoreanName: '사용자',
+						subjectArea: 'USER'
+					}
+				],
+				columns: [
+					{
+						...createMockColumn(),
+						id: 'column-order-user',
+						tableEnglishName: 'orders',
+						columnEnglishName: 'user_id',
+						fkInfo: 'users.user_id',
+						subjectArea: 'ORDER'
+					},
+					{
+						...createMockColumn(),
+						id: 'column-user-id',
+						tableEnglishName: 'users',
+						columnEnglishName: 'user_id',
+						subjectArea: 'USER'
+					}
+				]
+			};
+
+			const withoutExternal = filterMappingContext(context, {
+				subjectAreas: ['ORDER'],
+				includeRelated: false,
+				includeExternalReferences: false
+			});
+			const withExternal = filterMappingContext(context, {
+				subjectAreas: ['ORDER'],
+				includeRelated: false,
+				includeExternalReferences: true
+			});
+
+			expect(withoutExternal.tables.map((table) => table.tableEnglishName)).toEqual(['orders']);
+			expect(withoutExternal.columns.map((column) => column.id)).toEqual(['column-order-user']);
+			expect(withExternal.tables.map((table) => table.tableEnglishName)).toEqual([
+				'orders',
+				'users'
+			]);
+			expect(withExternal.columns.map((column) => column.id)).toEqual([
+				'column-order-user',
+				'column-user-id'
+			]);
+		});
 	});
 
 	describe('filterERDDataByTableIds', () => {

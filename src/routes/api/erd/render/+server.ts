@@ -1,8 +1,9 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
+import { loadDesignRelationContext } from '$lib/utils/design-relation-context.js';
 import {
-	getAnyExplicitDefinitionFile,
-	loadDesignRelationContext
-} from '$lib/utils/design-relation-context.js';
+	getErdFileContextInputFromUrl,
+	resolveErdFileContext
+} from '$lib/utils/erd-file-context.js';
 import {
 	buildGraphvizERDModel,
 	type GraphvizERDFilterOptions,
@@ -21,7 +22,9 @@ const VALID_FORMATS: GraphvizERDFormat[] = ['svg', 'png'];
 const VALID_MODES: GraphvizERDMode[] = ['logical', 'physical'];
 
 function parseListParam(url: URL, ...names: string[]): string[] {
-	return names.flatMap((name) => url.searchParams.getAll(name)).flatMap((value) => value.split(','))
+	return names
+		.flatMap((name) => url.searchParams.getAll(name))
+		.flatMap((value) => value.split(','))
 		.map((value) => value.trim())
 		.filter(Boolean);
 }
@@ -56,9 +59,7 @@ function parseMode(url: URL): GraphvizERDMode | null {
 
 function parseFormat(url: URL): GraphvizERDFormat | null {
 	const format = (url.searchParams.get('format') || 'svg').trim().toLowerCase();
-	return VALID_FORMATS.includes(format as GraphvizERDFormat)
-		? (format as GraphvizERDFormat)
-		: null;
+	return VALID_FORMATS.includes(format as GraphvizERDFormat) ? (format as GraphvizERDFormat) : null;
 }
 
 function createFilterOptions(url: URL): GraphvizERDFilterOptions {
@@ -104,22 +105,16 @@ export async function GET({ url }: RequestEvent) {
 			);
 		}
 
-		const databaseFile = url.searchParams.get('databaseFile') || undefined;
-		const entityFile = url.searchParams.get('entityFile') || undefined;
-		const attributeFile = url.searchParams.get('attributeFile') || undefined;
-		const tableFile = url.searchParams.get('tableFile') || undefined;
-		const columnFile = url.searchParams.get('columnFile') || undefined;
-		const domainFile = url.searchParams.get('domainFile') || undefined;
-		const vocabularyFile = url.searchParams.get('vocabularyFile') || undefined;
-
-		const hasExplicitFile = getAnyExplicitDefinitionFile({
+		const fileContext = await resolveErdFileContext(getErdFileContextInputFromUrl(url));
+		const {
 			databaseFile,
 			entityFile,
 			attributeFile,
 			tableFile,
 			columnFile,
-			domainFile
-		});
+			domainFile,
+			vocabularyFile
+		} = fileContext.files;
 		const { context } = await loadDesignRelationContext({
 			databaseFile,
 			entityFile,
@@ -130,11 +125,14 @@ export async function GET({ url }: RequestEvent) {
 			vocabularyFile,
 			includeDomain: false,
 			includeVocabularyMap: false,
-			fallbackToFirstWhenMissing: !hasExplicitFile
+			fallbackToFirstWhenMissing: !fileContext.hasExplicitFile
 		});
 
 		const model = buildGraphvizERDModel(context, createFilterOptions(url));
-		const dot = buildGraphvizDot(model, { mode, title: mode === 'logical' ? '논리 ERD' : '물리 ERD' });
+		const dot = buildGraphvizDot(model, {
+			mode,
+			title: mode === 'logical' ? '논리 ERD' : '물리 ERD'
+		});
 		const rendered = await renderGraphvizDot(dot, format);
 		const download = parseBooleanParam(url.searchParams.get('download'), false);
 

@@ -22,6 +22,19 @@ vi.mock('$lib/utils/design-relation-context.js', () => ({
 	}))
 }));
 
+vi.mock('$lib/utils/erd-file-context.js', () => ({
+	resolveErdFileContext: vi.fn(async (params: Record<string, string | boolean | undefined>) => ({
+		files: params,
+		hasExplicitFile: Boolean(
+			params.databaseFile ||
+				params.entityFile ||
+				params.attributeFile ||
+				params.tableFile ||
+				params.columnFile
+		)
+	}))
+}));
+
 vi.mock('$lib/utils/design-relation-sync.js', () => ({
 	buildDesignRelationSyncPlan: vi.fn()
 }));

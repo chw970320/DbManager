@@ -6,6 +6,7 @@ import {
 	pickDefinitionFileFromUrl,
 	toDefinitionFileSelection
 } from '$lib/utils/design-relation-context.js';
+import { resolveErdFileContext } from '$lib/utils/erd-file-context.js';
 import { buildDesignRelationSyncPlan } from '$lib/utils/design-relation-sync.js';
 import { validateDesignRelations } from '$lib/utils/design-relation-validator.js';
 
@@ -58,7 +59,10 @@ function applyTablePatches(
 
 function applyColumnPatches(
 	columnData: ColumnData,
-	updates: Map<string, { schemaName?: string; tableEnglishName?: string; relatedEntityName?: string }>,
+	updates: Map<
+		string,
+		{ schemaName?: string; tableEnglishName?: string; relatedEntityName?: string }
+	>,
 	now: string
 ): { data: ColumnData; updatedCount: number } {
 	let updatedCount = 0;
@@ -86,15 +90,16 @@ function applyColumnPatches(
 }
 
 async function runRelationSync(params: RelationSyncParams) {
+	const fileContext = await resolveErdFileContext(params);
 	const { context, files } = await loadDesignRelationContext({
-		databaseFile: params.databaseFile,
-		entityFile: params.entityFile,
-		attributeFile: params.attributeFile,
-		tableFile: params.tableFile,
-		columnFile: params.columnFile,
+		databaseFile: fileContext.files.databaseFile,
+		entityFile: fileContext.files.entityFile,
+		attributeFile: fileContext.files.attributeFile,
+		tableFile: fileContext.files.tableFile,
+		columnFile: fileContext.files.columnFile,
 		includeDomain: false,
 		includeVocabularyMap: false,
-		fallbackToFirstWhenMissing: true
+		fallbackToFirstWhenMissing: !fileContext.hasExplicitFile
 	});
 
 	const validationBefore = validateDesignRelations(context);
@@ -122,7 +127,11 @@ async function runRelationSync(params: RelationSyncParams) {
 		if (files.column && syncPlan.columnUpdates.length > 0) {
 			const columnData = (await loadData('column', files.column)) as ColumnData;
 			const updateMap = new Map(syncPlan.columnUpdates.map((update) => [update.id, update.patch]));
-			const { data: updatedColumnData, updatedCount } = applyColumnPatches(columnData, updateMap, now);
+			const { data: updatedColumnData, updatedCount } = applyColumnPatches(
+				columnData,
+				updateMap,
+				now
+			);
 			if (updatedCount > 0) {
 				await saveData('column', updatedColumnData, files.column);
 				appliedColumnUpdates = updatedCount;
@@ -187,9 +196,7 @@ export async function GET({ url }: RequestEvent) {
 			{
 				success: false,
 				error:
-					error instanceof Error
-						? error.message
-						: '5개 정의서 관계 동기화 중 오류가 발생했습니다.'
+					error instanceof Error ? error.message : '5개 정의서 관계 동기화 중 오류가 발생했습니다.'
 			} as DbDesignApiResponse,
 			{ status: 500 }
 		);
@@ -226,9 +233,7 @@ export async function POST({ request }: RequestEvent) {
 			{
 				success: false,
 				error:
-					error instanceof Error
-						? error.message
-						: '5개 정의서 관계 동기화 중 오류가 발생했습니다.'
+					error instanceof Error ? error.message : '5개 정의서 관계 동기화 중 오류가 발생했습니다.'
 			} as DbDesignApiResponse,
 			{ status: 500 }
 		);

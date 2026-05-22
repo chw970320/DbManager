@@ -14,6 +14,9 @@ export interface GraphvizDotOptions {
 	title?: string;
 }
 
+const ERD_FONT_FAMILY =
+	'Pretendard Variable,Pretendard,Inter,Malgun Gothic,Noto Sans CJK KR,Arial,sans-serif';
+
 function xmlEscape(value: string | undefined | null): string {
 	return (value ?? '')
 		.replace(/&/g, '&amp;')
@@ -126,9 +129,9 @@ export function buildGraphvizDot(model: GraphvizERDModel, options: GraphvizDotOp
 	const tableMap = new Map(model.tables.map((table) => [table.key, table]));
 	const lines: string[] = [
 		'digraph DbManagerERD {',
-		'  graph [rankdir=LR, splines=ortho, overlap=false, pad="0.3", nodesep="0.8", ranksep="1.1", bgcolor="#F8FAFC"];',
-		'  node [shape=plaintext, fontname="Noto Sans CJK KR,Malgun Gothic,Arial"];',
-		'  edge [fontname="Noto Sans CJK KR,Malgun Gothic,Arial", fontsize=10, color="#475569", arrowsize=0.8];',
+		`  graph [rankdir=LR, splines=ortho, overlap=false, pad="0.3", nodesep="0.8", ranksep="1.1", bgcolor="#F8FAFC", fontname="${dotEscape(ERD_FONT_FAMILY)}"];`,
+		`  node [shape=plaintext, fontname="${dotEscape(ERD_FONT_FAMILY)}"];`,
+		`  edge [fontname="${dotEscape(ERD_FONT_FAMILY)}", fontsize=10, color="#475569", arrowsize=0.8];`,
 		`  label="${dotEscape(title)}";`,
 		'  labelloc="t";',
 		'  fontsize=18;'

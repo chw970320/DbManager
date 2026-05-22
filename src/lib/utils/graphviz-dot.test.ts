@@ -98,4 +98,10 @@ describe('buildGraphvizDot', () => {
 
 		expect(dot).toContain('bksp.TB_ORDER');
 	});
+
+	it('서비스 폰트 스택을 ERD 렌더링 폰트로 사용한다', () => {
+		const dot = buildGraphvizDot(createModel(), { mode: 'logical' });
+
+		expect(dot).toContain('Pretendard Variable,Pretendard,Inter');
+	});
 });

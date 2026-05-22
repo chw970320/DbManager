@@ -1,5 +1,31 @@
 # 변경 이력
 
+## 2026-05-22
+
+### 요약
+
+- ERD 화면에서 렌더러 기술명 노출과 중복 헤더를 제거했습니다.
+- ERD 이미지 렌더링 폰트 스택을 서비스 기본 폰트 우선순위와 맞췄습니다.
+
+### 상세 변경
+
+1. ERD 화면 문구 정리
+
+- 대상:
+  - `src/lib/components/ERDViewer.svelte`
+  - `src/routes/erd/+page.svelte`
+- 변경:
+  - 미리보기 영역의 별도 헤더와 렌더러 설명 문구 제거
+  - 이미지 로딩/오류/메타데이터 문구에서 렌더러 기술명 제거
+
+2. ERD 이미지 폰트 정렬
+
+- 대상:
+  - `src/app.css`
+  - `src/lib/utils/graphviz-dot.ts`
+- 변경:
+  - 서비스와 ERD 이미지 모두 `Pretendard Variable`, `Pretendard`, `Inter` 순서의 폰트 스택을 우선 사용
+
 ## 2026-05-21
 
 ### 요약

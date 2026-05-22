@@ -40,8 +40,7 @@ function createMockERDData(): ERDData {
 
 const defaultProps = {
 	erdData: createMockERDData(),
-	renderUrl: '/api/erd/render?format=svg&mode=logical',
-	mode: 'logical' as const
+	renderUrl: '/api/erd/render?format=svg&mode=logical'
 };
 
 describe('ERDViewer', () => {
@@ -49,17 +48,18 @@ describe('ERDViewer', () => {
 		vi.clearAllMocks();
 	});
 
-	it('Graphviz ERD 뷰어와 이미지 미리보기를 렌더링한다', () => {
+	it('ERD 이미지 미리보기를 렌더링한다', () => {
 		render(ERDViewer, { props: defaultProps });
 
-		expect(screen.getByText('Graphviz ERD 다이어그램')).toBeInTheDocument();
-		const image = screen.getByAltText('Graphviz ERD 다이어그램') as HTMLImageElement;
+		const image = screen.getByAltText('ERD 다이어그램') as HTMLImageElement;
 		expect(image.src).toContain('/api/erd/render?format=svg&mode=logical');
 	});
 
-	it('Mermaid 코드 복사/다운로드 버튼을 노출하지 않는다', () => {
-		render(ERDViewer, { props: defaultProps });
+	it('렌더러 기술명을 화면에 노출하지 않는다', () => {
+		const { container } = render(ERDViewer, { props: defaultProps });
 
+		expect(container).not.toHaveTextContent('Graphviz');
+		expect(container).not.toHaveTextContent('Mermaid');
 		expect(screen.queryByText('Mermaid 코드 복사')).not.toBeInTheDocument();
 		expect(screen.queryByText('Mermaid 파일 다운로드')).not.toBeInTheDocument();
 	});
@@ -74,9 +74,9 @@ describe('ERDViewer', () => {
 	it('이미지 로드 오류를 한국어 메시지로 표시한다', async () => {
 		render(ERDViewer, { props: defaultProps });
 
-		await fireEvent.error(screen.getByAltText('Graphviz ERD 다이어그램'));
+		await fireEvent.error(screen.getByAltText('ERD 다이어그램'));
 
 		expect(screen.getByText('이미지 생성 오류')).toBeInTheDocument();
-		expect(screen.getByText(/Graphviz ERD 이미지를 불러오지 못했습니다/)).toBeInTheDocument();
+		expect(screen.getByText(/ERD 이미지를 불러오지 못했습니다/)).toBeInTheDocument();
 	});
 });

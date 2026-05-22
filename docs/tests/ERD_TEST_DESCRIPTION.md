@@ -8,9 +8,9 @@
 | --- | --- | --- |
 | `src/routes/api/erd/render/server.test.ts` | Graphviz SVG/PNG 렌더 API, 파라미터 검증, 설치 오류 응답 | 완료 |
 | `src/lib/utils/erd-graphviz-model.test.ts` | 테이블/컬럼 조인, 필터, FK 외부참조 포함/제외 | 완료 |
-| `src/lib/utils/graphviz-dot.test.ts` | DOT/HTML label 생성, escape, 논리/물리 표시 | 완료 |
+| `src/lib/utils/graphviz-dot.test.ts` | DOT/HTML label 생성, escape, 논리/물리 표시, 폰트 스택 | 완료 |
 | `src/lib/server/graphviz-renderer.test.ts` | `dot -Tsvg/-Tpng` 호출, ENOENT/non-zero 오류 변환 | 완료 |
-| `src/lib/components/ERDViewer.test.ts` | Graphviz 이미지 미리보기, SVG/PNG 다운로드, 오류 표시 | 완료 |
+| `src/lib/components/ERDViewer.test.ts` | ERD 이미지 미리보기, 렌더러 기술명 비노출, 오류 표시 | 완료 |
 | `src/routes/api/erd/generate/server.test.ts` | 기존 ERD JSON/관계 요약 API | 완료 |
 | `src/routes/api/erd/tables/server.test.ts` | ERD 테이블 목록 조회/검색/정렬 | 완료 |
 | `src/lib/utils/erd-generator.test.ts` | 기존 ERDData 노드/엣지 생성 | 완료 |
@@ -54,6 +54,7 @@
 - `digraph`와 HTML table label 생성.
 - PK/FK/NN 배지 표시.
 - XML 특수문자 escape.
+- 서비스 기본 폰트 우선순위와 맞춘 `Pretendard Variable`, `Pretendard`, `Inter` 폰트 스택 사용.
 - FK edge 생성.
 - `dot -Tsvg`, `dot -Tpng` 인자 사용.
 - `ENOENT` → Graphviz 설치 오류, non-zero exit → 렌더링 오류 변환.
@@ -62,9 +63,9 @@
 
 **파일 경로**: `src/lib/components/ERDViewer.test.ts`
 
-- Graphviz ERD 미리보기 이미지를 렌더링합니다.
-- Mermaid 코드 복사/다운로드 버튼은 노출하지 않습니다.
-- SVG/PNG 다운로드 링크를 제공합니다.
+- ERD 미리보기 이미지를 렌더링합니다.
+- 렌더러 기술명과 기존 코드 복사/다운로드 버튼은 노출하지 않습니다.
+- SVG/PNG 다운로드 링크는 ERD 화면의 필터 패널에서 제공합니다.
 - 이미지 로드 실패 시 한국어 오류 메시지를 표시합니다.
 
 ## 5. 기존 ERD 데이터/관계 API

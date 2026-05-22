@@ -484,10 +484,6 @@
 				</div>
 			</div>
 		</div>
-		<p class="mt-2 text-xs text-slate-600">
-			Graphviz 기반 이미지 생성은 현재 테이블 정의서와 컬럼 정의서를 기준으로 동작합니다. Mermaid 복구와
-			인터랙티브 편집은 이 화면에서 사용하지 않습니다.
-		</p>
 	</div>
 
 	<!-- 테이블 선택 패널 -->
@@ -962,7 +958,6 @@
 		{:else if erdData}
 			<ERDViewer
 				{erdData}
-				mode={graphvizMode}
 				renderUrl={getGraphvizRenderUrl('svg')}
 			/>
 		{:else}

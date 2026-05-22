@@ -143,8 +143,7 @@
 	let filteredTables = $derived(() => {
 		const query = tableSearchQuery.trim().toLowerCase();
 		return tables.filter((table) => {
-			const subjectMatches =
-				!subjectAreaFilter || table.subjectArea === subjectAreaFilter;
+			const subjectMatches = !subjectAreaFilter || table.subjectArea === subjectAreaFilter;
 			const schemaMatches = !schemaFilter || table.schemaName === schemaFilter;
 			const scopeMatches =
 				!scopeFlagFilter ||
@@ -179,8 +178,7 @@
 		if (selectedColumnFile.trim()) params.set('columnFile', selectedColumnFile.trim());
 		if (mappedTableFile?.trim()) params.set('tableFile', mappedTableFile.trim());
 		if (selectedTableIds.size > 0) params.set('tableIds', Array.from(selectedTableIds).join(','));
-		if (subjectAreaFilter.trim())
-			params.set('subjectArea', subjectAreaFilter.trim());
+		if (subjectAreaFilter.trim()) params.set('subjectArea', subjectAreaFilter.trim());
 		if (schemaFilter.trim()) params.set('schema', schemaFilter.trim());
 		if (debouncedTableSearchQuery.trim()) params.set('q', debouncedTableSearchQuery.trim());
 		if (scopeFlagFilter.trim()) params.set('scopeFlag', scopeFlagFilter.trim());
@@ -534,13 +532,57 @@
 				<p class="text-gray-500">설정 버튼에서 정의서 매핑을 확인하고 수정할 수 있습니다.</p>
 			</div>
 		</section>
+	</div>
+{/snippet}
 
+{#snippet actions()}
+	<button
+		type="button"
+		onclick={() => (showMappingSummary = !showMappingSummary)}
+		class="rounded-lg border px-4 py-2 text-sm font-medium transition-colors {showMappingSummary
+			? 'border-indigo-300 bg-indigo-50 text-indigo-700'
+			: 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}"
+	>
+		연관관계 요약
+	</button>
+	<button
+		type="button"
+		onclick={handleRefresh}
+		disabled={loading}
+		class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+	>
+		{loading ? '생성 중...' : '새로고침'}
+	</button>
+{/snippet}
+
+<BrowsePageLayout
+	title="ERD 다이어그램"
+	description={`현재 컬럼 정의서: ${selectedColumnFile}`}
+	breadcrumbItems={getNavigationBreadcrumbItems('/erd')}
+	sidebarSurface="plain"
+	{sidebar}
+	{actions}
+>
+	<ColumnDefFileManager
+		isOpen={isFileManagerOpen}
+		currentFilename={selectedColumnFile}
+		on:close={() => (isFileManagerOpen = false)}
+		on:change={async () => {
+			await loadColumnFiles();
+			await reloadForColumnFile();
+		}}
+	/>
+
+	<section aria-label="ERD 메인 제어 영역" class="mb-4 space-y-4">
 		<section
 			aria-label="ERD 조회 조건"
-			class="rounded-2xl border border-border bg-surface/95 p-4 shadow-xl backdrop-blur-md dark:bg-surface/90"
+			class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"
 		>
-			<h2 class="mb-3 text-sm font-semibold text-gray-900">조회 조건</h2>
-			<div class="space-y-3">
+			<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+				<h2 class="text-sm font-semibold text-gray-900">조회 조건</h2>
+				<span class="text-xs text-gray-500">조건 결과 {filteredTables().length}개 테이블</span>
+			</div>
+			<div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
 				<div>
 					<label for="displayMode" class="mb-1 block text-xs font-medium text-gray-700"
 						>표시 모드</label
@@ -614,7 +656,9 @@
 						<option value="N">사업범위 외</option>
 					</select>
 				</div>
-				<label class="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+				<label
+					class="flex cursor-pointer items-center gap-2 self-end rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700"
+				>
 					<input
 						type="checkbox"
 						bind:checked={includeExternalReferences}
@@ -623,7 +667,9 @@
 					/>
 					FK 외부참조 포함
 				</label>
-				<label class="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+				<label
+					class="flex cursor-pointer items-center gap-2 self-end rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700"
+				>
 					<input
 						type="checkbox"
 						bind:checked={includeRelated}
@@ -635,125 +681,98 @@
 			</div>
 		</section>
 
-		<section
-			aria-label="ERD 테이블 다중 선택"
-			class="rounded-2xl border border-border bg-surface/95 p-4 shadow-xl backdrop-blur-md dark:bg-surface/90"
-		>
-			<div class="mb-3 flex items-center justify-between gap-2">
-				<h2 class="text-sm font-semibold text-gray-900">테이블 선택</h2>
-				<span class="text-xs text-gray-500">{selectedTableIds.size}개 선택</span>
-			</div>
-			<div class="mb-3 flex gap-2">
-				<button
-					type="button"
-					onclick={handleSelectAll}
-					class="flex-1 rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-				>
-					전체 선택
-				</button>
-				<button
-					type="button"
-					onclick={handleDeselectAll}
-					class="flex-1 rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-				>
-					전체 해제
-				</button>
-			</div>
-			<div class="max-h-80 overflow-y-auto rounded-lg border border-gray-200 bg-white">
-				{#if loadingTables}
-					<div class="flex items-center justify-center p-4 text-sm text-gray-500">
-						테이블 로딩 중...
+		<div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
+			<section
+				aria-label="ERD 테이블 다중 선택"
+				class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"
+			>
+				<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+					<div>
+						<h2 class="text-sm font-semibold text-gray-900">테이블 선택</h2>
+						<p class="mt-1 text-xs text-gray-500">
+							조건 결과에서 다이어그램에 표시할 테이블을 선택합니다.
+						</p>
 					</div>
-				{:else if filteredTables().length === 0}
-					<div class="p-4 text-center text-sm text-gray-500">조건에 맞는 테이블이 없습니다.</div>
-				{:else}
-					<div class="divide-y divide-gray-200">
-						{#each filteredTables() as table (table.id)}
-							<label class="flex cursor-pointer items-start gap-3 px-3 py-2 hover:bg-gray-50">
-								<input
-									type="checkbox"
-									checked={selectedTableIds.has(table.id)}
-									onchange={() => handleTableToggle(table.id)}
-									class="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-								/>
-								<div class="min-w-0 flex-1">
-									<div class="truncate text-sm font-medium text-gray-900">
-										{table.tableEnglishName || '이름 없음'}
+					<span class="text-xs text-gray-500">{selectedTableIds.size}개 선택</span>
+				</div>
+				<div class="mb-3 flex gap-2 sm:max-w-xs">
+					<button
+						type="button"
+						onclick={handleSelectAll}
+						class="flex-1 rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+					>
+						전체 선택
+					</button>
+					<button
+						type="button"
+						onclick={handleDeselectAll}
+						class="flex-1 rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+					>
+						전체 해제
+					</button>
+				</div>
+				<div class="max-h-64 overflow-y-auto rounded-lg border border-gray-200 bg-white">
+					{#if loadingTables}
+						<div class="flex items-center justify-center p-4 text-sm text-gray-500">
+							테이블 로딩 중...
+						</div>
+					{:else if filteredTables().length === 0}
+						<div class="p-4 text-center text-sm text-gray-500">조건에 맞는 테이블이 없습니다.</div>
+					{:else}
+						<div
+							class="grid divide-y divide-gray-200 md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-3"
+						>
+							{#each filteredTables() as table (table.id)}
+								<label
+									class="flex cursor-pointer items-start gap-3 border-b border-gray-200 px-3 py-2 hover:bg-gray-50 md:border-b-0"
+								>
+									<input
+										type="checkbox"
+										checked={selectedTableIds.has(table.id)}
+										onchange={() => handleTableToggle(table.id)}
+										class="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+									/>
+									<div class="min-w-0 flex-1">
+										<div class="truncate text-sm font-medium text-gray-900">
+											{table.tableEnglishName || '이름 없음'}
+										</div>
+										<div class="mt-0.5 truncate text-xs text-gray-500">
+											{table.tableKoreanName || '-'} · {table.schemaName || '-'} · {table.subjectArea ||
+												'-'}
+										</div>
 									</div>
-									<div class="mt-0.5 truncate text-xs text-gray-500">
-										{table.tableKoreanName || '-'} · {table.schemaName || '-'} · {table.subjectArea ||
-											'-'}
-									</div>
-								</div>
-							</label>
-						{/each}
-					</div>
-				{/if}
-			</div>
-		</section>
+								</label>
+							{/each}
+						</div>
+					{/if}
+				</div>
+			</section>
 
-		<section
-			aria-label="ERD 이미지 다운로드"
-			class="rounded-2xl border border-border bg-surface/95 p-4 shadow-xl backdrop-blur-md dark:bg-surface/90"
-		>
-			<h2 class="mb-3 text-sm font-semibold text-gray-900">이미지 다운로드</h2>
-			<div class="flex gap-2">
-				<a
-					href={getErdRenderUrl('svg', true)}
-					download
-					class="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-2 text-center text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50"
-				>
-					SVG
-				</a>
-				<a
-					href={getErdRenderUrl('png', true)}
-					download
-					class="flex-1 rounded-lg bg-blue-600 px-3 py-2 text-center text-xs font-medium text-white transition-colors hover:bg-blue-700"
-				>
-					PNG
-				</a>
-			</div>
-		</section>
-	</div>
-{/snippet}
-
-{#snippet actions()}
-	<button
-		type="button"
-		onclick={() => (showMappingSummary = !showMappingSummary)}
-		class="rounded-lg border px-4 py-2 text-sm font-medium transition-colors {showMappingSummary
-			? 'border-indigo-300 bg-indigo-50 text-indigo-700'
-			: 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}"
-	>
-		연관관계 요약
-	</button>
-	<button
-		type="button"
-		onclick={handleRefresh}
-		disabled={loading}
-		class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-	>
-		{loading ? '생성 중...' : '새로고침'}
-	</button>
-{/snippet}
-
-<BrowsePageLayout
-	title="ERD 다이어그램"
-	description={`현재 컬럼 정의서: ${selectedColumnFile}`}
-	breadcrumbItems={getNavigationBreadcrumbItems('/erd')}
-	sidebarSurface="plain"
-	{sidebar}
-	{actions}
->
-	<ColumnDefFileManager
-		isOpen={isFileManagerOpen}
-		currentFilename={selectedColumnFile}
-		on:close={() => (isFileManagerOpen = false)}
-		on:change={async () => {
-			await loadColumnFiles();
-			await reloadForColumnFile();
-		}}
-	/>
+			<section
+				aria-label="ERD 이미지 다운로드"
+				class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"
+			>
+				<h2 class="text-sm font-semibold text-gray-900">이미지 다운로드</h2>
+				<p class="mt-1 text-xs text-gray-500">현재 조건과 선택 테이블 기준으로 내려받습니다.</p>
+				<div class="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+					<a
+						href={getErdRenderUrl('svg', true)}
+						download
+						class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-center text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50"
+					>
+						SVG 다운로드
+					</a>
+					<a
+						href={getErdRenderUrl('png', true)}
+						download
+						class="rounded-lg bg-blue-600 px-3 py-2 text-center text-xs font-medium text-white transition-colors hover:bg-blue-700"
+					>
+						PNG 다운로드
+					</a>
+				</div>
+			</section>
+		</div>
+	</section>
 
 	{#if showMappingSummary && erdData}
 		{@const stats = mappingStats()}

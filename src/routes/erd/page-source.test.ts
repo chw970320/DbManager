@@ -7,6 +7,10 @@ const currentDir = dirname(fileURLToPath(import.meta.url));
 const source = readFileSync(join(currentDir, '+page.svelte'), 'utf8');
 const sidebarSource = source.match(/\{#snippet sidebar\(\)\}([\s\S]*?)\{\/snippet\}/)?.[1] ?? '';
 
+function getSelectSource(id: string): string {
+	return source.match(new RegExp(`id="${id}"[\\s\\S]*?<\\/select>`))?.[0] ?? '';
+}
+
 describe('ERD page sidebar and main controls contract', () => {
 	it('uses browse sidebar layout and column definition file manager', () => {
 		expect(source).toContain('BrowsePageLayout');
@@ -27,10 +31,23 @@ describe('ERD page sidebar and main controls contract', () => {
 	});
 
 	it('keeps subject area and schema as Korean-labeled select boxes in the main query controls', () => {
+		const subjectAreaSelect = getSelectSource('subjectAreaFilter');
+		const schemaSelect = getSelectSource('schemaFilter');
+
 		expect(source).toMatch(/for="subjectAreaFilter"[\s\S]*?<select/);
 		expect(source).toMatch(/for="schemaFilter"[\s\S]*?>스키마<\/label[\s\S]*?<select/);
-		expect(source).toContain('<option value="">전체</option>');
-		expect(source).toContain('placeholder="영문/한글/스키마"');
+		expect(subjectAreaSelect).not.toContain('<option value="">전체</option>');
+		expect(schemaSelect).not.toContain('<option value="">전체</option>');
+		expect(source).toContain('pickFirstOption');
+		expect(source).toContain('normalizeFiltersAfterTableLoad({ selectAll: true })');
+	});
+
+	it('keeps table selection collapsed by default with searchable edit controls', () => {
+		expect(source).toContain('let isTableSelectionExpanded = $state(false)');
+		expect(source).toContain('aria-expanded={isTableSelectionExpanded}');
+		expect(source).toContain('기본으로 조건 결과 전체가 선택됩니다');
+		expect(source).toContain('placeholder="영문/한글/스키마/주제영역"');
+		expect(source).toContain('selectedFilteredTableIds().length');
 	});
 
 	it('removes old top filter and manual generation controls', () => {

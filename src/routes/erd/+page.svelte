@@ -53,6 +53,8 @@
 		mapping?: Record<string, string>;
 	};
 
+	const NO_TABLE_SELECTION_PARAM = '__dbmanager_no_table_selected__';
+
 	let erdData = $state<ERDDataWithValidation | null>(null);
 	let loading = $state(true);
 	let error = $state<string | null>(null);
@@ -78,6 +80,7 @@
 	let includeExternalReferences = $state(true);
 	let includeRelated = $state(true);
 	let loadingTables = $state(false);
+	let isTableSelectionExpanded = $state(false);
 	let showMappingSummary = $state(false);
 	let relationSyncLoading = $state(false);
 	let relationSyncError = $state<string | null>(null);
@@ -139,7 +142,7 @@
 	});
 
 	let subjectAreaOptions = $derived(() => uniqueSorted(tables.map((table) => table.subjectArea)));
-	let schemaOptions = $derived(() => uniqueSorted(tables.map((table) => table.schemaName)));
+	let schemaOptions = $derived(() => getSchemaOptionsForSubject());
 	let filteredTables = $derived(() => {
 		const query = tableSearchQuery.trim().toLowerCase();
 		return tables.filter((table) => {
@@ -157,11 +160,42 @@
 			return subjectMatches && schemaMatches && scopeMatches && queryMatches;
 		});
 	});
+	let selectedFilteredTableIds = $derived(() =>
+		filteredTables()
+			.map((table) => table.id)
+			.filter((id) => selectedTableIds.has(id))
+	);
 
 	function uniqueSorted(values: Array<string | undefined>): string[] {
 		return Array.from(
 			new Set(values.map((value) => value?.trim()).filter(Boolean) as string[])
 		).sort((a, b) => a.localeCompare(b, 'ko', { sensitivity: 'base' }));
+	}
+
+	function getSchemaOptionsForSubject(subjectArea = subjectAreaFilter): string[] {
+		return uniqueSorted(
+			tables
+				.filter((table) => !subjectArea || table.subjectArea === subjectArea)
+				.map((table) => table.schemaName)
+		);
+	}
+
+	function pickFirstOption(options: string[], current: string): string {
+		return current && options.includes(current) ? current : (options[0] ?? '');
+	}
+
+	function selectAllFilteredTables() {
+		selectedTableIds = new Set(filteredTables().map((table) => table.id));
+	}
+
+	function getSelectedTableIdsParam(): string | null {
+		const filteredIds = filteredTables().map((table) => table.id);
+		if (filteredIds.length === 0) return NO_TABLE_SELECTION_PARAM;
+
+		const selectedIds = filteredIds.filter((id) => selectedTableIds.has(id));
+		if (selectedIds.length === 0) return NO_TABLE_SELECTION_PARAM;
+		if (selectedIds.length === filteredIds.length) return null;
+		return selectedIds.join(',');
 	}
 
 	function refreshColumnFileList(files = allColumnFiles) {
@@ -177,7 +211,8 @@
 		if (options.download) params.set('download', 'true');
 		if (selectedColumnFile.trim()) params.set('columnFile', selectedColumnFile.trim());
 		if (mappedTableFile?.trim()) params.set('tableFile', mappedTableFile.trim());
-		if (selectedTableIds.size > 0) params.set('tableIds', Array.from(selectedTableIds).join(','));
+		const selectedTableIdsParam = getSelectedTableIdsParam();
+		if (selectedTableIdsParam) params.set('tableIds', selectedTableIdsParam);
 		if (subjectAreaFilter.trim()) params.set('subjectArea', subjectAreaFilter.trim());
 		if (schemaFilter.trim()) params.set('schema', schemaFilter.trim());
 		if (debouncedTableSearchQuery.trim()) params.set('q', debouncedTableSearchQuery.trim());
@@ -244,17 +279,15 @@
 		}
 	}
 
-	function normalizeFiltersAfterTableLoad() {
+	function normalizeFiltersAfterTableLoad(options: { selectAll?: boolean } = {}) {
 		const subjects = subjectAreaOptions();
-		const schemas = schemaOptions();
-		if (subjectAreaFilter && !subjects.includes(subjectAreaFilter)) {
-			subjectAreaFilter = '';
-		}
-		if (schemaFilter && !schemas.includes(schemaFilter)) {
-			schemaFilter = '';
-		}
+		subjectAreaFilter = pickFirstOption(subjects, subjectAreaFilter);
+		schemaFilter = pickFirstOption(getSchemaOptionsForSubject(subjectAreaFilter), schemaFilter);
 		const validIds = new Set(tables.map((table) => table.id));
 		selectedTableIds = new Set(Array.from(selectedTableIds).filter((id) => validIds.has(id)));
+		if (options.selectAll || selectedTableIds.size === 0) {
+			selectAllFilteredTables();
+		}
 	}
 
 	async function loadTables() {
@@ -267,7 +300,7 @@
 
 			if (result.success && result.data) {
 				tables = result.data;
-				normalizeFiltersAfterTableLoad();
+				normalizeFiltersAfterTableLoad({ selectAll: true });
 			}
 		} catch (err) {
 			console.error('테이블 목록 로드 오류:', err);
@@ -305,6 +338,7 @@
 		tableSearchQuery = '';
 		debouncedTableSearchQuery = '';
 		scopeFlagFilter = '';
+		isTableSelectionExpanded = false;
 		relationSyncResult = null;
 		await loadColumnMapping(selectedColumnFile);
 		await loadTables();
@@ -320,8 +354,28 @@
 		if (filterRefreshTimer) clearTimeout(filterRefreshTimer);
 		filterRefreshTimer = setTimeout(() => {
 			debouncedTableSearchQuery = tableSearchQuery;
+			selectAllFilteredTables();
 			void loadERDData();
 		}, 250);
+	}
+
+	function handleSubjectAreaFilterChange(event: Event) {
+		subjectAreaFilter = (event.currentTarget as HTMLSelectElement).value;
+		schemaFilter = pickFirstOption(getSchemaOptionsForSubject(subjectAreaFilter), schemaFilter);
+		selectAllFilteredTables();
+		refreshErdImmediately();
+	}
+
+	function handleSchemaFilterChange(event: Event) {
+		schemaFilter = (event.currentTarget as HTMLSelectElement).value;
+		selectAllFilteredTables();
+		refreshErdImmediately();
+	}
+
+	function handleScopeFlagFilterChange(event: Event) {
+		scopeFlagFilter = (event.currentTarget as HTMLSelectElement).value;
+		selectAllFilteredTables();
+		refreshErdImmediately();
 	}
 
 	function handleTableToggle(tableId: string) {
@@ -603,10 +657,9 @@
 					<select
 						id="subjectAreaFilter"
 						bind:value={subjectAreaFilter}
-						onchange={refreshErdImmediately}
+						onchange={handleSubjectAreaFilterChange}
 						class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
 					>
-						<option value="">전체</option>
 						{#each subjectAreaOptions() as subjectArea (subjectArea)}
 							<option value={subjectArea}>{subjectArea}</option>
 						{/each}
@@ -619,27 +672,13 @@
 					<select
 						id="schemaFilter"
 						bind:value={schemaFilter}
-						onchange={refreshErdImmediately}
+						onchange={handleSchemaFilterChange}
 						class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
 					>
-						<option value="">전체</option>
 						{#each schemaOptions() as schemaName (schemaName)}
 							<option value={schemaName}>{schemaName}</option>
 						{/each}
 					</select>
-				</div>
-				<div>
-					<label for="erdTableSearch" class="mb-1 block text-xs font-medium text-gray-700"
-						>테이블명 검색</label
-					>
-					<input
-						id="erdTableSearch"
-						type="text"
-						placeholder="영문/한글/스키마"
-						bind:value={tableSearchQuery}
-						oninput={scheduleTableSearchRefresh}
-						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-					/>
 				</div>
 				<div>
 					<label for="scopeFlagFilter" class="mb-1 block text-xs font-medium text-gray-700"
@@ -648,7 +687,7 @@
 					<select
 						id="scopeFlagFilter"
 						bind:value={scopeFlagFilter}
-						onchange={refreshErdImmediately}
+						onchange={handleScopeFlagFilterChange}
 						class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
 					>
 						<option value="">전체</option>
@@ -686,66 +725,107 @@
 				aria-label="ERD 테이블 다중 선택"
 				class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"
 			>
-				<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+				<div class="flex flex-wrap items-center justify-between gap-2">
 					<div>
 						<h2 class="text-sm font-semibold text-gray-900">테이블 선택</h2>
 						<p class="mt-1 text-xs text-gray-500">
-							조건 결과에서 다이어그램에 표시할 테이블을 선택합니다.
+							기본으로 조건 결과 전체가 선택됩니다. 필요할 때만 펼쳐 수정합니다.
 						</p>
 					</div>
-					<span class="text-xs text-gray-500">{selectedTableIds.size}개 선택</span>
-				</div>
-				<div class="mb-3 flex gap-2 sm:max-w-xs">
-					<button
-						type="button"
-						onclick={handleSelectAll}
-						class="flex-1 rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-					>
-						전체 선택
-					</button>
-					<button
-						type="button"
-						onclick={handleDeselectAll}
-						class="flex-1 rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
-					>
-						전체 해제
-					</button>
-				</div>
-				<div class="max-h-64 overflow-y-auto rounded-lg border border-gray-200 bg-white">
-					{#if loadingTables}
-						<div class="flex items-center justify-center p-4 text-sm text-gray-500">
-							테이블 로딩 중...
-						</div>
-					{:else if filteredTables().length === 0}
-						<div class="p-4 text-center text-sm text-gray-500">조건에 맞는 테이블이 없습니다.</div>
-					{:else}
-						<div
-							class="grid divide-y divide-gray-200 md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-3"
+					<div class="flex items-center gap-2">
+						<span class="text-xs text-gray-500">
+							{selectedFilteredTableIds().length}개 선택 / 조건 결과 {filteredTables().length}개
+						</span>
+						<button
+							type="button"
+							onclick={() => (isTableSelectionExpanded = !isTableSelectionExpanded)}
+							aria-expanded={isTableSelectionExpanded}
+							aria-controls="erd-table-selection-panel"
+							class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50"
 						>
-							{#each filteredTables() as table (table.id)}
-								<label
-									class="flex cursor-pointer items-start gap-3 border-b border-gray-200 px-3 py-2 hover:bg-gray-50 md:border-b-0"
-								>
-									<input
-										type="checkbox"
-										checked={selectedTableIds.has(table.id)}
-										onchange={() => handleTableToggle(table.id)}
-										class="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-									/>
-									<div class="min-w-0 flex-1">
-										<div class="truncate text-sm font-medium text-gray-900">
-											{table.tableEnglishName || '이름 없음'}
-										</div>
-										<div class="mt-0.5 truncate text-xs text-gray-500">
-											{table.tableKoreanName || '-'} · {table.schemaName || '-'} · {table.subjectArea ||
-												'-'}
-										</div>
-									</div>
-								</label>
-							{/each}
-						</div>
-					{/if}
+							{isTableSelectionExpanded ? '접기' : '수정'}
+						</button>
+					</div>
 				</div>
+
+				{#if isTableSelectionExpanded}
+					<div id="erd-table-selection-panel" class="mt-4 space-y-3">
+						<div>
+							<label for="erdTableSearch" class="mb-1 block text-xs font-medium text-gray-700">
+								테이블명 검색
+							</label>
+							<input
+								id="erdTableSearch"
+								type="text"
+								placeholder="영문/한글/스키마/주제영역"
+								bind:value={tableSearchQuery}
+								oninput={scheduleTableSearchRefresh}
+								class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+							/>
+						</div>
+
+						<div class="flex gap-2 sm:max-w-xs">
+							<button
+								type="button"
+								onclick={handleSelectAll}
+								class="flex-1 rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+							>
+								전체 선택
+							</button>
+							<button
+								type="button"
+								onclick={handleDeselectAll}
+								class="flex-1 rounded-lg border border-gray-300 bg-white px-2 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+							>
+								전체 해제
+							</button>
+						</div>
+						<div class="max-h-64 overflow-y-auto rounded-lg border border-gray-200 bg-white">
+							{#if loadingTables}
+								<div class="flex items-center justify-center p-4 text-sm text-gray-500">
+									테이블 로딩 중...
+								</div>
+							{:else if filteredTables().length === 0}
+								<div class="p-4 text-center text-sm text-gray-500">
+									조건에 맞는 테이블이 없습니다.
+								</div>
+							{:else}
+								<div
+									class="grid divide-y divide-gray-200 md:grid-cols-2 md:divide-x md:divide-y-0 xl:grid-cols-3"
+								>
+									{#each filteredTables() as table (table.id)}
+										<label
+											class="flex cursor-pointer items-start gap-3 border-b border-gray-200 px-3 py-2 hover:bg-gray-50 md:border-b-0"
+										>
+											<input
+												type="checkbox"
+												checked={selectedTableIds.has(table.id)}
+												onchange={() => handleTableToggle(table.id)}
+												class="mt-0.5 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+											/>
+											<div class="min-w-0 flex-1">
+												<div class="truncate text-sm font-medium text-gray-900">
+													{table.tableEnglishName || '이름 없음'}
+												</div>
+												<div class="mt-0.5 truncate text-xs text-gray-500">
+													{table.tableKoreanName || '-'} · {table.schemaName || '-'} · {table.subjectArea ||
+														'-'}
+												</div>
+											</div>
+										</label>
+									{/each}
+								</div>
+							{/if}
+						</div>
+					</div>
+				{:else}
+					<p
+						class="mt-3 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700"
+					>
+						현재 조건 결과는 기본 전체 선택 상태입니다. 특정 테이블만 내려받으려면 수정 버튼을 눌러
+						검색 후 선택을 조정하세요.
+					</p>
+				{/if}
 			</section>
 
 			<section

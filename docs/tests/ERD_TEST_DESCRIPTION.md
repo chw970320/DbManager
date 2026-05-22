@@ -4,21 +4,21 @@
 
 ## 테스트 현황 요약
 
-| 테스트 파일                                         | 주요 검증                                                                           | 상태 |
-| --------------------------------------------------- | ----------------------------------------------------------------------------------- | ---- |
-| `src/lib/utils/erd-file-context.test.ts`            | 컬럼 정의서 기준 공통 파일 매핑 해석, mapped tableFile 우선순위                     | 완료 |
-| `src/routes/erd/page-source.test.ts`                | 좌측 sidebar/본문 제어 영역 배치 계약, 주제영역/스키마 selectbox, 수동 생성 UI 제거 | 완료 |
-| `src/routes/api/erd/render/server.test.ts`          | Graphviz SVG/PNG 렌더 API, 파라미터 검증, 설치 오류 응답, columnFile 매핑 해석      | 완료 |
-| `src/lib/utils/erd-graphviz-model.test.ts`          | 테이블/컬럼 조인, 필터, FK 외부참조 포함/제외                                       | 완료 |
-| `src/lib/utils/graphviz-dot.test.ts`                | DOT/HTML label 생성, escape, 논리/물리 표시, 폰트 스택                              | 완료 |
-| `src/lib/server/graphviz-renderer.test.ts`          | `dot -Tsvg/-Tpng` 호출, ENOENT/non-zero 오류 변환                                   | 완료 |
-| `src/lib/components/ERDViewer.test.ts`              | ERD 이미지 미리보기, 렌더러 기술명 비노출, 오류 표시                                | 완료 |
-| `src/routes/api/erd/generate/server.test.ts`        | 기존 ERD JSON/관계 요약 API, render와 같은 필터 계약, columnFile 매핑 해석          | 완료 |
-| `src/routes/api/erd/tables/server.test.ts`          | ERD 테이블 목록 조회/검색/정렬, columnFile 기반 mapped tableFile 조회               | 완료 |
-| `src/lib/utils/erd-generator.test.ts`               | 기존 ERDData 노드/엣지 생성                                                         | 완료 |
-| `src/lib/utils/erd-mapper.test.ts`                  | 기존 관계 매핑 생성                                                                 | 완료 |
-| `src/lib/utils/erd-filter.test.ts`                  | tableIds/정의서 조건 및 FK 외부참조 포함 여부 기반 컨텍스트 필터                    | 완료 |
-| `src/lib/utils/database-design-xlsx-parser.test.ts` | BKSP 테이블 정의서 헤더 매핑 회귀                                                   | 완료 |
+| 테스트 파일                                         | 주요 검증                                                                                                  | 상태 |
+| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ---- |
+| `src/lib/utils/erd-file-context.test.ts`            | 컬럼 정의서 기준 공통 파일 매핑 해석, mapped tableFile 우선순위                                            | 완료 |
+| `src/routes/erd/page-source.test.ts`                | 좌측 sidebar/본문 제어 영역 배치 계약, 주제영역/스키마 selectbox, 테이블 선택 접힘/검색, 수동 생성 UI 제거 | 완료 |
+| `src/routes/api/erd/render/server.test.ts`          | Graphviz SVG/PNG 렌더 API, 파라미터 검증, 설치 오류 응답, columnFile 매핑 해석                             | 완료 |
+| `src/lib/utils/erd-graphviz-model.test.ts`          | 테이블/컬럼 조인, 필터, FK 외부참조 포함/제외                                                              | 완료 |
+| `src/lib/utils/graphviz-dot.test.ts`                | DOT/HTML label 생성, escape, 논리/물리 표시, 폰트 스택                                                     | 완료 |
+| `src/lib/server/graphviz-renderer.test.ts`          | `dot -Tsvg/-Tpng` 호출, ENOENT/non-zero 오류 변환                                                          | 완료 |
+| `src/lib/components/ERDViewer.test.ts`              | ERD 이미지 미리보기, 렌더러 기술명 비노출, 오류 표시                                                       | 완료 |
+| `src/routes/api/erd/generate/server.test.ts`        | 기존 ERD JSON/관계 요약 API, render와 같은 필터 계약, columnFile 매핑 해석                                 | 완료 |
+| `src/routes/api/erd/tables/server.test.ts`          | ERD 테이블 목록 조회/검색/정렬, columnFile 기반 mapped tableFile 조회                                      | 완료 |
+| `src/lib/utils/erd-generator.test.ts`               | 기존 ERDData 노드/엣지 생성                                                                                | 완료 |
+| `src/lib/utils/erd-mapper.test.ts`                  | 기존 관계 매핑 생성                                                                                        | 완료 |
+| `src/lib/utils/erd-filter.test.ts`                  | tableIds/정의서 조건 및 FK 외부참조 포함 여부 기반 컨텍스트 필터                                           | 완료 |
+| `src/lib/utils/database-design-xlsx-parser.test.ts` | BKSP 테이블 정의서 헤더 매핑 회귀                                                                          | 완료 |
 
 ---
 
@@ -87,8 +87,9 @@
 - ERD 화면이 `BrowsePageLayout`과 `sidebarSurface="plain"`을 사용합니다.
 - 컬럼 정의서 파일 선택과 매핑 기준은 `ColumnDefFileManager`와 좌측 sidebar 카드로 제공됩니다.
 - 조회 조건, 테이블 다중 선택, 이미지 다운로드는 본문 상단의 `ERD 메인 제어 영역` 안에 제공됩니다.
-- 주제영역/스키마 필터는 본문 조회 조건에서 input이 아닌 selectbox이며 `전체` 옵션을 포함합니다.
-- 기존 상단 Graphviz 필터 패널, 접힘형 테이블 선택 패널, 수동 `ERD 생성` 버튼, 데이터베이스/테이블 정의서 직접 선택 UI가 남지 않았는지 검증합니다.
+- 주제영역/스키마 필터는 본문 조회 조건에서 input이 아닌 selectbox이며 `전체` 옵션 없이 첫 유효 옵션을 기본값으로 사용합니다.
+- 테이블 선택은 최초 로드 시 조건 결과 전체가 선택되고 기본 상태는 접혀 있으며, 펼친 뒤 테이블명 검색과 다중 선택을 수정할 수 있는지 검증합니다.
+- 기존 상단 Graphviz 필터 패널, 수동 `ERD 생성` 버튼, 데이터베이스/테이블 정의서 직접 선택 UI가 남지 않았는지 검증합니다.
 
 ## 7. 테이블 정의서 업로드 회귀
 

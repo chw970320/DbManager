@@ -41,8 +41,6 @@ function createMockERDData(): ERDData {
 const defaultProps = {
 	erdData: createMockERDData(),
 	renderUrl: '/api/erd/render?format=svg&mode=logical',
-	svgDownloadUrl: '/api/erd/render?format=svg&mode=logical&download=true',
-	pngDownloadUrl: '/api/erd/render?format=png&mode=logical&download=true',
 	mode: 'logical' as const
 };
 
@@ -66,17 +64,11 @@ describe('ERDViewer', () => {
 		expect(screen.queryByText('Mermaid 파일 다운로드')).not.toBeInTheDocument();
 	});
 
-	it('SVG와 PNG 다운로드 링크를 제공한다', () => {
+	it('미리보기 헤더에 중복 다운로드 링크를 노출하지 않는다', () => {
 		render(ERDViewer, { props: defaultProps });
 
-		expect(screen.getByText('SVG 다운로드')).toHaveAttribute(
-			'href',
-			'/api/erd/render?format=svg&mode=logical&download=true'
-		);
-		expect(screen.getByText('PNG 다운로드')).toHaveAttribute(
-			'href',
-			'/api/erd/render?format=png&mode=logical&download=true'
-		);
+		expect(screen.queryByText('SVG 다운로드')).not.toBeInTheDocument();
+		expect(screen.queryByText('PNG 다운로드')).not.toBeInTheDocument();
 	});
 
 	it('이미지 로드 오류를 한국어 메시지로 표시한다', async () => {

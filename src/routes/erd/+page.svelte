@@ -964,8 +964,6 @@
 				{erdData}
 				mode={graphvizMode}
 				renderUrl={getGraphvizRenderUrl('svg')}
-				svgDownloadUrl={getGraphvizRenderUrl('svg', true)}
-				pngDownloadUrl={getGraphvizRenderUrl('png', true)}
 			/>
 		{:else}
 			<div class="flex h-full items-center justify-center">

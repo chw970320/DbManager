@@ -4,14 +4,10 @@
 	let {
 		erdData,
 		renderUrl,
-		svgDownloadUrl,
-		pngDownloadUrl,
 		mode = 'logical'
 	}: {
 		erdData: ERDData;
 		renderUrl: string;
-		svgDownloadUrl: string;
-		pngDownloadUrl: string;
 		mode?: 'logical' | 'physical';
 	} = $props();
 
@@ -46,22 +42,6 @@
 				{erdData.metadata.logicalNodes}개 | 물리 노드: {erdData.metadata.physicalNodes}개 | 매핑:
 				{erdData.metadata.totalMappings}건
 			</p>
-		</div>
-		<div class="flex flex-wrap gap-2">
-			<a
-				href={svgDownloadUrl}
-				download
-				class="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
-			>
-				SVG 다운로드
-			</a>
-			<a
-				href={pngDownloadUrl}
-				download
-				class="rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
-			>
-				PNG 다운로드
-			</a>
 		</div>
 	</div>
 

@@ -28,6 +28,7 @@ import type {
 	ColumnDomainMapping,
 	MappingContext
 } from '../types/erd-mapping.js';
+import { parseForeignKeyReference } from './erd-fk-reference.js';
 
 // ============================================================================
 // 유틸리티 함수
@@ -331,48 +332,34 @@ export function mapColumnFK(column: ColumnEntry, columns: ColumnEntry[]): Column
 		return null;
 	}
 
-	const fkInfo = column.fkInfo.trim().toUpperCase();
+	const reference = parseForeignKeyReference(column.fkInfo, column);
+	if (!reference?.tableEnglishName || !reference.columnEnglishName) return null;
 
-	// "Y"만 있는 경우는 참조 정보가 없으므로 null 반환
-	if (fkInfo === 'Y' || fkInfo === 'YES') {
-		return null;
-	}
+	const targetColumn = columns.find((candidate) => {
+		const schemaMatches =
+			!reference.schemaName ||
+			normalizeString(candidate.schemaName) === normalizeString(reference.schemaName);
+		const tableMatches =
+			normalizeString(candidate.tableEnglishName) === normalizeString(reference.tableEnglishName);
+		const columnMatches =
+			normalizeString(candidate.columnEnglishName) === normalizeString(reference.columnEnglishName);
+		return schemaMatches && tableMatches && columnMatches;
+	});
 
-	// FK 정보에서 참조 테이블/컬럼 추출 시도
-	// 형식 예: "TABLE_NAME.COLUMN_NAME" 또는 "TABLE_NAME:COLUMN_NAME"
-	const parts = fkInfo
-		.split(/[.:]/)
-		.map((p) => p.trim())
-		.filter((p) => p.length > 0);
-
-	if (parts.length >= 2) {
-		const referencedTable = parts[0];
-		const referencedColumn = parts[1];
-
-		// 참조 대상 컬럼 찾기
-		const targetColumn = columns.find((c) => {
-			const cTable = c.tableEnglishName ? normalizeString(c.tableEnglishName) : '';
-			const cColumn = c.columnEnglishName ? normalizeString(c.columnEnglishName) : '';
-			return (
-				cTable === normalizeString(referencedTable) && cColumn === normalizeString(referencedColumn)
-			);
-		});
-
-		if (targetColumn) {
-			return {
-				id: uuidv4(),
-				sourceId: column.id,
-				targetId: targetColumn.id,
-				sourceType: 'column',
-				targetType: 'column',
-				layerType: 'physical',
-				mappingKey: 'fkInfo',
-				relationshipType: 'N:1',
-				fkInfo: column.fkInfo,
-				referencedTable,
-				referencedColumn
-			};
-		}
+	if (targetColumn) {
+		return {
+			id: uuidv4(),
+			sourceId: column.id,
+			targetId: targetColumn.id,
+			sourceType: 'column',
+			targetType: 'column',
+			layerType: 'physical',
+			mappingKey: 'fkInfo',
+			relationshipType: 'N:1',
+			fkInfo: column.fkInfo,
+			referencedTable: reference.tableEnglishName,
+			referencedColumn: reference.columnEnglishName
+		};
 	}
 
 	return null;

@@ -16,6 +16,11 @@ export interface GraphvizDotOptions {
 
 const ERD_FONT_FAMILY =
 	'Pretendard Variable,Pretendard,Inter,Malgun Gothic,Noto Sans CJK KR,Arial,sans-serif';
+const BUSINESS_SCOPE_HEADER_COLOR = '#4A90E2';
+const OUT_OF_SCOPE_HEADER_COLOR = '#9B9B9B';
+const EXTERNAL_HEADER_COLOR = '#64748B';
+const TABLE_BORDER_COLOR = '#CBD5E1';
+const EXTERNAL_BORDER_COLOR = '#94A3B8';
 
 function xmlEscape(value: string | undefined | null): string {
 	return (value ?? '')
@@ -72,58 +77,73 @@ function getColumnSubName(column: GraphvizERDColumn, mode: GraphvizERDMode): str
 	return normalizeText(column.columnKoreanName);
 }
 
-function getColumnBadges(column: GraphvizERDColumn): string {
-	const badges: string[] = [];
-	if (column.isPrimaryKey) badges.push('PK');
-	if (column.isForeignKey) badges.push('FK');
-	if (column.isNotNull) badges.push('NN');
-	return badges.join(' ');
+function getHeaderColor(table: GraphvizERDTable): string {
+	if (table.isExternal) return EXTERNAL_HEADER_COLOR;
+	return table.inBusinessScope ? BUSINESS_SCOPE_HEADER_COLOR : OUT_OF_SCOPE_HEADER_COLOR;
+}
+
+function getBorderColor(table: GraphvizERDTable): string {
+	return table.isExternal ? EXTERNAL_BORDER_COLOR : TABLE_BORDER_COLOR;
 }
 
 function buildColumnRow(column: GraphvizERDColumn, mode: GraphvizERDMode): string {
 	const columnName = getColumnName(column, mode);
 	const subName = getColumnSubName(column, mode);
-	const badge = getColumnBadges(column);
 	const type = formatDataType(column);
 	const nameCell = subName
-		? `${xmlEscape(columnName)}<BR/><FONT POINT-SIZE="9" COLOR="#64748B">${xmlEscape(subName)}</FONT>`
-		: xmlEscape(columnName);
+		? `<FONT POINT-SIZE="10">${xmlEscape(columnName)}</FONT><BR/><FONT POINT-SIZE="9" COLOR="#64748B">${xmlEscape(subName)}</FONT>`
+		: `<FONT POINT-SIZE="10">${xmlEscape(columnName)}</FONT>`;
+	const primaryKeyCell = column.isPrimaryKey
+		? '<FONT POINT-SIZE="9" COLOR="#1D4ED8"><B>PK</B></FONT>'
+		: '';
+	const foreignKeyCell = column.isForeignKey
+		? '<FONT POINT-SIZE="9" COLOR="#B45309"><B>FK</B></FONT>'
+		: '';
+	const notNullCell = column.isNotNull
+		? '<FONT POINT-SIZE="9" COLOR="#334155"><B>NN</B></FONT>'
+		: '';
 
 	return [
 		'<TR>',
+		`<TD WIDTH="24" ALIGN="CENTER">${primaryKeyCell}</TD>`,
+		`<TD WIDTH="24" ALIGN="CENTER">${foreignKeyCell}</TD>`,
 		`<TD ALIGN="LEFT" BALIGN="LEFT" PORT="${xmlEscape(column.id)}">${nameCell}</TD>`,
 		`<TD ALIGN="LEFT"><FONT POINT-SIZE="10">${xmlEscape(type)}</FONT></TD>`,
-		`<TD ALIGN="CENTER"><FONT POINT-SIZE="10" COLOR="#334155">${xmlEscape(badge)}</FONT></TD>`,
+		`<TD WIDTH="28" ALIGN="CENTER">${notNullCell}</TD>`,
 		'</TR>'
 	].join('');
 }
 
 function buildTableLabel(table: GraphvizERDTable, mode: GraphvizERDMode): string {
-	const headerColor = table.isExternal ? '#64748B' : '#2563EB';
+	const headerColor = getHeaderColor(table);
+	const borderColor = getBorderColor(table);
 	const title = getTableTitle(table, mode);
 	const subtitle = getTableSubtitle(table, mode);
 	const scopeText = table.inBusinessScope ? '사업범위' : '사업범위 외';
 	const externalText = table.isExternal ? ' · 외부참조' : '';
 	const rows = table.columns.length
 		? table.columns.map((column) => buildColumnRow(column, mode)).join('\n')
-		: '<TR><TD COLSPAN="3" ALIGN="CENTER"><FONT COLOR="#94A3B8">컬럼 없음</FONT></TD></TR>';
+		: '<TR><TD COLSPAN="5" ALIGN="CENTER"><FONT COLOR="#94A3B8">컬럼 없음</FONT></TD></TR>';
 
 	return [
 		'<',
-		'<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="6" COLOR="#CBD5E1">',
-		`<TR><TD COLSPAN="3" BGCOLOR="${headerColor}"><FONT COLOR="#FFFFFF"><B>${xmlEscape(title)}</B></FONT></TD></TR>`,
+		`<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="6" COLOR="${borderColor}">`,
+		`<TR><TD COLSPAN="5" BGCOLOR="${headerColor}"><FONT POINT-SIZE="14" COLOR="#FFFFFF"><B>${xmlEscape(title)}</B></FONT></TD></TR>`,
 		subtitle
-			? `<TR><TD COLSPAN="3" BGCOLOR="#EFF6FF"><FONT POINT-SIZE="10" COLOR="#334155">${xmlEscape(subtitle)}</FONT></TD></TR>`
+			? `<TR><TD COLSPAN="5" BGCOLOR="#EFF6FF"><FONT POINT-SIZE="10" COLOR="#334155">${xmlEscape(subtitle)}</FONT></TD></TR>`
 			: '',
-		`<TR><TD COLSPAN="3" BGCOLOR="#F8FAFC"><FONT POINT-SIZE="9" COLOR="#475569">${xmlEscape(scopeText + externalText)}</FONT></TD></TR>`,
-		'<TR><TD ALIGN="LEFT" BGCOLOR="#E2E8F0"><B>컬럼</B></TD><TD ALIGN="LEFT" BGCOLOR="#E2E8F0"><B>타입</B></TD><TD ALIGN="CENTER" BGCOLOR="#E2E8F0"><B>키</B></TD></TR>',
+		`<TR><TD COLSPAN="5" BGCOLOR="#F8FAFC"><FONT POINT-SIZE="9" COLOR="#475569">${xmlEscape(scopeText + externalText)}</FONT></TD></TR>`,
+		'<TR><TD WIDTH="24" ALIGN="CENTER" BGCOLOR="#E2E8F0"><B>PK</B></TD><TD WIDTH="24" ALIGN="CENTER" BGCOLOR="#E2E8F0"><B>FK</B></TD><TD ALIGN="LEFT" BGCOLOR="#E2E8F0"><B>컬럼</B></TD><TD ALIGN="LEFT" BGCOLOR="#E2E8F0"><B>타입</B></TD><TD WIDTH="28" ALIGN="CENTER" BGCOLOR="#E2E8F0"><B>NN</B></TD></TR>',
 		rows,
 		'</TABLE>',
 		'>'
 	].join('');
 }
 
-export function buildGraphvizDot(model: GraphvizERDModel, options: GraphvizDotOptions = {}): string {
+export function buildGraphvizDot(
+	model: GraphvizERDModel,
+	options: GraphvizDotOptions = {}
+): string {
 	const mode = options.mode ?? 'logical';
 	const title = options.title ?? 'DbManager ERD';
 	const tableMap = new Map(model.tables.map((table) => [table.key, table]));
@@ -139,8 +159,9 @@ export function buildGraphvizDot(model: GraphvizERDModel, options: GraphvizDotOp
 
 	for (const table of model.tables) {
 		const tooltip = `${table.schemaName ?? ''}.${table.tableEnglishName}`.replace(/^\./, '');
+		const style = table.isExternal ? ', style="dashed"' : '';
 		lines.push(
-			`  ${table.nodeId} [label=${buildTableLabel(table, mode)}, tooltip="${dotEscape(tooltip)}"];`
+			`  ${table.nodeId} [label=${buildTableLabel(table, mode)}, tooltip="${dotEscape(tooltip)}"${style}];`
 		);
 	}
 
@@ -149,8 +170,9 @@ export function buildGraphvizDot(model: GraphvizERDModel, options: GraphvizDotOp
 		const target = tableMap.get(relationship.targetTableKey);
 		if (!source || !target) continue;
 		const color = relationship.isExternalReference ? '#94A3B8' : '#475569';
+		const style = relationship.isExternalReference ? ', style="dashed"' : '';
 		lines.push(
-			`  ${source.nodeId} -> ${target.nodeId} [label="${dotEscape(relationship.label)}", color="${color}", fontcolor="${color}", dir="both", arrowtail="crow", arrowhead="tee"];`
+			`  ${source.nodeId} -> ${target.nodeId} [label="${dotEscape(relationship.label)}", color="${color}", fontcolor="${color}", dir="both", arrowtail="crow", arrowhead="tee"${style}];`
 		);
 	}
 

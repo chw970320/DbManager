@@ -27,6 +27,10 @@
 		previewLoading = false;
 		previewError = 'ERD 이미지를 불러오지 못했습니다. 필터 조건을 확인해 주세요.';
 	}
+
+	let relationshipCount = $derived(
+		erdData.metadata.totalRelationships ?? erdData.metadata.totalEdges
+	);
 </script>
 
 <div class="flex h-full flex-col">
@@ -68,10 +72,11 @@
 	<!-- 메타데이터 -->
 	<div class="border-t border-gray-200 bg-white px-4 py-2">
 		<div class="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
-			<span>데이터 생성 시간: {new Date(erdData.metadata.generatedAt).toLocaleString('ko-KR')}</span>
 			<span>
-				노드: {erdData.metadata.totalNodes}개 | 엣지: {erdData.metadata.totalEdges}개 | 출력:
-				SVG/PNG
+				데이터 생성 시간: {new Date(erdData.metadata.generatedAt).toLocaleString('ko-KR')}
+			</span>
+			<span>
+				노드: {erdData.metadata.totalNodes}개 | 관계: {relationshipCount}개 | 출력: SVG/PNG
 			</span>
 		</div>
 	</div>

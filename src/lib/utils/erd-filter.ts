@@ -11,6 +11,7 @@ import type {
 } from '../types/database-design.js';
 import type { DomainEntry } from '../types/domain.js';
 import type { MappingContext } from '../types/erd-mapping.js';
+import { parseForeignKeyReference, type ERDForeignKeyReference } from './erd-fk-reference.js';
 
 /**
  * ERD 필터 옵션
@@ -108,60 +109,8 @@ function matchesScope(columns: ColumnEntry[], scopeFlags: string[]): boolean {
 	return columns.some((column) => normalizedFilters.includes(normalizeKey(column.scopeFlag)));
 }
 
-type ForeignKeyReference = {
-	schemaName?: string;
-	tableEnglishName?: string;
-	columnEnglishName?: string;
-};
-
-function parseForeignKeyReference(column: ColumnEntry): ForeignKeyReference | undefined {
-	const fkInfo = normalizeText(column.fkInfo);
-	if (!fkInfo || ['y', 'yes', 'true'].includes(fkInfo.toLowerCase())) return undefined;
-
-	const firstReference = fkInfo
-		.split(/[;,\n]/)
-		.map((part) => part.trim())
-		.find(Boolean);
-	if (!firstReference) return undefined;
-
-	const parts = firstReference
-		.replace(/[`"'[\]{}()]/g, ' ')
-		.replace(/->|=>/g, '.')
-		.replace(/\s+/g, ' ')
-		.trim()
-		.split(/[.:]/)
-		.map((part) => part.trim())
-		.filter(Boolean);
-
-	if (parts.length >= 3) {
-		return {
-			schemaName: parts[parts.length - 3],
-			tableEnglishName: parts[parts.length - 2],
-			columnEnglishName: parts[parts.length - 1]
-		};
-	}
-
-	if (parts.length === 2) {
-		return {
-			schemaName: column.schemaName,
-			tableEnglishName: parts[0],
-			columnEnglishName: parts[1]
-		};
-	}
-
-	if (parts.length === 1) {
-		return {
-			schemaName: column.schemaName,
-			tableEnglishName: column.tableEnglishName,
-			columnEnglishName: parts[0]
-		};
-	}
-
-	return undefined;
-}
-
 function findReferencedColumn(
-	reference: ForeignKeyReference,
+	reference: ERDForeignKeyReference,
 	columns: ColumnEntry[]
 ): ColumnEntry | undefined {
 	const referenceSchema = normalizeKey(reference.schemaName);
@@ -169,8 +118,10 @@ function findReferencedColumn(
 	const referenceColumn = normalizeKey(reference.columnEnglishName);
 
 	return columns.find((candidate) => {
-		const schemaMatches = !referenceSchema || normalizeKey(candidate.schemaName) === referenceSchema;
-		const tableMatches = !referenceTable || normalizeKey(candidate.tableEnglishName) === referenceTable;
+		const schemaMatches =
+			!referenceSchema || normalizeKey(candidate.schemaName) === referenceSchema;
+		const tableMatches =
+			!referenceTable || normalizeKey(candidate.tableEnglishName) === referenceTable;
 		const columnMatches =
 			!referenceColumn || normalizeKey(candidate.columnEnglishName) === referenceColumn;
 		return schemaMatches && tableMatches && columnMatches;
@@ -187,7 +138,7 @@ function collectExternalReferencedTableKeys(
 	for (const column of columns) {
 		if (!sourceTableKeys.has(createTableKey(column.schemaName, column.tableEnglishName))) continue;
 
-		const reference = parseForeignKeyReference(column);
+		const reference = parseForeignKeyReference(column.fkInfo, column);
 		if (!reference) continue;
 
 		const targetColumn = findReferencedColumn(reference, columns);

@@ -280,13 +280,17 @@ describe('erd-mapper', () => {
 				...createMockColumn(),
 				domainName: '사용자ID_VARCHAR(50)'
 			};
-			const mapping = mapColumnToDomain(column, [], [
-				{
-					...createMockDomain(),
-					id: 'domain-direct',
-					standardDomainName: '사용자ID_VARCHAR(50)'
-				}
-			]);
+			const mapping = mapColumnToDomain(
+				column,
+				[],
+				[
+					{
+						...createMockDomain(),
+						id: 'domain-direct',
+						standardDomainName: '사용자ID_VARCHAR(50)'
+					}
+				]
+			);
 
 			expect(mapping).not.toBeNull();
 			expect(mapping?.targetId).toBe('domain-direct');
@@ -428,6 +432,74 @@ describe('erd-mapper', () => {
 			const mapping = mapColumnFK(column, columns);
 
 			expect(mapping).not.toBeNull();
+		});
+
+		it('should resolve table.column fkInfo against the source schema', () => {
+			const column: ColumnEntry = {
+				...createMockColumn(),
+				id: 'column-source',
+				schemaName: 'sales',
+				tableEnglishName: 'orders',
+				columnEnglishName: 'user_id',
+				fkInfo: 'users.id'
+			};
+			const wrongSchemaTarget: ColumnEntry = {
+				...createMockColumn(),
+				id: 'column-target-archive',
+				schemaName: 'archive',
+				tableEnglishName: 'users',
+				columnEnglishName: 'id'
+			};
+			const targetColumn: ColumnEntry = {
+				...createMockColumn(),
+				id: 'column-target-sales',
+				schemaName: 'sales',
+				tableEnglishName: 'users',
+				columnEnglishName: 'id'
+			};
+
+			const mapping = mapColumnFK(column, [wrongSchemaTarget, targetColumn]);
+
+			expect(mapping).not.toBeNull();
+			expect(mapping?.targetId).toBe('column-target-sales');
+			expect(mapping?.referencedTable).toBe('users');
+			expect(mapping?.referencedColumn).toBe('id');
+		});
+
+		it('should parse schema.table.column fkInfo without confusing schema as table', () => {
+			const column: ColumnEntry = {
+				...createMockColumn(),
+				id: 'column-source',
+				schemaName: 'public',
+				tableEnglishName: 'orders',
+				columnEnglishName: 'user_id',
+				fkInfo: 'public.users.id'
+			};
+			const targetColumn: ColumnEntry = {
+				...createMockColumn(),
+				id: 'column-target',
+				schemaName: 'public',
+				tableEnglishName: 'users',
+				columnEnglishName: 'id'
+			};
+
+			const mapping = mapColumnFK(column, [column, targetColumn]);
+
+			expect(mapping).not.toBeNull();
+			expect(mapping?.targetId).toBe('column-target');
+			expect(mapping?.referencedTable).toBe('users');
+			expect(mapping?.referencedColumn).toBe('id');
+		});
+
+		it('should keep boolean FK markers from creating relationship mappings', () => {
+			const column: ColumnEntry = {
+				...createMockColumn(),
+				fkInfo: 'YES'
+			};
+
+			const mapping = mapColumnFK(column, [column]);
+
+			expect(mapping).toBeNull();
 		});
 
 		it('should handle invalid fkInfo', () => {

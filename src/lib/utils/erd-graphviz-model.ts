@@ -6,6 +6,11 @@
 
 import type { ColumnEntry, TableEntry } from '$lib/types/database-design.js';
 import type { MappingContext } from '$lib/types/erd-mapping.js';
+import {
+	hasForeignKeyMarker,
+	isBooleanForeignKeyMarker,
+	parseForeignKeyReference
+} from './erd-fk-reference.js';
 
 // ============================================================================
 // 타입 정의
@@ -123,7 +128,10 @@ function normalizeList(values: string[] | undefined): string[] {
 		.filter((value) => value.length > 0);
 }
 
-function createTableKey(schemaName: string | undefined, tableEnglishName: string | undefined): string {
+function createTableKey(
+	schemaName: string | undefined,
+	tableEnglishName: string | undefined
+): string {
 	return `${normalizeKey(schemaName)}|${normalizeKey(tableEnglishName)}`;
 }
 
@@ -173,9 +181,7 @@ function scopeFilterMatches(table: GraphvizERDTable, scopeFlags: string[]): bool
 	const wantsNegative = normalizedFilters.some((value) => isNegativeFlag(value));
 
 	if (wantsPositive || wantsNegative) {
-		return (
-			(wantsPositive && table.inBusinessScope) || (wantsNegative && !table.inBusinessScope)
-		);
+		return (wantsPositive && table.inBusinessScope) || (wantsNegative && !table.inBusinessScope);
 	}
 
 	const tableScope = normalizeKey(table.scopeFlag);
@@ -194,7 +200,7 @@ function createColumnModel(column: ColumnEntry): GraphvizERDColumn {
 		pkInfo: column.pkInfo,
 		fkInfo: column.fkInfo,
 		isPrimaryKey: !isBlank(column.pkInfo),
-		isForeignKey: !isBlank(column.fkInfo) && !['y', 'yes'].includes(normalizeKey(column.fkInfo)),
+		isForeignKey: hasForeignKeyMarker(column.fkInfo),
 		isNotNull: isPositiveFlag(column.notNullFlag),
 		reference: parseForeignKeyReference(column.fkInfo, column),
 		raw: column
@@ -226,55 +232,6 @@ function createGraphvizTable(
 		isExternal,
 		columns: record.columns.map(createColumnModel),
 		raw: record.table
-	};
-}
-
-function parseForeignKeyReference(
-	fkInfo: string | undefined,
-	column: ColumnEntry
-): GraphvizERDColumnReference | undefined {
-	if (isBlank(fkInfo)) return undefined;
-
-	const text = normalizeText(fkInfo);
-	if (['Y', 'YES', 'TRUE'].includes(text.toUpperCase())) return undefined;
-
-	const firstReference = text
-		.split(/[;,\n]/)
-		.map((part) => part.trim())
-		.find((part) => part.length > 0);
-	if (!firstReference) return undefined;
-
-	const cleaned = firstReference
-		.replace(/[`"'[\]{}()]/g, ' ')
-		.replace(/->/g, '.')
-		.replace(/=>/g, '.')
-		.replace(/\s+/g, ' ')
-		.trim();
-	const parts = cleaned
-		.split(/[.:]/)
-		.map((part) => part.trim())
-		.filter(Boolean);
-
-	if (parts.length >= 3) {
-		return {
-			schemaName: parts[parts.length - 3],
-			tableEnglishName: parts[parts.length - 2],
-			columnEnglishName: parts[parts.length - 1]
-		};
-	}
-
-	if (parts.length === 2) {
-		return {
-			schemaName: column.schemaName,
-			tableEnglishName: parts[0],
-			columnEnglishName: parts[1]
-		};
-	}
-
-	return {
-		schemaName: column.schemaName,
-		tableEnglishName: column.tableEnglishName,
-		columnEnglishName: parts[0]
 	};
 }
 
@@ -325,21 +282,18 @@ function findReferencedColumn(
 	const referenceColumn = normalizeKey(reference.columnEnglishName);
 
 	return columns.find((candidate) => {
-		const schemaMatches = !referenceSchema || normalizeKey(candidate.schemaName) === referenceSchema;
-		const tableMatches = !referenceTable || normalizeKey(candidate.tableEnglishName) === referenceTable;
+		const schemaMatches =
+			!referenceSchema || normalizeKey(candidate.schemaName) === referenceSchema;
+		const tableMatches =
+			!referenceTable || normalizeKey(candidate.tableEnglishName) === referenceTable;
 		const columnMatches =
 			!referenceColumn || normalizeKey(candidate.columnEnglishName) === referenceColumn;
 		return schemaMatches && tableMatches && columnMatches;
 	});
 }
 
-function buildRelationshipId(
-	sourceTableKey: string,
-	targetTableKey: string,
-	sourceColumnName: string | undefined,
-	targetColumnName: string | undefined
-): string {
-	return [sourceTableKey, sourceColumnName, targetTableKey, targetColumnName]
+function buildRelationshipId(sourceTableKey: string, targetTableKey: string): string {
+	return [sourceTableKey, targetTableKey]
 		.map((part) => normalizeKey(part).replace(/[^a-z0-9가-힣|_]/g, '_'))
 		.join('__');
 }
@@ -406,7 +360,23 @@ export function buildGraphvizERDModel(
 	for (const record of selectedRecords) {
 		for (const sourceColumn of record.columns) {
 			const reference = parseForeignKeyReference(sourceColumn.fkInfo, sourceColumn);
-			if (!reference) continue;
+			if (!reference) {
+				if (
+					hasForeignKeyMarker(sourceColumn.fkInfo) &&
+					!isBooleanForeignKeyMarker(sourceColumn.fkInfo)
+				) {
+					warnings.push({
+						code: 'unresolved-fk',
+						message: 'FK 참조 형식을 해석할 수 없습니다.',
+						detail: {
+							fkInfo: sourceColumn.fkInfo ?? '',
+							table: sourceColumn.tableEnglishName ?? '',
+							column: sourceColumn.columnEnglishName ?? ''
+						}
+					});
+				}
+				continue;
+			}
 
 			const targetColumn = findReferencedColumn(reference, context.columns);
 			if (!targetColumn) {
@@ -445,12 +415,7 @@ export function buildGraphvizERDModel(
 				}
 			}
 
-			const relationshipId = buildRelationshipId(
-				record.key,
-				targetTableKey,
-				sourceColumn.columnEnglishName,
-				targetColumn.columnEnglishName
-			);
+			const relationshipId = buildRelationshipId(record.key, targetTableKey);
 			if (relationships.has(relationshipId)) continue;
 
 			relationships.set(relationshipId, {

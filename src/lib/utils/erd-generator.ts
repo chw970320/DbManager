@@ -25,6 +25,7 @@ import type {
 } from '../types/erd-mapping.js';
 import { generateAllMappings } from './erd-mapper.js';
 import { filterMappingContext, type ERDFilterOptions } from './erd-filter.js';
+import { buildGraphvizERDModel } from './erd-graphviz-model.js';
 
 // ============================================================================
 // 노드 생성 함수
@@ -247,6 +248,7 @@ export function generateERDData(
 
 	// 모든 엣지 생성
 	const edges: ERDEdge[] = mappings.map((mapping, index) => createEdgeFromMapping(mapping, index));
+	const graphvizModel = buildGraphvizERDModel(context, filterOptions);
 
 	// 메타데이터 계산
 	const logicalNodes = nodes.filter((n) => n.layerType === 'logical').length;
@@ -262,6 +264,13 @@ export function generateERDData(
 			totalNodes: nodes.length,
 			totalEdges: edges.length,
 			totalMappings: mappings.length,
+			totalRelationships: graphvizModel.metadata.totalRelationships,
+			externalRelationships: graphvizModel.relationships.filter(
+				(relationship) => relationship.isExternalReference
+			).length,
+			unresolvedForeignKeys: graphvizModel.warnings.filter(
+				(warning) => warning.code === 'unresolved-fk'
+			).length,
 			logicalNodes,
 			physicalNodes,
 			domainNodes

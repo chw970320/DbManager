@@ -7,6 +7,7 @@
 - ERD 화면의 정의서 파일 선택/매핑 기준은 좌측 제어판에 유지하고, 조회 조건/테이블 선택/이미지 다운로드는 본문 제어 영역으로 이동했습니다.
 - ERD 주제영역/스키마 조회 조건에서 `전체` 옵션을 제거하고, 최초 조건 결과 테이블을 기본 전체 선택하되 테이블 선택은 접힌 상태로 시작합니다.
 - ERD API가 `columnFile`만 받아도 공통 파일 매핑으로 관련 정의서와 테이블 정의서를 해석하도록 보강했습니다.
+- ERD 이미지가 `excel2image` 샘플 방향의 정보 구성에 가깝도록 PK/FK/NN 열, 사업범위 색상, 명시 FK 관계선, 관계 metadata 표시를 보강했습니다.
 
 ### 상세 변경
 
@@ -55,6 +56,42 @@
   - `docs/USER_GUIDE.md`
   - `docs/specs/api-reference.md`
   - `docs/tests/ERD_TEST_DESCRIPTION.md`
+
+5. ERD 이미지 품질/관계 metadata 보강
+
+- 대상:
+  - `src/lib/utils/erd-fk-reference.ts`
+  - `src/lib/utils/erd-graphviz-model.ts`
+  - `src/lib/utils/graphviz-dot.ts`
+  - `src/lib/utils/erd-filter.ts`
+  - `src/lib/utils/erd-mapper.ts`
+  - `src/lib/utils/erd-generator.ts`
+  - `src/lib/types/erd-mapping.ts`
+  - `src/lib/components/ERDViewer.svelte`
+- 변경:
+  - FK 파서를 공유 유틸리티로 분리해 Graphviz 모델, 외부참조 필터, 기존 ERD mapping/generate 경로가 `schema.table.column`과 `table.column` 축약형을 동일하게 해석하도록 정리
+  - `Y/YES/TRUE` FK 값은 관계 대상이 아닌 FK marker로만 유지하고, 컬럼명만 있는 1-part 값은 관계를 추론하지 않도록 조정
+  - 같은 source/target 테이블 사이 복수 FK를 Graphviz 관계 1개로 축약
+  - DOT HTML label에 PK/FK/NN 좁은 열, 타입 길이/소수점 표시, 사업범위 `#4A90E2`, 사업범위 외 `#9B9B9B`, 외부참조 회색/점선 스타일을 반영
+  - ERDData metadata에 Graphviz 이미지 기준 `totalRelationships`, `externalRelationships`, `unresolvedForeignKeys`를 추가하고 ERDViewer는 구조적 edge 수 대신 관계 수를 표시
+
+6. ERD 품질 테스트/문서 갱신
+
+- 대상:
+  - `src/lib/utils/erd-graphviz-model.test.ts`
+  - `src/lib/utils/graphviz-dot.test.ts`
+  - `src/lib/utils/erd-filter.test.ts`
+  - `src/lib/utils/erd-mapper.test.ts`
+  - `src/lib/utils/erd-generator.test.ts`
+  - `src/lib/components/ERDViewer.test.ts`
+  - `docs/USER_GUIDE.md`
+  - `docs/specs/data-model.md`
+  - `docs/specs/api-reference.md`
+  - `docs/tests/ERD_TEST_DESCRIPTION.md`
+  - `README.md`
+- 변경:
+  - 명시 FK만 관계선을 생성하고, 픽셀 단위 `excel2image` 동일성은 비목표임을 문서화
+  - 이미지 관계 metadata와 기존 구조적 edge 수의 의미 차이를 API/데이터 모델 문서에 반영
 
 ### 요약
 

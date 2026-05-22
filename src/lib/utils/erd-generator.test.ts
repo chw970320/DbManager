@@ -116,6 +116,56 @@ function createMockContext(): MappingContext {
 	};
 }
 
+function createExternalReferenceContext(fkInfo = 'public.users.user_id'): MappingContext {
+	return {
+		...createMockContext(),
+		entities: [],
+		attributes: [],
+		tables: [
+			{
+				...createMockTable(),
+				id: 'table-order',
+				tableEnglishName: 'orders',
+				tableKoreanName: '주문',
+				subjectArea: 'ORDER'
+			},
+			{
+				...createMockTable(),
+				id: 'table-user',
+				tableEnglishName: 'users',
+				tableKoreanName: '사용자',
+				subjectArea: 'USER'
+			}
+		],
+		columns: [
+			{
+				...createMockColumn(),
+				id: 'column-order-id',
+				tableEnglishName: 'orders',
+				columnEnglishName: 'order_id',
+				subjectArea: 'ORDER',
+				pkInfo: 'PK'
+			},
+			{
+				...createMockColumn(),
+				id: 'column-order-user',
+				tableEnglishName: 'orders',
+				columnEnglishName: 'user_id',
+				subjectArea: 'ORDER',
+				fkInfo
+			},
+			{
+				...createMockColumn(),
+				id: 'column-user-id',
+				tableEnglishName: 'users',
+				columnEnglishName: 'user_id',
+				subjectArea: 'USER',
+				pkInfo: 'PK'
+			}
+		]
+	};
+}
+
 describe('erd-generator', () => {
 	describe('generateERDData', () => {
 		it('should generate ERD data with all nodes', () => {
@@ -145,6 +195,112 @@ describe('erd-generator', () => {
 			expect(erdData.metadata.totalEdges).toBe(erdData.edges.length);
 			expect(erdData.metadata.totalMappings).toBe(erdData.mappings.length);
 			expect(erdData.metadata.generatedAt).toBeDefined();
+		});
+
+		it('should expose Graphviz-aligned relationship metadata separately from structural edges', () => {
+			const context: MappingContext = {
+				...createMockContext(),
+				entities: [],
+				attributes: [],
+				tables: [
+					{
+						...createMockTable(),
+						id: 'table-order',
+						tableEnglishName: 'orders',
+						tableKoreanName: '주문'
+					},
+					{
+						...createMockTable(),
+						id: 'table-user',
+						tableEnglishName: 'users',
+						tableKoreanName: '사용자'
+					}
+				],
+				columns: [
+					{
+						...createMockColumn(),
+						id: 'column-order-id',
+						tableEnglishName: 'orders',
+						columnEnglishName: 'order_id',
+						pkInfo: 'PK'
+					},
+					{
+						...createMockColumn(),
+						id: 'column-order-user',
+						tableEnglishName: 'orders',
+						columnEnglishName: 'user_id',
+						fkInfo: 'public.users.user_id'
+					},
+					{
+						...createMockColumn(),
+						id: 'column-order-created-by',
+						tableEnglishName: 'orders',
+						columnEnglishName: 'created_by',
+						fkInfo: 'public.users.user_id'
+					},
+					{
+						...createMockColumn(),
+						id: 'column-user-id',
+						tableEnglishName: 'users',
+						columnEnglishName: 'user_id',
+						pkInfo: 'PK'
+					}
+				]
+			};
+
+			const erdData = generateERDData(context, { includeRelated: false });
+
+			expect(erdData.metadata.totalEdges).toBe(erdData.edges.length);
+			expect(erdData.metadata.totalRelationships).toBe(1);
+			expect(erdData.metadata.unresolvedForeignKeys).toBe(0);
+		});
+
+		it('should keep Graphviz metadata external when filtered context includes external FK tables', () => {
+			const erdData = generateERDData(createExternalReferenceContext(), {
+				subjectAreas: ['ORDER'],
+				includeRelated: false,
+				includeExternalReferences: true
+			});
+
+			expect(erdData.metadata.totalRelationships).toBe(1);
+			expect(erdData.metadata.externalRelationships).toBe(1);
+			expect(erdData.metadata.unresolvedForeignKeys).toBe(0);
+		});
+
+		it('should suppress filtered external FK metadata without reporting false unresolved warnings', () => {
+			const erdData = generateERDData(createExternalReferenceContext(), {
+				subjectAreas: ['ORDER'],
+				includeRelated: false,
+				includeExternalReferences: false
+			});
+
+			expect(erdData.metadata.totalRelationships).toBe(0);
+			expect(erdData.metadata.externalRelationships).toBe(0);
+			expect(erdData.metadata.unresolvedForeignKeys).toBe(0);
+		});
+
+		it('should still report unresolved metadata when the FK target is truly missing', () => {
+			const erdData = generateERDData(createExternalReferenceContext('public.missing.user_id'), {
+				subjectAreas: ['ORDER'],
+				includeRelated: false,
+				includeExternalReferences: true
+			});
+
+			expect(erdData.metadata.totalRelationships).toBe(0);
+			expect(erdData.metadata.externalRelationships).toBe(0);
+			expect(erdData.metadata.unresolvedForeignKeys).toBe(1);
+		});
+
+		it('should use same-schema table.column FK shorthand for Graphviz metadata', () => {
+			const erdData = generateERDData(createExternalReferenceContext('users.user_id'), {
+				subjectAreas: ['ORDER'],
+				includeRelated: false,
+				includeExternalReferences: true
+			});
+
+			expect(erdData.metadata.totalRelationships).toBe(1);
+			expect(erdData.metadata.externalRelationships).toBe(1);
+			expect(erdData.metadata.unresolvedForeignKeys).toBe(0);
 		});
 
 		it('should filter nodes by tableIds', () => {
@@ -215,5 +371,4 @@ describe('erd-generator', () => {
 			expect(domainNodes.length).toBeGreaterThanOrEqual(0);
 		});
 	});
-
 });

@@ -98,7 +98,9 @@ describe('buildGraphvizERDModel', () => {
 		const model = buildGraphvizERDModel(context());
 
 		expect(model.tables).toHaveLength(2);
-		expect(model.tables.find((item) => item.tableEnglishName === 'TB_ORDER')?.columns).toHaveLength(2);
+		expect(model.tables.find((item) => item.tableEnglishName === 'TB_ORDER')?.columns).toHaveLength(
+			2
+		);
 		expect(model.tables.find((item) => item.tableEnglishName === 'TB_ORDER')?.tableKoreanName).toBe(
 			'주문'
 		);
@@ -138,5 +140,96 @@ describe('buildGraphvizERDModel', () => {
 
 		expect(model.tables).toHaveLength(1);
 		expect(model.relationships).toHaveLength(0);
+	});
+
+	it('같은 두 테이블 사이의 복수 명시 FK를 하나의 관계로 축약한다', () => {
+		const fixture = context();
+		fixture.columns.push(
+			column({
+				id: 'order-created-by',
+				scopeFlag: 'Y',
+				subjectArea: '주문',
+				schemaName: 'bksp',
+				tableEnglishName: 'TB_ORDER',
+				columnEnglishName: 'CREATED_BY',
+				columnKoreanName: '생성자ID',
+				dataType: 'VARCHAR',
+				fkInfo: 'bksp.TB_USER.USER_ID'
+			})
+		);
+
+		const model = buildGraphvizERDModel(fixture);
+
+		expect(model.relationships).toHaveLength(1);
+		expect(model.relationships[0]).toMatchObject({
+			sourceTableKey: 'bksp|tb_order',
+			targetTableKey: 'bksp|tb_user'
+		});
+	});
+
+	it('table.column FK 축약형은 원본 컬럼 schema 안에서 참조 대상을 찾는다', () => {
+		const fixture = context();
+		const fkColumn = fixture.columns.find((item) => item.id === 'order-user-id');
+		if (!fkColumn) throw new Error('테스트 FK 컬럼 누락');
+		fkColumn.fkInfo = 'TB_USER.USER_ID';
+
+		const model = buildGraphvizERDModel(fixture);
+		const order = model.tables.find((item) => item.tableEnglishName === 'TB_ORDER');
+		const sourceColumn = order?.columns.find((item) => item.id === 'order-user-id');
+
+		expect(model.relationships).toHaveLength(1);
+		expect(model.relationships[0]).toMatchObject({
+			sourceTableKey: 'bksp|tb_order',
+			targetTableKey: 'bksp|tb_user',
+			targetColumnName: 'USER_ID'
+		});
+		expect(sourceColumn?.reference).toMatchObject({
+			schemaName: 'bksp',
+			tableEnglishName: 'TB_USER',
+			columnEnglishName: 'USER_ID'
+		});
+	});
+
+	it('미해결 FK는 FK 표시와 warning을 남기고 관계 edge를 만들지 않는다', () => {
+		const fixture = context();
+		const fkColumn = fixture.columns.find((item) => item.id === 'order-user-id');
+		if (!fkColumn) throw new Error('테스트 FK 컬럼 누락');
+		fkColumn.fkInfo = 'bksp.TB_MISSING.USER_ID';
+
+		const model = buildGraphvizERDModel(fixture);
+		const order = model.tables.find((item) => item.tableEnglishName === 'TB_ORDER');
+		const sourceColumn = order?.columns.find((item) => item.id === 'order-user-id');
+
+		expect(model.relationships).toHaveLength(0);
+		expect(sourceColumn?.isForeignKey).toBe(true);
+		expect(model.warnings.some((warning) => warning.code === 'unresolved-fk')).toBe(true);
+	});
+
+	it('Y/YES FK 표시는 badge만 유지하고 관계 대상 추론을 만들지 않는다', () => {
+		const fixture = context();
+		const fkColumn = fixture.columns.find((item) => item.id === 'order-user-id');
+		if (!fkColumn) throw new Error('테스트 FK 컬럼 누락');
+		fkColumn.fkInfo = 'Y';
+
+		const model = buildGraphvizERDModel(fixture);
+		const order = model.tables.find((item) => item.tableEnglishName === 'TB_ORDER');
+		const sourceColumn = order?.columns.find((item) => item.id === 'order-user-id');
+
+		expect(model.relationships).toHaveLength(0);
+		expect(model.warnings).toHaveLength(0);
+		expect(sourceColumn?.isForeignKey).toBe(true);
+		expect(sourceColumn?.reference).toBeUndefined();
+	});
+
+	it('컬럼명만 있는 FK 문자열은 같은 테이블 관계로 추론하지 않는다', () => {
+		const fixture = context();
+		const fkColumn = fixture.columns.find((item) => item.id === 'order-user-id');
+		if (!fkColumn) throw new Error('테스트 FK 컬럼 누락');
+		fkColumn.fkInfo = 'USER_ID';
+
+		const model = buildGraphvizERDModel(fixture);
+
+		expect(model.relationships).toHaveLength(0);
+		expect(model.warnings.some((warning) => warning.code === 'unresolved-fk')).toBe(true);
 	});
 });

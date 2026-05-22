@@ -29,6 +29,20 @@ function createModel(): GraphvizERDModel {
 						isForeignKey: false,
 						isNotNull: true,
 						raw: {} as never
+					},
+					{
+						id: 'column-2',
+						columnEnglishName: 'USER_ID',
+						columnKoreanName: '사용자ID',
+						dataType: 'NUMBER',
+						dataLength: '10',
+						dataDecimalLength: '2',
+						pkInfo: '',
+						fkInfo: 'bksp.TB_USER.USER_ID',
+						isPrimaryKey: false,
+						isForeignKey: true,
+						isNotNull: true,
+						raw: {} as never
 					}
 				]
 			},
@@ -103,5 +117,39 @@ describe('buildGraphvizDot', () => {
 		const dot = buildGraphvizDot(createModel(), { mode: 'logical' });
 
 		expect(dot).toContain('Pretendard Variable,Pretendard,Inter');
+	});
+
+	it('사업범위 여부와 외부 참조 상태에 맞는 헤더/외곽 스타일을 사용한다', () => {
+		const dot = buildGraphvizDot(createModel(), { mode: 'logical' });
+
+		expect(dot).toContain('BGCOLOR="#4A90E2"');
+		expect(dot).toContain('BGCOLOR="#64748B"');
+		expect(dot).toContain('style="dashed"');
+
+		const nonScopeModel = createModel();
+		nonScopeModel.tables[0].inBusinessScope = false;
+		const nonScopeDot = buildGraphvizDot(nonScopeModel, { mode: 'logical' });
+
+		expect(nonScopeDot).toContain('BGCOLOR="#9B9B9B"');
+	});
+
+	it('컬럼 행에 PK/FK 좁은 열과 타입 길이/소수점 및 NN을 분리해 표시한다', () => {
+		const dot = buildGraphvizDot(createModel(), { mode: 'logical' });
+
+		expect(dot).toContain('<B>PK</B>');
+		expect(dot).toContain('<B>FK</B>');
+		expect(dot).toContain('<B>NN</B>');
+		expect(dot).toContain('VARCHAR(20)');
+		expect(dot).toContain('NUMBER(10,2)');
+		expect(dot).toMatch(/<TD[^>]*WIDTH="24"[^>]*>[\s\S]*PK/);
+		expect(dot).toMatch(/<TD[^>]*WIDTH="24"[^>]*>[\s\S]*FK/);
+	});
+
+	it('관계선은 crow-foot/one 방향성과 외부 관계 점선 스타일을 유지한다', () => {
+		const dot = buildGraphvizDot(createModel(), { mode: 'logical' });
+
+		expect(dot).toContain('arrowtail="crow"');
+		expect(dot).toContain('arrowhead="tee"');
+		expect(dot).toContain('style="dashed"');
 	});
 });

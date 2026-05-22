@@ -324,6 +324,9 @@ export interface ERDData {
 		totalNodes: number;
 		totalEdges: number;
 		totalMappings: number;
+		totalRelationships?: number;
+		externalRelationships?: number;
+		unresolvedForeignKeys?: number;
 		logicalNodes: number;
 		physicalNodes: number;
 		domainNodes: number;

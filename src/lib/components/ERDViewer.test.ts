@@ -31,6 +31,7 @@ function createMockERDData(): ERDData {
 			totalNodes: 1,
 			totalEdges: 0,
 			totalMappings: 0,
+			totalRelationships: 0,
 			logicalNodes: 0,
 			physicalNodes: 1,
 			domainNodes: 0
@@ -69,6 +70,14 @@ describe('ERDViewer', () => {
 
 		expect(screen.queryByText('SVG 다운로드')).not.toBeInTheDocument();
 		expect(screen.queryByText('PNG 다운로드')).not.toBeInTheDocument();
+	});
+
+	it('이미지 관계 수와 혼동되는 구조적 엣지 수를 노출하지 않는다', () => {
+		render(ERDViewer, { props: defaultProps });
+
+		expect(screen.getByText(/노드: 1개/)).toBeInTheDocument();
+		expect(screen.getByText(/관계: 0개/)).toBeInTheDocument();
+		expect(screen.queryByText(/엣지:/)).not.toBeInTheDocument();
 	});
 
 	it('이미지 로드 오류를 한국어 메시지로 표시한다', async () => {

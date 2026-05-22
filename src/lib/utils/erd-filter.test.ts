@@ -274,6 +274,175 @@ describe('erd-filter', () => {
 				'column-user-id'
 			]);
 		});
+
+		it('should resolve external references from canonical schema.table.column FK values', () => {
+			const context: MappingContext = {
+				...createMockContext(),
+				entities: [],
+				attributes: [],
+				tables: [
+					{
+						...createMockTable(),
+						id: 'table-order',
+						tableEnglishName: 'orders',
+						tableKoreanName: '주문',
+						subjectArea: 'ORDER'
+					},
+					{
+						...createMockTable(),
+						id: 'table-user',
+						tableEnglishName: 'users',
+						tableKoreanName: '사용자',
+						subjectArea: 'USER'
+					}
+				],
+				columns: [
+					{
+						...createMockColumn(),
+						id: 'column-order-user',
+						tableEnglishName: 'orders',
+						columnEnglishName: 'user_id',
+						fkInfo: 'public.users.user_id',
+						subjectArea: 'ORDER'
+					},
+					{
+						...createMockColumn(),
+						id: 'column-user-id',
+						tableEnglishName: 'users',
+						columnEnglishName: 'user_id',
+						subjectArea: 'USER'
+					}
+				]
+			};
+
+			const filtered = filterMappingContext(context, {
+				subjectAreas: ['ORDER'],
+				includeRelated: false,
+				includeExternalReferences: true
+			});
+
+			expect(filtered.tables.map((table) => table.tableEnglishName)).toEqual(['orders', 'users']);
+		});
+
+		it('should resolve table.column shorthand external references within the source schema', () => {
+			const context: MappingContext = {
+				...createMockContext(),
+				entities: [],
+				attributes: [],
+				tables: [
+					{
+						...createMockTable(),
+						id: 'table-order',
+						schemaName: 'sales',
+						tableEnglishName: 'orders',
+						tableKoreanName: '주문',
+						subjectArea: 'ORDER'
+					},
+					{
+						...createMockTable(),
+						id: 'table-user-sales',
+						schemaName: 'sales',
+						tableEnglishName: 'users',
+						tableKoreanName: '사용자',
+						subjectArea: 'USER'
+					},
+					{
+						...createMockTable(),
+						id: 'table-user-archive',
+						schemaName: 'archive',
+						tableEnglishName: 'users',
+						tableKoreanName: '아카이브사용자',
+						subjectArea: 'ARCHIVE'
+					}
+				],
+				columns: [
+					{
+						...createMockColumn(),
+						id: 'column-order-user',
+						schemaName: 'sales',
+						tableEnglishName: 'orders',
+						columnEnglishName: 'user_id',
+						fkInfo: 'users.user_id',
+						subjectArea: 'ORDER'
+					},
+					{
+						...createMockColumn(),
+						id: 'column-user-sales-id',
+						schemaName: 'sales',
+						tableEnglishName: 'users',
+						columnEnglishName: 'user_id',
+						subjectArea: 'USER'
+					},
+					{
+						...createMockColumn(),
+						id: 'column-user-archive-id',
+						schemaName: 'archive',
+						tableEnglishName: 'users',
+						columnEnglishName: 'user_id',
+						subjectArea: 'ARCHIVE'
+					}
+				]
+			};
+
+			const filtered = filterMappingContext(context, {
+				subjectAreas: ['ORDER'],
+				includeRelated: false,
+				includeExternalReferences: true
+			});
+
+			expect(
+				filtered.tables.map((table) => `${table.schemaName}|${table.tableEnglishName}`)
+			).toEqual(['sales|orders', 'sales|users']);
+		});
+
+		it('should not infer external references from one-part FK values', () => {
+			const context: MappingContext = {
+				...createMockContext(),
+				entities: [],
+				attributes: [],
+				tables: [
+					{
+						...createMockTable(),
+						id: 'table-order',
+						tableEnglishName: 'orders',
+						tableKoreanName: '주문',
+						subjectArea: 'ORDER'
+					},
+					{
+						...createMockTable(),
+						id: 'table-user',
+						tableEnglishName: 'users',
+						tableKoreanName: '사용자',
+						subjectArea: 'USER'
+					}
+				],
+				columns: [
+					{
+						...createMockColumn(),
+						id: 'column-order-user',
+						tableEnglishName: 'orders',
+						columnEnglishName: 'user_id',
+						fkInfo: 'user_id',
+						subjectArea: 'ORDER'
+					},
+					{
+						...createMockColumn(),
+						id: 'column-user-id',
+						tableEnglishName: 'users',
+						columnEnglishName: 'user_id',
+						subjectArea: 'USER'
+					}
+				]
+			};
+
+			const filtered = filterMappingContext(context, {
+				subjectAreas: ['ORDER'],
+				includeRelated: false,
+				includeExternalReferences: true
+			});
+
+			expect(filtered.tables.map((table) => table.tableEnglishName)).toEqual(['orders']);
+		});
 	});
 
 	describe('filterERDDataByTableIds', () => {

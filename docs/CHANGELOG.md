@@ -8,6 +8,7 @@
 - ERD 주제영역/스키마 조회 조건에서 `전체` 옵션을 제거하고, 최초 조건 결과 테이블을 기본 전체 선택하되 테이블 선택은 접힌 상태로 시작합니다.
 - ERD API가 `columnFile`만 받아도 공통 파일 매핑으로 관련 정의서와 테이블 정의서를 해석하도록 보강했습니다.
 - ERD 이미지가 `excel2image` 샘플 방향의 정보 구성에 가깝도록 PK/FK/NN 열, 사업범위 색상, 명시 FK 관계선, 관계 metadata 표시를 보강했습니다.
+- 논리/물리 ERD의 이름 label에서 한글·영문 보조명을 섞지 않도록 분리하고, FK 칸의 `PK01` 같은 PK 순번 값은 관계로 해석하지 않도록 정리했습니다.
 
 ### 상세 변경
 
@@ -74,6 +75,8 @@
   - 같은 source/target 테이블 사이 복수 FK를 Graphviz 관계 1개로 축약
   - DOT HTML label에 PK/FK/NN 좁은 열, 타입 길이/소수점 표시, 사업범위 `#4A90E2`, 사업범위 외 `#9B9B9B`, 외부참조 회색/점선 스타일을 반영
   - ERDData metadata에 Graphviz 이미지 기준 `totalRelationships`, `externalRelationships`, `unresolvedForeignKeys`를 추가하고 ERDViewer는 구조적 edge 수 대신 관계 수를 표시
+  - FK 칸에 들어온 `PK01`/`PK02` 같은 PK 순번 값은 명시 참조가 아니므로 FK marker, warning, 관계선에서 제외
+  - 논리 ERD label은 한글 테이블/컬럼명만, 물리 ERD label은 `schema.table`과 컬럼 영문명만 표시하도록 DOT 직렬화 조정
 
 6. ERD 품질 테스트/문서 갱신
 

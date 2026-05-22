@@ -55,7 +55,21 @@ function createModel(): GraphvizERDModel {
 				tableKoreanName: '사용자',
 				inBusinessScope: false,
 				isExternal: true,
-				columns: [],
+				columns: [
+					{
+						id: 'column-user-id',
+						columnEnglishName: 'USER_ID',
+						columnKoreanName: '사용자ID',
+						dataType: 'NUMBER',
+						dataLength: '10',
+						dataDecimalLength: '0',
+						pkInfo: 'PK',
+						isPrimaryKey: true,
+						isForeignKey: false,
+						isNotNull: true,
+						raw: {} as never
+					}
+				],
 				raw: {} as never
 			}
 		],
@@ -111,6 +125,28 @@ describe('buildGraphvizDot', () => {
 		const dot = buildGraphvizDot(createModel(), { mode: 'physical' });
 
 		expect(dot).toContain('bksp.TB_ORDER');
+	});
+
+	it('논리 모드에서는 테이블/컬럼의 영문 보조명을 화면 label에 섞지 않는다', () => {
+		const dot = buildGraphvizDot(createModel(), { mode: 'logical' });
+
+		expect(dot).toContain('주문&lt;관리&gt;');
+		expect(dot).toContain('주문ID');
+		expect(dot).toContain('사용자ID → 사용자ID');
+		expect(dot).not.toContain('TB_ORDER');
+		expect(dot).not.toContain('ORDER_ID');
+		expect(dot).not.toContain('USER_ID → USER_ID');
+	});
+
+	it('물리 모드에서는 테이블/컬럼의 한글 보조명을 화면 label에 섞지 않는다', () => {
+		const dot = buildGraphvizDot(createModel(), { mode: 'physical' });
+
+		expect(dot).toContain('bksp.TB_ORDER');
+		expect(dot).toContain('ORDER_ID');
+		expect(dot).toContain('USER_ID → USER_ID');
+		expect(dot).not.toContain('주문&lt;관리&gt;');
+		expect(dot).not.toContain('주문ID');
+		expect(dot).not.toContain('사용자ID → 사용자ID');
 	});
 
 	it('서비스 폰트 스택을 ERD 렌더링 폰트로 사용한다', () => {

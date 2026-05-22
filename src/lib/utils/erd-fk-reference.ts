@@ -22,7 +22,7 @@ function normalizeText(value: string | undefined | null): string {
 
 export function isBlankForeignKeyInfo(value: string | undefined | null): boolean {
 	const text = normalizeText(value);
-	return text === '' || text === '-';
+	return text === '' || text === '-' || /^pk\d*$/i.test(text);
 }
 
 export function isBooleanForeignKeyMarker(value: string | undefined | null): boolean {
@@ -41,6 +41,7 @@ export function hasForeignKeyMarker(value: string | undefined | null): boolean {
  * - explicit shorthand: table.column 또는 table:column (source schema fallback)
  * - one-part column name: 관계 추론으로 간주해 참조를 만들지 않는다.
  * - Y/YES/TRUE: FK badge marker이며 관계 대상은 없다.
+ * - PK01/PK02: PK 순번이 FK 칸에 잘못 들어온 값으로 간주해 무시한다.
  */
 export function parseForeignKeyReference(
 	fkInfo: string | undefined | null,

@@ -221,6 +221,22 @@ describe('buildGraphvizERDModel', () => {
 		expect(sourceColumn?.reference).toBeUndefined();
 	});
 
+	it('PK01 같은 PK 순번이 FK 칸에 들어온 값은 FK로 표시하지 않는다', () => {
+		const fixture = context();
+		const fkColumn = fixture.columns.find((item) => item.id === 'order-user-id');
+		if (!fkColumn) throw new Error('테스트 FK 컬럼 누락');
+		fkColumn.fkInfo = 'PK01';
+
+		const model = buildGraphvizERDModel(fixture);
+		const order = model.tables.find((item) => item.tableEnglishName === 'TB_ORDER');
+		const sourceColumn = order?.columns.find((item) => item.id === 'order-user-id');
+
+		expect(model.relationships).toHaveLength(0);
+		expect(model.warnings).toHaveLength(0);
+		expect(sourceColumn?.isForeignKey).toBe(false);
+		expect(sourceColumn?.reference).toBeUndefined();
+	});
+
 	it('컬럼명만 있는 FK 문자열은 같은 테이블 관계로 추론하지 않는다', () => {
 		const fixture = context();
 		const fkColumn = fixture.columns.find((item) => item.id === 'order-user-id');

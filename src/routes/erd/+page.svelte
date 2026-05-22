@@ -614,7 +614,7 @@
 				</div>
 				<div>
 					<label for="schemaFilter" class="mb-1 block text-xs font-medium text-gray-700"
-						>schema</label
+						>스키마</label
 					>
 					<select
 						id="schemaFilter"
@@ -635,7 +635,7 @@
 					<input
 						id="erdTableSearch"
 						type="text"
-						placeholder="영문/한글/schema"
+						placeholder="영문/한글/스키마"
 						bind:value={tableSearchQuery}
 						oninput={scheduleTableSearchRefresh}
 						class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"

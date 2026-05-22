@@ -26,10 +26,11 @@ describe('ERD page sidebar and main controls contract', () => {
 		expect(sidebarSource).not.toContain('aria-label="ERD 이미지 다운로드"');
 	});
 
-	it('keeps subject area and schema as select boxes in the main query controls', () => {
+	it('keeps subject area and schema as Korean-labeled select boxes in the main query controls', () => {
 		expect(source).toMatch(/for="subjectAreaFilter"[\s\S]*?<select/);
-		expect(source).toMatch(/for="schemaFilter"[\s\S]*?<select/);
+		expect(source).toMatch(/for="schemaFilter"[\s\S]*?>스키마<\/label[\s\S]*?<select/);
 		expect(source).toContain('<option value="">전체</option>');
+		expect(source).toContain('placeholder="영문/한글/스키마"');
 	});
 
 	it('removes old top filter and manual generation controls', () => {

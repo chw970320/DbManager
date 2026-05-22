@@ -7,7 +7,7 @@
 | 테스트 파일                                         | 주요 검증                                                                           | 상태 |
 | --------------------------------------------------- | ----------------------------------------------------------------------------------- | ---- |
 | `src/lib/utils/erd-file-context.test.ts`            | 컬럼 정의서 기준 공통 파일 매핑 해석, mapped tableFile 우선순위                     | 완료 |
-| `src/routes/erd/page-source.test.ts`                | 좌측 sidebar/본문 제어 영역 배치 계약, 주제영역/schema selectbox, 수동 생성 UI 제거 | 완료 |
+| `src/routes/erd/page-source.test.ts`                | 좌측 sidebar/본문 제어 영역 배치 계약, 주제영역/스키마 selectbox, 수동 생성 UI 제거 | 완료 |
 | `src/routes/api/erd/render/server.test.ts`          | Graphviz SVG/PNG 렌더 API, 파라미터 검증, 설치 오류 응답, columnFile 매핑 해석      | 완료 |
 | `src/lib/utils/erd-graphviz-model.test.ts`          | 테이블/컬럼 조인, 필터, FK 외부참조 포함/제외                                       | 완료 |
 | `src/lib/utils/graphviz-dot.test.ts`                | DOT/HTML label 생성, escape, 논리/물리 표시, 폰트 스택                              | 완료 |
@@ -31,7 +31,7 @@
 | 기본 요청은 SVG 이미지를 반환한다                                | 기본 `format=svg`, `mode=logical` 응답      | `image/svg+xml`, Graphviz renderer 호출                                                               |
 | `format=png`는 PNG content-type을 반환한다                       | PNG 다운로드/미리보기 응답                  | `image/png`, `dot -Tpng` 렌더링                                                                       |
 | 잘못된 format은 400 JSON 오류를 반환한다                         | 입력 검증                                   | `success=false`, 400                                                                                  |
-| 필터 query를 Graphviz 모델 빌더에 전달한다                       | 주제영역/schema/검색/사업범위/외부참조 필터 | 모델 빌더 옵션 전달                                                                                   |
+| 필터 query를 Graphviz 모델 빌더에 전달한다                       | 주제영역/스키마/검색/사업범위/외부참조 필터 | 모델 빌더 옵션 전달                                                                                   |
 | Graphviz 누락 오류는 설치 안내를 포함한다                        | `dot` 미설치 진단                           | 500 JSON, Graphviz 설치 안내                                                                          |
 | columnFile만 전달되어도 매핑된 정의서 파일로 컨텍스트를 로드한다 | 컬럼 정의서 선택 기준 API 호출              | `resolveDbDesignFileMappingBundle('column', columnFile)`, mapped table/database/entity/attribute 사용 |
 
@@ -41,7 +41,7 @@
 
 - `TableEntry`와 `ColumnEntry`를 `schemaName + tableEnglishName`으로 조인합니다.
 - 논리 표시는 테이블/컬럼 한글명을 우선하고, 물리 표시는 schema/table/column 영문명을 사용합니다.
-- 주제영역, schema, 테이블명 검색, 사업범위여부 필터를 적용합니다.
+- 주제영역, 스키마, 테이블명 검색, 사업범위여부 필터를 적용합니다.
 - FK 외부참조 포함 옵션이 켜져 있으면 필터 밖 참조 테이블을 외부 노드로 포함합니다.
 - FK 외부참조 제외 옵션이 꺼져 있으면 필터 밖 참조 관계를 제거합니다.
 
@@ -87,7 +87,7 @@
 - ERD 화면이 `BrowsePageLayout`과 `sidebarSurface="plain"`을 사용합니다.
 - 컬럼 정의서 파일 선택과 매핑 기준은 `ColumnDefFileManager`와 좌측 sidebar 카드로 제공됩니다.
 - 조회 조건, 테이블 다중 선택, 이미지 다운로드는 본문 상단의 `ERD 메인 제어 영역` 안에 제공됩니다.
-- 주제영역/schema 필터는 본문 조회 조건에서 input이 아닌 selectbox이며 `전체` 옵션을 포함합니다.
+- 주제영역/스키마 필터는 본문 조회 조건에서 input이 아닌 selectbox이며 `전체` 옵션을 포함합니다.
 - 기존 상단 Graphviz 필터 패널, 접힘형 테이블 선택 패널, 수동 `ERD 생성` 버튼, 데이터베이스/테이블 정의서 직접 선택 UI가 남지 않았는지 검증합니다.
 
 ## 7. 테이블 정의서 업로드 회귀

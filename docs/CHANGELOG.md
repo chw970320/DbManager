@@ -78,7 +78,7 @@
   - DOT HTML label에 PK/FK/NN 좁은 열, 타입 길이/소수점 표시, 사업범위 `#4A90E2`, 사업범위 외 `#9B9B9B`, 외부참조 회색/점선 스타일을 반영
   - ERDData metadata에 Graphviz 이미지 기준 `totalRelationships`, `externalRelationships`, `unresolvedForeignKeys`를 추가하고 ERDViewer는 구조적 edge 수 대신 관계 수를 표시
   - FK 칸에 들어온 `PK01`/`PK02` 같은 PK 순번 값은 명시 참조가 아니므로 FK marker, warning, 관계선에서 제외
-  - 논리 ERD label은 한글 테이블/컬럼명만, 물리 ERD label은 `schema.table`과 컬럼 영문명만 표시하도록 DOT 직렬화 조정
+  - 논리 ERD label은 한글 테이블/컬럼명만, 물리 ERD label은 스키마 접두어를 제외한 테이블 영문명과 컬럼 영문명만 표시하도록 DOT 직렬화 조정
   - 그래프 전체 제목, 주제영역 행, 사업범위 문구 행, `PK/FK/컬럼/타입/NN` 머리행, 관계선 라벨은 제거하고 사업범위 색상과 외부참조 점선 스타일은 유지
   - PNG 렌더링은 기본 192DPI를 사용하고, 필요 시 `pngDpi=96..600` 범위에서 조정 가능하도록 지원
 

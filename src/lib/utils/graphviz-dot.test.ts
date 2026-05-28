@@ -136,10 +136,11 @@ describe('buildGraphvizDot', () => {
 		expect(dot).toContain('VARCHAR(20)');
 	});
 
-	it('물리 모드에서는 schema.table 이름을 우선 표시한다', () => {
+	it('물리 모드에서는 스키마 없이 테이블 영문명만 표시한다', () => {
 		const dot = buildGraphvizDot(createModel(), { mode: 'physical' });
 
-		expect(dot).toContain('bksp.TB_ORDER');
+		expect(dot).toContain('<B>TB_ORDER</B>');
+		expect(dot).not.toContain('bksp.TB_ORDER');
 	});
 
 	it('논리 모드에서는 테이블/컬럼의 영문 보조명을 화면 label에 섞지 않는다', () => {
@@ -156,7 +157,8 @@ describe('buildGraphvizDot', () => {
 	it('물리 모드에서는 테이블/컬럼의 한글 보조명을 화면 label에 섞지 않는다', () => {
 		const dot = buildGraphvizDot(createModel(), { mode: 'physical' });
 
-		expect(dot).toContain('bksp.TB_ORDER');
+		expect(dot).toContain('<B>TB_ORDER</B>');
+		expect(dot).not.toContain('<B>bksp.TB_ORDER</B>');
 		expect(dot).toContain('ORDER_ID');
 		expect(dot).not.toContain('주문&lt;관리&gt;');
 		expect(dot).not.toContain('주문ID');

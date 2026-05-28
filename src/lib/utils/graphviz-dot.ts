@@ -51,8 +51,7 @@ function getTableTitle(table: GraphvizERDTable, mode: GraphvizERDMode): string {
 	if (mode === 'logical') {
 		return normalizeText(table.tableKoreanName) || table.tableEnglishName || '테이블';
 	}
-	const schema = normalizeText(table.schemaName);
-	return schema ? `${schema}.${table.tableEnglishName}` : table.tableEnglishName || 'TABLE';
+	return table.tableEnglishName || 'TABLE';
 }
 
 function getColumnName(column: GraphvizERDColumn, mode: GraphvizERDMode): string {
@@ -66,8 +65,7 @@ function getTableTooltip(table: GraphvizERDTable, mode: GraphvizERDMode): string
 	if (mode === 'logical') {
 		return normalizeText(table.tableKoreanName) || table.tableEnglishName;
 	}
-	const schema = normalizeText(table.schemaName);
-	return schema ? `${schema}.${table.tableEnglishName}` : table.tableEnglishName;
+	return table.tableEnglishName;
 }
 
 function getHeaderColor(table: GraphvizERDTable): string {

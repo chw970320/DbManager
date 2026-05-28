@@ -114,11 +114,26 @@ describe('buildGraphvizDot', () => {
 		expect(dot).toContain('t_bksp_tb_order -> t_bksp_tb_user');
 	});
 
-	it('HTML label 특수문자를 escape한다', () => {
+	it('HTML label 특수문자를 escape하고 보조 정보 행은 표시하지 않는다', () => {
 		const dot = buildGraphvizDot(createModel(), { mode: 'logical' });
 
 		expect(dot).toContain('주문&lt;관리&gt;');
-		expect(dot).toContain('주문&amp;결제');
+		expect(dot).not.toContain('주문&amp;결제');
+		expect(dot).not.toContain('사업범위');
+		expect(dot).not.toContain('사업범위 외');
+		expect(dot).not.toContain('외부참조');
+	});
+
+	it('그래프 전체 제목과 컬럼 머리행을 표시하지 않는다', () => {
+		const dot = buildGraphvizDot(createModel(), { mode: 'logical' });
+
+		expect(dot).not.toContain('label="논리 ERD"');
+		expect(dot).not.toContain('labelloc="t"');
+		expect(dot).not.toContain('fontsize=18');
+		expect(dot).not.toContain('<B>컬럼</B>');
+		expect(dot).not.toContain('<B>타입</B>');
+		expect(dot).toContain('주문ID');
+		expect(dot).toContain('VARCHAR(20)');
 	});
 
 	it('물리 모드에서는 schema.table 이름을 우선 표시한다', () => {
@@ -132,9 +147,9 @@ describe('buildGraphvizDot', () => {
 
 		expect(dot).toContain('주문&lt;관리&gt;');
 		expect(dot).toContain('주문ID');
-		expect(dot).toContain('사용자ID → 사용자ID');
 		expect(dot).not.toContain('TB_ORDER');
 		expect(dot).not.toContain('ORDER_ID');
+		expect(dot).not.toContain('사용자ID → 사용자ID');
 		expect(dot).not.toContain('USER_ID → USER_ID');
 	});
 
@@ -143,10 +158,10 @@ describe('buildGraphvizDot', () => {
 
 		expect(dot).toContain('bksp.TB_ORDER');
 		expect(dot).toContain('ORDER_ID');
-		expect(dot).toContain('USER_ID → USER_ID');
 		expect(dot).not.toContain('주문&lt;관리&gt;');
 		expect(dot).not.toContain('주문ID');
 		expect(dot).not.toContain('사용자ID → 사용자ID');
+		expect(dot).not.toContain('USER_ID → USER_ID');
 	});
 
 	it('서비스 폰트 스택을 ERD 렌더링 폰트로 사용한다', () => {
@@ -169,7 +184,7 @@ describe('buildGraphvizDot', () => {
 		expect(nonScopeDot).toContain('BGCOLOR="#9B9B9B"');
 	});
 
-	it('컬럼 행에 PK/FK 좁은 열과 타입 길이/소수점 및 NN을 분리해 표시한다', () => {
+	it('컬럼 데이터 행에 PK/FK 좁은 열과 타입 길이/소수점 및 NN을 분리해 표시한다', () => {
 		const dot = buildGraphvizDot(createModel(), { mode: 'logical' });
 
 		expect(dot).toContain('<B>PK</B>');
@@ -181,9 +196,14 @@ describe('buildGraphvizDot', () => {
 		expect(dot).toMatch(/<TD[^>]*WIDTH="24"[^>]*>[\s\S]*FK/);
 	});
 
-	it('관계선은 crow-foot/one 방향성과 외부 관계 점선 스타일을 유지한다', () => {
+	it('관계선은 라벨 없이 crow-foot/one 방향성과 외부 관계 점선 스타일을 유지한다', () => {
 		const dot = buildGraphvizDot(createModel(), { mode: 'logical' });
 
+		const edgeLine = dot
+			.split('\n')
+			.find((line) => line.includes('t_bksp_tb_order -> t_bksp_tb_user'));
+		expect(edgeLine).toBeDefined();
+		expect(edgeLine).not.toContain('label=');
 		expect(dot).toContain('arrowtail="crow"');
 		expect(dot).toContain('arrowhead="tee"');
 		expect(dot).toContain('style="dashed"');

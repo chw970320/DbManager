@@ -129,10 +129,7 @@ export async function GET({ url }: RequestEvent) {
 		});
 
 		const model = buildGraphvizERDModel(context, createFilterOptions(url));
-		const dot = buildGraphvizDot(model, {
-			mode,
-			title: mode === 'logical' ? '논리 ERD' : '물리 ERD'
-		});
+		const dot = buildGraphvizDot(model, { mode });
 		const rendered = await renderGraphvizDot(dot, format);
 		const download = parseBooleanParam(url.searchParams.get('download'), false);
 

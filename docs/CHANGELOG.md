@@ -9,6 +9,7 @@
 - ERD API가 `columnFile`만 받아도 공통 파일 매핑으로 관련 정의서와 테이블 정의서를 해석하도록 보강했습니다.
 - ERD 이미지가 `excel2image` 샘플 방향의 정보 구성에 가깝도록 PK/FK/NN 열, 사업범위 색상, 명시 FK 관계선, 관계 metadata 표시를 보강했습니다.
 - 논리/물리 ERD의 이름 label에서 한글·영문 보조명을 섞지 않도록 분리하고, FK 칸의 `PK01` 같은 PK 순번 값은 관계로 해석하지 않도록 정리했습니다.
+- ERD 이미지에서 그래프 제목, 주제영역/사업범위 문구, 컬럼 머리행, 관계선 라벨을 제거해 핵심 테이블/컬럼 정보만 보이도록 정리했습니다.
 
 ### 상세 변경
 
@@ -77,6 +78,7 @@
   - ERDData metadata에 Graphviz 이미지 기준 `totalRelationships`, `externalRelationships`, `unresolvedForeignKeys`를 추가하고 ERDViewer는 구조적 edge 수 대신 관계 수를 표시
   - FK 칸에 들어온 `PK01`/`PK02` 같은 PK 순번 값은 명시 참조가 아니므로 FK marker, warning, 관계선에서 제외
   - 논리 ERD label은 한글 테이블/컬럼명만, 물리 ERD label은 `schema.table`과 컬럼 영문명만 표시하도록 DOT 직렬화 조정
+  - 그래프 전체 제목, 주제영역 행, 사업범위 문구 행, `PK/FK/컬럼/타입/NN` 머리행, 관계선 라벨은 제거하고 사업범위 색상과 외부참조 점선 스타일은 유지
 
 6. ERD 품질 테스트/문서 갱신
 

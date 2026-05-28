@@ -10,7 +10,7 @@
 | `src/routes/erd/page-source.test.ts`                | 좌측 sidebar/본문 제어 영역 배치 계약, 주제영역/스키마 selectbox, 테이블 선택 접힘/검색, 수동 생성 UI 제거 | 완료 |
 | `src/routes/api/erd/render/server.test.ts`          | Graphviz SVG/PNG 렌더 API, 파라미터 검증, 설치 오류 응답, columnFile 매핑 해석                             | 완료 |
 | `src/lib/utils/erd-graphviz-model.test.ts`          | 테이블/컬럼 조인, 필터, 명시 FK 관계/축약, FK marker/warning, PK 순번 비관계 처리, FK 외부참조 포함/제외    | 완료 |
-| `src/lib/utils/graphviz-dot.test.ts`                | DOT/HTML label 생성, 논리/물리 명칭 분리, excel2image 방향 PK/FK/NN 열, 사업범위 색상, 외부참조 점선, 폰트 스택 | 완료 |
+| `src/lib/utils/graphviz-dot.test.ts`                | DOT/HTML label 생성, 논리/물리 명칭 분리, 제목/보조행/머리행/관계라벨 제거, PK/FK/NN 열, 사업범위 색상, 외부참조 점선, 폰트 스택 | 완료 |
 | `src/lib/server/graphviz-renderer.test.ts`          | `dot -Tsvg/-Tpng` 호출, ENOENT/non-zero 오류 변환                                                          | 완료 |
 | `src/lib/components/ERDViewer.test.ts`              | ERD 이미지 미리보기, 렌더러 기술명 비노출, 구조적 엣지 수 대신 이미지 관계 수 표시, 오류 표시              | 완료 |
 | `src/routes/api/erd/generate/server.test.ts`        | 기존 ERD JSON/관계 요약 API, render와 같은 필터 계약, columnFile 매핑 해석                                 | 완료 |
@@ -59,8 +59,9 @@
 검증 범위:
 
 - `digraph`와 HTML table label 생성.
-- PK/FK/NN을 독립된 좁은 열로 표시하고, 컬럼명/타입/길이/소수점 정보를 분리 표시합니다.
-- 사업범위 `#4A90E2`, 사업범위 외 `#9B9B9B`, 외부참조 회색/점선 스타일을 직렬화합니다.
+- 그래프 전체 제목, 주제영역 행, 사업범위 문구 행, `PK/FK/컬럼/타입/NN` 머리행, 관계선 라벨을 직렬화하지 않습니다.
+- PK/FK/NN을 독립된 좁은 열로 표시하고, 컬럼명/타입/길이/소수점 정보를 컬럼 데이터 행에 분리 표시합니다.
+- 사업범위 `#4A90E2`, 사업범위 외 `#9B9B9B` 색상 구분과 외부참조 회색/점선 스타일을 직렬화합니다.
 - XML 특수문자 escape.
 - 논리 모드 label에는 한글 테이블/컬럼명만, 물리 모드 label에는 `schema.table`과 컬럼 영문명만 직렬화.
 - 서비스 기본 폰트 우선순위와 맞춘 `Pretendard Variable`, `Pretendard`, `Inter` 폰트 스택 사용.

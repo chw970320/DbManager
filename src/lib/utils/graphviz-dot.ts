@@ -6,13 +6,11 @@ import type {
 	GraphvizERDMode,
 	GraphvizERDModel,
 	GraphvizERDTable,
-	GraphvizERDColumn,
-	GraphvizERDRelationship
+	GraphvizERDColumn
 } from './erd-graphviz-model.js';
 
 export interface GraphvizDotOptions {
 	mode?: GraphvizERDMode;
-	title?: string;
 }
 
 const ERD_FONT_FAMILY =
@@ -57,10 +55,6 @@ function getTableTitle(table: GraphvizERDTable, mode: GraphvizERDMode): string {
 	return schema ? `${schema}.${table.tableEnglishName}` : table.tableEnglishName || 'TABLE';
 }
 
-function getTableSubtitle(table: GraphvizERDTable): string {
-	return normalizeText(table.subjectArea);
-}
-
 function getColumnName(column: GraphvizERDColumn, mode: GraphvizERDMode): string {
 	if (mode === 'logical') {
 		return normalizeText(column.columnKoreanName) || column.columnEnglishName || '컬럼';
@@ -74,34 +68,6 @@ function getTableTooltip(table: GraphvizERDTable, mode: GraphvizERDMode): string
 	}
 	const schema = normalizeText(table.schemaName);
 	return schema ? `${schema}.${table.tableEnglishName}` : table.tableEnglishName;
-}
-
-function findColumnByEnglishName(
-	table: GraphvizERDTable,
-	columnEnglishName: string | undefined
-): GraphvizERDColumn | undefined {
-	const normalizedName = normalizeText(columnEnglishName).toLowerCase();
-	if (!normalizedName) return undefined;
-	return table.columns.find(
-		(column) => normalizeText(column.columnEnglishName).toLowerCase() === normalizedName
-	);
-}
-
-function getRelationshipLabel(
-	relationship: GraphvizERDRelationship,
-	source: GraphvizERDTable,
-	target: GraphvizERDTable,
-	mode: GraphvizERDMode
-): string {
-	if (mode === 'physical') {
-		return `${relationship.sourceColumnName ?? 'FK'} → ${relationship.targetColumnName ?? 'PK'}`;
-	}
-
-	const sourceColumn = findColumnByEnglishName(source, relationship.sourceColumnName);
-	const targetColumn = findColumnByEnglishName(target, relationship.targetColumnName);
-	const sourceName = normalizeText(sourceColumn?.columnKoreanName);
-	const targetName = normalizeText(targetColumn?.columnKoreanName);
-	return sourceName && targetName ? `${sourceName} → ${targetName}` : '';
 }
 
 function getHeaderColor(table: GraphvizERDTable): string {
@@ -142,9 +108,6 @@ function buildTableLabel(table: GraphvizERDTable, mode: GraphvizERDMode): string
 	const headerColor = getHeaderColor(table);
 	const borderColor = getBorderColor(table);
 	const title = getTableTitle(table, mode);
-	const subtitle = getTableSubtitle(table);
-	const scopeText = table.inBusinessScope ? '사업범위' : '사업범위 외';
-	const externalText = table.isExternal ? ' · 외부참조' : '';
 	const rows = table.columns.length
 		? table.columns.map((column) => buildColumnRow(column, mode)).join('\n')
 		: '<TR><TD COLSPAN="5" ALIGN="CENTER"><FONT COLOR="#94A3B8">컬럼 없음</FONT></TD></TR>';
@@ -153,11 +116,6 @@ function buildTableLabel(table: GraphvizERDTable, mode: GraphvizERDMode): string
 		'<',
 		`<TABLE BORDER="0" CELLBORDER="1" CELLSPACING="0" CELLPADDING="6" COLOR="${borderColor}">`,
 		`<TR><TD COLSPAN="5" BGCOLOR="${headerColor}"><FONT POINT-SIZE="14" COLOR="#FFFFFF"><B>${xmlEscape(title)}</B></FONT></TD></TR>`,
-		subtitle
-			? `<TR><TD COLSPAN="5" BGCOLOR="#EFF6FF"><FONT POINT-SIZE="10" COLOR="#334155">${xmlEscape(subtitle)}</FONT></TD></TR>`
-			: '',
-		`<TR><TD COLSPAN="5" BGCOLOR="#F8FAFC"><FONT POINT-SIZE="9" COLOR="#475569">${xmlEscape(scopeText + externalText)}</FONT></TD></TR>`,
-		'<TR><TD WIDTH="24" ALIGN="CENTER" BGCOLOR="#E2E8F0"><B>PK</B></TD><TD WIDTH="24" ALIGN="CENTER" BGCOLOR="#E2E8F0"><B>FK</B></TD><TD ALIGN="LEFT" BGCOLOR="#E2E8F0"><B>컬럼</B></TD><TD ALIGN="LEFT" BGCOLOR="#E2E8F0"><B>타입</B></TD><TD WIDTH="28" ALIGN="CENTER" BGCOLOR="#E2E8F0"><B>NN</B></TD></TR>',
 		rows,
 		'</TABLE>',
 		'>'
@@ -169,16 +127,12 @@ export function buildGraphvizDot(
 	options: GraphvizDotOptions = {}
 ): string {
 	const mode = options.mode ?? 'logical';
-	const title = options.title ?? 'DbManager ERD';
 	const tableMap = new Map(model.tables.map((table) => [table.key, table]));
 	const lines: string[] = [
 		'digraph DbManagerERD {',
 		`  graph [rankdir=LR, splines=ortho, overlap=false, pad="0.3", nodesep="0.8", ranksep="1.1", bgcolor="#F8FAFC", fontname="${dotEscape(ERD_FONT_FAMILY)}"];`,
 		`  node [shape=plaintext, fontname="${dotEscape(ERD_FONT_FAMILY)}"];`,
-		`  edge [fontname="${dotEscape(ERD_FONT_FAMILY)}", fontsize=10, color="#475569", arrowsize=0.8];`,
-		`  label="${dotEscape(title)}";`,
-		'  labelloc="t";',
-		'  fontsize=18;'
+		`  edge [fontname="${dotEscape(ERD_FONT_FAMILY)}", fontsize=10, color="#475569", arrowsize=0.8];`
 	];
 
 	for (const table of model.tables) {
@@ -195,12 +149,8 @@ export function buildGraphvizDot(
 		if (!source || !target) continue;
 		const color = relationship.isExternalReference ? '#94A3B8' : '#475569';
 		const style = relationship.isExternalReference ? ', style="dashed"' : '';
-		const label = getRelationshipLabel(relationship, source, target, mode);
-		const labelAttribute = label
-			? `label="${dotEscape(label)}", fontcolor="${color}", `
-			: '';
 		lines.push(
-			`  ${source.nodeId} -> ${target.nodeId} [${labelAttribute}color="${color}", dir="both", arrowtail="crow", arrowhead="tee"${style}];`
+			`  ${source.nodeId} -> ${target.nodeId} [color="${color}", dir="both", arrowtail="crow", arrowhead="tee"${style}];`
 		);
 	}
 

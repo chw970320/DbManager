@@ -58,4 +58,9 @@ describe('ERD page sidebar and main controls contract', () => {
 		expect(source).not.toContain('데이터베이스 정의서 파일 선택');
 		expect(source).not.toContain('테이블 정의서 파일 선택');
 	});
+
+	it('does not expose legacy related logical definition controls', () => {
+		expect(source).not.toContain('관련 논리 정의 포함');
+		expect(source).not.toContain('includeRelated');
+	});
 });

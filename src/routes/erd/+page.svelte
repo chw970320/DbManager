@@ -78,7 +78,6 @@
 	let scopeFlagFilter = $state('');
 	let displayMode: 'logical' | 'physical' = $state('logical');
 	let includeExternalReferences = $state(true);
-	let includeRelated = $state(true);
 	let loadingTables = $state(false);
 	let isTableSelectionExpanded = $state(false);
 	let showMappingSummary = $state(false);
@@ -207,7 +206,6 @@
 		if (options.format) params.set('format', options.format);
 		if (options.format) params.set('mode', displayMode);
 		params.set('includeExternalReferences', includeExternalReferences.toString());
-		params.set('includeRelated', includeRelated.toString());
 		if (options.download) params.set('download', 'true');
 		if (selectedColumnFile.trim()) params.set('columnFile', selectedColumnFile.trim());
 		if (mappedTableFile?.trim()) params.set('tableFile', mappedTableFile.trim());
@@ -705,17 +703,6 @@
 						class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
 					/>
 					FK 외부참조 포함
-				</label>
-				<label
-					class="flex cursor-pointer items-center gap-2 self-end rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700"
-				>
-					<input
-						type="checkbox"
-						bind:checked={includeRelated}
-						onchange={refreshErdImmediately}
-						class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-					/>
-					관련 논리 정의 포함
 				</label>
 			</div>
 		</section>

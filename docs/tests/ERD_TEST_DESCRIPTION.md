@@ -8,10 +8,10 @@
 | --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ---- |
 | `src/lib/utils/erd-file-context.test.ts`            | 컬럼 정의서 기준 공통 파일 매핑 해석, mapped tableFile 우선순위                                            | 완료 |
 | `src/routes/erd/page-source.test.ts`                | 좌측 sidebar/본문 제어 영역 배치 계약, 주제영역/스키마 selectbox, 테이블 선택 접힘/검색, 수동 생성 UI 제거 | 완료 |
-| `src/routes/api/erd/render/server.test.ts`          | Graphviz SVG/PNG 렌더 API, 파라미터 검증, 설치 오류 응답, columnFile 매핑 해석                             | 완료 |
+| `src/routes/api/erd/render/server.test.ts`          | Graphviz SVG/PNG 렌더 API, PNG 고DPI 옵션, 파라미터 검증, 설치 오류 응답, columnFile 매핑 해석              | 완료 |
 | `src/lib/utils/erd-graphviz-model.test.ts`          | 테이블/컬럼 조인, 필터, 명시 FK 관계/축약, FK marker/warning, PK 순번 비관계 처리, FK 외부참조 포함/제외    | 완료 |
 | `src/lib/utils/graphviz-dot.test.ts`                | DOT/HTML label 생성, 논리/물리 명칭 분리, 제목/보조행/머리행/관계라벨 제거, PK/FK/NN 열, 사업범위 색상, 외부참조 점선, 폰트 스택 | 완료 |
-| `src/lib/server/graphviz-renderer.test.ts`          | `dot -Tsvg/-Tpng` 호출, ENOENT/non-zero 오류 변환                                                          | 완료 |
+| `src/lib/server/graphviz-renderer.test.ts`          | `dot -Tsvg/-Tpng`, PNG `-Gdpi` 호출, ENOENT/non-zero 오류 변환                                              | 완료 |
 | `src/lib/components/ERDViewer.test.ts`              | ERD 이미지 미리보기, 렌더러 기술명 비노출, 구조적 엣지 수 대신 이미지 관계 수 표시, 오류 표시              | 완료 |
 | `src/routes/api/erd/generate/server.test.ts`        | 기존 ERD JSON/관계 요약 API, render와 같은 필터 계약, columnFile 매핑 해석                                 | 완료 |
 | `src/routes/api/erd/tables/server.test.ts`          | ERD 테이블 목록 조회/검색/정렬, columnFile 기반 mapped tableFile 조회                                      | 완료 |
@@ -29,7 +29,8 @@
 | 테스트명                                                         | 설명                                        | 검증 내용                                                                                             |
 | ---------------------------------------------------------------- | ------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | 기본 요청은 SVG 이미지를 반환한다                                | 기본 `format=svg`, `mode=logical` 응답      | `image/svg+xml`, Graphviz renderer 호출                                                               |
-| `format=png`는 PNG content-type을 반환한다                       | PNG 다운로드/미리보기 응답                  | `image/png`, `dot -Tpng` 렌더링                                                                       |
+| `format=png`는 PNG content-type을 반환한다                       | PNG 다운로드/미리보기 응답                  | `image/png`, 기본 192DPI 렌더 옵션 전달                                                               |
+| `pngDpi`를 지정하면 PNG 렌더 옵션에 전달한다                     | 대형 ERD PNG 가독성 향상                    | `pngDpi=300` 전달, 범위 밖 값은 400 JSON 오류                                                         |
 | 잘못된 format은 400 JSON 오류를 반환한다                         | 입력 검증                                   | `success=false`, 400                                                                                  |
 | 필터 query를 Graphviz 모델 빌더에 전달한다                       | 주제영역/스키마/검색/사업범위/외부참조 필터 | 모델 빌더 옵션 전달                                                                                   |
 | Graphviz 누락 오류는 설치 안내를 포함한다                        | `dot` 미설치 진단                           | 500 JSON, Graphviz 설치 안내                                                                          |
@@ -66,7 +67,7 @@
 - 논리 모드 label에는 한글 테이블/컬럼명만, 물리 모드 label에는 `schema.table`과 컬럼 영문명만 직렬화.
 - 서비스 기본 폰트 우선순위와 맞춘 `Pretendard Variable`, `Pretendard`, `Inter` 폰트 스택 사용.
 - FK edge 생성.
-- `dot -Tsvg`, `dot -Tpng` 인자 사용.
+- `dot -Tsvg`, `dot -Tpng`, PNG `-Gdpi` 인자 사용.
 - `ENOENT` → Graphviz 설치 오류, non-zero exit → 렌더링 오류 변환.
 
 ## 4. ERDViewer 컴포넌트

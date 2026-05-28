@@ -5,6 +5,15 @@
 import { spawn } from 'node:child_process';
 import type { GraphvizERDFormat } from '$lib/utils/erd-graphviz-model.js';
 
+export const DEFAULT_GRAPHVIZ_PNG_DPI = 192;
+export const MIN_GRAPHVIZ_PNG_DPI = 96;
+export const MAX_GRAPHVIZ_PNG_DPI = 600;
+
+export interface GraphvizRenderOptions {
+	timeoutMs?: number;
+	dpi?: number;
+}
+
 export class GraphvizNotAvailableError extends Error {
 	constructor(message = 'Graphviz dot 실행 파일을 찾을 수 없습니다.') {
 		super(message);
@@ -31,10 +40,16 @@ export function getGraphvizInstallHint(): string {
 export async function renderGraphvizDot(
 	dot: string,
 	format: GraphvizERDFormat,
-	timeoutMs = 30_000
+	optionsOrTimeoutMs: GraphvizRenderOptions | number = {}
 ): Promise<Buffer> {
+	const options =
+		typeof optionsOrTimeoutMs === 'number' ? { timeoutMs: optionsOrTimeoutMs } : optionsOrTimeoutMs;
+	const timeoutMs = options.timeoutMs ?? 30_000;
 	const command = process.env.GRAPHVIZ_DOT || 'dot';
 	const args = [`-T${format}`];
+	if (format === 'png') {
+		args.push(`-Gdpi=${options.dpi ?? DEFAULT_GRAPHVIZ_PNG_DPI}`);
+	}
 
 	return new Promise<Buffer>((resolve, reject) => {
 		const child = spawn(command, args, { stdio: ['pipe', 'pipe', 'pipe'] });

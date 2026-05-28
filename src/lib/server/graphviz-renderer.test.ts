@@ -2,6 +2,7 @@ import { EventEmitter } from 'node:events';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { spawn } from 'node:child_process';
 import {
+	DEFAULT_GRAPHVIZ_PNG_DPI,
 	GraphvizNotAvailableError,
 	GraphvizRenderError,
 	renderGraphvizDot
@@ -51,6 +52,34 @@ describe('renderGraphvizDot', () => {
 		await expect(resultPromise).resolves.toEqual(Buffer.from('<svg/>'));
 		expect(spawn).toHaveBeenCalledWith('dot', ['-Tsvg'], { stdio: ['pipe', 'pipe', 'pipe'] });
 		expect(child.stdin.end).toHaveBeenCalledWith('digraph G {}', 'utf8');
+	});
+
+	it('PNG 렌더링은 기본 고DPI 옵션을 전달한다', async () => {
+		const child = createMockChild();
+		vi.mocked(spawn).mockReturnValue(child as never);
+
+		const resultPromise = renderGraphvizDot('digraph G {}', 'png');
+		child.stdout.emit('data', Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+		child.emit('close', 0);
+
+		await expect(resultPromise).resolves.toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+		expect(spawn).toHaveBeenCalledWith('dot', ['-Tpng', `-Gdpi=${DEFAULT_GRAPHVIZ_PNG_DPI}`], {
+			stdio: ['pipe', 'pipe', 'pipe']
+		});
+	});
+
+	it('PNG 렌더링에 사용자 지정 DPI 옵션을 전달한다', async () => {
+		const child = createMockChild();
+		vi.mocked(spawn).mockReturnValue(child as never);
+
+		const resultPromise = renderGraphvizDot('digraph G {}', 'png', { dpi: 300 });
+		child.stdout.emit('data', Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+		child.emit('close', 0);
+
+		await expect(resultPromise).resolves.toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+		expect(spawn).toHaveBeenCalledWith('dot', ['-Tpng', '-Gdpi=300'], {
+			stdio: ['pipe', 'pipe', 'pipe']
+		});
 	});
 
 	it('ENOENT를 GraphvizNotAvailableError로 변환한다', async () => {

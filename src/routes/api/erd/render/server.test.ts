@@ -99,14 +99,33 @@ describe('API: /api/erd/render', () => {
 		expect(renderGraphvizDot).toHaveBeenCalledWith('digraph G {}', 'svg');
 	});
 
-	it('format=png는 PNG content-type을 반환한다', async () => {
+	it('format=png는 PNG content-type과 기본 고DPI 렌더 옵션을 반환한다', async () => {
 		vi.mocked(renderGraphvizDot).mockResolvedValue(Buffer.from([0x89, 0x50, 0x4e, 0x47]));
 
 		const response = await GET(createMockRequestEvent({ format: 'png', mode: 'physical' }));
 
 		expect(response.status).toBe(200);
 		expect(response.headers.get('content-type')).toContain('image/png');
-		expect(renderGraphvizDot).toHaveBeenCalledWith('digraph G {}', 'png');
+		expect(renderGraphvizDot).toHaveBeenCalledWith('digraph G {}', 'png', { dpi: 192 });
+	});
+
+	it('format=png에서 pngDpi를 지정하면 렌더 옵션에 전달한다', async () => {
+		vi.mocked(renderGraphvizDot).mockResolvedValue(Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+
+		const response = await GET(createMockRequestEvent({ format: 'png', pngDpi: '300' }));
+
+		expect(response.status).toBe(200);
+		expect(renderGraphvizDot).toHaveBeenCalledWith('digraph G {}', 'png', { dpi: 300 });
+	});
+
+	it('잘못된 pngDpi는 400 JSON 오류를 반환한다', async () => {
+		const response = await GET(createMockRequestEvent({ format: 'png', pngDpi: '48' }));
+		const result = await response.json();
+
+		expect(response.status).toBe(400);
+		expect(result.success).toBe(false);
+		expect(result.error).toContain('pngDpi');
+		expect(renderGraphvizDot).not.toHaveBeenCalled();
 	});
 
 	it('잘못된 format은 400 JSON 오류를 반환한다', async () => {

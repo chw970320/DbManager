@@ -99,6 +99,114 @@ describe('TermGenerator', () => {
 				{ timeout: 3000 }
 			);
 		});
+
+		it('should use Korean-to-English direction by default', async () => {
+			render(TermGenerator, { props: {} });
+
+			const input = screen.getByPlaceholderText(/한글 약어 입력/) as HTMLInputElement;
+			await fireEvent.input(input, { target: { value: '사용자_이름' } });
+
+			await waitFor(
+				() => {
+					const segmentCall = mockFetch.mock.calls.find(([callUrl]) =>
+						callUrl?.toString().includes('/api/generator/segment')
+					);
+					expect(segmentCall).toBeDefined();
+					const requestBody = JSON.parse(segmentCall?.[1]?.body as string);
+					expect(requestBody.direction).toBe('ko-to-en');
+				},
+				{ timeout: 3000 }
+			);
+		});
+	});
+
+	describe('Reverse Lookup Mode', () => {
+		it('should use one toggle button to switch direction back and forth', async () => {
+			render(TermGenerator, { props: {} });
+
+			const toggleButton = screen.getByRole('button', { name: /변환 방향 전환/ });
+			expect(screen.getAllByRole('button', { name: /변환 방향 전환/ })).toHaveLength(1);
+			expect(screen.getByPlaceholderText(/한글 약어 입력/)).toBeInTheDocument();
+
+			await fireEvent.click(toggleButton);
+			expect(screen.getByPlaceholderText(/영문 약어 입력/)).toBeInTheDocument();
+			expect(toggleButton).toHaveAttribute('aria-pressed', 'true');
+
+			await fireEvent.click(toggleButton);
+			expect(screen.getByPlaceholderText(/한글 약어 입력/)).toBeInTheDocument();
+			expect(toggleButton).toHaveAttribute('aria-pressed', 'false');
+		});
+
+		it('should convert English abbreviations to Korean result without validation or add action', async () => {
+			mockFetch.mockImplementation((url: string, options?: RequestInit) => {
+				const requestBody = options?.body ? JSON.parse(options.body as string) : {};
+
+				if (url.includes('/api/generator/segment')) {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({
+								success: true,
+								segments:
+									requestBody.direction === 'en-to-ko'
+										? ['VSTR_CNT_PRST_YM']
+										: ['방문자_수_현황_연월'],
+								forbiddenWordInfo: null
+							})
+					});
+				}
+
+				if (url.includes('/api/term/validate')) {
+					return Promise.resolve({
+						ok: true,
+						json: () => Promise.resolve({ success: true })
+					});
+				}
+
+				if (url.includes('/api/generator')) {
+					return Promise.resolve({
+						ok: true,
+						json: () =>
+							Promise.resolve({
+								success: true,
+								results:
+									requestBody.direction === 'en-to-ko'
+										? ['방문자_수_현황_연월']
+										: ['VSTR_CNT_PRST_YM'],
+								hasMultiple: false
+							})
+					});
+				}
+
+				return Promise.resolve({
+					ok: false,
+					json: () => Promise.resolve({ success: false })
+				});
+			});
+
+			render(TermGenerator, { props: { filename: 'term.json' } });
+
+			await fireEvent.click(screen.getByRole('button', { name: /변환 방향 전환/ }));
+			const input = screen.getByPlaceholderText(/영문 약어 입력/) as HTMLInputElement;
+			await fireEvent.input(input, { target: { value: 'VSTR_CNT_PRST_YM' } });
+
+			await waitFor(
+				() => {
+					expect(screen.getByText('방문자_수_현황_연월')).toBeInTheDocument();
+				},
+				{ timeout: 3000 }
+			);
+
+			const requestBodies = mockFetch.mock.calls
+				.map(([, options]) => (options?.body ? JSON.parse(options.body as string) : null))
+				.filter(Boolean);
+			expect(requestBodies.some((body) => body.direction === 'en-to-ko')).toBe(true);
+			expect(
+				mockFetch.mock.calls.some(([callUrl]) => callUrl?.toString().includes('/api/term/validate'))
+			).toBe(false);
+			expect(screen.getByLabelText('결과 복사')).toBeInTheDocument();
+			expect(screen.queryByLabelText('새 용어 추가')).not.toBeInTheDocument();
+		});
 	});
 
 	describe('Combination Selection', () => {
@@ -221,9 +329,8 @@ describe('TermGenerator', () => {
 
 			await waitFor(() => {
 				expect(
-					mockFetch.mock.calls.some(
-						([callUrl]) =>
-							callUrl?.toString().includes('/api/generator/segment?filename=beta.json')
+					mockFetch.mock.calls.some(([callUrl]) =>
+						callUrl?.toString().includes('/api/generator/segment?filename=beta.json')
 					)
 				).toBe(true);
 				expect(screen.getByText('MEMBER_NAME')).toBeInTheDocument();
@@ -307,8 +414,7 @@ describe('TermGenerator', () => {
 									errors: [
 										{
 											type: 'TERM_NAME_MAPPING',
-											message:
-												'용어명의 다음 부분이 단어집에 등록되지 않았습니다: 가능',
+											message: '용어명의 다음 부분이 단어집에 등록되지 않았습니다: 가능',
 											field: 'termName'
 										}
 									],

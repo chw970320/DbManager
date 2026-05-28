@@ -332,6 +332,12 @@ export async function POST({ request, url }: RequestEvent) {
 			return json({ success: false, error: '분석할 단어를 제공해야 합니다.' }, { status: 400 });
 		}
 
+		if (direction !== 'ko-to-en' && direction !== 'en-to-ko') {
+			return json({ success: false, error: '지원하지 않는 변환 방향입니다.' } as ApiResponse, {
+				status: 400
+			});
+		}
+
 		// 용어 파일의 매핑 정보 로드
 		let vocabularyFilename = 'vocabulary.json';
 		try {
@@ -394,6 +400,3 @@ export async function POST({ request, url }: RequestEvent) {
 		});
 	}
 }
-
-
-

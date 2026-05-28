@@ -12,7 +12,8 @@
 
 	// --- Component State ---
 	let sourceTerm = $state('');
-	const direction = 'ko-to-en' as const; // 한영 변환만 지원
+	type ConversionDirection = 'ko-to-en' | 'en-to-ko';
+	let direction = $state<ConversionDirection>('ko-to-en');
 	let segmentsList = $state<string[]>([]);
 	let selectedSegment = $state('');
 	let finalResults = $state<string[]>([]); // 단일 결과에서 복수 결과로 변경
@@ -29,7 +30,10 @@
 	} | null>(null);
 	// 각 결과에 대한 validation 상태 저장 (key: `${segment}::${result}`)
 	let validationResults = $state<
-		Map<string, { isValid: boolean; errors?: Array<{ type: string; message: string }>; error?: string }>
+		Map<
+			string,
+			{ isValid: boolean; errors?: Array<{ type: string; message: string }>; error?: string }
+		>
 	>(new Map());
 	let combinationRequestVersion = 0;
 	let conversionRequestVersion = 0;
@@ -63,6 +67,7 @@
 	$effect(() => {
 		void sourceTerm;
 		void filename;
+		void direction;
 		debouncedFindCombinations.cancel();
 		invalidateInFlightRequests();
 		resetGeneratorState();
@@ -168,7 +173,7 @@
 			finalResults = data.results || [];
 
 			// 각 결과에 대해 접미사 validation 수행
-			if (finalResults.length > 0) {
+			if (direction === 'ko-to-en' && finalResults.length > 0) {
 				await validateSegmentResults(segment, requestVersion);
 			}
 		} catch (err) {
@@ -293,7 +298,9 @@
 	function getValidation(
 		segment: string,
 		result: string
-	): { isValid: boolean; errors?: Array<{ type: string; message: string }>; error?: string } | undefined {
+	):
+		| { isValid: boolean; errors?: Array<{ type: string; message: string }>; error?: string }
+		| undefined {
 		return validationResults.get(`${segment}::${result}`);
 	}
 
@@ -387,6 +394,10 @@
 		}
 	}
 
+	function toggleDirection() {
+		direction = direction === 'ko-to-en' ? 'en-to-ko' : 'ko-to-en';
+	}
+
 	/**
 	 * 토글 상태 변경
 	 */
@@ -428,7 +439,27 @@
 	>
 		<!-- Input Section -->
 		<div class="relative">
-			<div class="flex items-center space-x-2">
+			<div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+				<button
+					type="button"
+					onclick={toggleDirection}
+					aria-pressed={direction === 'en-to-ko'}
+					aria-label={direction === 'ko-to-en'
+						? '변환 방향 전환: 현재 한글→영문, 클릭하면 영문→한글'
+						: '변환 방향 전환: 현재 영문→한글, 클릭하면 한글→영문'}
+					class="inline-flex items-center gap-2 rounded-md border border-blue-200 bg-white px-3 py-2 text-left shadow-sm transition-colors hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-1"
+				>
+					<span class="flex flex-col leading-tight">
+						<span class="text-xs text-gray-600">변환 방향</span>
+						<span class="text-sm font-semibold text-blue-800">
+							{direction === 'ko-to-en' ? '한글→영문' : '영문→한글'}
+						</span>
+					</span>
+					<span class="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+						전환
+					</span>
+				</button>
+
 				<!-- Search Input -->
 				<div class="relative flex-1">
 					<!-- Search Icon -->
@@ -452,7 +483,8 @@
 						bind:this={searchInput}
 						type="text"
 						bind:value={sourceTerm}
-						placeholder="한글 약어 입력..."
+						placeholder={direction === 'ko-to-en' ? '한글 약어 입력...' : '영문 약어 입력...'}
+						aria-label={direction === 'ko-to-en' ? '한글 용어 입력' : '영문 약어 입력'}
 						class="input pl-10 pr-10"
 					/>
 
@@ -475,10 +507,17 @@
 					{/if}
 				</div>
 			</div>
+			<p class="mt-2 text-xs text-gray-600">
+				{#if direction === 'ko-to-en'}
+					한글 표준단어명을 입력하면 연결된 단어집 기준으로 영문 컬럼명 후보를 보여줍니다.
+				{:else}
+					영문 약어를 입력하면 연결된 단어집 기준으로 한글 표준단어명 후보를 조회합니다.
+				{/if}
+			</p>
 		</div>
 
 		<!-- 금칙어 및 이음동의어 경고 -->
-		{#if forbiddenWordInfo && (forbiddenWordInfo.isForbidden || forbiddenWordInfo.isSynonym)}
+		{#if direction === 'ko-to-en' && forbiddenWordInfo && (forbiddenWordInfo.isForbidden || forbiddenWordInfo.isSynonym)}
 			<div class="rounded-md border border-yellow-300 bg-yellow-50 p-3">
 				<div class="flex items-start">
 					<svg
@@ -552,7 +591,9 @@
 		<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 			<!-- Combinations -->
 			<div class="space-y-2">
-				<h3 class="font-semibold text-gray-900">단어 조합</h3>
+				<h3 class="font-semibold text-gray-900">
+					{direction === 'ko-to-en' ? '단어 조합' : '약어 조합'}
+				</h3>
 				<div class="h-48 overflow-y-auto rounded-md border bg-white p-2">
 					{#if segmentsList.length > 0}
 						<ul class="space-y-1">
@@ -574,7 +615,9 @@
 					{:else if !isLoadingCombinations && sourceTerm}
 						<p class="p-2 text-gray-700">결과를 찾을 수 없습니다.</p>
 					{:else}
-						<p class="text-gray-500">용어를 입력하세요</p>
+						<p class="text-gray-500">
+							{direction === 'ko-to-en' ? '용어를 입력하세요' : '영문 약어를 입력하세요'}
+						</p>
 					{/if}
 				</div>
 			</div>
@@ -610,7 +653,10 @@
 						<!-- 통일된 목록 형태 -->
 						<div class="space-y-1">
 							{#each finalResults as result, index (`${index}-${result}`)}
-								{@const validation = selectedSegment ? getValidation(selectedSegment, result) : undefined}
+								{@const validation =
+									direction === 'ko-to-en' && selectedSegment
+										? getValidation(selectedSegment, result)
+										: undefined}
 								<div
 									class="rounded-md border p-2 {validation?.isValid === false
 										? 'border-red-300 bg-red-50'
@@ -660,7 +706,7 @@
 													</svg>
 												{/if}
 											</button>
-											{#if selectedSegment}
+											{#if selectedSegment && direction === 'ko-to-en'}
 												{#if validation?.isValid === true}
 													<!-- Validation 통과: + 버튼 -->
 													<button
@@ -744,7 +790,8 @@
 											{#each validation.errors as err (err.type)}
 												<div class="flex items-start gap-1.5">
 													<span
-														class="inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] font-medium {err.type === 'TERM_NAME_MAPPING'
+														class="inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] font-medium {err.type ===
+														'TERM_NAME_MAPPING'
 															? 'bg-blue-100 text-blue-700'
 															: err.type === 'COLUMN_NAME_MAPPING'
 																? 'bg-purple-100 text-purple-700'
@@ -773,7 +820,9 @@
 					{:else if selectedSegment}
 						<p class="text-gray-700">변환할 수 없습니다.</p>
 					{:else}
-						<p class="text-gray-500">단어 조합을 선택하세요</p>
+						<p class="text-gray-500">
+							{direction === 'ko-to-en' ? '단어 조합을 선택하세요' : '약어 조합을 선택하세요'}
+						</p>
 					{/if}
 				</div>
 			</div>

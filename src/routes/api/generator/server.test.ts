@@ -41,10 +41,42 @@ const createMockVocabularyData = (): VocabularyData => ({
 			englishName: 'Name',
 			createdAt: '2024-01-01T00:00:00.000Z',
 			updatedAt: '2024-01-01T00:00:00.000Z'
+		},
+		{
+			id: 'vocab-3',
+			standardName: '방문자',
+			abbreviation: 'VSTR',
+			englishName: 'Visitor',
+			createdAt: '2024-01-01T00:00:00.000Z',
+			updatedAt: '2024-01-01T00:00:00.000Z'
+		},
+		{
+			id: 'vocab-4',
+			standardName: '수',
+			abbreviation: 'CNT',
+			englishName: 'Count',
+			createdAt: '2024-01-01T00:00:00.000Z',
+			updatedAt: '2024-01-01T00:00:00.000Z'
+		},
+		{
+			id: 'vocab-5',
+			standardName: '현황',
+			abbreviation: 'PRST',
+			englishName: 'Present',
+			createdAt: '2024-01-01T00:00:00.000Z',
+			updatedAt: '2024-01-01T00:00:00.000Z'
+		},
+		{
+			id: 'vocab-6',
+			standardName: '연월',
+			abbreviation: 'YM',
+			englishName: 'Year Month',
+			createdAt: '2024-01-01T00:00:00.000Z',
+			updatedAt: '2024-01-01T00:00:00.000Z'
 		}
 	],
 	lastUpdated: '2024-01-01T00:00:00.000Z',
-	totalCount: 2
+	totalCount: 6
 });
 
 // RequestEvent Mock 생성 헬퍼
@@ -148,6 +180,40 @@ describe('Generator API: /api/generator', () => {
 		expect(result.results).toBeInstanceOf(Array);
 	});
 
+	it('영문 약어 입력: 영문→한글 방향으로 연결 단어집의 표준단어명을 반환', async () => {
+		const event = createMockRequestEvent({
+			body: {
+				term: 'VSTR_CNT_PRST_YM',
+				direction: 'en-to-ko'
+			},
+			searchParams: { filename: 'term.json' }
+		});
+
+		const response = await POST(event);
+		const result = await response.json();
+
+		expect(response.status).toBe(200);
+		expect(result.success).toBe(true);
+		expect(result.results).toContain('방문자_수_현황_연월');
+	});
+
+	it('영문 약어 입력: 매칭되지 않는 영문 약어는 ##으로 표시', async () => {
+		const event = createMockRequestEvent({
+			body: {
+				term: 'VSTR_UNKNOWN_YM',
+				direction: 'en-to-ko'
+			},
+			searchParams: { filename: 'term.json' }
+		});
+
+		const response = await POST(event);
+		const result = await response.json();
+
+		expect(response.status).toBe(200);
+		expect(result.success).toBe(true);
+		expect(result.results).toContain('방문자_##_연월');
+	});
+
 	it('filename 파라미터 사용: filename 파라미터로 특정 단어집 파일 사용', async () => {
 		const event = createMockRequestEvent({
 			body: {
@@ -190,6 +256,22 @@ describe('Generator API: /api/generator', () => {
 		expect(result.error).toContain('변환할 단어');
 	});
 
+	it('should return 400 when direction is unsupported', async () => {
+		const event = createMockRequestEvent({
+			body: {
+				term: '사용자_이름',
+				direction: 'invalid-direction'
+			}
+		});
+
+		const response = await POST(event);
+		const result = await response.json();
+
+		expect(response.status).toBe(400);
+		expect(result.success).toBe(false);
+		expect(result.error).toContain('변환 방향');
+	});
+
 	it('should return 500 on vocabulary load error', async () => {
 		vi.mocked(loadVocabularyData).mockRejectedValue(new Error('단어집 파일을 찾을 수 없습니다'));
 
@@ -207,4 +289,3 @@ describe('Generator API: /api/generator', () => {
 		expect(result.success).toBe(false);
 	});
 });
-

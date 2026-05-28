@@ -7,6 +7,7 @@
 - ERD 미리보기를 단순 이미지 스크롤에서 inline SVG 기반 탐색 뷰어로 전환했습니다.
 - ERD 보기 도구에 **맞춤**, **100%**, **축소**, **확대**, **초기화**와 drag 이동을 추가했습니다.
 - 관계가 없거나 희박한 Graphviz ERD의 세로형 단일 스택을 줄이도록 disconnected graph packing을 개선했습니다.
+- 용어 변환기에 **한글→영문 / 영문→한글** 방향 토글을 추가해, 영문 약어 조합을 연결 단어집 기준 한글 표준단어명으로 조회할 수 있게 했습니다.
 
 ### 상세 변경
 
@@ -43,6 +44,25 @@
 - 변경:
   - viewer toolbar, SVG guard/sanitization, zoom/reset/pan, sparse graph packing, render API layout DOT 전달 테스트 추가
   - ERD 사용자 가이드에 보기 도구와 improved SVG/PNG 배치 정책 설명 추가
+
+4. 용어 변환기 역방향 조회
+
+- 대상:
+  - `src/lib/components/TermGenerator.svelte`
+  - `src/lib/components/TermGenerator.test.ts`
+  - `src/routes/api/generator/+server.ts`
+  - `src/routes/api/generator/server.test.ts`
+  - `src/routes/api/generator/segment/+server.ts`
+  - `src/routes/api/generator/segment/server.test.ts`
+  - `docs/USER_GUIDE.md`
+  - `docs/QUICK_START.md`
+  - `docs/tests/TERM_TEST_DESCRIPTION.md`
+- 변경:
+  - 단일 변환 방향 토글 버튼으로 기본 한글→영문 흐름을 유지하면서 영문→한글 조회 모드를 추가
+  - 영문→한글 모드는 연결된 단어집의 `abbreviation → standardName` 기준으로 결과를 표시하고, 조회 전용 요구에 맞춰 validation 및 `새 용어 추가` 액션을 숨김
+  - 미매칭 영문 약어는 기존 변환기 계약처럼 `##`으로 표시
+  - generator API와 segment API가 지원하지 않는 `direction` 값을 400으로 거부하도록 보강
+  - 역방향 API 결과와 UI 조회 전용 동작을 회귀 테스트로 고정
 
 ## 2026-05-22
 

@@ -165,6 +165,17 @@ export async function POST({ request, url }: RequestEvent) {
 			);
 		}
 
+		if (direction !== 'ko-to-en' && direction !== 'en-to-ko') {
+			return json(
+				{
+					success: false,
+					error: '지원하지 않는 변환 방향입니다.',
+					message: 'Unsupported conversion direction'
+				} as ApiResponse,
+				{ status: 400 }
+			);
+		}
+
 		const sourceMap =
 			direction === 'ko-to-en'
 				? getCachedGeneratorConversionMaps(filename)?.koToEn
@@ -216,6 +227,3 @@ export async function POST({ request, url }: RequestEvent) {
 		);
 	}
 }
-
-
-

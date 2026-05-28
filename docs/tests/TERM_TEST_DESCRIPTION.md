@@ -17,14 +17,15 @@
 | `term/filter-options/server.test.ts` | 7개       | 완료 |
 | `term/recommend/server.test.ts`      | 6개       | 완료 |
 | `term/impact-preview/server.test.ts` | 3개       | 완료 |
-| `generator/server.test.ts`           | 8개       | 완료 |
+| `generator/server.test.ts`           | 10개      | 완료 |
+| `generator/segment/server.test.ts`   | 3개       | 완료 |
 | `TermEditor.test.ts`                 | 13개      | 완료 |
 | `TermFileManager.test.ts`            | 10개      | 완료 |
 | `TermTable.test.ts`                  | 6개       | 완료 |
-| `TermGenerator.test.ts`              | 13개      | 완료 |
+| `TermGenerator.test.ts`              | 16개      | 완료 |
 | `TermValidationPanel.test.ts`        | 6개       | 완료 |
 | `term/browse/page.test.ts`           | 1개       | 완료 |
-| **합계**                             | **130개** |      |
+| **합계**                             | **138개** |      |
 
 ---
 
@@ -266,25 +267,42 @@
 
 ---
 
-## 10. generator/server.test.ts (8개)
+## 10. generator/server.test.ts (10개)
 
 **파일 경로**: `src/routes/api/generator/server.test.ts`
 
 용어 자동 생성 API를 테스트합니다.
 
-| 테스트명                                                              | 설명                    | 검증 내용                           |
-| --------------------------------------------------------------------- | ----------------------- | ----------------------------------- |
-| 용어 조합 생성 성공: 한국어 입력 시 가능한 영문 컬럼명 조합 반환      | 용어 조합 생성 성공     | 200 응답, results 배열 반환         |
-| 단어집에 없는 단어: 단어집에 없는 단어 포함 시 빈 배열 또는 에러 반환 | 단어집에 없는 단어 처리 | '##'이 포함된 결과 반환             |
-| 한 단어 입력: 단일 단어 입력 시 조합 생성                             | 단일 단어 처리          | 단일 단어로도 조합 생성             |
-| filename 파라미터 사용: filename 파라미터로 특정 단어집 파일 사용     | 파일명 파라미터 사용    | filename 파라미터 적용              |
-| should use default filename when not specified                        | 기본 파일명 사용        | 파라미터 없을 때 term.json 사용     |
-| should return 400 when term is missing                                | 용어 누락               | term 없을 때 400 에러               |
-| should return 500 on vocabulary load error                            | 단어집 로드 오류 처리   | loadVocabularyData 실패 시 500 에러 |
+| 테스트명                                                              | 설명                    | 검증 내용                            |
+| --------------------------------------------------------------------- | ----------------------- | ------------------------------------ |
+| 용어 조합 생성 성공: 한국어 입력 시 가능한 영문 컬럼명 조합 반환      | 용어 조합 생성 성공     | 200 응답, results 배열 반환          |
+| 단어집에 없는 단어: 단어집에 없는 단어 포함 시 빈 배열 또는 에러 반환 | 단어집에 없는 단어 처리 | '##'이 포함된 결과 반환              |
+| 한 단어 입력: 단일 단어 입력 시 조합 생성                             | 단일 단어 처리          | 단일 단어로도 조합 생성              |
+| 영문 약어 입력: 영문→한글 방향으로 연결 단어집의 표준단어명을 반환    | 역방향 조회             | 영문 약어를 한글 표준단어명으로 변환 |
+| 영문 약어 입력: 매칭되지 않는 영문 약어는 ##으로 표시                 | 역방향 미매칭 처리      | 미매칭 약어가 `##`으로 표시          |
+| filename 파라미터 사용: filename 파라미터로 특정 단어집 파일 사용     | 파일명 파라미터 사용    | filename 파라미터 적용               |
+| should use default filename when not specified                        | 기본 파일명 사용        | 파라미터 없을 때 term.json 사용      |
+| should return 400 when term is missing                                | 용어 누락               | term 없을 때 400 에러                |
+| should return 400 when direction is unsupported                       | 방향값 검증             | 미지원 direction은 400 에러          |
+| should return 500 on vocabulary load error                            | 단어집 로드 오류 처리   | loadVocabularyData 실패 시 500 에러  |
 
 ---
 
-## 11. term/impact-preview/server.test.ts (3개)
+## 11. generator/segment/server.test.ts (3개)
+
+**파일 경로**: `src/routes/api/generator/segment/server.test.ts`
+
+용어 변환기 단어/약어 조합 분석 API를 테스트합니다.
+
+| 테스트명                                                                | 설명               | 검증 내용                                |
+| ----------------------------------------------------------------------- | ------------------ | ---------------------------------------- |
+| should segment concatenated English abbreviations in en-to-ko direction | 역방향 약어 분해   | 붙여 쓴 영문 약어를 단어집 기준으로 분해 |
+| should keep ## placeholder for unmatched English abbreviation parts     | 역방향 미매칭 처리 | 매칭되지 않는 약어 조각을 `##`으로 표시  |
+| should return 400 when direction is unsupported                         | 방향값 검증        | 미지원 direction은 400 에러              |
+
+---
+
+## 12. term/impact-preview/server.test.ts (3개)
 
 **파일 경로**: `src/routes/api/term/impact-preview/server.test.ts`
 
@@ -298,7 +316,7 @@
 
 ---
 
-## 12. TermEditor.test.ts (13개)
+## 13. TermEditor.test.ts (13개)
 
 **파일 경로**: `src/lib/components/TermEditor.test.ts`
 
@@ -344,7 +362,7 @@
 
 ---
 
-## 13. TermFileManager.test.ts (10개)
+## 14. TermFileManager.test.ts (10개)
 
 **파일 경로**: `src/lib/components/TermFileManager.test.ts`
 
@@ -389,7 +407,7 @@
 
 ---
 
-## 14. TermTable.test.ts (6개)
+## 15. TermTable.test.ts (6개)
 
 **파일 경로**: `src/lib/components/TermTable.test.ts`
 
@@ -423,7 +441,7 @@
 
 ---
 
-## 15. TermGenerator.test.ts (13개)
+## 16. TermGenerator.test.ts (16개)
 
 **파일 경로**: `src/lib/components/TermGenerator.test.ts`
 
@@ -435,12 +453,20 @@
 | ---------------------------- | -------------- | ------------------------- |
 | should render generator form | 생성 폼 렌더링 | 생성 폼이 표시되는지 확인 |
 
-### Term Generation (2개)
+### Term Generation (3개)
 
 | 테스트명                                             | 설명             | 검증 내용                      |
 | ---------------------------------------------------- | ---------------- | ------------------------------ |
 | should call API when generate button is clicked      | 용어 생성 요청   | 생성 버튼 클릭 시 API 호출     |
 | should display results list when API returns results | 결과 목록 렌더링 | API 응답에 따라 결과 목록 표시 |
+| should use Korean-to-English direction by default    | 기본 방향 유지   | 기본 API 요청 방향이 ko-to-en  |
+
+### Reverse Lookup Mode (2개)
+
+| 테스트명                                                                               | 설명                | 검증 내용                                                 |
+| -------------------------------------------------------------------------------------- | ------------------- | --------------------------------------------------------- |
+| should use one toggle button to switch direction back and forth                        | 단일 토글 전환      | 하나의 버튼으로 한글→영문/영문→한글 방향 왕복 전환        |
+| should convert English abbreviations to Korean result without validation or add action | 영문→한글 조회 전용 | en-to-ko 요청, 한글 결과 표시, validation/add 액션 미노출 |
 
 ### Interaction Stability (2개)
 
@@ -469,7 +495,7 @@
 
 ---
 
-## 16. TermValidationPanel.test.ts (6개)
+## 17. TermValidationPanel.test.ts (6개)
 
 **파일 경로**: `src/lib/components/TermValidationPanel.test.ts`
 
@@ -498,7 +524,7 @@
 
 ---
 
-## 17. term/browse/page.test.ts (1개)
+## 18. term/browse/page.test.ts (1개)
 
 **파일 경로**: `src/routes/term/browse/page.test.ts`
 

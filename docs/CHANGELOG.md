@@ -1,5 +1,49 @@
 # 변경 이력
 
+## 2026-05-28
+
+### 요약
+
+- ERD 미리보기를 단순 이미지 스크롤에서 inline SVG 기반 탐색 뷰어로 전환했습니다.
+- ERD 보기 도구에 **맞춤**, **100%**, **축소**, **확대**, **초기화**와 drag 이동을 추가했습니다.
+- 관계가 없거나 희박한 Graphviz ERD의 세로형 단일 스택을 줄이도록 disconnected graph packing을 개선했습니다.
+
+### 상세 변경
+
+1. ERD 미리보기 탐색 UX 개선
+
+- 대상:
+  - `src/lib/components/ERDViewer.svelte`
+- 변경:
+  - `/api/erd/render?format=svg` 응답을 같은 출처에서 fetch해 inline SVG로 표시
+  - 이전 render 요청은 `AbortController`와 request sequence로 취소/무시해 stale SVG가 현재 화면을 덮지 않도록 처리
+  - `Content-Type`, SVG root, 위험 태그/속성 제거를 거친 뒤 미리보기에 주입
+  - SVG URL guard/sanitizer는 ERD Graphviz preview 전용 유틸로 분리하고, 범용 SVG sanitizer로 재사용하지 않도록 boundary를 명시
+  - 최초 로드와 초기화는 미리보기 영역에 맞춤 배율로 가운데 정렬
+  - 100% 보기, 확대/축소, 맞춤, 초기화, pointer drag 이동 지원
+
+2. Graphviz layout packing 개선
+
+- 대상:
+  - `src/lib/utils/graphviz-dot.ts`
+- 변경:
+  - 관계가 없는 다중 테이블 모델은 `pack=12`, `packmode="array_iN"`, tighter spacing을 사용해 grid형 배치를 유도
+  - 관계가 있는 모델은 기존 `rankdir=LR`, `splines=ortho`, crow/tee edge 계약을 유지하면서 보수적 packing 적용
+  - 화면 미리보기와 SVG/PNG 다운로드가 같은 개선 DOT를 사용
+
+3. 테스트/문서 갱신
+
+- 대상:
+  - `src/lib/components/ERDViewer.test.ts`
+  - `src/lib/utils/graphviz-dot.test.ts`
+  - `src/lib/utils/erd-svg-preview.test.ts`
+  - `src/routes/api/erd/render/server.test.ts`
+  - `docs/USER_GUIDE.md`
+  - `docs/tests/ERD_TEST_DESCRIPTION.md`
+- 변경:
+  - viewer toolbar, SVG guard/sanitization, zoom/reset/pan, sparse graph packing, render API layout DOT 전달 테스트 추가
+  - ERD 사용자 가이드에 보기 도구와 improved SVG/PNG 배치 정책 설명 추가
+
 ## 2026-05-22
 
 ### 요약

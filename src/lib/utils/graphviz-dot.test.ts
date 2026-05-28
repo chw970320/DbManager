@@ -104,6 +104,32 @@ function createModel(): GraphvizERDModel {
 	};
 }
 
+function createDisconnectedModel(tableCount = 9): GraphvizERDModel {
+	const baseModel = createModel();
+	return {
+		...baseModel,
+		tables: Array.from({ length: tableCount }, (_, index) => ({
+			...baseModel.tables[0],
+			id: `table-${index + 1}`,
+			key: `bksp|tb_${index + 1}`,
+			nodeId: `t_bksp_tb_${index + 1}`,
+			tableEnglishName: `TB_${index + 1}`,
+			tableKoreanName: `테이블${index + 1}`,
+			columns: baseModel.tables[0].columns.map((column, columnIndex) => ({
+				...column,
+				id: `column-${index + 1}-${columnIndex + 1}`
+			}))
+		})),
+		relationships: [],
+		metadata: {
+			...baseModel.metadata,
+			totalTables: tableCount,
+			totalRelationships: 0,
+			externalTables: 0
+		}
+	};
+}
+
 describe('buildGraphvizDot', () => {
 	it('Graphviz digraph와 HTML table label을 생성한다', () => {
 		const dot = buildGraphvizDot(createModel(), { mode: 'logical' });
@@ -172,6 +198,31 @@ describe('buildGraphvizDot', () => {
 		expect(dot).toContain('Pretendard Variable,Pretendard,Inter');
 	});
 
+	it('관계가 없는 다중 테이블은 grid형 packing 속성을 사용한다', () => {
+		const dot = buildGraphvizDot(createDisconnectedModel(9), { mode: 'logical' });
+
+		expect(dot).toContain('rankdir=LR');
+		expect(dot).toContain('splines=ortho');
+		expect(dot).toContain('pack=12');
+		expect(dot).toContain('packmode="array_i3"');
+		expect(dot).toContain('pad="0.15"');
+		expect(dot).toContain('nodesep="0.45"');
+		expect(dot).toContain('ranksep="0.65"');
+		expect(dot).not.toContain('array_u');
+		expect(dot).not.toContain('sortv=');
+	});
+
+	it('관계가 있는 모델은 edge 방향성을 보존하는 보수적 packing을 사용한다', () => {
+		const dot = buildGraphvizDot(createModel(), { mode: 'logical' });
+
+		expect(dot).toContain('rankdir=LR');
+		expect(dot).toContain('splines=ortho');
+		expect(dot).toContain('pack=true');
+		expect(dot).toContain('packmode="graph"');
+		expect(dot).toContain('arrowtail="crow"');
+		expect(dot).toContain('arrowhead="tee"');
+	});
+
 	it('사업범위 여부와 외부 참조 상태에 맞는 헤더/외곽 스타일을 사용한다', () => {
 		const dot = buildGraphvizDot(createModel(), { mode: 'logical' });
 
@@ -209,5 +260,24 @@ describe('buildGraphvizDot', () => {
 		expect(dot).toContain('arrowtail="crow"');
 		expect(dot).toContain('arrowhead="tee"');
 		expect(dot).toContain('style="dashed"');
+	});
+
+	it('빈 모델도 유효한 digraph와 빈 상태 노드를 생성한다', () => {
+		const baseModel = createModel();
+		const emptyModel: GraphvizERDModel = {
+			...baseModel,
+			tables: [],
+			relationships: [],
+			metadata: {
+				...baseModel.metadata,
+				totalTables: 0,
+				totalRelationships: 0
+			}
+		};
+
+		const dot = buildGraphvizDot(emptyModel, { mode: 'logical' });
+
+		expect(dot).toContain('digraph DbManagerERD');
+		expect(dot).toContain('조건에 맞는 ERD 테이블이 없습니다.');
 	});
 });

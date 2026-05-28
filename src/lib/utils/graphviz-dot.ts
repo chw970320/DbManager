@@ -77,6 +77,38 @@ function getBorderColor(table: GraphvizERDTable): string {
 	return table.isExternal ? EXTERNAL_BORDER_COLOR : TABLE_BORDER_COLOR;
 }
 
+function clampNumber(value: number, min: number, max: number): number {
+	return Math.min(Math.max(value, min), max);
+}
+
+function getDisconnectedPackColumnCount(tableCount: number): number {
+	return clampNumber(Math.ceil(Math.sqrt(Math.max(tableCount, 1))), 2, 4);
+}
+
+function buildGraphAttributes(model: GraphvizERDModel): string {
+	const hasRelationships = model.relationships.length > 0;
+	const disconnectedPackColumnCount = getDisconnectedPackColumnCount(model.tables.length);
+	const layoutAttributes = hasRelationships
+		? ['pack=true', 'packmode="graph"', 'pad="0.2"', 'nodesep="0.65"', 'ranksep="0.9"']
+		: [
+				'pack=12',
+				`packmode="array_i${disconnectedPackColumnCount}"`,
+				'pad="0.15"',
+				'nodesep="0.45"',
+				'ranksep="0.65"'
+			];
+
+	return [
+		'rankdir=LR',
+		'splines=ortho',
+		'overlap=false',
+		'outputorder=edgesfirst',
+		...layoutAttributes,
+		'bgcolor="#F8FAFC"',
+		`fontname="${dotEscape(ERD_FONT_FAMILY)}"`
+	].join(', ');
+}
+
 function buildColumnRow(column: GraphvizERDColumn, mode: GraphvizERDMode): string {
 	const columnName = getColumnName(column, mode);
 	const type = formatDataType(column);
@@ -128,7 +160,7 @@ export function buildGraphvizDot(
 	const tableMap = new Map(model.tables.map((table) => [table.key, table]));
 	const lines: string[] = [
 		'digraph DbManagerERD {',
-		`  graph [rankdir=LR, splines=ortho, overlap=false, pad="0.3", nodesep="0.8", ranksep="1.1", bgcolor="#F8FAFC", fontname="${dotEscape(ERD_FONT_FAMILY)}"];`,
+		`  graph [${buildGraphAttributes(model)}];`,
 		`  node [shape=plaintext, fontname="${dotEscape(ERD_FONT_FAMILY)}"];`,
 		`  edge [fontname="${dotEscape(ERD_FONT_FAMILY)}", fontsize=10, color="#475569", arrowsize=0.8];`
 	];

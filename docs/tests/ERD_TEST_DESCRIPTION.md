@@ -1,24 +1,25 @@
 # ERD (Entity Relationship Diagram) 주제영역 테스트 설명
 
-이 문서는 ERD 주제영역의 현재 테스트 범위를 설명합니다. 2026-05-21 기준 ERD 이미지는 Mermaid가 아니라 서버 측 Graphviz 렌더링을 기준으로 검증합니다.
+이 문서는 ERD 주제영역의 현재 테스트 범위를 설명합니다. 2026-05-28 기준 ERD 이미지는 Mermaid가 아니라 서버 측 Graphviz 렌더링과 inline SVG 미리보기 탐색 UX를 기준으로 검증합니다.
 
 ## 테스트 현황 요약
 
-| 테스트 파일                                         | 주요 검증                                                                                                  | 상태 |
-| --------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ---- |
-| `src/lib/utils/erd-file-context.test.ts`            | 컬럼 정의서 기준 공통 파일 매핑 해석, mapped tableFile 우선순위                                            | 완료 |
-| `src/routes/erd/page-source.test.ts`                | 좌측 sidebar/본문 제어 영역 배치 계약, 주제영역/스키마 selectbox, 테이블 선택 접힘/검색, 수동 생성 UI 제거 | 완료 |
-| `src/routes/api/erd/render/server.test.ts`          | Graphviz SVG/PNG 렌더 API, PNG 고DPI 옵션, 파라미터 검증, 설치 오류 응답, columnFile 매핑 해석              | 완료 |
-| `src/lib/utils/erd-graphviz-model.test.ts`          | 테이블/컬럼 조인, 필터, 명시 FK 관계/축약, FK marker/warning, PK 순번 비관계 처리, FK 외부참조 포함/제외    | 완료 |
-| `src/lib/utils/graphviz-dot.test.ts`                | DOT/HTML label 생성, 논리/물리 명칭 분리, 제목/보조행/머리행/관계라벨 제거, PK/FK/NN 열, 사업범위 색상, 외부참조 점선, 폰트 스택 | 완료 |
-| `src/lib/server/graphviz-renderer.test.ts`          | `dot -Tsvg/-Tpng`, PNG `-Gdpi` 호출, ENOENT/non-zero 오류 변환                                              | 완료 |
-| `src/lib/components/ERDViewer.test.ts`              | ERD 이미지 미리보기, 렌더러 기술명 비노출, 구조적 엣지 수 대신 이미지 관계 수 표시, 오류 표시              | 완료 |
-| `src/routes/api/erd/generate/server.test.ts`        | 기존 ERD JSON/관계 요약 API, render와 같은 필터 계약, columnFile 매핑 해석                                 | 완료 |
-| `src/routes/api/erd/tables/server.test.ts`          | ERD 테이블 목록 조회/검색/정렬, columnFile 기반 mapped tableFile 조회                                      | 완료 |
-| `src/lib/utils/erd-generator.test.ts`               | 기존 ERDData 노드/엣지 생성, Graphviz 기준 관계 metadata 분리, render 경로와 외부참조 metadata 일치         | 완료 |
-| `src/lib/utils/erd-mapper.test.ts`                  | 기존 관계 매핑 생성, `schema.table.column`/`table.column` FK 파싱, FK marker 비관계 처리                    | 완료 |
-| `src/lib/utils/erd-filter.test.ts`                  | tableIds/정의서 조건 및 FK 외부참조 포함 여부 기반 컨텍스트 필터, 3-part/2-part FK와 one-part 비추론 계약   | 완료 |
-| `src/lib/utils/database-design-xlsx-parser.test.ts` | BKSP 테이블 정의서 헤더 매핑 회귀                                                                          | 완료 |
+| 테스트 파일                                         | 주요 검증                                                                                                                                              | 상태 |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ---- |
+| `src/lib/utils/erd-file-context.test.ts`            | 컬럼 정의서 기준 공통 파일 매핑 해석, mapped tableFile 우선순위                                                                                        | 완료 |
+| `src/routes/erd/page-source.test.ts`                | 좌측 sidebar/본문 제어 영역 배치 계약, 주제영역/스키마 selectbox, 테이블 선택 접힘/검색, 수동 생성 UI 제거                                             | 완료 |
+| `src/routes/api/erd/render/server.test.ts`          | Graphviz SVG/PNG 렌더 API, PNG 고DPI 옵션, 파라미터 검증, 개선 layout DOT 전달, 설치 오류 응답, columnFile 매핑 해석                                   | 완료 |
+| `src/lib/utils/erd-graphviz-model.test.ts`          | 테이블/컬럼 조인, 필터, 명시 FK 관계/축약, FK marker/warning, PK 순번 비관계 처리, FK 외부참조 포함/제외                                               | 완료 |
+| `src/lib/utils/graphviz-dot.test.ts`                | DOT/HTML label 생성, 논리/물리 명칭 분리, 제목/보조행/머리행/관계라벨 제거, PK/FK/NN 열, 사업범위 색상, 외부참조 점선, 폰트 스택, sparse graph packing | 완료 |
+| `src/lib/utils/erd-svg-preview.test.ts`             | ERD preview 전용 same-origin SVG render URL guard, Graphviz pt 크기 변환, inline SVG 위험 태그/속성 제거                                               | 완료 |
+| `src/lib/server/graphviz-renderer.test.ts`          | `dot -Tsvg/-Tpng`, PNG `-Gdpi` 호출, ENOENT/non-zero 오류 변환                                                                                         | 완료 |
+| `src/lib/components/ERDViewer.test.ts`              | ERD inline SVG 미리보기, 맞춤/100%/확대/축소/초기화, drag pan, SVG guard/sanitization, 렌더러 기술명 비노출, 이미지 관계 수 표시, 오류 표시            | 완료 |
+| `src/routes/api/erd/generate/server.test.ts`        | 기존 ERD JSON/관계 요약 API, render와 같은 필터 계약, columnFile 매핑 해석                                                                             | 완료 |
+| `src/routes/api/erd/tables/server.test.ts`          | ERD 테이블 목록 조회/검색/정렬, columnFile 기반 mapped tableFile 조회                                                                                  | 완료 |
+| `src/lib/utils/erd-generator.test.ts`               | 기존 ERDData 노드/엣지 생성, Graphviz 기준 관계 metadata 분리, render 경로와 외부참조 metadata 일치                                                    | 완료 |
+| `src/lib/utils/erd-mapper.test.ts`                  | 기존 관계 매핑 생성, `schema.table.column`/`table.column` FK 파싱, FK marker 비관계 처리                                                               | 완료 |
+| `src/lib/utils/erd-filter.test.ts`                  | tableIds/정의서 조건 및 FK 외부참조 포함 여부 기반 컨텍스트 필터, 3-part/2-part FK와 one-part 비추론 계약                                              | 완료 |
+| `src/lib/utils/database-design-xlsx-parser.test.ts` | BKSP 테이블 정의서 헤더 매핑 회귀                                                                                                                      | 완료 |
 
 ---
 
@@ -31,6 +32,7 @@
 | 기본 요청은 SVG 이미지를 반환한다                                | 기본 `format=svg`, `mode=logical` 응답      | `image/svg+xml`, Graphviz renderer 호출                                                               |
 | `format=png`는 PNG content-type을 반환한다                       | PNG 다운로드/미리보기 응답                  | `image/png`, 기본 192DPI 렌더 옵션 전달                                                               |
 | `pngDpi`를 지정하면 PNG 렌더 옵션에 전달한다                     | 대형 ERD PNG 가독성 향상                    | `pngDpi=300` 전달, 범위 밖 값은 400 JSON 오류                                                         |
+| Graphviz layout 개선 속성이 포함된 DOT를 렌더러에 전달한다       | sparse/disconnected ERD 출력 품질 유지      | `pack`, `packmode`, `pad`가 포함된 DOT를 renderer에 전달                                              |
 | 잘못된 format은 400 JSON 오류를 반환한다                         | 입력 검증                                   | `success=false`, 400                                                                                  |
 | 필터 query를 Graphviz 모델 빌더에 전달한다                       | 주제영역/스키마/검색/사업범위/외부참조 필터 | 모델 빌더 옵션 전달                                                                                   |
 | Graphviz 누락 오류는 설치 안내를 포함한다                        | `dot` 미설치 진단                           | 500 JSON, Graphviz 설치 안내                                                                          |
@@ -66,6 +68,8 @@
 - XML 특수문자 escape.
 - 논리 모드 label에는 한글 테이블/컬럼명만, 물리 모드 label에는 스키마 접두어를 제외한 테이블 영문명과 컬럼 영문명만 직렬화.
 - 서비스 기본 폰트 우선순위와 맞춘 `Pretendard Variable`, `Pretendard`, `Inter` 폰트 스택 사용.
+- 관계가 없는 다중 테이블 모델은 `pack=12`, `packmode="array_iN"`, tighter `pad`/`nodesep`/`ranksep`로 grid형 packing을 직렬화하고 `array_u`/`sortv` 없는 불안정 계약을 사용하지 않습니다.
+- 관계가 있는 모델은 `rankdir=LR`, `splines=ortho`, crow/tee edge와 외부참조 점선 스타일을 유지하면서 보수적 `packmode="graph"`를 사용합니다.
 - FK edge 생성.
 - `dot -Tsvg`, `dot -Tpng`, PNG `-Gdpi` 인자 사용.
 - `ENOENT` → Graphviz 설치 오류, non-zero exit → 렌더링 오류 변환.
@@ -74,7 +78,11 @@
 
 **파일 경로**: `src/lib/components/ERDViewer.test.ts`
 
-- ERD 미리보기 이미지를 렌더링합니다.
+- `src/lib/utils/erd-svg-preview.test.ts`는 이 sanitizer가 범용 SVG sanitizer가 아니라 서버 생성 Graphviz ERD preview 전용 boundary임을 same-origin `/api/erd/render?format=svg` guard와 위험 태그/속성 제거 테스트로 고정합니다.
+- ERD SVG를 같은 출처 `/api/erd/render`에서 fetch하고 `image/svg+xml` 응답만 inline 미리보기로 렌더링합니다.
+- `<script>`, `<foreignObject>`, 이벤트 핸들러 속성, `javascript:` URL 속성을 제거해 inline SVG 주입 전 안전장치를 검증합니다.
+- **맞춤**, **100%**, **축소**, **확대**, **초기화** 버튼과 현재 배율 표시를 렌더링합니다.
+- 최초 로드/초기화 시 미리보기 영역에 맞춰 가운데 정렬하고, 버튼 확대/축소 및 pointer drag pan 상태 변경을 검증합니다.
 - 렌더러 기술명과 기존 코드 복사/다운로드 버튼은 노출하지 않습니다.
 - `/api/erd/generate`의 구조적 `totalEdges` 대신 이미지 관계 기준 `totalRelationships`를 표시합니다.
 - SVG/PNG 다운로드 링크는 ERD 화면의 필터 패널에서 제공합니다.
@@ -112,7 +120,7 @@
 ## 테스트 실행 방법
 
 ```bash
-pnpm vitest run src/lib/utils/erd-file-context.test.ts src/routes/api/erd/tables/server.test.ts src/routes/api/erd/render/server.test.ts src/routes/api/erd/generate/server.test.ts src/routes/erd/page-source.test.ts src/lib/utils/erd-graphviz-model.test.ts src/lib/utils/graphviz-dot.test.ts src/lib/utils/erd-filter.test.ts src/lib/utils/erd-mapper.test.ts src/lib/utils/erd-generator.test.ts src/lib/server/graphviz-renderer.test.ts src/lib/components/ERDViewer.test.ts
+pnpm vitest run src/lib/utils/erd-file-context.test.ts src/routes/api/erd/tables/server.test.ts src/routes/api/erd/render/server.test.ts src/routes/api/erd/generate/server.test.ts src/routes/erd/page-source.test.ts src/lib/utils/erd-graphviz-model.test.ts src/lib/utils/graphviz-dot.test.ts src/lib/utils/erd-svg-preview.test.ts src/lib/utils/erd-filter.test.ts src/lib/utils/erd-mapper.test.ts src/lib/utils/erd-generator.test.ts src/lib/server/graphviz-renderer.test.ts src/lib/components/ERDViewer.test.ts
 ```
 
 전체 회귀는 `pnpm vitest run`, 타입/빌드 검증은 `pnpm check`, `pnpm lint`, `pnpm build`로 확인합니다.

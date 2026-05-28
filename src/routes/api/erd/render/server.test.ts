@@ -3,6 +3,7 @@ import { GET } from './+server';
 import type { RequestEvent } from '@sveltejs/kit';
 import { renderGraphvizDot, GraphvizNotAvailableError } from '$lib/server/graphviz-renderer.js';
 import { buildGraphvizERDModel } from '$lib/utils/erd-graphviz-model.js';
+import { buildGraphvizDot } from '$lib/utils/graphviz-dot.js';
 import { loadDesignRelationContext } from '$lib/utils/design-relation-context.js';
 import { resolveDbDesignFileMappingBundle } from '$lib/registry/db-design-file-mapping';
 
@@ -116,6 +117,21 @@ describe('API: /api/erd/render', () => {
 
 		expect(response.status).toBe(200);
 		expect(renderGraphvizDot).toHaveBeenCalledWith('digraph G {}', 'png', { dpi: 300 });
+	});
+
+	it('Graphviz layout 개선 속성이 포함된 DOT를 렌더러에 전달한다', async () => {
+		vi.mocked(buildGraphvizDot).mockReturnValueOnce(
+			'digraph DbManagerERD { graph [pack=12, packmode="array_i2", pad="0.15"]; }'
+		);
+
+		const response = await GET(createMockRequestEvent());
+
+		expect(response.status).toBe(200);
+		expect(renderGraphvizDot).toHaveBeenCalledWith(
+			expect.stringContaining('packmode="array_i2"'),
+			'svg'
+		);
+		expect(renderGraphvizDot).toHaveBeenCalledWith(expect.stringContaining('pack=12'), 'svg');
 	});
 
 	it('잘못된 pngDpi는 400 JSON 오류를 반환한다', async () => {

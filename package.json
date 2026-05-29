@@ -1,9 +1,14 @@
 {
 	"name": "dbmanager",
 	"version": "0.0.1",
+	"packageManager": "pnpm@11.2.2",
+	"engines": {
+		"node": ">=20.0.0",
+		"pnpm": ">=11.2.2 <12"
+	},
 	"scripts": {
 		"dev": "vite dev",
-		"build": "vite build && npm run prepack",
+		"build": "vite build && pnpm run prepack",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
 		"prepack": "svelte-kit sync && svelte-package && publint",

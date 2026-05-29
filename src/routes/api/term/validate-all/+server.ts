@@ -619,7 +619,11 @@ export async function GET({ url }: RequestEvent) {
 		const fileMappingOverride: Partial<Record<string, string>> = {};
 		if (termData.mapping?.vocabulary) fileMappingOverride.vocabulary = termData.mapping.vocabulary;
 		if (termData.mapping?.domain) fileMappingOverride.domain = termData.mapping.domain;
-		const relatedFiles = await resolveRelatedFilenames('term', filename, fileMappingOverride as Partial<Record<DataType, string>>);
+		const relatedFiles = await resolveRelatedFilenames(
+			'term',
+			filename,
+			fileMappingOverride as Partial<Record<DataType, string>>
+		);
 		const mapping = {
 			vocabulary: relatedFiles.get('vocabulary') || 'vocabulary.json',
 			domain: relatedFiles.get('domain') || 'domain.json'
@@ -841,4 +845,3 @@ export async function GET({ url }: RequestEvent) {
 		);
 	}
 }
-

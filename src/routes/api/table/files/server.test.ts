@@ -226,4 +226,3 @@ describe('Table Files API: /api/table/files', () => {
 		});
 	});
 });
-

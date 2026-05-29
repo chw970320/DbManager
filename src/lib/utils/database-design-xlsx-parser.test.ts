@@ -58,7 +58,22 @@ describe('database-design-xlsx-parser', () => {
 					'NOTNULL여부',
 					'PK정보'
 				],
-				['Y', '회원', 'main', 'tb_user', 'user_id', '사용자ID', '설명', '사용자', 'VARCHAR', '20', '0', '', 'Y', 'PK']
+				[
+					'Y',
+					'회원',
+					'main',
+					'tb_user',
+					'user_id',
+					'사용자ID',
+					'설명',
+					'사용자',
+					'VARCHAR',
+					'20',
+					'0',
+					'',
+					'Y',
+					'PK'
+				]
 			] as string[][];
 		});
 

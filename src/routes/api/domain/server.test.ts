@@ -185,7 +185,9 @@ describe('Domain API: /api/domain', () => {
 		vi.mocked(saveData).mockResolvedValue(undefined);
 		vi.mocked(listDomainFiles).mockResolvedValue(['domain.json']);
 		vi.mocked(loadDomainDataTypeMappingData).mockResolvedValue({
-			entries: [{ id: 'map-1', dataType: 'VARCHAR', abbreviation: 'V', createdAt: '', updatedAt: '' }],
+			entries: [
+				{ id: 'map-1', dataType: 'VARCHAR', abbreviation: 'V', createdAt: '', updatedAt: '' }
+			],
 			lastUpdated: '2024-01-02T00:00:00.000Z',
 			totalCount: 1
 		});
@@ -548,4 +550,3 @@ describe('Domain API: /api/domain', () => {
 		});
 	});
 });
-

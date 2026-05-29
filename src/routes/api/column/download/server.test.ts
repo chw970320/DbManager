@@ -177,4 +177,3 @@ describe('Column Download API: /api/column/download', () => {
 		expect(loadColumnData).toHaveBeenCalledWith('column.json');
 	});
 });
-

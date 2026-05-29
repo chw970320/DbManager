@@ -25,7 +25,9 @@
 <div class={orientation === 'horizontal' ? 'flex items-start gap-4' : ''}>
 	<label
 		for={name}
-		class="block text-sm font-medium text-content-secondary {orientation === 'horizontal' ? 'w-32 pt-2 flex-shrink-0' : 'mb-1'}"
+		class="block text-sm font-medium text-content-secondary {orientation === 'horizontal'
+			? 'w-32 flex-shrink-0 pt-2'
+			: 'mb-1'}"
 	>
 		{label}
 		{#if required}

@@ -83,7 +83,10 @@ import {
 	getOptionalBoolean,
 	FormDataValidationError
 } from '$lib/utils/type-guards.js';
-import { normalizeUploadPostProcessMode, runUploadPostProcess } from '$lib/utils/upload-postprocess.js';
+import {
+	normalizeUploadPostProcessMode,
+	runUploadPostProcess
+} from '$lib/utils/upload-postprocess.js';
 import { classifyUploadParseError, noValidDataUploadError } from '$lib/utils/upload-error.js';
 import { captureUploadReplaceHistory } from '$lib/registry/upload-history-registry';
 
@@ -261,4 +264,3 @@ export async function POST({ request, fetch }: RequestEvent) {
 		);
 	}
 }
-

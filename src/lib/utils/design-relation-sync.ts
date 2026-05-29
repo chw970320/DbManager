@@ -8,7 +8,9 @@ import type { MappingContext } from '$lib/types/erd-mapping.js';
 import { buildCompositeKey, normalizeKey } from '$lib/utils/mapping-key.js';
 
 type TablePatch = Partial<Pick<TableEntry, 'relatedEntityName'>>;
-type ColumnPatch = Partial<Pick<ColumnEntry, 'schemaName' | 'tableEnglishName' | 'relatedEntityName'>>;
+type ColumnPatch = Partial<
+	Pick<ColumnEntry, 'schemaName' | 'tableEnglishName' | 'relatedEntityName'>
+>;
 
 export interface RelationSyncUpdate<TPatch> {
 	id: string;
@@ -198,7 +200,11 @@ export function buildDesignRelationSyncPlan(context: MappingContext): DesignRela
 		const tableEnglish = normalizeKey(column.tableEnglishName, { emptyLikeDash: true });
 		const relatedEntity = normalizeKey(column.relatedEntityName, { emptyLikeDash: true });
 
-		if (schema && tableEnglish && tableBySchemaEnglish.has(buildCompositeKey([schema, tableEnglish]))) {
+		if (
+			schema &&
+			tableEnglish &&
+			tableBySchemaEnglish.has(buildCompositeKey([schema, tableEnglish]))
+		) {
 			continue;
 		}
 
@@ -240,11 +246,17 @@ export function buildDesignRelationSyncPlan(context: MappingContext): DesignRela
 			patch.schemaName = matchedTable.schemaName;
 			changedFields.push('schemaName');
 		}
-		if (matchedTable.tableEnglishName && matchedTable.tableEnglishName !== column.tableEnglishName) {
+		if (
+			matchedTable.tableEnglishName &&
+			matchedTable.tableEnglishName !== column.tableEnglishName
+		) {
 			patch.tableEnglishName = matchedTable.tableEnglishName;
 			changedFields.push('tableEnglishName');
 		}
-		if (matchedTable.relatedEntityName && matchedTable.relatedEntityName !== column.relatedEntityName) {
+		if (
+			matchedTable.relatedEntityName &&
+			matchedTable.relatedEntityName !== column.relatedEntityName
+		) {
 			patch.relatedEntityName = matchedTable.relatedEntityName;
 			changedFields.push('relatedEntityName');
 		}

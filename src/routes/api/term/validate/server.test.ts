@@ -310,7 +310,7 @@ describe('Term Validate API: /api/term/validate', () => {
 	describe('용어명 매핑 validation', () => {
 		it('용어명에 단어집에 없는 단어가 포함된 경우 400 에러를 반환한다', async () => {
 			vi.mocked(validateTermNameMapping).mockReturnValue(
-				"용어명의 다음 부분이 단어집에 등록되지 않았습니다: 가능"
+				'용어명의 다음 부분이 단어집에 등록되지 않았습니다: 가능'
 			);
 
 			const request = createMockRequestEvent({
@@ -351,7 +351,7 @@ describe('Term Validate API: /api/term/validate', () => {
 	describe('컬럼명 매핑 validation', () => {
 		it('컬럼명에 영문약어에 없는 단어가 포함된 경우 400 에러를 반환한다', async () => {
 			vi.mocked(validateColumnNameMapping).mockReturnValue(
-				"컬럼명의 다음 부분이 영문약어로 등록되지 않았습니다: ##"
+				'컬럼명의 다음 부분이 영문약어로 등록되지 않았습니다: ##'
 			);
 
 			const request = createMockRequestEvent({

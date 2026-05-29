@@ -16,7 +16,7 @@
 	<!-- 히어로 섹션 -->
 	<section class="bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-20 sm:py-32">
 		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-			<div class="animate-fade-in-up mx-auto max-w-3xl text-center opacity-0">
+			<div class="mx-auto max-w-3xl animate-fade-in-up text-center opacity-0">
 				<h1 class="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl lg:text-6xl">
 					<span class="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"
 						>DbManager</span
@@ -38,7 +38,7 @@
 	<section class="py-20 sm:py-32">
 		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 			<!-- 섹션 헤더 -->
-			<div class="animate-fade-in-up mx-auto max-w-2xl text-center opacity-0">
+			<div class="mx-auto max-w-2xl animate-fade-in-up text-center opacity-0">
 				<h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
 					<span class="text-blue-600">용어 표준화 모듈</span>
 				</h2>
@@ -67,23 +67,43 @@
 
 				<a
 					href="/browse"
-					class="animate-fade-in-up delay-400 card group relative col-span-12 overflow-hidden p-6 opacity-0 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg sm:p-8 lg:col-span-7"
+					class="delay-400 card group relative col-span-12 animate-fade-in-up overflow-hidden p-6 opacity-0 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg sm:p-8 lg:col-span-7"
 				>
-					<div class="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-50 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
+					<div
+						class="absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-50 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+					></div>
 					<div class="relative">
-						<div class="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-blue-600 transition-all duration-300 group-hover:bg-blue-600 group-hover:text-white">
+						<div
+							class="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 text-blue-600 transition-all duration-300 group-hover:bg-blue-600 group-hover:text-white"
+						>
 							<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+								/>
 							</svg>
 						</div>
 						<h3 class="mt-4 text-lg font-semibold text-gray-900">단어집 (Vocabulary)</h3>
 						<p class="mt-2 text-sm text-gray-600">
-							한국어 표준 용어와 영문 약어/전체명을 관리합니다. 표준 용어의 일관성을 보장하고 재사용을 촉진합니다.
+							한국어 표준 용어와 영문 약어/전체명을 관리합니다. 표준 용어의 일관성을 보장하고
+							재사용을 촉진합니다.
 						</p>
 						<div class="mt-4 inline-flex items-center text-sm font-medium text-blue-600">
 							<span>자세히 보기</span>
-							<svg class="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+							<svg
+								class="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M9 5l7 7-7 7"
+								/>
 							</svg>
 						</div>
 					</div>
@@ -91,23 +111,43 @@
 
 				<a
 					href="/domain/browse"
-					class="animate-fade-in-up delay-600 card group relative col-span-12 overflow-hidden p-6 opacity-0 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg sm:p-8 lg:col-span-6"
+					class="delay-600 card group relative col-span-12 animate-fade-in-up overflow-hidden p-6 opacity-0 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg sm:p-8 lg:col-span-6"
 				>
-					<div class="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-50 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
+					<div
+						class="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-50 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+					></div>
 					<div class="relative">
-						<div class="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-green-100 text-green-600 transition-all duration-300 group-hover:bg-green-600 group-hover:text-white">
+						<div
+							class="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-green-100 text-green-600 transition-all duration-300 group-hover:bg-green-600 group-hover:text-white"
+						>
 							<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"
+								/>
 							</svg>
 						</div>
 						<h3 class="mt-4 text-lg font-semibold text-gray-900">도메인 (Domain)</h3>
 						<p class="mt-2 text-sm text-gray-600">
-							공통표준도메인 정보를 관리하고 단어집과 자동 동기화합니다. 데이터 타입 표준화를 지원합니다.
+							공통표준도메인 정보를 관리하고 단어집과 자동 동기화합니다. 데이터 타입 표준화를
+							지원합니다.
 						</p>
 						<div class="mt-4 inline-flex items-center text-sm font-medium text-green-600">
 							<span>자세히 보기</span>
-							<svg class="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+							<svg
+								class="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M9 5l7 7-7 7"
+								/>
 							</svg>
 						</div>
 					</div>
@@ -115,46 +155,99 @@
 
 				<a
 					href="/term/browse"
-					class="animate-fade-in-up delay-700 card group relative col-span-12 overflow-hidden p-6 opacity-0 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg sm:p-8 lg:col-span-6"
+					class="card group relative col-span-12 animate-fade-in-up overflow-hidden p-6 opacity-0 transition-all delay-700 duration-300 hover:-translate-y-0.5 hover:shadow-lg sm:p-8 lg:col-span-6"
 				>
-					<div class="absolute inset-0 bg-gradient-to-br from-purple-50 to-pink-50 opacity-0 transition-opacity duration-300 group-hover:opacity-100"></div>
+					<div
+						class="absolute inset-0 bg-gradient-to-br from-purple-50 to-pink-50 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+					></div>
 					<div class="relative">
-						<div class="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100 text-purple-600 transition-all duration-300 group-hover:bg-purple-600 group-hover:text-white">
+						<div
+							class="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100 text-purple-600 transition-all duration-300 group-hover:bg-purple-600 group-hover:text-white"
+						>
 							<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+								/>
 							</svg>
 						</div>
 						<h3 class="mt-4 text-lg font-semibold text-gray-900">용어 (Term)</h3>
 						<p class="mt-2 text-sm text-gray-600">
-							단어집과 도메인을 조합해 최종 용어를 관리합니다. 컬럼명/도메인명을 생성하고 표준 기반으로 검증합니다.
+							단어집과 도메인을 조합해 최종 용어를 관리합니다. 컬럼명/도메인명을 생성하고 표준
+							기반으로 검증합니다.
 						</p>
 						<div class="mt-4 inline-flex items-center text-sm font-medium text-purple-600">
 							<span>자세히 보기</span>
-							<svg class="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+							<svg
+								class="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M9 5l7 7-7 7"
+								/>
 							</svg>
 						</div>
 					</div>
 				</a>
 
-				<div class="animate-fade-in-up delay-800 col-span-12 opacity-0">
-					<BentoCard title="주요 기능" subtitle="표준화 모듈에서 자주 쓰는 흐름을 빠르게 확인하세요.">
+				<div class="delay-800 col-span-12 animate-fade-in-up opacity-0">
+					<BentoCard
+						title="주요 기능"
+						subtitle="표준화 모듈에서 자주 쓰는 흐름을 빠르게 확인하세요."
+					>
 						<ul class="mt-1 space-y-2 text-sm text-gray-600">
 							<li class="flex items-start">
-								<svg class="mr-2 h-5 w-5 shrink-0 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+								<svg
+									class="mr-2 h-5 w-5 shrink-0 text-blue-600"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M5 13l4 4L19 7"
+									/>
 								</svg>
 								<span>용어 자동 생성: 한국어 용어 입력 → 가능한 조합 자동 생성</span>
 							</li>
 							<li class="flex items-start">
-								<svg class="mr-2 h-5 w-5 shrink-0 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+								<svg
+									class="mr-2 h-5 w-5 shrink-0 text-blue-600"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M5 13l4 4L19 7"
+									/>
 								</svg>
 								<span>매핑 검증: 단어집/도메인 기반 매핑 자동 검증</span>
 							</li>
 							<li class="flex items-start">
-								<svg class="mr-2 h-5 w-5 shrink-0 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+								<svg
+									class="mr-2 h-5 w-5 shrink-0 text-blue-600"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M5 13l4 4L19 7"
+									/>
 								</svg>
 								<span>동기화: 단어집 ↔ 도메인 자동 동기화로 일관성 유지</span>
 							</li>
@@ -169,7 +262,7 @@
 	<section class="bg-gray-50 py-20 sm:py-32">
 		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 			<!-- 섹션 헤더 -->
-			<div class="animate-fade-in-up mx-auto max-w-2xl text-center opacity-0">
+			<div class="mx-auto max-w-2xl animate-fade-in-up text-center opacity-0">
 				<h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
 					<span class="text-green-600">데이터베이스 설계 모듈</span>
 				</h2>
@@ -184,7 +277,7 @@
 				<!-- DB 카드 -->
 				<a
 					href="/database/browse"
-					class="animate-fade-in-up delay-400 group relative overflow-hidden rounded-xl border border-gray-200/50 bg-white p-6 opacity-0 shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-lg"
+					class="delay-400 group relative animate-fade-in-up overflow-hidden rounded-xl border border-gray-200/50 bg-white p-6 opacity-0 shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-lg"
 				>
 					<div
 						class="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-50 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
@@ -213,7 +306,7 @@
 				<!-- 엔터티 카드 -->
 				<a
 					href="/entity/browse"
-					class="animate-fade-in-up group relative overflow-hidden rounded-xl border border-gray-200/50 bg-white p-6 opacity-0 shadow-sm transition-all delay-500 duration-300 hover:scale-105 hover:shadow-lg"
+					class="group relative animate-fade-in-up overflow-hidden rounded-xl border border-gray-200/50 bg-white p-6 opacity-0 shadow-sm transition-all delay-500 duration-300 hover:scale-105 hover:shadow-lg"
 				>
 					<div
 						class="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-50 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
@@ -242,7 +335,7 @@
 				<!-- 속성 카드 -->
 				<a
 					href="/attribute/browse"
-					class="animate-fade-in-up delay-600 group relative overflow-hidden rounded-xl border border-gray-200/50 bg-white p-6 opacity-0 shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-lg"
+					class="delay-600 group relative animate-fade-in-up overflow-hidden rounded-xl border border-gray-200/50 bg-white p-6 opacity-0 shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-lg"
 				>
 					<div
 						class="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-50 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
@@ -271,7 +364,7 @@
 				<!-- 테이블 카드 -->
 				<a
 					href="/table/browse"
-					class="animate-fade-in-up group relative overflow-hidden rounded-xl border border-gray-200/50 bg-white p-6 opacity-0 shadow-sm transition-all delay-700 duration-300 hover:scale-105 hover:shadow-lg"
+					class="group relative animate-fade-in-up overflow-hidden rounded-xl border border-gray-200/50 bg-white p-6 opacity-0 shadow-sm transition-all delay-700 duration-300 hover:scale-105 hover:shadow-lg"
 				>
 					<div
 						class="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-50 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
@@ -300,7 +393,7 @@
 				<!-- 컬럼 카드 -->
 				<a
 					href="/column/browse"
-					class="animate-fade-in-up delay-800 group relative overflow-hidden rounded-xl border border-gray-200/50 bg-white p-6 opacity-0 shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-lg"
+					class="delay-800 group relative animate-fade-in-up overflow-hidden rounded-xl border border-gray-200/50 bg-white p-6 opacity-0 shadow-sm transition-all duration-300 hover:scale-105 hover:shadow-lg"
 				>
 					<div
 						class="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-50 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
@@ -328,7 +421,7 @@
 			</div>
 
 			<!-- 주요 기능 설명 -->
-			<div class="animate-fade-in-up delay-900 mt-12 opacity-0">
+			<div class="delay-900 mt-12 animate-fade-in-up opacity-0">
 				<div class="rounded-2xl bg-green-50/50 p-8">
 					<h3 class="text-lg font-semibold text-gray-900">주요 기능</h3>
 					<ul class="mt-4 space-y-2 text-sm text-gray-600">
@@ -389,7 +482,7 @@
 	<!-- 주요 기능 섹션 -->
 	<section class="py-20 sm:py-32">
 		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-			<div class="animate-fade-in-up mx-auto max-w-2xl text-center opacity-0">
+			<div class="mx-auto max-w-2xl animate-fade-in-up text-center opacity-0">
 				<h2 class="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">주요 기능</h2>
 				<p class="mt-4 text-lg leading-8 text-gray-600">
 					두 모듈에서 공통으로 제공하는 핵심 기능을 통해 데이터 관리 효율성을 극대화합니다.

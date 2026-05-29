@@ -201,4 +201,3 @@ describe('Vocabulary Download API: /api/vocabulary/download', () => {
 		expect(loadVocabularyData).toHaveBeenCalledWith(undefined);
 	});
 });
-

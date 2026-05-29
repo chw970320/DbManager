@@ -426,4 +426,3 @@ describe('Table API: /api/table', () => {
 		});
 	});
 });
-

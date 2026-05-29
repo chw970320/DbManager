@@ -147,4 +147,3 @@ describe('Attribute Download API: /api/attribute/download', () => {
 		expect(loadAttributeData).toHaveBeenCalledWith('attribute.json');
 	});
 });
-

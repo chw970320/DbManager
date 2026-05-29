@@ -277,11 +277,7 @@ describe('validation', () => {
 		it('should detect when a valid abbreviation from vocabulary is in wrong position', () => {
 			// 용어명: 사용자_이름 → USER_NAME 이어야 하지만
 			// 컬럼명: NAME_USER (순서 반대)
-			const result = validateTermColumnOrderMapping(
-				'사용자_이름',
-				'NAME_USER',
-				vocabularyEntries
-			);
+			const result = validateTermColumnOrderMapping('사용자_이름', 'NAME_USER', vocabularyEntries);
 			expect(result.error).not.toBeNull();
 			expect(result.mismatches).toHaveLength(2);
 			expect(result.correctedColumnName).toBe('USER_NAME');
@@ -366,9 +362,7 @@ describe('validation', () => {
 	describe('generateStandardDomainName', () => {
 		it('should use mapped abbreviation for registered data types', () => {
 			expect(generateStandardDomainName('사용자분류', 'TIMESTAMP', '14')).toBe('사용자분류TS14');
-			expect(generateStandardDomainName('금액', 'DOUBLE PRECISION', '22', '2')).toBe(
-				'금액DP22,2'
-			);
+			expect(generateStandardDomainName('금액', 'DOUBLE PRECISION', '22', '2')).toBe('금액DP22,2');
 		});
 
 		it('should fall back to the first character for unmapped data types', () => {

@@ -51,14 +51,14 @@ export default {
 				}
 			},
 			zIndex: {
-				'dropdown': '100',
-				'sticky': '200',
-				'fixed': '300',
+				dropdown: '100',
+				sticky: '200',
+				fixed: '300',
 				'modal-backdrop': '400',
-				'modal': '500',
-				'popover': '600',
-				'toast': '700',
-				'tooltip': '800'
+				modal: '500',
+				popover: '600',
+				toast: '700',
+				tooltip: '800'
 			},
 			keyframes: {
 				'fade-in-up': {

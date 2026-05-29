@@ -84,9 +84,7 @@ export async function POST({ request }: RequestEvent) {
 			{
 				success: false,
 				error:
-					error instanceof Error
-						? error.message
-						: '데이터타입 매핑 등록 중 오류가 발생했습니다.',
+					error instanceof Error ? error.message : '데이터타입 매핑 등록 중 오류가 발생했습니다.',
 				message: 'Create failed'
 			} as ApiResponse,
 			{ status: resolveErrorStatus(error) }
@@ -140,9 +138,7 @@ export async function PUT({ request }: RequestEvent) {
 			{
 				success: false,
 				error:
-					error instanceof Error
-						? error.message
-						: '데이터타입 매핑 수정 중 오류가 발생했습니다.',
+					error instanceof Error ? error.message : '데이터타입 매핑 수정 중 오류가 발생했습니다.',
 				message: 'Update failed'
 			} as ApiResponse,
 			{ status: resolveErrorStatus(error) }
@@ -181,9 +177,7 @@ export async function DELETE({ request }: RequestEvent) {
 			{
 				success: false,
 				error:
-					error instanceof Error
-						? error.message
-						: '데이터타입 매핑 삭제 중 오류가 발생했습니다.',
+					error instanceof Error ? error.message : '데이터타입 매핑 삭제 중 오류가 발생했습니다.',
 				message: 'Delete failed'
 			} as ApiResponse,
 			{ status: resolveErrorStatus(error) }

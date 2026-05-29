@@ -126,7 +126,9 @@
 	async function loadMappingInfo(filename: string) {
 		isMappingLoading = true;
 		try {
-			const response = await fetch(`/api/domain/files/mapping?filename=${encodeURIComponent(filename)}`);
+			const response = await fetch(
+				`/api/domain/files/mapping?filename=${encodeURIComponent(filename)}`
+			);
 			const result: ApiResponse = await response.json();
 			const mapping = (result.data as { mapping?: Record<string, unknown> } | undefined)?.mapping;
 			if (result.success && mapping) {
@@ -261,7 +263,8 @@
 
 			if (result.success) {
 				successMessage = '파일 이름이 변경되었습니다.';
-				const wasCurrentFile = currentMappingFile === editingFile || selectedUploadFile === editingFile;
+				const wasCurrentFile =
+					currentMappingFile === editingFile || selectedUploadFile === editingFile;
 				editingFile = null;
 				await loadFiles();
 				if (wasCurrentFile) {

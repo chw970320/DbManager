@@ -184,4 +184,3 @@ describe('Entity Filter Options API: /api/entity/filter-options', () => {
 		expect(result.data.schemaName).toEqual([]);
 	});
 });
-

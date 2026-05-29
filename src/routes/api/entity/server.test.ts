@@ -397,4 +397,3 @@ describe('Entity API: /api/entity', () => {
 		});
 	});
 });
-

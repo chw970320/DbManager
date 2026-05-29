@@ -245,7 +245,12 @@
 			return;
 		}
 
-		const confirmed = await showConfirm({ title: '확인', message: `정말 "${filename}" 파일을 삭제하시겠습니까?`, confirmText: '삭제', variant: 'danger' });
+		const confirmed = await showConfirm({
+			title: '확인',
+			message: `정말 "${filename}" 파일을 삭제하시겠습니까?`,
+			confirmText: '삭제',
+			variant: 'danger'
+		});
 		if (!confirmed) {
 			return;
 		}

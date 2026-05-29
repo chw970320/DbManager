@@ -299,9 +299,7 @@ describe('ColumnDefEditor', () => {
 			await fireEvent.click(screen.getByRole('button', { name: '추천값 전체 적용' }));
 
 			await waitFor(() => {
-				expect((screen.getByLabelText(/^컬럼한글명/) as HTMLInputElement).value).toBe(
-					'표준컬럼명'
-				);
+				expect((screen.getByLabelText(/^컬럼한글명/) as HTMLInputElement).value).toBe('표준컬럼명');
 				expect((screen.getByLabelText(/^자료길이/) as HTMLInputElement).value).toBe('200');
 			});
 		});

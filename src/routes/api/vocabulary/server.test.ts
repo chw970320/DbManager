@@ -472,4 +472,3 @@ describe('Vocabulary API: /api/vocabulary', () => {
 		});
 	});
 });
-

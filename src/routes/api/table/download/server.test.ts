@@ -161,4 +161,3 @@ describe('Table Download API: /api/table/download', () => {
 		expect(loadTableData).toHaveBeenCalledWith('table.json');
 	});
 });
-

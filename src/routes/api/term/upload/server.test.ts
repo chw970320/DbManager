@@ -308,5 +308,3 @@ describe('Term Upload API: /api/term/upload', () => {
 		});
 	});
 });
-
-

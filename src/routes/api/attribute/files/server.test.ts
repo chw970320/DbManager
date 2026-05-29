@@ -226,4 +226,3 @@ describe('Attribute Files API: /api/attribute/files', () => {
 		});
 	});
 });
-

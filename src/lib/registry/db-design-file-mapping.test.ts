@@ -93,50 +93,52 @@ describe('db-design-file-mapping', () => {
 			throw new Error(`unexpected load: ${type}:${filename}`);
 		});
 
-		vi.mocked(resolveRelatedFilenames).mockImplementation(async (type: DataType, filename: string) => {
-			const relations = new Map<DataType, string>();
+		vi.mocked(resolveRelatedFilenames).mockImplementation(
+			async (type: DataType, filename: string) => {
+				const relations = new Map<DataType, string>();
 
-			if (type === 'database' && filename === 'database.json') {
-				relations.set('entity', 'entity-a.json');
-				relations.set('table', 'table-a.json');
-			}
-			if (type === 'entity' && filename === 'entity-a.json') {
-				relations.set('database', 'database.json');
-				relations.set('attribute', 'attribute-a.json');
-				relations.set('table', 'table-a.json');
-			}
-			if (type === 'attribute' && filename === 'attribute-a.json') {
-				relations.set('entity', 'entity-a.json');
-				relations.set('column', 'column-a.json');
-			}
-			if (type === 'table' && filename === 'table-a.json') {
-				relations.set('database', 'database.json');
-				relations.set('entity', 'entity-a.json');
-				relations.set('column', 'column-a.json');
-			}
-			if (type === 'column' && filename === 'column-a.json') {
-				relations.set('attribute', 'attribute-a.json');
-				relations.set('table', 'table-a.json');
-				relations.set('term', 'term-a.json');
-				relations.set('domain', 'domain-a.json');
-			}
-			if (type === 'term' && filename === 'term-a.json') {
-				relations.set('vocabulary', 'vocabulary-a.json');
-				relations.set('domain', 'domain-a.json');
-				relations.set('column', 'column-a.json');
-			}
-			if (type === 'vocabulary' && filename === 'vocabulary-a.json') {
-				relations.set('domain', 'domain-a.json');
-				relations.set('term', 'term-a.json');
-			}
-			if (type === 'domain' && filename === 'domain-a.json') {
-				relations.set('vocabulary', 'vocabulary-a.json');
-				relations.set('term', 'term-a.json');
-				relations.set('column', 'column-a.json');
-			}
+				if (type === 'database' && filename === 'database.json') {
+					relations.set('entity', 'entity-a.json');
+					relations.set('table', 'table-a.json');
+				}
+				if (type === 'entity' && filename === 'entity-a.json') {
+					relations.set('database', 'database.json');
+					relations.set('attribute', 'attribute-a.json');
+					relations.set('table', 'table-a.json');
+				}
+				if (type === 'attribute' && filename === 'attribute-a.json') {
+					relations.set('entity', 'entity-a.json');
+					relations.set('column', 'column-a.json');
+				}
+				if (type === 'table' && filename === 'table-a.json') {
+					relations.set('database', 'database.json');
+					relations.set('entity', 'entity-a.json');
+					relations.set('column', 'column-a.json');
+				}
+				if (type === 'column' && filename === 'column-a.json') {
+					relations.set('attribute', 'attribute-a.json');
+					relations.set('table', 'table-a.json');
+					relations.set('term', 'term-a.json');
+					relations.set('domain', 'domain-a.json');
+				}
+				if (type === 'term' && filename === 'term-a.json') {
+					relations.set('vocabulary', 'vocabulary-a.json');
+					relations.set('domain', 'domain-a.json');
+					relations.set('column', 'column-a.json');
+				}
+				if (type === 'vocabulary' && filename === 'vocabulary-a.json') {
+					relations.set('domain', 'domain-a.json');
+					relations.set('term', 'term-a.json');
+				}
+				if (type === 'domain' && filename === 'domain-a.json') {
+					relations.set('vocabulary', 'vocabulary-a.json');
+					relations.set('term', 'term-a.json');
+					relations.set('column', 'column-a.json');
+				}
 
-			return relations;
-		});
+				return relations;
+			}
+		);
 
 		const bundle = await resolveDbDesignFileMappingBundle('database', 'database.json');
 

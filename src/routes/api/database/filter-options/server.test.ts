@@ -202,4 +202,3 @@ describe('Database Filter Options API: /api/database/filter-options', () => {
 		expect(result.data.logicalDbName[0]).toBe('(빈값)');
 	});
 });
-

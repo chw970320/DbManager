@@ -46,7 +46,8 @@ export async function completeUploadWithMappingSave(
 				success: false,
 				partialSuccess: true,
 				successMessage: uploadMessage,
-				errorMessage: `업로드는 완료되었지만 현재 매핑 저장에 실패했습니다. ${result.error || ''}`.trim()
+				errorMessage:
+					`업로드는 완료되었지만 현재 매핑 저장에 실패했습니다. ${result.error || ''}`.trim()
 			};
 		}
 
@@ -62,7 +63,8 @@ export async function completeUploadWithMappingSave(
 			success: false,
 			partialSuccess: true,
 			successMessage: uploadMessage,
-			errorMessage: `업로드는 완료되었지만 현재 매핑 저장 중 오류가 발생했습니다. ${error instanceof Error ? error.message : ''}`.trim()
+			errorMessage:
+				`업로드는 완료되었지만 현재 매핑 저장 중 오류가 발생했습니다. ${error instanceof Error ? error.message : ''}`.trim()
 		};
 	}
 }

@@ -17,8 +17,12 @@ export async function GET({ url }: RequestEvent) {
 	try {
 		const termFilename = url.searchParams.get('termFilename') || 'term.json';
 		const relatedFiles = await resolveRelatedFilenames('term', termFilename);
-		const vocabularyFilename = url.searchParams.get('vocabularyFilename') || relatedFiles.get('vocabulary') || 'vocabulary.json';
-		const domainFilename = url.searchParams.get('domainFilename') || relatedFiles.get('domain') || 'domain.json';
+		const vocabularyFilename =
+			url.searchParams.get('vocabularyFilename') ||
+			relatedFiles.get('vocabulary') ||
+			'vocabulary.json';
+		const domainFilename =
+			url.searchParams.get('domainFilename') || relatedFiles.get('domain') || 'domain.json';
 
 		const [termData, vocabularyData, domainData] = await Promise.all([
 			loadData('term', termFilename),
@@ -30,10 +34,18 @@ export async function GET({ url }: RequestEvent) {
 		const vocabularyEntries = vocabularyData.entries as VocabularyEntry[];
 		const domainEntries = domainData.entries as DomainEntry[];
 
-		const standardNames = new Set(vocabularyEntries.map((entry) => normalizeKey(entry.standardName)));
-		const abbreviations = new Set(vocabularyEntries.map((entry) => normalizeKey(entry.abbreviation)));
-		const domainNames = new Set(domainEntries.map((entry) => normalizeKey(entry.standardDomainName)));
-		const domainCategories = new Set(domainEntries.map((entry) => normalizeKey(entry.domainCategory)));
+		const standardNames = new Set(
+			vocabularyEntries.map((entry) => normalizeKey(entry.standardName))
+		);
+		const abbreviations = new Set(
+			vocabularyEntries.map((entry) => normalizeKey(entry.abbreviation))
+		);
+		const domainNames = new Set(
+			domainEntries.map((entry) => normalizeKey(entry.standardDomainName))
+		);
+		const domainCategories = new Set(
+			domainEntries.map((entry) => normalizeKey(entry.domainCategory))
+		);
 
 		let termNameMappedCount = 0;
 		let columnNameMappedCount = 0;
@@ -46,8 +58,11 @@ export async function GET({ url }: RequestEvent) {
 			const termParts = splitParts(entry.termName);
 			const columnParts = splitParts(entry.columnName);
 
-			const termMapped = termParts.length > 0 && termParts.every((part) => standardNames.has(normalizeKey(part)));
-			const columnMapped = columnParts.length > 0 && columnParts.every((part) => abbreviations.has(normalizeKey(part)));
+			const termMapped =
+				termParts.length > 0 && termParts.every((part) => standardNames.has(normalizeKey(part)));
+			const columnMapped =
+				columnParts.length > 0 &&
+				columnParts.every((part) => abbreviations.has(normalizeKey(part)));
 			const domainMapped = domainNames.has(normalizeKey(entry.domainName));
 
 			if (termMapped) {

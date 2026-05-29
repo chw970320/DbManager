@@ -164,4 +164,3 @@ describe('API: /api/validation/report', () => {
 		expect(result.error).toContain('relation failed');
 	});
 });
-

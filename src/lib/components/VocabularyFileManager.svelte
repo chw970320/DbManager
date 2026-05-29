@@ -172,8 +172,9 @@
 				error = result.error || '매핑 정보 저장에 실패했습니다.';
 				return false;
 			}
-			const autoSync = (result.data as { autoSync?: { success?: boolean; summary?: string } } | undefined)
-				?.autoSync;
+			const autoSync = (
+				result.data as { autoSync?: { success?: boolean; summary?: string } } | undefined
+			)?.autoSync;
 
 			currentMappingFile = filename;
 			if (autoSync?.success === false) {
@@ -263,7 +264,8 @@
 
 			if (result.success) {
 				successMessage = '파일 이름이 변경되었습니다.';
-				const wasCurrentFile = currentMappingFile === editingFile || selectedUploadFile === editingFile;
+				const wasCurrentFile =
+					currentMappingFile === editingFile || selectedUploadFile === editingFile;
 				editingFile = null;
 				await loadFiles();
 				if (wasCurrentFile) {

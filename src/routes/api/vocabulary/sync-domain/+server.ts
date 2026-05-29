@@ -88,8 +88,11 @@ type SyncRequest = {
 
 export async function POST({ request, url }: RequestEvent) {
 	try {
-		const { vocabularyFilename, domainFilename, apply: applyFromBody }: SyncRequest =
-			await request.json();
+		const {
+			vocabularyFilename,
+			domainFilename,
+			apply: applyFromBody
+		}: SyncRequest = await request.json();
 		const applyQuery = url.searchParams.get('apply');
 		const apply =
 			typeof applyFromBody === 'boolean'
@@ -101,12 +104,16 @@ export async function POST({ request, url }: RequestEvent) {
 		const vocabFile = vocabularyFilename || 'vocabulary.json';
 
 		// 단어집 로드
-		const vocabularyData = await loadData('vocabulary', vocabFile) as VocabularyData;
+		const vocabularyData = (await loadData('vocabulary', vocabFile)) as VocabularyData;
 
 		// 3단계 폴백으로 도메인 파일 해석
 		const fileMappingOverride: Partial<Record<string, string>> = {};
 		if (vocabularyData.mapping?.domain) fileMappingOverride.domain = vocabularyData.mapping.domain;
-		const relatedFiles = await resolveRelatedFilenames('vocabulary', vocabFile, fileMappingOverride as Partial<Record<DataType, string>>);
+		const relatedFiles = await resolveRelatedFilenames(
+			'vocabulary',
+			vocabFile,
+			fileMappingOverride as Partial<Record<DataType, string>>
+		);
 		const domainFile = domainFilename || relatedFiles.get('domain') || 'domain.json';
 
 		// 도메인 데이터 로드
@@ -221,4 +228,3 @@ export async function POST({ request, url }: RequestEvent) {
 		);
 	}
 }
-

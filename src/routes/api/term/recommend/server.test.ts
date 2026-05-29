@@ -188,4 +188,3 @@ describe('Term Recommend API: /api/term/recommend', () => {
 		expect(result.success).toBe(false);
 	});
 });
-

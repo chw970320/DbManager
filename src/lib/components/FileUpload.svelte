@@ -225,8 +225,8 @@
 	<div class="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
 		<h3 class="mb-2 text-sm font-semibold text-gray-700">단순 교체 업로드</h3>
 		<p class="text-xs leading-5 text-gray-600">
-			기존 {contentType}을 완전히 삭제하고 새로운 데이터로 교체합니다. 업로드 직전 파일 내용은
-			복원 가능한 이력으로 저장되며, 이후 현재 화면의 매핑값이 자동 저장됩니다.
+			기존 {contentType}을 완전히 삭제하고 새로운 데이터로 교체합니다. 업로드 직전 파일 내용은 복원
+			가능한 이력으로 저장되며, 이후 현재 화면의 매핑값이 자동 저장됩니다.
 		</p>
 	</div>
 

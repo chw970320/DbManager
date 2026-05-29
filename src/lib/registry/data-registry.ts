@@ -56,8 +56,7 @@ interface DataTypeConfig<T extends DataType> {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const TYPE_CONFIGS: { [K in DataType]: DataTypeConfig<K> } = {
 	vocabulary: {
-		validate: (e) =>
-			!!(e.id && e.standardName && e.abbreviation && e.englishName && e.createdAt),
+		validate: (e) => !!(e.id && e.standardName && e.abbreviation && e.englishName && e.createdAt),
 		getMergeKey: (e) =>
 			`${e.standardName.toLowerCase()}|${e.abbreviation.toLowerCase()}|${e.englishName.toLowerCase()}`,
 		createDefault: () =>
@@ -407,7 +406,7 @@ export async function mergeData<T extends DataType>(
 						// eslint-disable-next-line @typescript-eslint/no-explicit-any
 						createdAt: (existing as any).createdAt,
 						updatedAt: new Date().toISOString()
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					} as any);
 				} else {
 					mergedMap.set(key, entry);
@@ -443,8 +442,7 @@ export async function listFiles(type: DataType): Promise<string[]> {
 		const dir = DATA_DIRS[type];
 		const files = await readdir(dir);
 		return files.filter(
-			(file) =>
-				file.endsWith('.json') && file !== HISTORY_FILE && !file.includes('_backup_')
+			(file) => file.endsWith('.json') && file !== HISTORY_FILE && !file.includes('_backup_')
 		);
 	} catch (error) {
 		console.error(`${type} 파일 목록 조회 실패:`, error);

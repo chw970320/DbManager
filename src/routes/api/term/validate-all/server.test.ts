@@ -16,7 +16,11 @@ vi.mock('$lib/utils/validation.js', () => ({
 	validateTermNameUniqueness: vi.fn(() => null),
 	validateTermNameMapping: vi.fn(() => null),
 	validateColumnNameMapping: vi.fn(() => null),
-	validateTermColumnOrderMapping: vi.fn(() => ({ error: null, mismatches: [], correctedColumnName: null })),
+	validateTermColumnOrderMapping: vi.fn(() => ({
+		error: null,
+		mismatches: [],
+		correctedColumnName: null
+	})),
 	validateDomainNameMapping: vi.fn(() => null)
 }));
 

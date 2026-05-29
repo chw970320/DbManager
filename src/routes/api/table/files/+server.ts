@@ -75,7 +75,6 @@ import {
 	invalidateAllCaches
 } from '$lib/registry/cache-registry';
 
-
 /**
  * 테이블 정의서 파일 목록 조회 API
  * GET /api/table/files
@@ -225,6 +224,3 @@ export async function DELETE({ request }: RequestEvent) {
 		);
 	}
 }
-
-
-

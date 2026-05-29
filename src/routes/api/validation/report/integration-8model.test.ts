@@ -30,8 +30,19 @@ describe('Integration: validation/report (8-model reference flow)', () => {
 						failedCount: 1,
 						failedEntries: [
 							{
-								entry: { id: 'term-1', termName: '없는_용어', columnName: 'NO_TERM', domainName: 'MISSING_DOM' },
-								errors: [{ type: 'TERM_NAME_MAPPING', code: 'TERM_NAME_MAPPING', message: '용어 매핑 실패' }],
+								entry: {
+									id: 'term-1',
+									termName: '없는_용어',
+									columnName: 'NO_TERM',
+									domainName: 'MISSING_DOM'
+								},
+								errors: [
+									{
+										type: 'TERM_NAME_MAPPING',
+										code: 'TERM_NAME_MAPPING',
+										message: '용어 매핑 실패'
+									}
+								],
 								suggestions: { actionType: 'ADD_VOCABULARY' }
 							}
 						]

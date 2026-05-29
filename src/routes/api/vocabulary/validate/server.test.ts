@@ -201,4 +201,3 @@ describe('POST /api/vocabulary/validate', () => {
 		expect(fileHandler.loadVocabularyData).toHaveBeenCalledWith('vocabulary.json');
 	});
 });
-

@@ -222,4 +222,3 @@ describe('Database Files API: /api/database/files', () => {
 		});
 	});
 });
-

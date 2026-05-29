@@ -233,4 +233,3 @@ describe('Column Filter Options API: /api/column/filter-options', () => {
 		expect(result.data.schemaName).toEqual([]);
 	});
 });
-

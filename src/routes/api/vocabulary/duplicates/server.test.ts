@@ -171,4 +171,3 @@ describe('GET /api/vocabulary/duplicates', () => {
 		);
 	});
 });
-

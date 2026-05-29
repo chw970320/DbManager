@@ -79,10 +79,7 @@ function sanitizeHistoryContent<T extends DataType>(data: DataTypeMap[T]): DataT
 	return cloned;
 }
 
-function normalizeEntry<T extends DataType>(
-	type: T,
-	entry: unknown
-): UploadHistoryEntry<T> | null {
+function normalizeEntry<T extends DataType>(type: T, entry: unknown): UploadHistoryEntry<T> | null {
 	if (!isObject(entry)) {
 		return null;
 	}
@@ -143,7 +140,9 @@ function toSummary<T extends DataType>(entry: UploadHistoryEntry<T>): UploadHist
 	};
 }
 
-export async function loadUploadHistoryData<T extends DataType>(type: T): Promise<UploadHistoryData<T>> {
+export async function loadUploadHistoryData<T extends DataType>(
+	type: T
+): Promise<UploadHistoryData<T>> {
 	await ensureUploadHistoryDirectory();
 	const filePath = getUploadHistoryPath(type);
 	const raw = await safeReadFile(filePath);

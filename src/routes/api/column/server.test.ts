@@ -465,4 +465,3 @@ describe('Column API: /api/column', () => {
 		});
 	});
 });
-

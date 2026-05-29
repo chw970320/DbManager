@@ -186,7 +186,11 @@ export async function POST({ request, url }: RequestEvent) {
 		const fileMappingOverride: Partial<Record<string, string>> = {};
 		if (termData.mapping?.vocabulary) fileMappingOverride.vocabulary = termData.mapping.vocabulary;
 		if (termData.mapping?.domain) fileMappingOverride.domain = termData.mapping.domain;
-		const relatedFiles = await resolveRelatedFilenames('term', filename, fileMappingOverride as Partial<Record<DataType, string>>);
+		const relatedFiles = await resolveRelatedFilenames(
+			'term',
+			filename,
+			fileMappingOverride as Partial<Record<DataType, string>>
+		);
 
 		// 단어집 데이터 로드
 		let vocabularyData;
@@ -214,10 +218,7 @@ export async function POST({ request, url }: RequestEvent) {
 		}
 
 		// 2. 컬럼명 매핑 validation (모든 부분이 영문약어로 등록되어 있는지 확인)
-		const columnMappingError = validateColumnNameMapping(
-			columnName.trim(),
-			vocabularyData.entries
-		);
+		const columnMappingError = validateColumnNameMapping(columnName.trim(), vocabularyData.entries);
 		if (columnMappingError) {
 			validationErrors.push({
 				type: 'COLUMN_NAME_MAPPING',
@@ -361,4 +362,3 @@ export async function POST({ request, url }: RequestEvent) {
 		);
 	}
 }
-

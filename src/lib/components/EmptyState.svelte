@@ -9,13 +9,7 @@
 		onaction?: () => void;
 	}
 
-	let {
-		icon = 'file',
-		title,
-		description = '',
-		actionLabel = '',
-		onaction
-	}: Props = $props();
+	let { icon = 'file', title, description = '', actionLabel = '', onaction }: Props = $props();
 </script>
 
 <div class="flex flex-col items-center justify-center py-12 text-center">
@@ -25,11 +19,7 @@
 		<p class="mt-2 max-w-sm text-sm text-content-muted">{description}</p>
 	{/if}
 	{#if actionLabel && onaction}
-		<button
-			type="button"
-			onclick={onaction}
-			class="btn btn-primary mt-4"
-		>
+		<button type="button" onclick={onaction} class="btn btn-primary mt-4">
 			{actionLabel}
 		</button>
 	{/if}

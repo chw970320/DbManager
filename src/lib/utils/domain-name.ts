@@ -1,6 +1,9 @@
 import type { DomainDataTypeMappingEntry } from '$lib/types/domain-data-type-mapping.js';
 
-export type DomainDataTypeMappingLike = Pick<DomainDataTypeMappingEntry, 'dataType' | 'abbreviation'>;
+export type DomainDataTypeMappingLike = Pick<
+	DomainDataTypeMappingEntry,
+	'dataType' | 'abbreviation'
+>;
 
 export const DEFAULT_DOMAIN_DATA_TYPE_MAPPINGS: DomainDataTypeMappingLike[] = [
 	{ dataType: 'NUMERIC', abbreviation: 'N' },
@@ -21,17 +24,11 @@ export const DEFAULT_DOMAIN_DATA_TYPE_MAPPINGS: DomainDataTypeMappingLike[] = [
 ];
 
 export function normalizePhysicalDataTypeKey(value: string | undefined | null): string {
-	return (value || '')
-		.trim()
-		.replace(/\s+/g, ' ')
-		.toUpperCase();
+	return (value || '').trim().replace(/\s+/g, ' ').toUpperCase();
 }
 
 export function normalizeDomainDataTypeAbbreviation(value: string | undefined | null): string {
-	return (value || '')
-		.trim()
-		.replace(/\s+/g, '')
-		.toUpperCase();
+	return (value || '').trim().replace(/\s+/g, '').toUpperCase();
 }
 
 export function resolveDomainDataTypeAbbreviation(

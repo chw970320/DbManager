@@ -112,6 +112,3 @@ export async function GET({ url }: RequestEvent) {
 		return error(500, '용어 데이터 다운로드 중 오류가 발생했습니다.');
 	}
 }
-
-
-

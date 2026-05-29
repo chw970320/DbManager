@@ -226,4 +226,3 @@ describe('Vocabulary Files API: /api/vocabulary/files', () => {
 		});
 	});
 });
-

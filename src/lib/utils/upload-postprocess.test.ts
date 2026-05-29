@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { normalizeUploadPostProcessMode, runUploadPostProcess } from './upload-postprocess';
 
 function okResponse(body: unknown): Response {
-	return new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } });
+	return new Response(JSON.stringify(body), {
+		status: 200,
+		headers: { 'Content-Type': 'application/json' }
+	});
 }
 
 describe('upload-postprocess', () => {

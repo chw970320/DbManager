@@ -275,5 +275,3 @@ describe('Entity Upload API: /api/entity/upload', () => {
 		});
 	});
 });
-
-

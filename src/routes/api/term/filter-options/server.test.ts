@@ -175,4 +175,3 @@ describe('Term Filter Options API: /api/term/filter-options', () => {
 		expect(result.data.domainName).toEqual([]);
 	});
 });
-

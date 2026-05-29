@@ -97,4 +97,3 @@ describe('API: /api/erd/relations', () => {
 		expect(result.error).toBeDefined();
 	});
 });
-

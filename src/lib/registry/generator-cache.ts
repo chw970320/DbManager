@@ -39,7 +39,10 @@ export function getCachedGeneratorDictionary(filename: string): GeneratorDiction
 	return dictionaryCache.get(filename);
 }
 
-export function setCachedGeneratorDictionary(filename: string, dictionary: GeneratorDictionary): void {
+export function setCachedGeneratorDictionary(
+	filename: string,
+	dictionary: GeneratorDictionary
+): void {
 	dictionaryCache.set(filename, dictionary);
 }
 

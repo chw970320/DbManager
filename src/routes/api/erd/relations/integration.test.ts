@@ -172,7 +172,9 @@ describe('API: /api/erd/relations integration (fixture-based)', () => {
 		const relationsModule = await import('./+server');
 		const syncModule = await import('./sync/+server');
 
-		const beforeResponse = await relationsModule.GET(createGetEvent('http://localhost/api/erd/relations'));
+		const beforeResponse = await relationsModule.GET(
+			createGetEvent('http://localhost/api/erd/relations')
+		);
 		const beforePayload = await beforeResponse.json();
 
 		expect(beforeResponse.status).toBe(200);
@@ -194,7 +196,9 @@ describe('API: /api/erd/relations integration (fixture-based)', () => {
 			syncPayload.data.validationBefore.totals.unmatched
 		);
 
-		const afterResponse = await relationsModule.GET(createGetEvent('http://localhost/api/erd/relations'));
+		const afterResponse = await relationsModule.GET(
+			createGetEvent('http://localhost/api/erd/relations')
+		);
 		const afterPayload = await afterResponse.json();
 
 		expect(afterResponse.status).toBe(200);

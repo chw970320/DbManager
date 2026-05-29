@@ -117,7 +117,9 @@ describe('Domain Upload API: /api/domain/upload', () => {
 		vi.mocked(loadDomainData).mockResolvedValue(createMockDomainData());
 		vi.mocked(listDomainFiles).mockResolvedValue(['domain.json']);
 		vi.mocked(loadDomainDataTypeMappingData).mockResolvedValue({
-			entries: [{ id: 'map-1', dataType: 'VARCHAR', abbreviation: 'V', createdAt: '', updatedAt: '' }],
+			entries: [
+				{ id: 'map-1', dataType: 'VARCHAR', abbreviation: 'V', createdAt: '', updatedAt: '' }
+			],
 			lastUpdated: '2024-01-01T00:00:00.000Z',
 			totalCount: 1
 		});
@@ -292,5 +294,3 @@ describe('Domain Upload API: /api/domain/upload', () => {
 		});
 	});
 });
-
-

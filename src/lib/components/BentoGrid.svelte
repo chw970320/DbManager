@@ -9,11 +9,9 @@
 
 	let { columns = 12, gapClass = 'gap-4 sm:gap-6', children }: Props = $props();
 
-	const colsClass =
-		columns === 12 ? 'grid-cols-12' : columns === 6 ? 'grid-cols-6' : 'grid-cols-4';
+	const colsClass = columns === 12 ? 'grid-cols-12' : columns === 6 ? 'grid-cols-6' : 'grid-cols-4';
 </script>
 
 <div class="grid {colsClass} {gapClass}">
 	{@render children()}
 </div>
-

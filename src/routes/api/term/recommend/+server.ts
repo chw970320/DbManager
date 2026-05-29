@@ -75,7 +75,6 @@ import {
 	invalidateAllCaches
 } from '$lib/registry/cache-registry';
 
-
 type RecommendRequest = {
 	filename?: string; // term 파일명
 	termName: string;
@@ -214,6 +213,3 @@ export async function POST({ request }: RequestEvent) {
 		);
 	}
 }
-
-
-

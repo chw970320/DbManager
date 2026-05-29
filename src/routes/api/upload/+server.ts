@@ -12,8 +12,16 @@ import {
 } from '$lib/utils/type-guards.js';
 import { parseXlsxToJson } from '$lib/utils/xlsx-parser.js';
 import { validateForbiddenWordsAndSynonyms, validateXlsxFile } from '$lib/utils/validation.js';
-import type { ApiResponse, UploadResult, VocabularyData, VocabularyEntry } from '$lib/types/vocabulary';
-import { normalizeUploadPostProcessMode, runUploadPostProcess } from '$lib/utils/upload-postprocess.js';
+import type {
+	ApiResponse,
+	UploadResult,
+	VocabularyData,
+	VocabularyEntry
+} from '$lib/types/vocabulary';
+import {
+	normalizeUploadPostProcessMode,
+	runUploadPostProcess
+} from '$lib/utils/upload-postprocess.js';
 import { classifyUploadParseError } from '$lib/utils/upload-error.js';
 import { captureUploadReplaceHistory } from '$lib/registry/upload-history-registry';
 
@@ -213,6 +221,3 @@ export async function GET() {
 		message: 'Upload endpoint information'
 	} as ApiResponse);
 }
-
-
-

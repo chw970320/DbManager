@@ -145,4 +145,3 @@ describe('Entity Download API: /api/entity/download', () => {
 		expect(loadEntityData).toHaveBeenCalledWith('entity.json');
 	});
 });
-

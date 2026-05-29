@@ -53,14 +53,18 @@
 					<h4 class="text-sm font-semibold {categoryStyles[group.key].heading}">{group.label}</h4>
 					<p class="mt-1 text-xs text-slate-600">{group.description}</p>
 				</div>
-				<span class="rounded-full border border-white/80 bg-white px-2.5 py-1 text-xs text-slate-500">
+				<span
+					class="rounded-full border border-white/80 bg-white px-2.5 py-1 text-xs text-slate-500"
+				>
 					{group.types.length}개 항목
 				</span>
 			</div>
 
 			<div class="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
 				{#each group.types as type (type)}
-					<div class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm shadow-slate-200/40">
+					<div
+						class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm shadow-slate-200/40"
+					>
 						<div>
 							<label
 								for={`dbDesignMapping-${currentType}-${type}`}
@@ -74,7 +78,7 @@
 							value={mapping[type] || DEFAULT_FILENAMES[type]}
 							onchange={(event) =>
 								handleChange(type, (event.currentTarget as HTMLSelectElement).value)}
-							disabled={disabled}
+							{disabled}
 							class="mt-2 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-400"
 						>
 							{#if !fileOptions[type] || fileOptions[type]?.length === 0}

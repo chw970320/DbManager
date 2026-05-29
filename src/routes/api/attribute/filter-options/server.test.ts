@@ -185,4 +185,3 @@ describe('Attribute Filter Options API: /api/attribute/filter-options', () => {
 		expect(result.data.entityName).toEqual([]);
 	});
 });
-

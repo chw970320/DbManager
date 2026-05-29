@@ -226,4 +226,3 @@ describe('Entity Files API: /api/entity/files', () => {
 		});
 	});
 });
-

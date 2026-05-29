@@ -44,9 +44,7 @@ describe('API: /api/vocabulary/validate-all', () => {
 			lastUpdated: '',
 			totalCount: 2
 		});
-		vi.mocked(loadForbiddenWords).mockResolvedValue([
-			{ type: 'standardName', keyword: '금지' }
-		]);
+		vi.mocked(loadForbiddenWords).mockResolvedValue([{ type: 'standardName', keyword: '금지' }]);
 	});
 
 	it('should return validation summary', async () => {

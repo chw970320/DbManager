@@ -48,11 +48,7 @@ export type ColumnStandardRecommendationCore = {
 	recommendedValues: Partial<
 		Pick<
 			ColumnEntry,
-			| 'columnKoreanName'
-			| 'domainName'
-			| 'dataType'
-			| 'dataLength'
-			| 'dataDecimalLength'
+			'columnKoreanName' | 'domainName' | 'dataType' | 'dataLength' | 'dataDecimalLength'
 		>
 	>;
 	changes: ColumnStandardRecommendationChange[];

@@ -141,4 +141,3 @@ describe('Database Download API: /api/database/download', () => {
 		expect(result.success).toBe(false);
 	});
 });
-

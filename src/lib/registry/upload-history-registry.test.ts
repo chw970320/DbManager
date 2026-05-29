@@ -46,11 +46,17 @@ describe('upload-history-registry', () => {
 			'custom-vocabulary.json'
 		);
 
-		const entry = await captureUploadReplaceHistory('vocabulary', 'custom-vocabulary.json', timestamp);
+		const entry = await captureUploadReplaceHistory(
+			'vocabulary',
+			'custom-vocabulary.json',
+			timestamp
+		);
 		const list = await listUploadHistoryEntries('vocabulary', 'custom-vocabulary.json', timestamp);
 		const storedRaw = JSON.parse(
 			await readFile(join(tempDir, 'settings', 'upload-history', 'vocabulary.json'), 'utf-8')
-		) as { entries: Array<{ filename: string; content: { mapping?: unknown; entries: unknown[] } }> };
+		) as {
+			entries: Array<{ filename: string; content: { mapping?: unknown; entries: unknown[] } }>;
+		};
 
 		expect(entry.filename).toBe('custom-vocabulary.json');
 		expect(list).toHaveLength(1);
@@ -60,7 +66,9 @@ describe('upload-history-registry', () => {
 	});
 
 	it('30일이 지난 이력을 prune하고 최신 순으로 반환한다', async () => {
-		const { saveUploadHistoryData, listUploadHistoryEntries } = await import('./upload-history-registry');
+		const { saveUploadHistoryData, listUploadHistoryEntries } = await import(
+			'./upload-history-registry'
+		);
 
 		await saveUploadHistoryData('term', {
 			entries: [
@@ -107,11 +115,7 @@ describe('upload-history-registry', () => {
 			totalCount: 2
 		});
 
-		const list = await listUploadHistoryEntries(
-			'term',
-			'term.json',
-			'2026-04-09T00:00:00.000Z'
-		);
+		const list = await listUploadHistoryEntries('term', 'term.json', '2026-04-09T00:00:00.000Z');
 
 		expect(list.map((entry) => entry.id)).toEqual(['latest']);
 	});
@@ -119,11 +123,8 @@ describe('upload-history-registry', () => {
 	it('복원은 현재 파일 JSON 본문만 되돌리고 새 이력을 만들지 않는다', async () => {
 		const timestamp = '2026-04-09T00:00:00.000Z';
 		const { saveData, loadData } = await import('./data-registry');
-		const {
-			saveUploadHistoryData,
-			restoreUploadHistoryEntry,
-			listUploadHistoryEntries
-		} = await import('./upload-history-registry');
+		const { saveUploadHistoryData, restoreUploadHistoryEntry, listUploadHistoryEntries } =
+			await import('./upload-history-registry');
 
 		await saveData(
 			'database',

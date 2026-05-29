@@ -119,7 +119,9 @@ export function getDbDesignSelectableTypeGroups(
 		.filter((group) => group.types.length > 0);
 }
 
-export function extractDbDesignRelatedMapping(mapping?: Record<string, unknown>): DbDesignRelatedMapping {
+export function extractDbDesignRelatedMapping(
+	mapping?: Record<string, unknown>
+): DbDesignRelatedMapping {
 	const result: DbDesignRelatedMapping = {};
 
 	for (const type of ALL_DATA_TYPES) {

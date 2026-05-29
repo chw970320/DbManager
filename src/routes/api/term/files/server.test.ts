@@ -224,4 +224,3 @@ describe('Term Files API: /api/term/files', () => {
 		});
 	});
 });
-

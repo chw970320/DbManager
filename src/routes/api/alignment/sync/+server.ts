@@ -28,7 +28,9 @@ function readString(value: unknown): string | undefined {
 	return typeof value === 'string' && value.trim() !== '' ? value : undefined;
 }
 
-async function readUpstream<T>(response: Response): Promise<{ status: number; body: UpstreamResult<T> }> {
+async function readUpstream<T>(
+	response: Response
+): Promise<{ status: number; body: UpstreamResult<T> }> {
 	try {
 		const body = (await response.json()) as UpstreamResult<T>;
 		return { status: response.status, body };
@@ -54,7 +56,9 @@ export async function POST({ request, url, fetch }: RequestEvent) {
 			readString(url.searchParams.get('vocabularyFilename')) ||
 			'vocabulary.json';
 		const termFilename =
-			readString(rawBody.termFilename) || readString(url.searchParams.get('termFilename')) || 'term.json';
+			readString(rawBody.termFilename) ||
+			readString(url.searchParams.get('termFilename')) ||
+			'term.json';
 		const columnFilename =
 			readString(rawBody.columnFilename) ||
 			readString(rawBody.columnFile) ||
@@ -66,15 +70,18 @@ export async function POST({ request, url, fetch }: RequestEvent) {
 			readString(url.searchParams.get('domainFilename')) ||
 			'domain.json';
 
-		const vocabularyResponse = await fetch(`/api/vocabulary/sync-domain?apply=${apply ? 'true' : 'false'}`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				apply,
-				vocabularyFilename,
-				domainFilename
-			})
-		});
+		const vocabularyResponse = await fetch(
+			`/api/vocabulary/sync-domain?apply=${apply ? 'true' : 'false'}`,
+			{
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					apply,
+					vocabularyFilename,
+					domainFilename
+				})
+			}
+		);
 		const vocabulary = await readUpstream(vocabularyResponse);
 		if (!vocabularyResponse.ok || vocabulary.body.success !== true) {
 			return json(
@@ -109,9 +116,11 @@ export async function POST({ request, url, fetch }: RequestEvent) {
 
 		const relationPayload = {
 			apply,
-			databaseFile: readString(rawBody.databaseFile) || readString(url.searchParams.get('databaseFile')),
+			databaseFile:
+				readString(rawBody.databaseFile) || readString(url.searchParams.get('databaseFile')),
 			entityFile: readString(rawBody.entityFile) || readString(url.searchParams.get('entityFile')),
-			attributeFile: readString(rawBody.attributeFile) || readString(url.searchParams.get('attributeFile')),
+			attributeFile:
+				readString(rawBody.attributeFile) || readString(url.searchParams.get('attributeFile')),
 			tableFile: readString(rawBody.tableFile) || readString(url.searchParams.get('tableFile')),
 			columnFile: readString(rawBody.columnFile) || readString(url.searchParams.get('columnFile'))
 		};

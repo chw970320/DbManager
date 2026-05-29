@@ -502,4 +502,3 @@ describe('Database API: /api/database', () => {
 		});
 	});
 });
-

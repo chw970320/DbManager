@@ -51,9 +51,7 @@ async function loadEntriesWithSelection(
 	return { entries: data.entries as unknown[], selectedFilename };
 }
 
-async function loadVocabularyMap(
-	explicitFilename?: string | null
-): Promise<{
+async function loadVocabularyMap(explicitFilename?: string | null): Promise<{
 	vocabularyMap:
 		| Map<string, { standardName: string; abbreviation: string; domainCategory?: string }>
 		| undefined;

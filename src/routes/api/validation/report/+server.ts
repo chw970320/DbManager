@@ -140,7 +140,9 @@ export async function GET({ url, fetch }: RequestEvent) {
 	try {
 		const termFilename = mapTermFilename(url);
 		const relationQuery = buildRelationQuery(url);
-		const relationUrl = relationQuery ? `/api/erd/relations?${relationQuery}` : '/api/erd/relations';
+		const relationUrl = relationQuery
+			? `/api/erd/relations?${relationQuery}`
+			: '/api/erd/relations';
 
 		const [termResponse, relationResponse] = await Promise.all([
 			fetch(`/api/term/validate-all?filename=${encodeURIComponent(termFilename)}`),

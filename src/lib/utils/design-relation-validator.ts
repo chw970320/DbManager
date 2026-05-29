@@ -86,8 +86,7 @@ export const DESIGN_RELATION_SPECS: RelationSpec[] = [
 		mappingKey: 'schemaName + entityName(relatedEntityName) + attributeName(columnKoreanName)',
 		cardinality: '1:1',
 		severity: 'warning',
-		description:
-			'속성과 컬럼의 논리-물리 연결 후보를 점검합니다. 불일치는 경고로 취급합니다.'
+		description: '속성과 컬럼의 논리-물리 연결 후보를 점검합니다. 불일치는 경고로 취급합니다.'
 	}
 ];
 
@@ -147,12 +146,10 @@ export function validateDesignRelations(context: MappingContext): DesignRelation
 
 	const columnLogicalKeySet = new Set(
 		context.columns
-			.map(
-				(column) =>
-					buildCompositeKey(
-						[column.schemaName, column.relatedEntityName, column.columnKoreanName],
-						{ emptyLikeDash: true }
-					)
+			.map((column) =>
+				buildCompositeKey([column.schemaName, column.relatedEntityName, column.columnKoreanName], {
+					emptyLikeDash: true
+				})
 			)
 			.filter((k) => k !== '')
 	);

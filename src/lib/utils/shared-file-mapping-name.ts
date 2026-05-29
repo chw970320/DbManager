@@ -8,7 +8,11 @@ function stripExtension(filename: string): string {
 	return filename.replace(/\.[^/.]+$/, '').trim();
 }
 
-function summarizeGroup(bundle: SharedFileMappingBundle, types: DataType[], defaultLabel: string): string {
+function summarizeGroup(
+	bundle: SharedFileMappingBundle,
+	types: DataType[],
+	defaultLabel: string
+): string {
 	const filenames = types.map((type) => bundle[type]);
 	const isDefaultGroup = types.every((type) => bundle[type] === DEFAULT_FILENAMES[type]);
 
@@ -16,7 +20,9 @@ function summarizeGroup(bundle: SharedFileMappingBundle, types: DataType[], defa
 		return defaultLabel;
 	}
 
-	const uniqueStems = [...new Set(filenames.map(stripExtension).filter((value) => value.length > 0))];
+	const uniqueStems = [
+		...new Set(filenames.map(stripExtension).filter((value) => value.length > 0))
+	];
 
 	if (uniqueStems.length === 0) {
 		return defaultLabel;

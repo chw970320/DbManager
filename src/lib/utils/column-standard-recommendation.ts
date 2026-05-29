@@ -189,7 +189,9 @@ export function createColumnStandardRecommendation(
 		guidance.push('컬럼영문명과 일치하는 표준 용어를 먼저 등록하거나 컬럼영문명을 조정하세요.');
 	} else {
 		if (changes.length > 0) {
-			guidance.push(`추천값 ${changes.length}건을 적용하면 컬럼 정의를 표준 용어와 바로 맞출 수 있습니다.`);
+			guidance.push(
+				`추천값 ${changes.length}건을 적용하면 컬럼 정의를 표준 용어와 바로 맞출 수 있습니다.`
+			);
 		}
 		if (!domainResolved) {
 			guidance.push('매핑된 도메인이 없으면 자료형과 길이 표준을 자동 보정할 수 없습니다.');

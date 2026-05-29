@@ -50,13 +50,12 @@ function createMockRequestEvent(options: {
 	return {
 		url,
 		request,
-		fetch:
-			(options.fetchImpl ||
-				(async () =>
-					new Response(JSON.stringify({ success: true, data: { updated: 0 } }), {
-						status: 200,
-						headers: { 'Content-Type': 'application/json' }
-					}))) as RequestEvent['fetch']
+		fetch: (options.fetchImpl ||
+			(async () =>
+				new Response(JSON.stringify({ success: true, data: { updated: 0 } }), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				}))) as RequestEvent['fetch']
 	} as RequestEvent;
 }
 
@@ -80,14 +79,15 @@ describe('Vocabulary Mapping API: /api/vocabulary/files/mapping', () => {
 	});
 
 	it('PUT should save the shared mapping bundle', async () => {
-		const fetchMock = vi.fn(async () =>
-			new Response(
-				JSON.stringify({
-					success: true,
-					data: { updated: 3 }
-				}),
-				{ status: 200, headers: { 'Content-Type': 'application/json' } }
-			)
+		const fetchMock = vi.fn(
+			async () =>
+				new Response(
+					JSON.stringify({
+						success: true,
+						data: { updated: 3 }
+					}),
+					{ status: 200, headers: { 'Content-Type': 'application/json' } }
+				)
 		);
 		const mapping = {
 			domain: 'domain-b.json',
@@ -136,11 +136,12 @@ describe('Vocabulary Mapping API: /api/vocabulary/files/mapping', () => {
 	});
 
 	it('PUT should keep saved=true when auto sync fails', async () => {
-		const fetchMock = vi.fn(async () =>
-			new Response(JSON.stringify({ success: false, error: 'sync failed' }), {
-				status: 500,
-				headers: { 'Content-Type': 'application/json' }
-			})
+		const fetchMock = vi.fn(
+			async () =>
+				new Response(JSON.stringify({ success: false, error: 'sync failed' }), {
+					status: 500,
+					headers: { 'Content-Type': 'application/json' }
+				})
 		);
 		const response = await PUT(
 			createMockRequestEvent({

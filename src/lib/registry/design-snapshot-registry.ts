@@ -220,7 +220,9 @@ export async function loadDesignSnapshotData(): Promise<DesignSnapshotData> {
 
 	try {
 		const normalized = normalizeData(JSON.parse(raw));
-		if (normalized.totalCount !== ((JSON.parse(raw) as { entries?: unknown[] }).entries?.length || 0)) {
+		if (
+			normalized.totalCount !== ((JSON.parse(raw) as { entries?: unknown[] }).entries?.length || 0)
+		) {
 			await saveDesignSnapshotData(normalized);
 		}
 		return normalized;
@@ -232,7 +234,9 @@ export async function loadDesignSnapshotData(): Promise<DesignSnapshotData> {
 	}
 }
 
-export async function saveDesignSnapshotData(data: DesignSnapshotData): Promise<DesignSnapshotData> {
+export async function saveDesignSnapshotData(
+	data: DesignSnapshotData
+): Promise<DesignSnapshotData> {
 	await ensureSettingsDirectory();
 	const entries = sortEntries(
 		data.entries
@@ -303,7 +307,11 @@ export async function restoreDesignSnapshot(
 	}
 
 	for (const type of ALL_DATA_TYPES) {
-		await saveData(type, snapshot.payloads[type].data as DataTypeMap[typeof type], snapshot.bundle[type]);
+		await saveData(
+			type,
+			snapshot.payloads[type].data as DataTypeMap[typeof type],
+			snapshot.bundle[type]
+		);
 	}
 
 	await saveDbDesignFileMappingBundle({

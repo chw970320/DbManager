@@ -166,7 +166,9 @@ describe('Vocabulary Sync-Domain API: /api/vocabulary/sync-domain', () => {
 	});
 
 	it('should use resolved domain mapping when domainFilename not specified', async () => {
-		vi.mocked(resolveRelatedFilenames).mockResolvedValue(new Map([['domain', 'mapped-domain.json']]));
+		vi.mocked(resolveRelatedFilenames).mockResolvedValue(
+			new Map([['domain', 'mapped-domain.json']])
+		);
 
 		const event = createMockRequestEvent({ vocabularyFilename: 'vocabulary.json' });
 		const response = await POST(event);

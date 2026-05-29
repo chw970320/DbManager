@@ -9,13 +9,7 @@
 		children?: Snippet;
 	}
 
-	let {
-		position = 'top',
-		alignment = 'right',
-		primary,
-		secondary,
-		children
-	}: Props = $props();
+	let { position = 'top', alignment = 'right', primary, secondary, children }: Props = $props();
 
 	const positionClass =
 		position === 'sticky'

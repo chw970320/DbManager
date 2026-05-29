@@ -152,4 +152,3 @@ describe('design-relation-validator', () => {
 		expect(result.totals.warningCount).toBe(1);
 	});
 });
-

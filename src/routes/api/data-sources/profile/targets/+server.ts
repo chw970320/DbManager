@@ -22,7 +22,10 @@ export async function GET({ url }: RequestEvent) {
 	const dataSourceId = url.searchParams.get('dataSourceId');
 
 	if (!isNonEmptyString(dataSourceId)) {
-		return json({ success: false, error: '필수 입력(dataSourceId)이 누락되었습니다.' }, { status: 400 });
+		return json(
+			{ success: false, error: '필수 입력(dataSourceId)이 누락되었습니다.' },
+			{ status: 400 }
+		);
 	}
 
 	const entry = await getDataSourceEntry(dataSourceId.trim());

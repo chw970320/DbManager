@@ -226,4 +226,3 @@ describe('Column Files API: /api/column/files', () => {
 		});
 	});
 });
-

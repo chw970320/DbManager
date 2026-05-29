@@ -124,4 +124,3 @@ describe('Term Download API: /api/term/download', () => {
 		expect(loadTermData).toHaveBeenCalledWith('term.json');
 	});
 });
-

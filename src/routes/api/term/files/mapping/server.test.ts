@@ -55,13 +55,12 @@ function createMockRequestEvent(options: {
 	return {
 		url,
 		request,
-		fetch:
-			(options.fetchImpl ||
-				(async () =>
-					new Response(JSON.stringify({ success: true, data: { updated: 0 } }), {
-						status: 200,
-						headers: { 'Content-Type': 'application/json' }
-					}))) as RequestEvent['fetch']
+		fetch: (options.fetchImpl ||
+			(async () =>
+				new Response(JSON.stringify({ success: true, data: { updated: 0 } }), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				}))) as RequestEvent['fetch']
 	} as RequestEvent;
 }
 
@@ -85,14 +84,15 @@ describe('Term Mapping API: /api/term/files/mapping', () => {
 	});
 
 	it('PUT should save the shared mapping bundle', async () => {
-		const fetchMock = vi.fn(async () =>
-			new Response(
-				JSON.stringify({
-					success: true,
-					data: { updated: 7 }
-				}),
-				{ status: 200, headers: { 'Content-Type': 'application/json' } }
-			)
+		const fetchMock = vi.fn(
+			async () =>
+				new Response(
+					JSON.stringify({
+						success: true,
+						data: { updated: 7 }
+					}),
+					{ status: 200, headers: { 'Content-Type': 'application/json' } }
+				)
 		);
 		const mapping = {
 			vocabulary: 'vocabulary-b.json',

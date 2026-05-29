@@ -205,4 +205,3 @@ describe('Table Filter Options API: /api/table/filter-options', () => {
 		expect(result.data.schemaName).toEqual([]);
 	});
 });
-

@@ -307,5 +307,3 @@ describe('Column Upload API: /api/column/upload', () => {
 		});
 	});
 });
-
-

@@ -36,7 +36,12 @@ describe('API: /api/term/relationship-summary', () => {
 			if (type === 'term') {
 				return {
 					entries: [
-						{ id: 't1', termName: '사용자_이름', columnName: 'USER_NAME', domainName: 'USER_NAME_DOM' },
+						{
+							id: 't1',
+							termName: '사용자_이름',
+							columnName: 'USER_NAME',
+							domainName: 'USER_NAME_DOM'
+						},
 						{ id: 't2', termName: '없는_이름', columnName: 'NOPE_NAME', domainName: 'MISSING_DOM' }
 					],
 					lastUpdated: '',

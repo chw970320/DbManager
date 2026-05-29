@@ -113,7 +113,10 @@ function normalizeColumnProfile(
 	};
 }
 
-async function withClient<T>(entry: DataSourceEntry, action: (client: Client) => Promise<T>): Promise<T> {
+async function withClient<T>(
+	entry: DataSourceEntry,
+	action: (client: Client) => Promise<T>
+): Promise<T> {
 	if (entry.type !== 'postgresql') {
 		throw new Error('지원하지 않는 데이터 소스 유형입니다.');
 	}
@@ -237,12 +240,14 @@ async function loadColumnMetrics(
 		from ${qualifiedTable}
 	`);
 
-	return result.rows[0] ?? {
-		nullCount: 0,
-		distinctCount: 0,
-		minLength: null,
-		maxLength: null
-	};
+	return (
+		result.rows[0] ?? {
+			nullCount: 0,
+			distinctCount: 0,
+			minLength: null,
+			maxLength: null
+		}
+	);
 }
 
 export async function listDataSourceProfileTargets(

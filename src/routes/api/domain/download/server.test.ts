@@ -144,4 +144,3 @@ describe('Domain Download API: /api/domain/download', () => {
 		expect(loadDomainData).toHaveBeenCalledWith('domain.json');
 	});
 });
-

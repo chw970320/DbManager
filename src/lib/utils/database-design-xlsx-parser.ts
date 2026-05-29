@@ -115,9 +115,7 @@ function parseWorkbookToArrayByRequiredHeaders(
 			const normalizedHeaderSet = new Set(
 				candidateHeaderRow.map((cell) => normalizeHeaderText(cell)).filter(Boolean)
 			);
-			const matched = normalizedRequiredHeaders.every((header) =>
-				normalizedHeaderSet.has(header)
-			);
+			const matched = normalizedRequiredHeaders.every((header) => normalizedHeaderSet.has(header));
 
 			if (!matched) continue;
 
@@ -126,9 +124,7 @@ function parseWorkbookToArrayByRequiredHeaders(
 			return dataFromHeader;
 		}
 	}
-	throw new Error(
-		`필수 헤더(${requiredHeaders.join(', ')})를 포함한 시트를 찾을 수 없습니다.`
-	);
+	throw new Error(`필수 헤더(${requiredHeaders.join(', ')})를 포함한 시트를 찾을 수 없습니다.`);
 }
 
 /**

@@ -66,7 +66,9 @@ function createMockRequestEvent(options: {
 		headers: {
 			get: vi.fn((header: string) => {
 				if (header === 'content-type') {
-					return options.contentType ?? (options.formData ? 'multipart/form-data' : 'application/json');
+					return (
+						options.contentType ?? (options.formData ? 'multipart/form-data' : 'application/json')
+					);
 				}
 				return null;
 			})

@@ -291,5 +291,3 @@ describe('Table Upload API: /api/table/upload', () => {
 		});
 	});
 });
-
-

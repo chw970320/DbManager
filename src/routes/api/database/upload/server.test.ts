@@ -376,4 +376,3 @@ describe('Database Upload API: /api/database/upload', () => {
 		});
 	});
 });
-

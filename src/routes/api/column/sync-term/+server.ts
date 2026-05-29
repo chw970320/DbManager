@@ -150,7 +150,7 @@ export async function POST({ request, url }: RequestEvent) {
 		// 컬럼 데이터 로드
 		let columnData: ColumnData;
 		try {
-			columnData = await loadData('column', colFile) as ColumnData;
+			columnData = (await loadData('column', colFile)) as ColumnData;
 		} catch (error) {
 			return json(
 				{
@@ -339,7 +339,8 @@ export async function POST({ request, url }: RequestEvent) {
 				if (hasChanged) {
 					updated += 1;
 					const changedFields: string[] = [];
-					if (nextEntry.columnKoreanName !== entry.columnKoreanName) changedFields.push('columnKoreanName');
+					if (nextEntry.columnKoreanName !== entry.columnKoreanName)
+						changedFields.push('columnKoreanName');
 					if (nextEntry.domainName !== entry.domainName) changedFields.push('domainName');
 					if (nextEntry.dataType !== entry.dataType) changedFields.push('dataType');
 					if (nextEntry.dataLength !== entry.dataLength) changedFields.push('dataLength');
@@ -457,7 +458,7 @@ export async function GET({ url }: RequestEvent) {
 		const domFile = domainFileParam || relatedFiles.get('domain') || 'domain.json';
 
 		// 컬럼 데이터 로드
-		const columnData = await loadData('column', colFile) as ColumnData;
+		const columnData = (await loadData('column', colFile)) as ColumnData;
 
 		// 용어 데이터 로드
 		const termData = await loadData('term', termFile);
@@ -581,4 +582,3 @@ export async function GET({ url }: RequestEvent) {
 		);
 	}
 }
-

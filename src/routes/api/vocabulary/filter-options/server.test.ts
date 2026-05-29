@@ -204,4 +204,3 @@ describe('Vocabulary Filter Options API: /api/vocabulary/filter-options', () => 
 		expect(result.data.abbreviation).toEqual([]);
 	});
 });
-

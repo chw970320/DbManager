@@ -41,7 +41,12 @@ function buildFailResponse(errors: ValidationIssue[], status: number): Response 
 export async function POST({ request, url }: RequestEvent): Promise<Response> {
 	try {
 		const body = await request.json();
-		const { id: entryId, entryId: bodyEntryId, standardName, abbreviation } = body as {
+		const {
+			id: entryId,
+			entryId: bodyEntryId,
+			standardName,
+			abbreviation
+		} = body as {
 			id?: string;
 			entryId?: string;
 			standardName?: string;
@@ -163,6 +168,3 @@ export async function POST({ request, url }: RequestEvent): Promise<Response> {
 function fwField(type: ForbiddenWord['type']): 'standardName' | 'abbreviation' {
 	return type === 'abbreviation' ? 'abbreviation' : 'standardName';
 }
-
-
-

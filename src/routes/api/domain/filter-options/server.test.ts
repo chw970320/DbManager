@@ -182,4 +182,3 @@ describe('Domain Filter Options API: /api/domain/filter-options', () => {
 		expect(result.data.domainCategory).toEqual([]);
 	});
 });
-

@@ -75,7 +75,6 @@ import {
 	invalidateAllCaches
 } from '$lib/registry/cache-registry';
 
-
 /**
  * 용어 파일 목록 조회 API
  * GET /api/term/files
@@ -224,6 +223,3 @@ export async function DELETE({ request }: RequestEvent) {
 		);
 	}
 }
-
-
-

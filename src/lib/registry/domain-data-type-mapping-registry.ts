@@ -67,13 +67,16 @@ async function ensureSettingsDirectory(): Promise<void> {
 
 function createDefaultDomainDataTypeMappingData(): DomainDataTypeMappingData {
 	const now = new Date().toISOString();
-	const entries: DomainDataTypeMappingEntry[] = DEFAULT_DOMAIN_DATA_TYPE_MAPPINGS.map((mapping) => ({
-		id: DEFAULT_MAPPING_IDS[normalizePhysicalDataTypeKey(mapping.dataType)] || crypto.randomUUID(),
-		dataType: mapping.dataType,
-		abbreviation: mapping.abbreviation,
-		createdAt: now,
-		updatedAt: now
-	}));
+	const entries: DomainDataTypeMappingEntry[] = DEFAULT_DOMAIN_DATA_TYPE_MAPPINGS.map(
+		(mapping) => ({
+			id:
+				DEFAULT_MAPPING_IDS[normalizePhysicalDataTypeKey(mapping.dataType)] || crypto.randomUUID(),
+			dataType: mapping.dataType,
+			abbreviation: mapping.abbreviation,
+			createdAt: now,
+			updatedAt: now
+		})
+	);
 
 	return {
 		entries,
@@ -147,8 +150,7 @@ function validateMappingFields(
 
 	const duplicatedType = existingEntries.find(
 		(entry) =>
-			entry.id !== excludeId &&
-			normalizePhysicalDataTypeKey(entry.dataType) === normalizedType
+			entry.id !== excludeId && normalizePhysicalDataTypeKey(entry.dataType) === normalizedType
 	);
 	if (duplicatedType) {
 		return `'${dataType}' 데이터타입 매핑이 이미 존재합니다.`;
@@ -388,7 +390,11 @@ export async function synchronizeDomainNameReferences(
 export async function createDomainDataTypeMapping(
 	dataType: string,
 	abbreviation: string
-): Promise<{ entry: DomainDataTypeMappingEntry; data: DomainDataTypeMappingData; sync: DomainDataTypeMappingSyncResult }> {
+): Promise<{
+	entry: DomainDataTypeMappingEntry;
+	data: DomainDataTypeMappingData;
+	sync: DomainDataTypeMappingSyncResult;
+}> {
 	const currentData = await loadDomainDataTypeMappingData();
 	const validationError = validateMappingFields(dataType, abbreviation, currentData.entries);
 	if (validationError) {
@@ -416,7 +422,11 @@ export async function updateDomainDataTypeMapping(
 	id: string,
 	dataType: string,
 	abbreviation: string
-): Promise<{ entry: DomainDataTypeMappingEntry; data: DomainDataTypeMappingData; sync: DomainDataTypeMappingSyncResult }> {
+): Promise<{
+	entry: DomainDataTypeMappingEntry;
+	data: DomainDataTypeMappingData;
+	sync: DomainDataTypeMappingSyncResult;
+}> {
 	const currentData = await loadDomainDataTypeMappingData();
 	const targetIndex = currentData.entries.findIndex((entry) => entry.id === id);
 
@@ -424,12 +434,7 @@ export async function updateDomainDataTypeMapping(
 		throw new Error('수정할 데이터타입 매핑을 찾을 수 없습니다.');
 	}
 
-	const validationError = validateMappingFields(
-		dataType,
-		abbreviation,
-		currentData.entries,
-		id
-	);
+	const validationError = validateMappingFields(dataType, abbreviation, currentData.entries, id);
 	if (validationError) {
 		throw new Error(validationError);
 	}

@@ -30,13 +30,20 @@ type RunPostProcessParams = {
 	mode: UploadPostProcessMode;
 };
 
-export function normalizeUploadPostProcessMode(value: string | undefined | null): UploadPostProcessMode {
+export function normalizeUploadPostProcessMode(
+	value: string | undefined | null
+): UploadPostProcessMode {
 	if (value === 'validate-only' || value === 'validate-sync') return value;
 	return 'none';
 }
 
 function isTruthySuccess(body: unknown): boolean {
-	return !!body && typeof body === 'object' && 'success' in body && (body as { success?: boolean }).success === true;
+	return (
+		!!body &&
+		typeof body === 'object' &&
+		'success' in body &&
+		(body as { success?: boolean }).success === true
+	);
 }
 
 async function callApi(
@@ -86,7 +93,9 @@ function definitionFileParamKey(
 	return 'columnFile';
 }
 
-export async function runUploadPostProcess(params: RunPostProcessParams): Promise<PostProcessResult> {
+export async function runUploadPostProcess(
+	params: RunPostProcessParams
+): Promise<PostProcessResult> {
 	const { fetch: fetchFn, dataType, filename, mode } = params;
 	if (mode === 'none') {
 		return { mode, steps: [] };
@@ -96,14 +105,25 @@ export async function runUploadPostProcess(params: RunPostProcessParams): Promis
 
 	if (dataType === 'vocabulary') {
 		steps.push(
-			await callApi(fetchFn, 'vocabulary-validate-all', `/api/vocabulary/validate-all?filename=${encodeURIComponent(filename)}`, 'GET')
+			await callApi(
+				fetchFn,
+				'vocabulary-validate-all',
+				`/api/vocabulary/validate-all?filename=${encodeURIComponent(filename)}`,
+				'GET'
+			)
 		);
 		if (mode === 'validate-sync') {
 			steps.push(
-				await callApi(fetchFn, 'vocabulary-sync-domain', '/api/vocabulary/sync-domain?apply=true', 'POST', {
-					vocabularyFilename: filename,
-					apply: true
-				})
+				await callApi(
+					fetchFn,
+					'vocabulary-sync-domain',
+					'/api/vocabulary/sync-domain?apply=true',
+					'POST',
+					{
+						vocabularyFilename: filename,
+						apply: true
+					}
+				)
 			);
 			steps.push(
 				await callApi(fetchFn, 'term-sync', '/api/term/sync?apply=true', 'POST', {
@@ -117,14 +137,25 @@ export async function runUploadPostProcess(params: RunPostProcessParams): Promis
 
 	if (dataType === 'domain') {
 		steps.push(
-			await callApi(fetchFn, 'domain-validate-all', `/api/domain/validate-all?filename=${encodeURIComponent(filename)}`, 'GET')
+			await callApi(
+				fetchFn,
+				'domain-validate-all',
+				`/api/domain/validate-all?filename=${encodeURIComponent(filename)}`,
+				'GET'
+			)
 		);
 		if (mode === 'validate-sync') {
 			steps.push(
-				await callApi(fetchFn, 'vocabulary-sync-domain', '/api/vocabulary/sync-domain?apply=true', 'POST', {
-					domainFilename: filename,
-					apply: true
-				})
+				await callApi(
+					fetchFn,
+					'vocabulary-sync-domain',
+					'/api/vocabulary/sync-domain?apply=true',
+					'POST',
+					{
+						domainFilename: filename,
+						apply: true
+					}
+				)
 			);
 			steps.push(
 				await callApi(fetchFn, 'column-sync-term', '/api/column/sync-term?apply=true', 'POST', {
@@ -138,7 +169,12 @@ export async function runUploadPostProcess(params: RunPostProcessParams): Promis
 
 	if (dataType === 'term') {
 		steps.push(
-			await callApi(fetchFn, 'term-validate-all', `/api/term/validate-all?filename=${encodeURIComponent(filename)}`, 'GET')
+			await callApi(
+				fetchFn,
+				'term-validate-all',
+				`/api/term/validate-all?filename=${encodeURIComponent(filename)}`,
+				'GET'
+			)
 		);
 		if (mode === 'validate-sync') {
 			steps.push(

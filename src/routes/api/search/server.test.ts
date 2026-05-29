@@ -402,4 +402,3 @@ describe('Search API: /api/search', () => {
 		});
 	});
 });
-

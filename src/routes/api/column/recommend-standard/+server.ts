@@ -21,12 +21,8 @@ type ColumnEntry = import('$lib/types/database-design.js').ColumnEntry;
 
 export async function POST({ request }: RequestEvent) {
 	try {
-		const {
-			columnFilename,
-			termFilename,
-			domainFilename,
-			entry
-		}: RecommendStandardRequest = await request.json();
+		const { columnFilename, termFilename, domainFilename, entry }: RecommendStandardRequest =
+			await request.json();
 
 		const columnFile = columnFilename || 'column.json';
 		let relatedFiles = new Map<string, string>();

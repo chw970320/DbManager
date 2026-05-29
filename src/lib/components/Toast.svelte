@@ -21,7 +21,7 @@
 	<div class="fixed right-4 top-4 z-50 flex flex-col gap-2" role="status" aria-live="polite">
 		{#each $toastStore as toast (toast.id)}
 			<div
-				class="flex min-w-[320px] max-w-md items-start gap-3 rounded-lg border px-4 py-3 shadow-lg animate-slide-in-right {styleMap[
+				class="flex min-w-[320px] max-w-md animate-slide-in-right items-start gap-3 rounded-lg border px-4 py-3 shadow-lg {styleMap[
 					toast.type
 				]}"
 			>

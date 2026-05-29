@@ -421,6 +421,3 @@ export async function DELETE({ url }: RequestEvent) {
 		return json({ success: false, error: '서버 오류' }, { status: 500 });
 	}
 }
-
-
-

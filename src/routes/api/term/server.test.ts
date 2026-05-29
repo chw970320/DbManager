@@ -512,4 +512,3 @@ describe('Term API: /api/term', () => {
 		});
 	});
 });
-

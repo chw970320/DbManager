@@ -28,7 +28,9 @@
 			<header class="mb-4 flex items-start justify-between gap-4">
 				<div class="flex min-w-0 items-start gap-3">
 					{#if icon}
-						<div class="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-raised text-content-secondary">
+						<div
+							class="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-raised text-content-secondary"
+						>
 							{@render icon()}
 						</div>
 					{/if}
@@ -59,4 +61,3 @@
 		</div>
 	</div>
 </section>
-

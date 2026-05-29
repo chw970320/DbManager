@@ -277,5 +277,3 @@ describe('Attribute Upload API: /api/attribute/upload', () => {
 		});
 	});
 });
-
-

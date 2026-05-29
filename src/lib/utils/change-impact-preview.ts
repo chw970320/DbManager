@@ -180,15 +180,19 @@ export async function buildTermImpactPreview({
 	const currentColumnRefs = countReferences(currentReferences.references, 'column');
 	const nextColumnRefs = countReferences(nextReferences.references, 'column');
 	const proposedDomainExists = (domainData.entries as DomainEntry[]).some(
-		(entry) => normalizeOptional(entry.standardDomainName) === normalizeOptional(proposed.domainName)
+		(entry) =>
+			normalizeOptional(entry.standardDomainName) === normalizeOptional(proposed.domainName)
 	);
 
 	const termNameChanged =
-		current !== null && normalizeOptional(current.termName) !== normalizeOptional(proposed.termName);
+		current !== null &&
+		normalizeOptional(current.termName) !== normalizeOptional(proposed.termName);
 	const columnNameChanged =
-		current !== null && normalizeOptional(current.columnName) !== normalizeOptional(proposed.columnName);
+		current !== null &&
+		normalizeOptional(current.columnName) !== normalizeOptional(proposed.columnName);
 	const domainNameChanged =
-		current !== null && normalizeOptional(current.domainName) !== normalizeOptional(proposed.domainName);
+		current !== null &&
+		normalizeOptional(current.domainName) !== normalizeOptional(proposed.domainName);
 
 	const affectedColumnStandardizationCount =
 		current !== null && !columnNameChanged && (termNameChanged || domainNameChanged)
@@ -196,7 +200,11 @@ export async function buildTermImpactPreview({
 			: 0;
 	const columnLinksToBeBroken = current !== null && columnNameChanged ? currentColumnRefs.count : 0;
 	const newColumnLinksDetected =
-		current !== null && columnNameChanged ? nextColumnRefs.count : current === null ? nextColumnRefs.count : 0;
+		current !== null && columnNameChanged
+			? nextColumnRefs.count
+			: current === null
+				? nextColumnRefs.count
+				: 0;
 
 	const guidance: string[] = [];
 
@@ -226,7 +234,9 @@ export async function buildTermImpactPreview({
 			);
 		}
 		if (columnLinksToBeBroken === 0 && newColumnLinksDetected === 0) {
-			guidance.push('columnName 변경은 있지만 현재/새 기준 모두 연결되는 컬럼이 없어 즉시 파급은 작습니다.');
+			guidance.push(
+				'columnName 변경은 있지만 현재/새 기준 모두 연결되는 컬럼이 없어 즉시 파급은 작습니다.'
+			);
 		}
 	} else if (affectedColumnStandardizationCount > 0) {
 		const labels = [
@@ -307,7 +317,8 @@ export async function buildDomainImpactPreview({
 		current !== null &&
 		proposed !== null &&
 		(normalizeOptional(current.domainCategory) !== normalizeOptional(proposed.domainCategory) ||
-			normalizeOptional(current.standardDomainName) !== normalizeOptional(proposed.standardDomainName));
+			normalizeOptional(current.standardDomainName) !==
+				normalizeOptional(proposed.standardDomainName));
 	const syncSpecChanged =
 		current !== null &&
 		proposed !== null &&

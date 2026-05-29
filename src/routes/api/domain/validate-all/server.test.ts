@@ -27,7 +27,9 @@ describe('API: /api/domain/validate-all', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		vi.mocked(loadDomainDataTypeMappingData).mockResolvedValue({
-			entries: [{ id: 'map-1', dataType: 'VARCHAR', abbreviation: 'V', createdAt: '', updatedAt: '' }],
+			entries: [
+				{ id: 'map-1', dataType: 'VARCHAR', abbreviation: 'V', createdAt: '', updatedAt: '' }
+			],
 			lastUpdated: '2024-01-01T00:00:00.000Z',
 			totalCount: 1
 		});

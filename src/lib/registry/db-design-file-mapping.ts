@@ -1,4 +1,9 @@
-import { ALL_DATA_TYPES, DEFAULT_FILENAMES, type DataType, type DataTypeMap } from '$lib/types/base';
+import {
+	ALL_DATA_TYPES,
+	DEFAULT_FILENAMES,
+	type DataType,
+	type DataTypeMap
+} from '$lib/types/base';
 import { loadData } from '$lib/registry/data-registry';
 import {
 	addMapping,
@@ -118,7 +123,9 @@ function readRawMapping(data: DataTypeMap[DbDesignDefinitionType]): Record<strin
 	return isObject(mapping) ? mapping : {};
 }
 
-function createPriorityMap(currentType: DbDesignDefinitionType): Record<DbDesignDefinitionType, number> {
+function createPriorityMap(
+	currentType: DbDesignDefinitionType
+): Record<DbDesignDefinitionType, number> {
 	const priorities = {} as Record<DbDesignDefinitionType, number>;
 
 	for (const type of ALL_DATA_TYPES) {
@@ -136,7 +143,9 @@ function applyBundleValues(
 ): DbDesignDefinitionType[] {
 	const changedTypes: DbDesignDefinitionType[] = [];
 
-	for (const [type, filename] of Object.entries(mapping) as Array<[DbDesignDefinitionType, string]>) {
+	for (const [type, filename] of Object.entries(mapping) as Array<
+		[DbDesignDefinitionType, string]
+	>) {
 		if (!filename?.trim()) continue;
 		if (priority < priorities[type]) continue;
 
@@ -212,7 +221,12 @@ export async function resolveDbDesignFileMappingBundle(
 			const explicitMapping = extractDbDesignRelatedMapping(rawMapping);
 			const explicitPriority = type === currentType ? 90 : 80;
 
-			for (const relatedType of applyBundleValues(bundle, priorities, explicitMapping, explicitPriority)) {
+			for (const relatedType of applyBundleValues(
+				bundle,
+				priorities,
+				explicitMapping,
+				explicitPriority
+			)) {
 				if (relatedType !== type) {
 					queue.push(relatedType);
 				}
@@ -263,8 +277,7 @@ async function upsertMappingRelation(input: UpsertRelationInput): Promise<void> 
 		(relation) =>
 			(relation.sourceType === input.sourceType &&
 				relation.sourceFilename === input.sourceFilename) ||
-			(relation.targetType === input.sourceType &&
-				relation.targetFilename === input.sourceFilename)
+			(relation.targetType === input.sourceType && relation.targetFilename === input.sourceFilename)
 	);
 
 	if (matchedByCanonicalSource.length > 0) {

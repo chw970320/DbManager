@@ -34,11 +34,15 @@
 		>
 			<div class="flex items-start gap-3">
 				{#if $confirmStore.options.variant === 'danger'}
-					<div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-status-error-bg">
+					<div
+						class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-status-error-bg"
+					>
 						<Icon name="warning" size="md" class="text-status-error" />
 					</div>
 				{:else}
-					<div class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-status-info-bg">
+					<div
+						class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-status-info-bg"
+					>
 						<Icon name="info" size="md" class="text-status-info" />
 					</div>
 				{/if}

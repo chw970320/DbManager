@@ -76,7 +76,6 @@ import {
 } from '$lib/registry/cache-registry';
 import type { ApiResponse } from '$lib/types/vocabulary';
 
-
 /**
  * 사용 가능한 단어집 파일 목록 조회 API
  * GET /api/vocabulary/files
@@ -226,6 +225,3 @@ export async function DELETE({ request }: RequestEvent) {
 		);
 	}
 }
-
-
-

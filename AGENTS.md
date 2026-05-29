@@ -49,4 +49,6 @@ Start with code and the fewest documents that can answer the task.
 - When a coherent work unit is implemented, verified, and documented, create a separate scoped commit unless the user explicitly says not to commit.
 - Commit messages must keep the repository convention: start the first line with a Conventional Commit type prefix such as `feat:`, `fix:`, `docs:`, `test:`, `refactor:`, or `chore:`.
 - After the type prefix, write the subject in Korean and keep it concise; avoid replacing the required prefix with a plain descriptive sentence.
-- Follow the Lore protocol in the commit body: intent line first, then useful trailers such as `Constraint:`, `Rejected:`, `Confidence:`, `Scope-risk:`, `Directive:`, `Tested:`, and `Not-tested:`.
+- Prefer short bullet/fragment style over narrative paragraphs in commit bodies.
+- If a body is useful, use 1-3 terse bullet lines for intent/evidence before trailers; avoid long explanatory prose.
+- Follow the Lore protocol in the commit body: short intent/evidence bullets first, then useful trailers such as `Constraint:`, `Rejected:`, `Confidence:`, `Scope-risk:`, `Directive:`, `Tested:`, and `Not-tested:`.

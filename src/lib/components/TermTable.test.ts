@@ -1,9 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
+import { render, screen, fireEvent } from '@testing-library/svelte';
 import TermTable from './TermTable.svelte';
 import type { TermEntry } from '$lib/types/term';
 
-// 테스트용 Mock 데이터
 const createMockEntries = (): TermEntry[] => [
 	{
 		id: 'entry-1',
@@ -29,158 +28,133 @@ const createMockEntries = (): TermEntry[] => [
 	}
 ];
 
-describe('TermTable', () => {
-	const mockSort = vi.fn();
-	const mockPageChange = vi.fn();
-	const mockFilter = vi.fn();
+const renderTable = (props: Record<string, unknown> = {}) =>
+	render(TermTable, {
+		props: {
+			entries: createMockEntries(),
+			onsort: vi.fn(),
+			onpagechange: vi.fn(),
+			...props
+		}
+	});
 
+describe('TermTable', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
 
-	describe('Rendering', () => {
-		it('should render entries correctly', async () => {
-			const mockEntries = createMockEntries();
-			render(TermTable, {
-				props: {
-					entries: mockEntries,
-					onsort: mockSort,
-					onpagechange: mockPageChange
-				}
-			});
+	it('행, 검색 맥락, 매핑 상태를 렌더링한다', () => {
+		const { container } = renderTable({ searchQuery: '사용자', totalCount: 2 });
 
-			await waitFor(() => {
-				expect(screen.getByText('사용자_이름')).toBeInTheDocument();
-				expect(screen.getByText('관리자_이름')).toBeInTheDocument();
-			});
-		});
-
-		it('should display loading state', async () => {
-			render(TermTable, {
-				props: {
-					entries: [],
-					loading: true,
-					onsort: mockSort,
-					onpagechange: mockPageChange
-				}
-			});
-
-			// 로딩 상태 표시 확인 (실제 컴포넌트 구조에 따라 조정)
-		});
-
-		it('검색어와 미매핑 하이라이트는 HTML을 실행하지 않고 텍스트로 렌더링한다', () => {
-			const entries = [
-				{
-					...createMockEntries()[0],
-					termName: '<mark onmouseover=alert(1)>위험_용어',
-					isMappedTerm: false,
-					unmappedTermParts: ['용어']
-				}
-			];
-
-			const { container } = render(TermTable, {
-				props: {
-					entries,
-					searchQuery: '위험',
-					onsort: mockSort,
-					onpagechange: mockPageChange
-				}
-			});
-
-			expect(container).toHaveTextContent('<mark onmouseover=alert(1)>위험_용어');
-			expect(screen.getByText('위험', { selector: 'mark' })).toBeInTheDocument();
-			expect(screen.getByText('용어', { selector: 'mark' })).toBeInTheDocument();
-			expect(container.querySelector('[onmouseover]')).not.toBeInTheDocument();
-		});
+		expect(screen.getAllByText('사용자', { selector: 'mark' }).length).toBeGreaterThan(0);
+		expect(screen.getByText('관리자_이름')).toBeInTheDocument();
+		expect(container).toHaveTextContent('"사용자" 검색 결과');
+		expect(container).toHaveTextContent('USER_NAME');
+		expect(container).toHaveTextContent('ADMIN_NAME');
 	});
 
-	describe('Sorting', () => {
-		it('should trigger sort event when column header is clicked', async () => {
-			const mockEntries = createMockEntries();
-			render(TermTable, {
-				props: {
-					entries: mockEntries,
-					onsort: mockSort,
-					onpagechange: mockPageChange
-				}
-			});
-
-			// 컬럼 헤더 클릭 시 sort 이벤트 발생 확인 (실제 컴포넌트 구조에 따라 조정)
+	it('로딩 중에는 스켈레톤을 표시하고 정렬/페이지 이동을 막는다', async () => {
+		const onsort = vi.fn();
+		const onpagechange = vi.fn();
+		const { container } = renderTable({
+			entries: [],
+			loading: true,
+			currentPage: 1,
+			totalPages: 2,
+			pageSize: 3,
+			onsort,
+			onpagechange
 		});
+
+		expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+		await fireEvent.click(screen.getByRole('button', { name: '용어명로 정렬' }));
+		await fireEvent.click(screen.getByRole('button', { name: '다음' }));
+
+		expect(onsort).not.toHaveBeenCalled();
+		expect(onpagechange).not.toHaveBeenCalled();
+		expect(screen.getByRole('button', { name: '다음' })).toBeDisabled();
 	});
 
-	describe('Pagination', () => {
-		it('should trigger page change event', async () => {
-			const mockEntries = createMockEntries();
-			render(TermTable, {
-				props: {
-					entries: mockEntries,
-					currentPage: 1,
-					totalPages: 2,
-					onsort: mockSort,
-					onpagechange: mockPageChange
-				}
-			});
+	it('일반 빈 상태와 검색 빈 상태를 구분한다', () => {
+		const { unmount } = renderTable({ entries: [] });
+		expect(screen.getByText('표시할 데이터가 없습니다')).toBeInTheDocument();
 
-			// 페이지 변경 시 pagechange 이벤트 발생 확인 (실제 컴포넌트 구조에 따라 조정)
-		});
+		unmount();
+		const { container } = renderTable({ entries: [], searchQuery: '없는용어' });
+		expect(container).toHaveTextContent('"없는용어" 검색 결과');
+		expect(screen.getByText('검색 결과가 없습니다')).toBeInTheDocument();
 	});
 
-	describe('Mapping Status', () => {
-		it('should display mapping status icons for each row', async () => {
-			const mockEntries = createMockEntries();
-			render(TermTable, {
-				props: {
-					entries: mockEntries,
-					onsort: mockSort,
-					onpagechange: mockPageChange
-				}
-			});
+	it.each([
+		[undefined, 'asc'],
+		['asc', 'desc'],
+		['desc', null]
+	] as const)(
+		'정렬 클릭은 현재 방향 %s에서 %s로 순환한다',
+		async (currentDirection, nextDirection) => {
+			const onsort = vi.fn();
+			renderTable({ onsort, sortConfig: { termName: currentDirection ?? null } });
 
-			await waitFor(() => {
-				// 매핑 상태 아이콘이 표시되는지 확인
-				expect(screen.getByText('사용자_이름')).toBeInTheDocument();
-			});
+			await fireEvent.click(screen.getByRole('button', { name: '용어명로 정렬' }));
+
+			expect(onsort).toHaveBeenCalledWith({ column: 'termName', direction: nextDirection });
+		}
+	);
+
+	it('키보드 Enter로 정렬을 실행한다', async () => {
+		const onsort = vi.fn();
+		renderTable({ onsort });
+
+		await fireEvent.keyDown(screen.getByRole('button', { name: '용어명로 정렬' }), {
+			key: 'Enter'
 		});
 
-		it('should filter by mapping failure when filter is applied', async () => {
-			const mockEntries = createMockEntries();
-			render(TermTable, {
-				props: {
-					entries: mockEntries,
-					onsort: mockSort,
-					onpagechange: mockPageChange,
-					onfilter: mockFilter,
-					filterOptions: {
-						isMappedTerm: ['true', 'false'],
-						isMappedColumn: ['true', 'false'],
-						isMappedDomain: ['true', 'false']
-					}
-				}
-			});
-
-			// 매핑 실패 필터 적용 시 filter 이벤트 발생 확인 (실제 컴포넌트 구조에 따라 조정)
-		});
+		expect(onsort).toHaveBeenCalledWith({ column: 'termName', direction: 'asc' });
 	});
 
-	describe('Filtering', () => {
-		it('should trigger filter event when filter is applied', async () => {
-			const mockEntries = createMockEntries();
-			render(TermTable, {
-				props: {
-					entries: mockEntries,
-					onsort: mockSort,
-					onpagechange: mockPageChange,
-					onfilter: mockFilter,
-					filterOptions: {
-						termName: ['사용자_이름', '관리자_이름'],
-						columnName: ['USER_NAME', 'ADMIN_NAME'],
-						domainName: ['사용자분류_VARCHAR(50)']
-					}
-				}
-			});
-
-			// 필터 적용 시 filter 이벤트 발생 확인 (실제 컴포넌트 구조에 따라 조정)
+	it('컬럼 필터를 열고 선택값을 전달한다', async () => {
+		const onfilter = vi.fn();
+		renderTable({
+			onfilter,
+			filterOptions: { termName: ['사용자_이름', '관리자_이름'] },
+			activeFilters: { termName: '관리자_이름' }
 		});
+
+		await fireEvent.click(screen.getByRole('button', { name: '용어명 필터' }));
+
+		expect(screen.getByRole('dialog', { name: '용어명 필터' })).toBeInTheDocument();
+		expect(screen.getByRole('combobox')).toHaveValue('관리자_이름');
+
+		await fireEvent.change(screen.getByRole('combobox'), { target: { value: '사용자_이름' } });
+
+		expect(onfilter).toHaveBeenCalledWith({ column: 'termName', value: '사용자_이름' });
+	});
+
+	it('페이지 경계와 유효한 다음 페이지 이벤트를 보존한다', async () => {
+		const onpagechange = vi.fn();
+		renderTable({ currentPage: 1, totalPages: 2, pageSize: 1, onpagechange });
+
+		expect(screen.getByRole('button', { name: '이전' })).toBeDisabled();
+		await fireEvent.click(screen.getByRole('button', { name: '다음' }));
+
+		expect(onpagechange).toHaveBeenCalledWith({ page: 2 });
+	});
+
+	it('검색어와 미매핑 하이라이트는 HTML을 실행하지 않고 텍스트로 렌더링한다', () => {
+		const entries = [
+			{
+				...createMockEntries()[0],
+				termName: '<mark onmouseover=alert(1)>위험_용어',
+				isMappedTerm: false,
+				unmappedTermParts: ['용어']
+			}
+		];
+
+		const { container } = renderTable({ entries, searchQuery: '위험' });
+
+		expect(container).toHaveTextContent('<mark onmouseover=alert(1)>위험_용어');
+		expect(screen.getByText('위험', { selector: 'mark' })).toBeInTheDocument();
+		expect(screen.getByText('용어', { selector: 'mark' })).toBeInTheDocument();
+		expect(container.querySelector('[onmouseover]')).not.toBeInTheDocument();
 	});
 });

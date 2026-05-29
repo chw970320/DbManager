@@ -1,9 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/svelte';
+import { render, screen, fireEvent } from '@testing-library/svelte';
 import AttributeTable from './AttributeTable.svelte';
 import type { AttributeEntry } from '$lib/types/database-design';
 
-// 테스트용 Mock 데이터
 const createMockEntries = (): AttributeEntry[] => [
 	{
 		id: 'entry-1',
@@ -32,121 +31,139 @@ const createMockEntries = (): AttributeEntry[] => [
 	}
 ];
 
+const renderTable = (props: Record<string, unknown> = {}) =>
+	render(AttributeTable, {
+		props: {
+			entries: createMockEntries(),
+			onsort: vi.fn(),
+			onpagechange: vi.fn(),
+			...props
+		}
+	});
+
 describe('AttributeTable', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
 
-	describe('Rendering', () => {
-		it('should render entries correctly', async () => {
-			const mockEntries = createMockEntries();
-			render(AttributeTable, {
-				props: {
-					entries: mockEntries,
-					onsort: vi.fn(),
-					onpagechange: vi.fn()
-				}
-			});
+	it('행, 검색 맥락, 하이라이트를 렌더링한다', () => {
+		const { container } = renderTable({ searchQuery: '속성', totalCount: 2 });
 
-			// 테이블이 렌더링되는지 확인 (실제 컴포넌트 구조에 따라 조정)
-			await waitFor(
-				() => {
-					// 테이블 컨테이너가 존재하는지 확인
-					const table = screen.queryByRole('table');
-					if (table) {
-						expect(table).toBeInTheDocument();
-					}
-				},
-				{ timeout: 2000 }
-			).catch(() => {
-				// 테이블이 없어도 테스트 계속 진행
-			});
-		});
-
-		it('should display loading state', async () => {
-			render(AttributeTable, {
-				props: {
-					entries: [],
-					loading: true,
-					onsort: vi.fn(),
-					onpagechange: vi.fn()
-				}
-			});
-
-			// 로딩 상태 표시 확인 (실제 컴포넌트 구조에 따라 조정)
-		});
-
-		it('검색어 하이라이트는 HTML을 실행하지 않고 텍스트로 렌더링한다', () => {
-			const entries = [
-				{
-					...createMockEntries()[0],
-					attributeName: '<img src=x onerror=alert(1)>위험속성'
-				}
-			];
-
-			const { container } = render(AttributeTable, {
-				props: {
-					entries,
-					searchQuery: '위험속성',
-					onsort: vi.fn(),
-					onpagechange: vi.fn()
-				}
-			});
-
-			expect(container).toHaveTextContent('<img src=x onerror=alert(1)>위험속성');
-			expect(screen.getByText('위험속성', { selector: 'mark' })).toBeInTheDocument();
-			expect(container.querySelector('img')).not.toBeInTheDocument();
-		});
+		expect(screen.getAllByText('속성', { selector: 'mark' }).length).toBeGreaterThan(0);
+		expect(container).toHaveTextContent('속성1');
+		expect(container).toHaveTextContent('속성2');
+		expect(container).toHaveTextContent('"속성" 검색 결과');
 	});
 
-	describe('Sorting', () => {
-		it('should trigger sort event when column header is clicked', async () => {
-			const mockSort = vi.fn();
-			const mockEntries = createMockEntries();
-			render(AttributeTable, {
-				props: {
-					entries: mockEntries,
-					onsort: mockSort,
-					onpagechange: vi.fn()
-				}
-			});
-
-			// 컬럼 헤더 클릭 시 sort 이벤트 발생 확인 (실제 컴포넌트 구조에 따라 조정)
+	it('로딩 중에는 스켈레톤을 표시하고 정렬/페이지 이동을 막는다', async () => {
+		const onsort = vi.fn();
+		const onpagechange = vi.fn();
+		const { container } = renderTable({
+			entries: [],
+			loading: true,
+			currentPage: 1,
+			totalPages: 2,
+			pageSize: 3,
+			onsort,
+			onpagechange
 		});
+
+		expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+		await fireEvent.click(screen.getByRole('button', { name: '속성명로 정렬' }));
+		await fireEvent.click(screen.getByRole('button', { name: '다음' }));
+
+		expect(onsort).not.toHaveBeenCalled();
+		expect(onpagechange).not.toHaveBeenCalled();
+		expect(screen.getByRole('button', { name: '다음' })).toBeDisabled();
 	});
 
-	describe('Pagination', () => {
-		it('should trigger page change event', async () => {
-			const mockPageChange = vi.fn();
-			const mockEntries = createMockEntries();
-			render(AttributeTable, {
-				props: {
-					entries: mockEntries,
-					currentPage: 1,
-					totalPages: 2,
-					onsort: vi.fn(),
-					onpagechange: mockPageChange
-				}
-			});
+	it('일반 빈 상태와 검색 빈 상태를 구분한다', () => {
+		const { unmount } = renderTable({ entries: [] });
+		expect(screen.getByText('표시할 데이터가 없습니다')).toBeInTheDocument();
 
-			// 페이지 변경 시 pagechange 이벤트 발생 확인 (실제 컴포넌트 구조에 따라 조정)
-		});
+		unmount();
+		const { container } = renderTable({ entries: [], searchQuery: '없는속성' });
+		expect(container).toHaveTextContent('"없는속성" 검색 결과');
+		expect(screen.getByText('검색 결과가 없습니다')).toBeInTheDocument();
 	});
 
-	describe('Row Click', () => {
-		it('should trigger entryclick event when row is clicked', async () => {
-			const mockEntryClick = vi.fn();
-			const mockEntries = createMockEntries();
-			render(AttributeTable, {
-				props: {
-					entries: mockEntries,
-					onsort: vi.fn(),
-					onpagechange: vi.fn(),
-					onentryclick: mockEntryClick
-				}
-			});
+	it.each([
+		[undefined, 'asc'],
+		['asc', 'desc'],
+		['desc', null]
+	] as const)(
+		'정렬 클릭은 현재 방향 %s에서 %s로 순환한다',
+		async (currentDirection, nextDirection) => {
+			const onsort = vi.fn();
+			renderTable({ onsort, sortConfig: { attributeName: currentDirection ?? null } });
 
-			// 행 클릭 시 entryclick 이벤트 발생 확인 (실제 컴포넌트 구조에 따라 조정)
+			await fireEvent.click(screen.getByRole('button', { name: '속성명로 정렬' }));
+
+			expect(onsort).toHaveBeenCalledWith({ column: 'attributeName', direction: nextDirection });
+		}
+	);
+
+	it('키보드 Enter로 정렬을 실행한다', async () => {
+		const onsort = vi.fn();
+		renderTable({ onsort });
+
+		await fireEvent.keyDown(screen.getByRole('button', { name: '속성명로 정렬' }), {
+			key: 'Enter'
 		});
+
+		expect(onsort).toHaveBeenCalledWith({ column: 'attributeName', direction: 'asc' });
+	});
+
+	it('컬럼 필터를 열고 선택값을 전달한다', async () => {
+		const onfilter = vi.fn();
+		renderTable({
+			onfilter,
+			filterOptions: { schemaName: ['스키마1', '스키마2'] },
+			activeFilters: { schemaName: '스키마2' }
+		});
+
+		await fireEvent.click(screen.getByRole('button', { name: '스키마명 필터' }));
+
+		expect(screen.getByRole('dialog', { name: '스키마명 필터' })).toBeInTheDocument();
+		expect(screen.getByRole('combobox')).toHaveValue('스키마2');
+
+		await fireEvent.change(screen.getByRole('combobox'), { target: { value: '스키마1' } });
+
+		expect(onfilter).toHaveBeenCalledWith({ column: 'schemaName', value: '스키마1' });
+	});
+
+	it('페이지 경계와 유효한 다음 페이지 이벤트를 보존한다', async () => {
+		const onpagechange = vi.fn();
+		renderTable({ currentPage: 1, totalPages: 2, pageSize: 1, onpagechange });
+
+		expect(screen.getByRole('button', { name: '이전' })).toBeDisabled();
+		await fireEvent.click(screen.getByRole('button', { name: '다음' }));
+
+		expect(onpagechange).toHaveBeenCalledWith({ page: 2 });
+	});
+
+	it('행 클릭은 entryclick 계약을 유지한다', async () => {
+		const onentryclick = vi.fn();
+		renderTable({ onentryclick });
+
+		await fireEvent.click(screen.getByText('속성1').closest('tr') as HTMLTableRowElement);
+
+		expect(onentryclick).toHaveBeenCalled();
+		expect(onentryclick.mock.calls[0][0].entry.id).toBe('entry-1');
+	});
+
+	it('검색어 하이라이트는 HTML을 실행하지 않고 텍스트로 렌더링한다', () => {
+		const entries = [
+			{
+				...createMockEntries()[0],
+				attributeName: '<img src=x onerror=alert(1)>위험속성'
+			}
+		];
+
+		const { container } = renderTable({ entries, searchQuery: '위험속성' });
+
+		expect(container).toHaveTextContent('<img src=x onerror=alert(1)>위험속성');
+		expect(screen.getByText('위험속성', { selector: 'mark' })).toBeInTheDocument();
+		expect(container.querySelector('img')).not.toBeInTheDocument();
 	});
 });

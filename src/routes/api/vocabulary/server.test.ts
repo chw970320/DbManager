@@ -42,6 +42,7 @@ import {
 } from '$lib/registry/data-registry';
 import { checkEntryReferences } from '$lib/registry/mapping-registry';
 import { invalidateAllGeneratorCaches } from '$lib/registry/generator-cache';
+import { getDuplicateDetails } from '$lib/utils/duplicate-handler.js';
 
 // 테스트용 Mock 데이터
 const createMockVocabularyData = (): VocabularyData => ({
@@ -127,10 +128,46 @@ describe('Vocabulary API: /api/vocabulary', () => {
 			const result = await response.json();
 
 			expect(response.status).toBe(200);
-			expect(result.success).toBe(true);
-			expect(result.data.entries).toHaveLength(2);
-			expect(result.data.pagination).toBeDefined();
-			expect(result.data.pagination.totalCount).toBe(2);
+			expect(result).toEqual({
+				success: true,
+				data: {
+					entries: [
+						expect.objectContaining({
+							id: 'entry-2',
+							duplicateInfo: {
+								standardName: false,
+								abbreviation: false,
+								englishName: false
+							}
+						}),
+						expect.objectContaining({
+							id: 'entry-1',
+							duplicateInfo: {
+								standardName: false,
+								abbreviation: false,
+								englishName: false
+							}
+						})
+					],
+					pagination: {
+						currentPage: 1,
+						totalPages: 1,
+						totalCount: 2,
+						limit: 100,
+						hasNextPage: false,
+						hasPrevPage: false
+					},
+					sorting: {
+						sortConfigs: [{ column: 'updatedAt', direction: 'desc' }]
+					},
+					filtering: {
+						filter: 'none',
+						isFiltered: false
+					},
+					lastUpdated: '2024-01-02T00:00:00.000Z'
+				},
+				message: 'Vocabulary data retrieved successfully'
+			});
 		});
 
 		it('should return paginated data correctly', async () => {
@@ -144,9 +181,14 @@ describe('Vocabulary API: /api/vocabulary', () => {
 			expect(response.status).toBe(200);
 			expect(result.success).toBe(true);
 			expect(result.data.entries).toHaveLength(1);
-			expect(result.data.pagination.currentPage).toBe(1);
-			expect(result.data.pagination.totalPages).toBe(2);
-			expect(result.data.pagination.hasNextPage).toBe(true);
+			expect(result.data.pagination).toEqual({
+				currentPage: 1,
+				totalPages: 2,
+				totalCount: 2,
+				limit: 1,
+				hasNextPage: true,
+				hasPrevPage: false
+			});
 		});
 
 		it('should return 400 for invalid pagination parameters', async () => {
@@ -158,8 +200,11 @@ describe('Vocabulary API: /api/vocabulary', () => {
 			const result = await response.json();
 
 			expect(response.status).toBe(400);
-			expect(result.success).toBe(false);
-			expect(result.error).toContain('잘못된 페이지네이션');
+			expect(result).toEqual({
+				success: false,
+				error: '잘못된 페이지네이션 파라미터입니다. (page >= 1, 1 <= limit <= 1000)',
+				message: 'Invalid pagination parameters'
+			});
 		});
 
 		it('should return 400 for invalid sort field', async () => {
@@ -171,8 +216,12 @@ describe('Vocabulary API: /api/vocabulary', () => {
 			const result = await response.json();
 
 			expect(response.status).toBe(400);
-			expect(result.success).toBe(false);
-			expect(result.error).toContain('지원하지 않는 정렬 필드');
+			expect(result).toEqual({
+				success: false,
+				error:
+					'지원하지 않는 정렬 필드입니다. 사용 가능: standardName, abbreviation, englishName, createdAt, updatedAt',
+				message: 'Invalid sort field'
+			});
 		});
 
 		it('should handle data loading error gracefully', async () => {
@@ -184,7 +233,96 @@ describe('Vocabulary API: /api/vocabulary', () => {
 			const result = await response.json();
 
 			expect(response.status).toBe(500);
-			expect(result.success).toBe(false);
+			expect(result).toEqual({
+				success: false,
+				error: '파일을 찾을 수 없습니다',
+				message: 'Data loading failed'
+			});
+		});
+
+		it('should filter duplicate details by requested duplicate field', async () => {
+			vi.mocked(getDuplicateDetails).mockReturnValue(
+				new Map([
+					[
+						'entry-1',
+						{
+							standardName: false,
+							abbreviation: true,
+							englishName: false
+						}
+					],
+					[
+						'entry-2',
+						{
+							standardName: true,
+							abbreviation: false,
+							englishName: false
+						}
+					]
+				])
+			);
+
+			const event = createMockRequestEvent({
+				searchParams: { filter: 'duplicates:abbreviation' }
+			});
+
+			const response = await GET(event);
+			const result = await response.json();
+
+			expect(response.status).toBe(200);
+			expect(result.data.entries).toHaveLength(1);
+			expect(result.data.entries[0]).toEqual(
+				expect.objectContaining({
+					id: 'entry-1',
+					duplicateInfo: {
+						standardName: false,
+						abbreviation: true,
+						englishName: false
+					}
+				})
+			);
+			expect(result.data.filtering).toEqual({
+				filter: 'duplicates:abbreviation',
+				isFiltered: false
+			});
+		});
+
+		it('should keep unmappedDomain filtering limited to formal words', async () => {
+			const data = createMockVocabularyData();
+			data.entries = [
+				{
+					...data.entries[0],
+					isFormalWord: true,
+					domainGroup: undefined,
+					isDomainCategoryMapped: false
+				},
+				{
+					...data.entries[1],
+					isFormalWord: false,
+					domainGroup: undefined,
+					isDomainCategoryMapped: false
+				}
+			];
+			vi.mocked(loadVocabularyData).mockResolvedValue(data);
+
+			const event = createMockRequestEvent({
+				searchParams: { unmappedDomain: 'true' }
+			});
+
+			const response = await GET(event);
+			const result = await response.json();
+
+			expect(response.status).toBe(200);
+			expect(result.data.entries).toHaveLength(1);
+			expect(result.data.entries[0].id).toBe('entry-1');
+			expect(result.data.pagination).toEqual({
+				currentPage: 1,
+				totalPages: 1,
+				totalCount: 1,
+				limit: 100,
+				hasNextPage: false,
+				hasPrevPage: false
+			});
 		});
 
 		it('should use specified filename parameter', async () => {

@@ -81,6 +81,16 @@ import { applyCascadePlan } from '$lib/utils/cascade-update-transaction.js';
 import { safeMerge } from '$lib/utils/type-guards.js';
 
 import { generateStandardDomainName, validateDomainNameUniqueness } from '$lib/utils/validation.js';
+import {
+	extractReferenceWarnings,
+	findInvalidField,
+	getMissingRequiredFields,
+	isInvalidPagination,
+	paginateEntries,
+	parseColumnFilters,
+	parsePaginationParams,
+	parseSortConfigs
+} from '$lib/server/standardization-crud';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -90,51 +100,17 @@ import { v4 as uuidv4 } from 'uuid';
 export async function GET({ url }: RequestEvent) {
 	try {
 		// 쿼리 파라미터 추출
-		const page = parseInt(url.searchParams.get('page') || '1');
-		const limit = parseInt(url.searchParams.get('limit') || '20');
+		const { page, limit } = parsePaginationParams(url.searchParams, 20);
 		const searchQuery = url.searchParams.get('q') || url.searchParams.get('query') || '';
 		const searchField = url.searchParams.get('field') || 'all';
 		const searchExact = url.searchParams.get('exact') === 'true';
 		const filename = url.searchParams.get('filename') || 'domain.json';
 
-		// 다중 정렬 파라미터 처리 (sortBy[]와 sortOrder[] 배열)
-		const sortByArray = url.searchParams.getAll('sortBy[]');
-		const sortOrderArray = url.searchParams.getAll('sortOrder[]');
-
-		// 하위 호환성: 단일 정렬 파라미터도 지원
-		const singleSortBy = url.searchParams.get('sortBy');
-		const singleSortOrder = url.searchParams.get('sortOrder');
-
-		// 정렬 설정 구성
-		type SortConfig = { column: string; direction: 'asc' | 'desc' };
-		const sortConfigs: SortConfig[] = [];
-
-		if (sortByArray.length > 0 && sortOrderArray.length > 0) {
-			// 다중 정렬
-			for (let i = 0; i < Math.min(sortByArray.length, sortOrderArray.length); i++) {
-				const direction = sortOrderArray[i];
-				if (direction === 'asc' || direction === 'desc') {
-					sortConfigs.push({ column: sortByArray[i], direction });
-				}
-			}
-		} else if (singleSortBy && singleSortOrder) {
-			// 단일 정렬 (하위 호환성)
-			if (singleSortOrder === 'asc' || singleSortOrder === 'desc') {
-				sortConfigs.push({ column: singleSortBy, direction: singleSortOrder });
-			}
-		}
-
-		// 컬럼 필터 파라미터 추출 (filters[columnKey]=value 형식)
-		const columnFilters: Record<string, string> = {};
-		url.searchParams.forEach((value, key) => {
-			const match = key.match(/^filters\[(.+)\]$/);
-			if (match && value) {
-				columnFilters[match[1]] = value;
-			}
-		});
+		const sortConfigs = parseSortConfigs(url.searchParams);
+		const columnFilters = parseColumnFilters(url.searchParams);
 
 		// 페이지네이션 유효성 검증
-		if (page < 1 || limit < 1 || limit > 100) {
+		if (isInvalidPagination({ page, limit }, { maxLimit: 100 })) {
 			return json(
 				{
 					success: false,
@@ -154,17 +130,19 @@ export async function GET({ url }: RequestEvent) {
 			'createdAt',
 			'updatedAt'
 		];
-		for (const config of sortConfigs) {
-			if (!validSortFields.includes(config.column)) {
-				return json(
-					{
-						success: false,
-						error: `지원하지 않는 정렬 필드입니다. 사용 가능: ${validSortFields.join(', ')}`,
-						message: 'Invalid sort field'
-					} as ApiResponse,
-					{ status: 400 }
-				);
-			}
+		const invalidSortField = findInvalidField(
+			sortConfigs.map((config) => config.column),
+			validSortFields
+		);
+		if (invalidSortField) {
+			return json(
+				{
+					success: false,
+					error: `지원하지 않는 정렬 필드입니다. 사용 가능: ${validSortFields.join(', ')}`,
+					message: 'Invalid sort field'
+				} as ApiResponse,
+				{ status: 400 }
+			);
 		}
 
 		// 검색 필드 유효성 검증
@@ -175,7 +153,7 @@ export async function GET({ url }: RequestEvent) {
 			'standardDomainName',
 			'physicalDataType'
 		];
-		if (!validSearchFields.includes(searchField)) {
+		if (findInvalidField([searchField], validSearchFields)) {
 			return json(
 				{
 					success: false,
@@ -298,25 +276,17 @@ export async function GET({ url }: RequestEvent) {
 			return 0;
 		});
 
-		// 페이지네이션
-		const startIndex = (page - 1) * limit;
-		const endIndex = startIndex + limit;
-		const paginatedEntries = filteredEntries.slice(startIndex, endIndex);
-
-		// 페이지네이션 메타 정보
-		const totalPages = Math.ceil(filteredEntries.length / limit);
-		const hasNextPage = page < totalPages;
-		const hasPrevPage = page > 1;
+		const pagination = paginateEntries(filteredEntries, { page, limit });
 
 		const responseData = {
-			entries: paginatedEntries,
+			entries: pagination.entries,
 			pagination: {
 				currentPage: page,
-				totalPages,
-				totalCount: filteredEntries.length,
+				totalPages: pagination.totalPages,
+				totalCount: pagination.totalCount,
 				limit,
-				hasNextPage,
-				hasPrevPage
+				hasNextPage: pagination.hasNextPage,
+				hasPrevPage: pagination.hasPrevPage
 			},
 			sorting: {
 				sortConfigs:
@@ -458,8 +428,11 @@ export async function POST({ request, url }: RequestEvent) {
 		const entryData = body;
 
 		// 필수 필드 검증 (standardDomainName은 자동 생성되므로 제외)
-		const requiredFields = ['domainGroup', 'domainCategory', 'physicalDataType'];
-		const missingFields = requiredFields.filter((field) => !entryData[field]);
+		const missingFields = getMissingRequiredFields(entryData, [
+			'domainGroup',
+			'domainCategory',
+			'physicalDataType'
+		]);
 
 		if (missingFields.length > 0) {
 			return json(
@@ -753,14 +726,11 @@ export async function DELETE({ url }: RequestEvent) {
 			);
 		}
 
-		// 참조 검증: 차단하지 않고 경고 정보만 수집
 		let warnings: unknown[] = [];
 		if (!force) {
 			try {
 				const refCheck = await checkEntryReferences('domain', entryToDelete, filename);
-				if (!refCheck.canDelete && refCheck.references?.length) {
-					warnings = refCheck.references;
-				}
+				warnings = extractReferenceWarnings(refCheck);
 			} catch (refError) {
 				console.warn('참조 검증 경고 수집 중 오류:', refError);
 			}

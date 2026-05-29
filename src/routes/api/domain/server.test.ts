@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GET, POST, PUT, DELETE } from './+server';
+import { GET, OPTIONS, POST, PUT, DELETE } from './+server';
 import type { RequestEvent } from '@sveltejs/kit';
 import type { DomainData, DomainEntry } from '$lib/types/domain';
 import type { VocabularyData } from '$lib/types/vocabulary';
@@ -209,10 +209,33 @@ describe('Domain API: /api/domain', () => {
 			const result = await response.json();
 
 			expect(response.status).toBe(200);
-			expect(result.success).toBe(true);
-			expect(result.data.entries).toHaveLength(2);
-			expect(result.data.pagination).toBeDefined();
-			expect(result.data.pagination.totalCount).toBe(2);
+			expect(result).toEqual({
+				success: true,
+				data: {
+					entries: [
+						expect.objectContaining({ id: 'entry-2' }),
+						expect.objectContaining({ id: 'entry-1' })
+					],
+					pagination: {
+						currentPage: 1,
+						totalPages: 1,
+						totalCount: 2,
+						limit: 20,
+						hasNextPage: false,
+						hasPrevPage: false
+					},
+					sorting: {
+						sortConfigs: [{ column: 'updatedAt', direction: 'desc' }]
+					},
+					search: {
+						query: '',
+						field: 'all',
+						isFiltered: false
+					},
+					lastUpdated: '2024-01-02T00:00:00.000Z'
+				},
+				message: 'Domain data retrieved successfully'
+			});
 		});
 
 		it('should return paginated data correctly', async () => {
@@ -226,9 +249,14 @@ describe('Domain API: /api/domain', () => {
 			expect(response.status).toBe(200);
 			expect(result.success).toBe(true);
 			expect(result.data.entries).toHaveLength(1);
-			expect(result.data.pagination.currentPage).toBe(1);
-			expect(result.data.pagination.totalPages).toBe(2);
-			expect(result.data.pagination.hasNextPage).toBe(true);
+			expect(result.data.pagination).toEqual({
+				currentPage: 1,
+				totalPages: 2,
+				totalCount: 2,
+				limit: 1,
+				hasNextPage: true,
+				hasPrevPage: false
+			});
 		});
 
 		it('should return 400 for invalid pagination parameters', async () => {
@@ -240,8 +268,11 @@ describe('Domain API: /api/domain', () => {
 			const result = await response.json();
 
 			expect(response.status).toBe(400);
-			expect(result.success).toBe(false);
-			expect(result.error).toContain('잘못된 페이지네이션');
+			expect(result).toEqual({
+				success: false,
+				error: '잘못된 페이지네이션 파라미터입니다. (page >= 1, 1 <= limit <= 100)',
+				message: 'Invalid pagination parameters'
+			});
 		});
 
 		it('should return 400 for invalid sort field', async () => {
@@ -253,8 +284,29 @@ describe('Domain API: /api/domain', () => {
 			const result = await response.json();
 
 			expect(response.status).toBe(400);
-			expect(result.success).toBe(false);
-			expect(result.error).toContain('지원하지 않는 정렬 필드');
+			expect(result).toEqual({
+				success: false,
+				error:
+					'지원하지 않는 정렬 필드입니다. 사용 가능: domainGroup, domainCategory, standardDomainName, physicalDataType, createdAt, updatedAt',
+				message: 'Invalid sort field'
+			});
+		});
+
+		it('should return 400 for invalid search field', async () => {
+			const event = createMockRequestEvent({
+				searchParams: { field: 'invalidField' }
+			});
+
+			const response = await GET(event);
+			const result = await response.json();
+
+			expect(response.status).toBe(400);
+			expect(result).toEqual({
+				success: false,
+				error:
+					'지원하지 않는 검색 필드입니다. 사용 가능: all, domainGroup, domainCategory, standardDomainName, physicalDataType',
+				message: 'Invalid search field'
+			});
 		});
 
 		it('should handle data loading error gracefully', async () => {
@@ -266,7 +318,11 @@ describe('Domain API: /api/domain', () => {
 			const result = await response.json();
 
 			expect(response.status).toBe(500);
-			expect(result.success).toBe(false);
+			expect(result).toEqual({
+				success: false,
+				error: '파일을 찾을 수 없습니다',
+				message: 'Data loading failed'
+			});
 		});
 
 		it('should use specified filename parameter', async () => {
@@ -285,6 +341,36 @@ describe('Domain API: /api/domain', () => {
 			await GET(event);
 
 			expect(loadDomainData).toHaveBeenCalledWith('domain.json');
+		});
+	});
+
+	describe('OPTIONS', () => {
+		it('should return domain statistics without touching CRUD response shape', async () => {
+			const event = createMockRequestEvent({});
+
+			const response = await OPTIONS(event);
+			const result = await response.json();
+
+			expect(response.status).toBe(200);
+			expect(result).toEqual({
+				success: true,
+				data: {
+					totalEntries: 2,
+					lastUpdated: '2024-01-02T00:00:00.000Z',
+					domainGroups: {
+						공통표준도메인그룹: 2
+					},
+					physicalDataTypes: {
+						VARCHAR: 1,
+						INT: 1
+					},
+					summary: {
+						uniqueGroups: 1,
+						uniquePhysicalDataTypes: 2
+					}
+				},
+				message: 'Domain statistics retrieved successfully'
+			});
 		});
 	});
 

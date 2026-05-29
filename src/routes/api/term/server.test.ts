@@ -204,10 +204,33 @@ describe('Term API: /api/term', () => {
 			const result = await response.json();
 
 			expect(response.status).toBe(200);
-			expect(result.success).toBe(true);
-			expect(result.data.entries).toHaveLength(2);
-			expect(result.data.pagination).toBeDefined();
-			expect(result.data.pagination.totalCount).toBe(2);
+			expect(result).toEqual({
+				success: true,
+				data: {
+					entries: [
+						expect.objectContaining({
+							id: 'entry-2',
+							isMappedTerm: false,
+							isMappedColumn: false,
+							isMappedDomain: true
+						}),
+						expect.objectContaining({
+							id: 'entry-1',
+							isMappedTerm: true,
+							isMappedColumn: true,
+							isMappedDomain: true
+						})
+					],
+					pagination: {
+						totalCount: 2,
+						totalPages: 1,
+						currentPage: 1,
+						pageSize: 20
+					},
+					lastUpdated: '2024-01-02T00:00:00.000Z'
+				},
+				message: 'Term data retrieved successfully'
+			});
 		});
 
 		it('should return paginated data correctly', async () => {
@@ -221,11 +244,15 @@ describe('Term API: /api/term', () => {
 			expect(response.status).toBe(200);
 			expect(result.success).toBe(true);
 			expect(result.data.entries).toHaveLength(1);
-			expect(result.data.pagination.currentPage).toBe(1);
-			expect(result.data.pagination.totalPages).toBe(2);
-			if (result.data.pagination.hasNextPage !== undefined) {
-				expect(result.data.pagination.hasNextPage).toBe(true);
-			}
+			expect(result.data.pagination).toEqual({
+				totalCount: 2,
+				totalPages: 2,
+				currentPage: 1,
+				pageSize: 1
+			});
+			expect(result.data.pagination).not.toHaveProperty('limit');
+			expect(result.data.pagination).not.toHaveProperty('hasNextPage');
+			expect(result.data.pagination).not.toHaveProperty('hasPrevPage');
 		});
 
 		it('should return 400 for invalid pagination parameters', async () => {
@@ -237,8 +264,11 @@ describe('Term API: /api/term', () => {
 			const result = await response.json();
 
 			expect(response.status).toBe(400);
-			expect(result.success).toBe(false);
-			expect(result.error).toContain('잘못된 페이지네이션');
+			expect(result).toEqual({
+				success: false,
+				error: '잘못된 페이지네이션 파라미터입니다. (page >= 1, 1 <= limit <= 100)',
+				message: 'Invalid pagination parameters'
+			});
 		});
 
 		it('should return 400 for invalid sort field', async () => {
@@ -250,8 +280,28 @@ describe('Term API: /api/term', () => {
 			const result = await response.json();
 
 			expect(response.status).toBe(400);
-			expect(result.success).toBe(false);
-			expect(result.error).toContain('지원하지 않는 정렬 필드');
+			expect(result).toEqual({
+				success: false,
+				error:
+					'지원하지 않는 정렬 필드입니다. 사용 가능: termName, columnName, domainName, createdAt, updatedAt',
+				message: 'Invalid sort field'
+			});
+		});
+
+		it('should return 400 for invalid search field', async () => {
+			const event = createMockRequestEvent({
+				searchParams: { field: 'invalidField' }
+			});
+
+			const response = await GET(event);
+			const result = await response.json();
+
+			expect(response.status).toBe(400);
+			expect(result).toEqual({
+				success: false,
+				error: '지원하지 않는 검색 필드입니다. 사용 가능: all, termName, columnName, domainName',
+				message: 'Invalid search field'
+			});
 		});
 
 		it('should handle data loading error gracefully', async () => {
@@ -263,7 +313,11 @@ describe('Term API: /api/term', () => {
 			const result = await response.json();
 
 			expect(response.status).toBe(500);
-			expect(result.success).toBe(false);
+			expect(result).toEqual({
+				success: false,
+				error: '파일을 찾을 수 없습니다',
+				message: 'Data loading failed'
+			});
 		});
 
 		it('should use specified filename parameter', async () => {
@@ -468,7 +522,53 @@ describe('Term API: /api/term', () => {
 			expect(response.status).toBe(200);
 			expect(result.success).toBe(true);
 			expect(result.message).toBe('Term deleted successfully');
+			expect(result.warnings).toEqual([]);
 			expect(saveTermData).toHaveBeenCalled();
+		});
+
+		it('should include warnings when references exist and force is false', async () => {
+			vi.mocked(checkEntryReferences).mockResolvedValue({
+				canDelete: false,
+				references: [{ type: 'column', filename: 'column.json', count: 1, entries: [] }]
+			} as never);
+
+			const event = createMockRequestEvent({
+				method: 'DELETE',
+				body: { id: 'entry-1', filename: 'term.json' }
+			});
+
+			const response = await DELETE(event);
+			const result = await response.json();
+
+			expect(response.status).toBe(200);
+			expect(result).toEqual({
+				success: true,
+				message: 'Term deleted successfully',
+				warnings: [{ type: 'column', filename: 'column.json', count: 1, entries: [] }]
+			});
+			expect(checkEntryReferences).toHaveBeenCalledWith(
+				'term',
+				expect.objectContaining({ id: 'entry-1' }),
+				'term.json'
+			);
+		});
+
+		it('should skip reference check when force=true', async () => {
+			const event = createMockRequestEvent({
+				method: 'DELETE',
+				body: { id: 'entry-1', filename: 'term.json', force: true }
+			});
+
+			const response = await DELETE(event);
+			const result = await response.json();
+
+			expect(response.status).toBe(200);
+			expect(result).toEqual({
+				success: true,
+				message: 'Term deleted successfully',
+				warnings: []
+			});
+			expect(checkEntryReferences).not.toHaveBeenCalled();
 		});
 
 		it('should return 400 when id is missing', async () => {

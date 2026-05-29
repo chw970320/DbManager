@@ -83,6 +83,16 @@ import { getDuplicateDetails } from '$lib/utils/duplicate-handler.js';
 import { normalizeKey } from '$lib/utils/mapping-key.js';
 import { safeMerge } from '$lib/utils/type-guards.js';
 import { validateForbiddenWordsAndSynonyms } from '$lib/utils/validation.js';
+import {
+	extractReferenceWarnings,
+	findInvalidField,
+	getMissingRequiredFields,
+	isInvalidPagination,
+	paginateEntries,
+	parseColumnFilters,
+	parsePaginationParams,
+	parseSortConfigs
+} from '$lib/server/standardization-crud';
 import { v4 as uuidv4 } from 'uuid';
 
 /**
@@ -92,50 +102,16 @@ import { v4 as uuidv4 } from 'uuid';
 export async function GET({ url }: RequestEvent) {
 	try {
 		// 쿼리 파라미터 추출
-		const page = parseInt(url.searchParams.get('page') || '1');
-		const limit = parseInt(url.searchParams.get('limit') || '100');
+		const { page, limit } = parsePaginationParams(url.searchParams, 100);
 		const filter = url.searchParams.get('filter'); // 중복 필터링 파라미터 추가
 		const unmappedDomain = url.searchParams.get('unmappedDomain') === 'true';
 		const filename = url.searchParams.get('filename') || undefined; // 파일명 파라미터 추가
 
-		// 다중 정렬 파라미터 처리 (sortBy[]와 sortOrder[] 배열)
-		const sortByArray = url.searchParams.getAll('sortBy[]');
-		const sortOrderArray = url.searchParams.getAll('sortOrder[]');
-
-		// 하위 호환성: 단일 정렬 파라미터도 지원
-		const singleSortBy = url.searchParams.get('sortBy');
-		const singleSortOrder = url.searchParams.get('sortOrder');
-
-		// 정렬 설정 구성
-		type SortConfig = { column: string; direction: 'asc' | 'desc' };
-		const sortConfigs: SortConfig[] = [];
-
-		if (sortByArray.length > 0 && sortOrderArray.length > 0) {
-			// 다중 정렬
-			for (let i = 0; i < Math.min(sortByArray.length, sortOrderArray.length); i++) {
-				const direction = sortOrderArray[i];
-				if (direction === 'asc' || direction === 'desc') {
-					sortConfigs.push({ column: sortByArray[i], direction });
-				}
-			}
-		} else if (singleSortBy && singleSortOrder) {
-			// 단일 정렬 (하위 호환성)
-			if (singleSortOrder === 'asc' || singleSortOrder === 'desc') {
-				sortConfigs.push({ column: singleSortBy, direction: singleSortOrder });
-			}
-		}
-
-		// 컬럼 필터 파라미터 추출 (filters[columnKey]=value 형식)
-		const columnFilters: Record<string, string> = {};
-		url.searchParams.forEach((value, key) => {
-			const match = key.match(/^filters\[(.+)\]$/);
-			if (match && value) {
-				columnFilters[match[1]] = value;
-			}
-		});
+		const sortConfigs = parseSortConfigs(url.searchParams);
+		const columnFilters = parseColumnFilters(url.searchParams);
 
 		// 페이지네이션 유효성 검증
-		if (page < 1 || limit < 1 || limit > 1000) {
+		if (isInvalidPagination({ page, limit }, { maxLimit: 1000 })) {
 			return json(
 				{
 					success: false,
@@ -154,17 +130,19 @@ export async function GET({ url }: RequestEvent) {
 			'createdAt',
 			'updatedAt'
 		];
-		for (const config of sortConfigs) {
-			if (!validSortFields.includes(config.column)) {
-				return json(
-					{
-						success: false,
-						error: `지원하지 않는 정렬 필드입니다. 사용 가능: ${validSortFields.join(', ')}`,
-						message: 'Invalid sort field'
-					} as ApiResponse,
-					{ status: 400 }
-				);
-			}
+		const invalidSortField = findInvalidField(
+			sortConfigs.map((config) => config.column),
+			validSortFields
+		);
+		if (invalidSortField) {
+			return json(
+				{
+					success: false,
+					error: `지원하지 않는 정렬 필드입니다. 사용 가능: ${validSortFields.join(', ')}`,
+					message: 'Invalid sort field'
+				} as ApiResponse,
+				{ status: 400 }
+			);
 		}
 
 		// 데이터 로드
@@ -300,27 +278,18 @@ export async function GET({ url }: RequestEvent) {
 			return 0;
 		});
 
-		// 페이지네이션 적용
-		const startIndex = (page - 1) * limit;
-		const endIndex = startIndex + limit;
-		const paginatedEntries = sortedEntries.slice(startIndex, endIndex);
-
-		// 페이지네이션 메타 정보 (필터링된 결과 기준으로 계산)
-		const filteredCount = filteredEntries.length;
-		const totalPages = Math.ceil(filteredCount / limit);
-		const hasNextPage = page < totalPages;
-		const hasPrevPage = page > 1;
+		const pagination = paginateEntries(sortedEntries, { page, limit });
 
 		// 성공 응답
 		const responseData = {
-			entries: paginatedEntries,
+			entries: pagination.entries,
 			pagination: {
 				currentPage: page,
-				totalPages,
-				totalCount: filteredCount, // 필터링된 결과의 총 개수
+				totalPages: pagination.totalPages,
+				totalCount: pagination.totalCount, // 필터링된 결과의 총 개수
 				limit,
-				hasNextPage,
-				hasPrevPage
+				hasNextPage: pagination.hasNextPage,
+				hasPrevPage: pagination.hasPrevPage
 			},
 			sorting: {
 				sortConfigs:
@@ -370,8 +339,12 @@ export async function POST({ request, url }: RequestEvent) {
 		const newEntry: Partial<VocabularyEntry> = requestBody;
 		const filename = url.searchParams.get('filename') || 'vocabulary.json';
 
-		// 필수 필드 검증
-		if (!newEntry.standardName || !newEntry.abbreviation || !newEntry.englishName) {
+		const missingFields = getMissingRequiredFields(newEntry as Record<string, unknown>, [
+			'standardName',
+			'abbreviation',
+			'englishName'
+		]);
+		if (missingFields.length > 0) {
 			return json(
 				{
 					success: false,
@@ -399,7 +372,7 @@ export async function POST({ request, url }: RequestEvent) {
 
 			// 금칙어 및 이음동의어 validation
 			const validationError = validateForbiddenWordsAndSynonyms(
-				newEntry.standardName,
+				newEntry.standardName!,
 				allVocabularyEntries
 			);
 			if (validationError) {
@@ -433,9 +406,9 @@ export async function POST({ request, url }: RequestEvent) {
 
 		const entryToSave: VocabularyEntry = {
 			id: uuidv4(),
-			standardName: newEntry.standardName,
-			abbreviation: newEntry.abbreviation,
-			englishName: newEntry.englishName,
+			standardName: newEntry.standardName!,
+			abbreviation: newEntry.abbreviation!,
+			englishName: newEntry.englishName!,
 			description: newEntry.description || '',
 			domainCategory: newEntry.domainCategory || undefined,
 			domainGroup: newEntry.domainGroup || undefined,
@@ -550,7 +523,11 @@ export async function PUT({ request, url }: RequestEvent) {
 
 		// 표준단어명이 변경되는 경우 금칙어 및 이음동의어 validation
 		const existingEntry = vocabularyData.entries[entryIndex];
-		if (!updatedEntry.standardName || !updatedEntry.abbreviation || !updatedEntry.englishName) {
+		const missingFields = getMissingRequiredFields(
+			updatedEntry as unknown as Record<string, unknown>,
+			['standardName', 'abbreviation', 'englishName']
+		);
+		if (missingFields.length > 0) {
 			return json(
 				{
 					success: false,
@@ -696,7 +673,6 @@ export async function DELETE({ url }: RequestEvent) {
 		const id = url.searchParams.get('id');
 		const filename = url.searchParams.get('filename') || undefined;
 		const force = url.searchParams.get('force') === 'true'; // 강제 삭제 옵션
-		console.log(`[DELETE] Request received for id: ${id}, filename: ${filename}, force: ${force}`);
 
 		if (!id) {
 			return json(
@@ -723,7 +699,6 @@ export async function DELETE({ url }: RequestEvent) {
 			);
 		}
 
-		// 참조 검증: 차단하지 않고 경고 정보만 수집
 		let warnings: unknown[] = [];
 		if (!force) {
 			try {
@@ -732,9 +707,7 @@ export async function DELETE({ url }: RequestEvent) {
 					entryToDelete,
 					filename || undefined
 				);
-				if (!refCheck.canDelete && refCheck.references?.length) {
-					warnings = refCheck.references;
-				}
+				warnings = extractReferenceWarnings(refCheck);
 			} catch (refError) {
 				console.warn('참조 검증 경고 수집 중 오류:', refError);
 			}

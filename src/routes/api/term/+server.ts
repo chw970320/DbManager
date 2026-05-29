@@ -79,6 +79,16 @@ import { checkEntryReferences } from '$lib/registry/mapping-registry';
 import { planCascadeUpdate } from '$lib/utils/cascade-update-plan.js';
 import { applyCascadePlan } from '$lib/utils/cascade-update-transaction.js';
 import { validateTermNameSuffix, validateTermNameUniqueness } from '$lib/utils/validation.js';
+import {
+	extractReferenceWarnings,
+	findInvalidField,
+	getMissingRequiredFields,
+	isInvalidPagination,
+	paginateEntries,
+	parseColumnFilters,
+	parsePaginationParams,
+	parseSortConfigs
+} from '$lib/server/standardization-crud';
 
 /**
  * 용어 매핑 로직 (업로드 API와 동일)
@@ -169,51 +179,17 @@ function checkTermMapping(
 export async function GET({ url }: RequestEvent) {
 	try {
 		// 쿼리 파라미터 추출
-		const page = parseInt(url.searchParams.get('page') || '1');
-		const limit = parseInt(url.searchParams.get('limit') || '20');
+		const { page, limit } = parsePaginationParams(url.searchParams, 20);
 		const searchQuery = url.searchParams.get('q') || url.searchParams.get('query') || '';
 		const searchField = url.searchParams.get('field') || 'all';
 		const searchExact = url.searchParams.get('exact') === 'true';
 		const filename = url.searchParams.get('filename') || 'term.json';
 
-		// 다중 정렬 파라미터 처리 (sortBy[]와 sortOrder[] 배열)
-		const sortByArray = url.searchParams.getAll('sortBy[]');
-		const sortOrderArray = url.searchParams.getAll('sortOrder[]');
-
-		// 하위 호환성: 단일 정렬 파라미터도 지원
-		const singleSortBy = url.searchParams.get('sortBy');
-		const singleSortOrder = url.searchParams.get('sortOrder');
-
-		// 정렬 설정 구성
-		type SortConfig = { column: string; direction: 'asc' | 'desc' };
-		const sortConfigs: SortConfig[] = [];
-
-		if (sortByArray.length > 0 && sortOrderArray.length > 0) {
-			// 다중 정렬
-			for (let i = 0; i < Math.min(sortByArray.length, sortOrderArray.length); i++) {
-				const direction = sortOrderArray[i];
-				if (direction === 'asc' || direction === 'desc') {
-					sortConfigs.push({ column: sortByArray[i], direction });
-				}
-			}
-		} else if (singleSortBy && singleSortOrder) {
-			// 단일 정렬 (하위 호환성)
-			if (singleSortOrder === 'asc' || singleSortOrder === 'desc') {
-				sortConfigs.push({ column: singleSortBy, direction: singleSortOrder });
-			}
-		}
-
-		// 컬럼 필터 파라미터 추출 (filters[columnKey]=value 형식)
-		const columnFilters: Record<string, string> = {};
-		url.searchParams.forEach((value, key) => {
-			const match = key.match(/^filters\[(.+)\]$/);
-			if (match && value) {
-				columnFilters[match[1]] = value;
-			}
-		});
+		const sortConfigs = parseSortConfigs(url.searchParams);
+		const columnFilters = parseColumnFilters(url.searchParams);
 
 		// 페이지네이션 유효성 검증
-		if (page < 1 || limit < 1 || limit > 100) {
+		if (isInvalidPagination({ page, limit }, { maxLimit: 100 })) {
 			return json(
 				{
 					success: false,
@@ -226,22 +202,24 @@ export async function GET({ url }: RequestEvent) {
 
 		// 정렬 필드 유효성 검증
 		const validSortFields = ['termName', 'columnName', 'domainName', 'createdAt', 'updatedAt'];
-		for (const config of sortConfigs) {
-			if (!validSortFields.includes(config.column)) {
-				return json(
-					{
-						success: false,
-						error: `지원하지 않는 정렬 필드입니다. 사용 가능: ${validSortFields.join(', ')}`,
-						message: 'Invalid sort field'
-					} as ApiResponse,
-					{ status: 400 }
-				);
-			}
+		const invalidSortField = findInvalidField(
+			sortConfigs.map((config) => config.column),
+			validSortFields
+		);
+		if (invalidSortField) {
+			return json(
+				{
+					success: false,
+					error: `지원하지 않는 정렬 필드입니다. 사용 가능: ${validSortFields.join(', ')}`,
+					message: 'Invalid sort field'
+				} as ApiResponse,
+				{ status: 400 }
+			);
 		}
 
 		// 검색 필드 유효성 검증
 		const validSearchFields = ['all', 'termName', 'columnName', 'domainName'];
-		if (!validSearchFields.includes(searchField)) {
+		if (findInvalidField([searchField], validSearchFields)) {
 			return json(
 				{
 					success: false,
@@ -423,20 +401,15 @@ export async function GET({ url }: RequestEvent) {
 			return 0;
 		});
 
-		// 페이지네이션
-		const totalCount = filteredEntries.length;
-		const totalPages = Math.ceil(totalCount / limit);
-		const startIndex = (page - 1) * limit;
-		const endIndex = startIndex + limit;
-		const paginatedEntries = filteredEntries.slice(startIndex, endIndex);
+		const pagination = paginateEntries(filteredEntries, { page, limit });
 
 		return json({
 			success: true,
 			data: {
-				entries: paginatedEntries,
+				entries: pagination.entries,
 				pagination: {
-					totalCount,
-					totalPages,
+					totalCount: pagination.totalCount,
+					totalPages: pagination.totalPages,
 					currentPage: page,
 					pageSize: limit
 				},
@@ -467,7 +440,10 @@ export async function POST({ request }: RequestEvent) {
 		const body = await request.json();
 		const { entry, filename = 'term.json', applyCascade = true } = body;
 
-		if (!entry || !entry.termName || !entry.columnName || !entry.domainName) {
+		const missingFields = entry
+			? getMissingRequiredFields(entry, ['termName', 'columnName', 'domainName'])
+			: ['entry'];
+		if (missingFields.length > 0) {
 			return json(
 				{
 					success: false,
@@ -777,9 +753,7 @@ export async function DELETE({ request }: RequestEvent) {
 		if (!force) {
 			try {
 				const refCheck = await checkEntryReferences('term', termData.entries[index], filename);
-				if (!refCheck.canDelete && refCheck.references?.length) {
-					warnings = refCheck.references;
-				}
+				warnings = extractReferenceWarnings(refCheck);
 			} catch (refError) {
 				console.warn('참조 검증 경고 수집 중 오류:', refError);
 			}

@@ -123,6 +123,7 @@ describe('Table API: /api/table', () => {
 			expect(result.data.entries).toHaveLength(2);
 			expect(result.data.pagination).toBeDefined();
 			expect(result.data.pagination.totalCount).toBe(2);
+			expect(result).not.toHaveProperty('message');
 		});
 
 		it('should return paginated data correctly', async () => {
@@ -150,8 +151,10 @@ describe('Table API: /api/table', () => {
 			const result = await response.json();
 
 			expect(response.status).toBe(400);
-			expect(result.success).toBe(false);
-			expect(result.error).toContain('잘못된 페이지네이션');
+			expect(result).toEqual({
+				success: false,
+				error: '잘못된 페이지네이션 파라미터입니다.'
+			});
 		});
 
 		it('should handle data loading error gracefully', async () => {
@@ -163,7 +166,10 @@ describe('Table API: /api/table', () => {
 			const result = await response.json();
 
 			expect(response.status).toBe(500);
-			expect(result.success).toBe(false);
+			expect(result).toEqual({
+				success: false,
+				error: '파일을 찾을 수 없습니다'
+			});
 		});
 
 		it('should use specified filename parameter', async () => {
@@ -210,6 +216,7 @@ describe('Table API: /api/table', () => {
 			expect(response.status).toBe(201);
 			expect(result.success).toBe(true);
 			expect(result.data.id).toBe('test-uuid-1234');
+			expect(result.message).toBe('테이블 정의서가 성공적으로 추가되었습니다.');
 			expect(result.data.physicalDbName).toBe('물리DB3');
 			expect(result.data.tableEnglishName).toBe('TABLE3');
 			expect(result.data).toHaveProperty('createdAt');
@@ -234,6 +241,7 @@ describe('Table API: /api/table', () => {
 			expect(response.status).toBe(400);
 			expect(result.success).toBe(false);
 			expect(result.error).toContain('필수 필드가 누락되었습니다');
+			expect(result.message).toBe('Missing required fields');
 		});
 
 		it('should use specified filename parameter', async () => {
@@ -289,6 +297,7 @@ describe('Table API: /api/table', () => {
 			expect(response.status).toBe(200);
 			expect(result.success).toBe(true);
 			expect(result.data.tableDescription).toBe('수정된 설명');
+			expect(result.message).toBe('수정 완료');
 			expect(saveTableData).toHaveBeenCalled();
 		});
 
@@ -315,7 +324,7 @@ describe('Table API: /api/table', () => {
 
 			expect(response.status).toBe(400);
 			expect(result.success).toBe(false);
-			expect(result.error).toContain('ID');
+			expect(result).toEqual({ success: false, error: 'ID가 필요합니다.' });
 		});
 
 		it('should return 404 when entry not found', async () => {
@@ -384,7 +393,7 @@ describe('Table API: /api/table', () => {
 
 			expect(response.status).toBe(200);
 			expect(result.success).toBe(true);
-			expect(result.message).toContain('삭제');
+			expect(result).toEqual({ success: true, message: '삭제 완료', warnings: [] });
 			expect(saveTableData).toHaveBeenCalled();
 		});
 
@@ -398,7 +407,7 @@ describe('Table API: /api/table', () => {
 
 			expect(response.status).toBe(400);
 			expect(result.success).toBe(false);
-			expect(result.error).toContain('ID');
+			expect(result).toEqual({ success: false, error: '삭제할 ID가 필요합니다.' });
 		});
 
 		it('should return 404 when entry not found', async () => {

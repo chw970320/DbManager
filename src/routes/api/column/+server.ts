@@ -1,237 +1,61 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
+import { loadColumnData, saveColumnData } from '$lib/registry/data-registry';
 import {
-	loadData,
-	saveData,
-	mergeData,
-	listFiles,
-	createFile,
-	renameFile,
-	deleteFile,
-	loadVocabularyData,
-	saveVocabularyData,
-	mergeVocabularyData,
-	listVocabularyFiles,
-	createVocabularyFile,
-	renameVocabularyFile,
-	deleteVocabularyFile,
-	loadDomainData,
-	saveDomainData,
-	mergeDomainData,
-	listDomainFiles,
-	createDomainFile,
-	renameDomainFile,
-	deleteDomainFile,
-	loadTermData,
-	saveTermData,
-	mergeTermData,
-	listTermFiles,
-	createTermFile,
-	renameTermFile,
-	deleteTermFile,
-	loadDatabaseData,
-	saveDatabaseData,
-	mergeDatabaseData,
-	listDatabaseFiles,
-	createDatabaseFile,
-	renameDatabaseFile,
-	deleteDatabaseFile,
-	loadEntityData,
-	saveEntityData,
-	mergeEntityData,
-	listEntityFiles,
-	createEntityFile,
-	renameEntityFile,
-	deleteEntityFile,
-	loadAttributeData,
-	saveAttributeData,
-	mergeAttributeData,
-	listAttributeFiles,
-	createAttributeFile,
-	renameAttributeFile,
-	deleteAttributeFile,
-	loadTableData,
-	saveTableData,
-	mergeTableData,
-	listTableFiles,
-	createTableFile,
-	renameTableFile,
-	deleteTableFile,
-	loadColumnData,
-	saveColumnData,
-	mergeColumnData,
-	listColumnFiles,
-	createColumnFile,
-	renameColumnFile,
-	deleteColumnFile,
-	loadForbiddenWords
-} from '$lib/registry/data-registry';
-import {
-	getCachedData,
-	getCachedVocabularyData,
-	getCachedDomainData,
-	getCachedTermData,
-	invalidateCache,
-	invalidateDataCache,
-	invalidateAllCaches
-} from '$lib/registry/cache-registry';
-
-import { checkEntryReferences } from '$lib/registry/mapping-registry';
+	collectDeleteWarnings,
+	getMissingRequiredFields,
+	handleDbDesignList,
+	type DbDesignListDescriptor
+} from '$lib/server/db-design-crud';
+import type { ColumnData, ColumnEntry } from '$lib/types/database-design';
 import { safeMerge } from '$lib/utils/type-guards.js';
 import { v4 as uuidv4 } from 'uuid';
 
+const columnListDescriptor: DbDesignListDescriptor<ColumnEntry, ColumnData> = {
+	defaultFilename: 'column.json',
+	loadData: loadColumnData,
+	searchMatches: (entry, searchField, matchValue) => {
+		switch (searchField) {
+			case 'schemaName':
+				return matchValue(entry.schemaName);
+			case 'tableEnglishName':
+				return matchValue(entry.tableEnglishName);
+			case 'columnEnglishName':
+				return matchValue(entry.columnEnglishName);
+			case 'columnKoreanName':
+				return matchValue(entry.columnKoreanName);
+			case 'domainName':
+				return matchValue(entry.domainName);
+			case 'dataType':
+				return matchValue(entry.dataType);
+			case 'all':
+			default:
+				return (
+					matchValue(entry.schemaName) ||
+					matchValue(entry.tableEnglishName) ||
+					matchValue(entry.columnEnglishName) ||
+					matchValue(entry.columnKoreanName) ||
+					matchValue(entry.domainName) ||
+					matchValue(entry.dataType)
+				);
+		}
+	},
+	invalidPaginationBody: {
+		success: false,
+		error: '잘못된 페이지네이션 파라미터입니다.'
+	},
+	loadFailureBody: (error) => ({
+		success: false,
+		error: error instanceof Error ? error.message : '데이터 로드 실패'
+	}),
+	serverErrorBody: {
+		success: false,
+		error: '서버에서 데이터 조회 중 오류가 발생했습니다.'
+	},
+	defaultSortDateFields: ['updatedAt']
+};
+
 export async function GET({ url }: RequestEvent) {
-	try {
-		const page = parseInt(url.searchParams.get('page') || '1');
-		const limit = parseInt(url.searchParams.get('limit') || '20');
-		const searchQuery = url.searchParams.get('q') || url.searchParams.get('query') || '';
-		const searchField = url.searchParams.get('field') || 'all';
-		const searchExact = url.searchParams.get('exact') === 'true';
-		const filename = url.searchParams.get('filename') || 'column.json';
-
-		const sortByArray = url.searchParams.getAll('sortBy[]');
-		const sortOrderArray = url.searchParams.getAll('sortOrder[]');
-		const singleSortBy = url.searchParams.get('sortBy');
-		const singleSortOrder = url.searchParams.get('sortOrder');
-
-		type SortConfig = { column: string; direction: 'asc' | 'desc' };
-		const sortConfigs: SortConfig[] = [];
-
-		if (sortByArray.length > 0 && sortOrderArray.length > 0) {
-			for (let i = 0; i < Math.min(sortByArray.length, sortOrderArray.length); i++) {
-				const direction = sortOrderArray[i];
-				if (direction === 'asc' || direction === 'desc')
-					sortConfigs.push({ column: sortByArray[i], direction });
-			}
-		} else if (
-			singleSortBy &&
-			singleSortOrder &&
-			(singleSortOrder === 'asc' || singleSortOrder === 'desc')
-		) {
-			sortConfigs.push({ column: singleSortBy, direction: singleSortOrder });
-		}
-
-		const columnFilters: Record<string, string> = {};
-		url.searchParams.forEach((value, key) => {
-			const match = key.match(/^filters\[(.+)\]$/);
-			if (match && value) columnFilters[match[1]] = value;
-		});
-
-		if (page < 1 || limit < 1 || limit > 100) {
-			return json(
-				{ success: false, error: '잘못된 페이지네이션 파라미터입니다.' } as DbDesignApiResponse,
-				{ status: 400 }
-			);
-		}
-
-		let columnData: ColumnData;
-		try {
-			columnData = await loadColumnData(filename);
-		} catch (e) {
-			return json(
-				{
-					success: false,
-					error: e instanceof Error ? e.message : '데이터 로드 실패'
-				} as DbDesignApiResponse,
-				{ status: 500 }
-			);
-		}
-
-		let filteredEntries = columnData.entries;
-
-		if (searchQuery.trim()) {
-			const query = searchQuery.toLowerCase();
-			const matchFn = (value: string | undefined | null) => {
-				if (!value) return false;
-				const target = value.toLowerCase();
-				return searchExact ? target === query : target.includes(query);
-			};
-			filteredEntries = columnData.entries.filter((entry) => {
-				switch (searchField) {
-					case 'schemaName':
-						return matchFn(entry.schemaName);
-					case 'tableEnglishName':
-						return matchFn(entry.tableEnglishName);
-					case 'columnEnglishName':
-						return matchFn(entry.columnEnglishName);
-					case 'columnKoreanName':
-						return matchFn(entry.columnKoreanName);
-					case 'domainName':
-						return matchFn(entry.domainName);
-					case 'dataType':
-						return matchFn(entry.dataType);
-					case 'all':
-					default:
-						return (
-							matchFn(entry.schemaName) ||
-							matchFn(entry.tableEnglishName) ||
-							matchFn(entry.columnEnglishName) ||
-							matchFn(entry.columnKoreanName) ||
-							matchFn(entry.domainName) ||
-							matchFn(entry.dataType)
-						);
-				}
-			});
-		}
-
-		if (Object.keys(columnFilters).length > 0) {
-			filteredEntries = filteredEntries.filter((entry) =>
-				Object.entries(columnFilters).every(([k, v]) => {
-					const val = entry[k as keyof ColumnEntry];
-					// "(빈값)" 필터 처리
-					if (v === '(빈값)') {
-						return val === null || val === undefined || val === '';
-					}
-					return val != null && String(val).toLowerCase().includes(v.toLowerCase());
-				})
-			);
-		}
-
-		filteredEntries.sort((a, b) => {
-			for (const config of sortConfigs) {
-				const aVal = a[config.column as keyof ColumnEntry],
-					bVal = b[config.column as keyof ColumnEntry];
-				if (aVal == null) {
-					if (bVal == null) continue;
-					return 1;
-				}
-				if (bVal == null) return -1;
-				const cmp = String(aVal).localeCompare(String(bVal), 'ko');
-				if (cmp !== 0) return config.direction === 'desc' ? -cmp : cmp;
-			}
-			return (b.updatedAt || '').localeCompare(a.updatedAt || '');
-		});
-
-		const startIndex = (page - 1) * limit;
-		const paginatedEntries = filteredEntries.slice(startIndex, startIndex + limit);
-		const totalPages = Math.ceil(filteredEntries.length / limit);
-
-		return json(
-			{
-				success: true,
-				data: {
-					entries: paginatedEntries,
-					pagination: {
-						currentPage: page,
-						totalPages,
-						totalCount: filteredEntries.length,
-						limit,
-						hasNextPage: page < totalPages,
-						hasPrevPage: page > 1
-					},
-					lastUpdated: columnData.lastUpdated
-				}
-			} as DbDesignApiResponse,
-			{ status: 200 }
-		);
-	} catch (error) {
-		return json(
-			{
-				success: false,
-				error: '서버에서 데이터 조회 중 오류가 발생했습니다.'
-			} as DbDesignApiResponse,
-			{ status: 500 }
-		);
-	}
+	return handleDbDesignList(url, columnListDescriptor);
 }
 
 export async function POST({ request, url }: RequestEvent) {
@@ -254,9 +78,7 @@ export async function POST({ request, url }: RequestEvent) {
 			'encryptionFlag',
 			'publicFlag'
 		];
-		const missingFields = requiredFields.filter(
-			(field) => !body[field] || (typeof body[field] === 'string' && body[field].trim() === '')
-		);
+		const missingFields = getMissingRequiredFields(body, requiredFields);
 
 		if (missingFields.length > 0) {
 			return json(
@@ -352,11 +174,7 @@ export async function PUT({ request, url }: RequestEvent) {
 			'encryptionFlag',
 			'publicFlag'
 		];
-		const missingFields = requiredFields.filter(
-			(field) =>
-				!updateFields[field] ||
-				(typeof updateFields[field] === 'string' && updateFields[field].trim() === '')
-		);
+		const missingFields = getMissingRequiredFields(updateFields, requiredFields);
 
 		if (missingFields.length > 0) {
 			return json(
@@ -401,17 +219,7 @@ export async function DELETE({ url }: RequestEvent) {
 		if (!entryToDelete)
 			return json({ success: false, error: '삭제할 데이터를 찾을 수 없습니다.' }, { status: 404 });
 
-		let warnings: unknown[] = [];
-		if (!force) {
-			try {
-				const refCheck = await checkEntryReferences('column', entryToDelete, filename);
-				if (!refCheck.canDelete && refCheck.references?.length) {
-					warnings = refCheck.references;
-				}
-			} catch (refError) {
-				console.warn('참조 검증 경고 수집 중 오류:', refError);
-			}
-		}
+		const warnings = await collectDeleteWarnings('column', entryToDelete, filename, force);
 
 		columnData.entries = columnData.entries.filter((e) => e.id !== id);
 		await saveColumnData(columnData, filename);

@@ -1,271 +1,62 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
+import { loadDatabaseData, saveDatabaseData } from '$lib/registry/data-registry';
 import {
-	loadData,
-	saveData,
-	mergeData,
-	listFiles,
-	createFile,
-	renameFile,
-	deleteFile,
-	loadVocabularyData,
-	saveVocabularyData,
-	mergeVocabularyData,
-	listVocabularyFiles,
-	createVocabularyFile,
-	renameVocabularyFile,
-	deleteVocabularyFile,
-	loadDomainData,
-	saveDomainData,
-	mergeDomainData,
-	listDomainFiles,
-	createDomainFile,
-	renameDomainFile,
-	deleteDomainFile,
-	loadTermData,
-	saveTermData,
-	mergeTermData,
-	listTermFiles,
-	createTermFile,
-	renameTermFile,
-	deleteTermFile,
-	loadDatabaseData,
-	saveDatabaseData,
-	mergeDatabaseData,
-	listDatabaseFiles,
-	createDatabaseFile,
-	renameDatabaseFile,
-	deleteDatabaseFile,
-	loadEntityData,
-	saveEntityData,
-	mergeEntityData,
-	listEntityFiles,
-	createEntityFile,
-	renameEntityFile,
-	deleteEntityFile,
-	loadAttributeData,
-	saveAttributeData,
-	mergeAttributeData,
-	listAttributeFiles,
-	createAttributeFile,
-	renameAttributeFile,
-	deleteAttributeFile,
-	loadTableData,
-	saveTableData,
-	mergeTableData,
-	listTableFiles,
-	createTableFile,
-	renameTableFile,
-	deleteTableFile,
-	loadColumnData,
-	saveColumnData,
-	mergeColumnData,
-	listColumnFiles,
-	createColumnFile,
-	renameColumnFile,
-	deleteColumnFile,
-	loadForbiddenWords
-} from '$lib/registry/data-registry';
-import {
-	getCachedData,
-	getCachedVocabularyData,
-	getCachedDomainData,
-	getCachedTermData,
-	invalidateCache,
-	invalidateDataCache,
-	invalidateAllCaches
-} from '$lib/registry/cache-registry';
-
-import { checkEntryReferences } from '$lib/registry/mapping-registry';
+	collectDeleteWarnings,
+	getMissingRequiredFields,
+	handleDbDesignList,
+	type DbDesignListDescriptor
+} from '$lib/server/db-design-crud';
+import type { DatabaseData, DatabaseEntry } from '$lib/types/database-design';
 import { safeMerge } from '$lib/utils/type-guards.js';
 import { v4 as uuidv4 } from 'uuid';
 
-/**
- * 데이터베이스 정의서 데이터 조회 API
- * GET /api/database
- */
+const databaseListDescriptor: DbDesignListDescriptor<DatabaseEntry, DatabaseData> = {
+	defaultFilename: 'database.json',
+	loadData: loadDatabaseData,
+	searchMatches: (entry, searchField, matchValue) => {
+		switch (searchField) {
+			case 'organizationName':
+				return matchValue(entry.organizationName);
+			case 'logicalDbName':
+				return matchValue(entry.logicalDbName);
+			case 'physicalDbName':
+				return matchValue(entry.physicalDbName);
+			case 'all':
+			default:
+				return (
+					matchValue(entry.organizationName) ||
+					matchValue(entry.departmentName) ||
+					matchValue(entry.logicalDbName) ||
+					matchValue(entry.physicalDbName) ||
+					matchValue(entry.dbDescription) ||
+					matchValue(entry.dbmsInfo)
+				);
+		}
+	},
+	invalidPaginationBody: {
+		success: false,
+		error: '잘못된 페이지네이션 파라미터입니다.',
+		message: 'Invalid pagination parameters'
+	},
+	loadFailureBody: (error) => ({
+		success: false,
+		error: error instanceof Error ? error.message : '데이터 로드 실패',
+		message: 'Data loading failed'
+	}),
+	serverErrorBody: {
+		success: false,
+		error: '서버에서 데이터 조회 중 오류가 발생했습니다.',
+		message: 'Internal server error'
+	},
+	successMessage: 'Database definition data retrieved successfully',
+	defaultSortDateFields: ['updatedAt', 'createdAt'],
+	errorLogPrefix: '데이터베이스 정의서 조회 중 오류:'
+};
+
 export async function GET({ url }: RequestEvent) {
-	try {
-		const page = parseInt(url.searchParams.get('page') || '1');
-		const limit = parseInt(url.searchParams.get('limit') || '20');
-		const searchQuery = url.searchParams.get('q') || url.searchParams.get('query') || '';
-		const searchField = url.searchParams.get('field') || 'all';
-		const searchExact = url.searchParams.get('exact') === 'true';
-		const filename = url.searchParams.get('filename') || 'database.json';
-
-		// 다중 정렬 파라미터 처리
-		const sortByArray = url.searchParams.getAll('sortBy[]');
-		const sortOrderArray = url.searchParams.getAll('sortOrder[]');
-		const singleSortBy = url.searchParams.get('sortBy');
-		const singleSortOrder = url.searchParams.get('sortOrder');
-
-		type SortConfig = { column: string; direction: 'asc' | 'desc' };
-		const sortConfigs: SortConfig[] = [];
-
-		if (sortByArray.length > 0 && sortOrderArray.length > 0) {
-			for (let i = 0; i < Math.min(sortByArray.length, sortOrderArray.length); i++) {
-				const direction = sortOrderArray[i];
-				if (direction === 'asc' || direction === 'desc') {
-					sortConfigs.push({ column: sortByArray[i], direction });
-				}
-			}
-		} else if (singleSortBy && singleSortOrder) {
-			if (singleSortOrder === 'asc' || singleSortOrder === 'desc') {
-				sortConfigs.push({ column: singleSortBy, direction: singleSortOrder });
-			}
-		}
-
-		// 컬럼 필터 파라미터 추출
-		const columnFilters: Record<string, string> = {};
-		url.searchParams.forEach((value, key) => {
-			const match = key.match(/^filters\[(.+)\]$/);
-			if (match && value) {
-				columnFilters[match[1]] = value;
-			}
-		});
-
-		if (page < 1 || limit < 1 || limit > 100) {
-			return json(
-				{
-					success: false,
-					error: '잘못된 페이지네이션 파라미터입니다.',
-					message: 'Invalid pagination parameters'
-				} as DbDesignApiResponse,
-				{ status: 400 }
-			);
-		}
-
-		let dbData: DatabaseData;
-		try {
-			dbData = await loadDatabaseData(filename);
-		} catch (loadError) {
-			return json(
-				{
-					success: false,
-					error: loadError instanceof Error ? loadError.message : '데이터 로드 실패',
-					message: 'Data loading failed'
-				} as DbDesignApiResponse,
-				{ status: 500 }
-			);
-		}
-
-		let filteredEntries = dbData.entries;
-
-		// 검색 필터링
-		if (searchQuery.trim()) {
-			const query = searchQuery.toLowerCase();
-			// 정확히 일치 또는 부분 일치 검색 함수
-			const matchFn = (value: string | undefined | null) => {
-				if (!value) return false;
-				const target = value.toLowerCase();
-				return searchExact ? target === query : target.includes(query);
-			};
-			filteredEntries = dbData.entries.filter((entry) => {
-				switch (searchField) {
-					case 'organizationName':
-						return matchFn(entry.organizationName);
-					case 'logicalDbName':
-						return matchFn(entry.logicalDbName);
-					case 'physicalDbName':
-						return matchFn(entry.physicalDbName);
-					case 'all':
-					default:
-						return (
-							matchFn(entry.organizationName) ||
-							matchFn(entry.departmentName) ||
-							matchFn(entry.logicalDbName) ||
-							matchFn(entry.physicalDbName) ||
-							matchFn(entry.dbDescription) ||
-							matchFn(entry.dbmsInfo)
-						);
-				}
-			});
-		}
-
-		// 컬럼 필터 적용
-		if (Object.keys(columnFilters).length > 0) {
-			filteredEntries = filteredEntries.filter((entry) => {
-				return Object.entries(columnFilters).every(([columnKey, filterValue]) => {
-					const entryValue = entry[columnKey as keyof DatabaseEntry];
-					// "(빈값)" 필터 처리
-					if (filterValue === '(빈값)') {
-						return entryValue === null || entryValue === undefined || entryValue === '';
-					}
-					if (entryValue === null || entryValue === undefined) return false;
-					return String(entryValue).toLowerCase().includes(filterValue.toLowerCase());
-				});
-			});
-		}
-
-		// 정렬
-		filteredEntries.sort((a, b) => {
-			for (const config of sortConfigs) {
-				const aValue = a[config.column as keyof DatabaseEntry];
-				const bValue = b[config.column as keyof DatabaseEntry];
-
-				if (aValue === null || aValue === undefined) {
-					if (bValue === null || bValue === undefined) continue;
-					return 1;
-				}
-				if (bValue === null || bValue === undefined) return -1;
-
-				let comparison = 0;
-				if (typeof aValue === 'string' && typeof bValue === 'string') {
-					comparison = aValue.localeCompare(bValue, 'ko');
-				} else {
-					comparison = String(aValue).localeCompare(String(bValue), 'ko');
-				}
-
-				if (comparison !== 0) {
-					return config.direction === 'desc' ? -comparison : comparison;
-				}
-			}
-
-			const aDate = a.updatedAt || a.createdAt || '';
-			const bDate = b.updatedAt || b.createdAt || '';
-			return bDate.localeCompare(aDate);
-		});
-
-		// 페이지네이션
-		const startIndex = (page - 1) * limit;
-		const paginatedEntries = filteredEntries.slice(startIndex, startIndex + limit);
-		const totalPages = Math.ceil(filteredEntries.length / limit);
-
-		return json(
-			{
-				success: true,
-				data: {
-					entries: paginatedEntries,
-					pagination: {
-						currentPage: page,
-						totalPages,
-						totalCount: filteredEntries.length,
-						limit,
-						hasNextPage: page < totalPages,
-						hasPrevPage: page > 1
-					},
-					lastUpdated: dbData.lastUpdated
-				},
-				message: 'Database definition data retrieved successfully'
-			} as DbDesignApiResponse,
-			{ status: 200 }
-		);
-	} catch (error) {
-		console.error('데이터베이스 정의서 조회 중 오류:', error);
-		return json(
-			{
-				success: false,
-				error: '서버에서 데이터 조회 중 오류가 발생했습니다.',
-				message: 'Internal server error'
-			} as DbDesignApiResponse,
-			{ status: 500 }
-		);
-	}
+	return handleDbDesignList(url, databaseListDescriptor);
 }
 
-/**
- * 데이터베이스 정의서 추가 API
- * POST /api/database
- */
 export async function POST({ request, url }: RequestEvent) {
 	try {
 		const filename = url.searchParams.get('filename') || 'database.json';
@@ -279,9 +70,7 @@ export async function POST({ request, url }: RequestEvent) {
 			'physicalDbName',
 			'dbmsInfo'
 		];
-		const missingFields = requiredFields.filter(
-			(field) => !body[field] || (typeof body[field] === 'string' && body[field].trim() === '')
-		);
+		const missingFields = getMissingRequiredFields(body, requiredFields);
 
 		if (missingFields.length > 0) {
 			return json(
@@ -375,11 +164,7 @@ export async function PUT({ request, url }: RequestEvent) {
 			'physicalDbName',
 			'dbmsInfo'
 		];
-		const missingFields = requiredFields.filter(
-			(field) =>
-				!updateFields[field] ||
-				(typeof updateFields[field] === 'string' && updateFields[field].trim() === '')
-		);
+		const missingFields = getMissingRequiredFields(updateFields, requiredFields);
 
 		if (missingFields.length > 0) {
 			return json(
@@ -449,17 +234,7 @@ export async function DELETE({ url }: RequestEvent) {
 			);
 		}
 
-		let warnings: unknown[] = [];
-		if (!force) {
-			try {
-				const refCheck = await checkEntryReferences('database', entryToDelete, filename);
-				if (!refCheck.canDelete && refCheck.references?.length) {
-					warnings = refCheck.references;
-				}
-			} catch (refError) {
-				console.warn('참조 검증 경고 수집 중 오류:', refError);
-			}
-		}
+		const warnings = await collectDeleteWarnings('database', entryToDelete, filename, force);
 
 		dbData.entries = dbData.entries.filter((e) => e.id !== id);
 		await saveDatabaseData(dbData, filename);

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
+	import ActionBar from '$lib/components/ActionBar.svelte';
 	import BentoCard from '$lib/components/BentoCard.svelte';
 	import BentoGrid from '$lib/components/BentoGrid.svelte';
 	import BrowsePageLayout from '$lib/components/BrowsePageLayout.svelte';
@@ -7,6 +8,7 @@
 	import EmptyState from '$lib/components/EmptyState.svelte';
 	import FormField from '$lib/components/FormField.svelte';
 	import Icon from '$lib/components/Icon.svelte';
+	import SearchBar from '$lib/components/SearchBar.svelte';
 	import { addToast } from '$lib/stores/toast-store';
 	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
 	import type { QualityRuleMetric, QualityRuleViolation } from '$lib/types/data-quality-rule.js';
@@ -26,6 +28,8 @@
 	let targetsResult = $state<DataSourceProfileTargetsResult | null>(null);
 	let profileResult = $state<DataSourceTableProfileResult | null>(null);
 	let tableSearchQuery = $state('');
+	let tableSearchField = $state('all');
+	let tableSearchExact = $state(false);
 	let schemaFilter = $state('all');
 	let loadingSources = $state(false);
 	let loadingTargets = $state(false);
@@ -54,8 +58,17 @@
 				return true;
 			}
 
-			const key = `${target.schema}.${target.table}`.toLowerCase();
-			return key.includes(query);
+			const searchValue =
+				tableSearchField === 'schema'
+					? target.schema
+					: tableSearchField === 'table'
+						? target.table
+						: `${target.schema}.${target.table}`;
+			const normalizedSearchValue = searchValue.toLowerCase();
+
+			return tableSearchExact
+				? normalizedSearchValue === query
+				: normalizedSearchValue.includes(query);
 		});
 	});
 
@@ -160,6 +173,8 @@
 		profileError = '';
 		activeTableKey = '';
 		tableSearchQuery = '';
+		tableSearchField = 'all';
+		tableSearchExact = false;
 		schemaFilter = 'all';
 		currentTargetPage = 1;
 	}
@@ -240,8 +255,17 @@
 		currentTargetPage = 1;
 	}
 
-	function handleTableSearchInput(event: Event) {
-		tableSearchQuery = (event.target as HTMLInputElement).value;
+	function handleTableSearch(event: { query: string; field: string; exact: boolean }) {
+		tableSearchQuery = event.query;
+		tableSearchField = event.field;
+		tableSearchExact = event.exact;
+		currentTargetPage = 1;
+	}
+
+	function clearTableSearch() {
+		tableSearchQuery = '';
+		tableSearchField = 'all';
+		tableSearchExact = false;
 		currentTargetPage = 1;
 	}
 
@@ -388,7 +412,7 @@
 							</div>
 						{/if}
 
-						<div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
+						<ActionBar alignment="right">
 							<button
 								type="button"
 								class="btn btn-secondary"
@@ -407,7 +431,7 @@
 								<Icon name={loadingTargets ? 'spinner' : 'search'} size="sm" />
 								<span>{loadingTargets ? '불러오는 중...' : '테이블 불러오기'}</span>
 							</button>
-						</div>
+						</ActionBar>
 					</div>
 				{/if}
 			</BentoCard>
@@ -632,7 +656,7 @@
 					title="대상 필터"
 					subtitle="조회된 테이블을 스키마와 이름으로 좁혀볼 수 있습니다."
 				>
-					<div class="grid gap-4 md:grid-cols-2">
+					<div class="grid gap-4 lg:grid-cols-[16rem_1fr]">
 						<FormField label="스키마 필터" name="profiling-schema-filter">
 							<select
 								id="profiling-schema-filter"
@@ -649,16 +673,19 @@
 							</select>
 						</FormField>
 
-						<FormField label="테이블 검색" name="profiling-table-search">
-							<input
-								id="profiling-table-search"
-								class="input"
-								value={tableSearchQuery}
-								oninput={handleTableSearchInput}
-								placeholder="schema.table 또는 테이블명으로 검색"
-								aria-label="테이블 검색"
-							/>
-						</FormField>
+						<SearchBar
+							placeholder="schema.table 또는 테이블명으로 검색"
+							bind:query={tableSearchQuery}
+							bind:field={tableSearchField}
+							bind:exact={tableSearchExact}
+							searchFields={[
+								{ value: 'all', label: '전체' },
+								{ value: 'schema', label: '스키마' },
+								{ value: 'table', label: '테이블' }
+							]}
+							onsearch={handleTableSearch}
+							onclear={clearTableSearch}
+						/>
 					</div>
 				</BentoCard>
 			</div>

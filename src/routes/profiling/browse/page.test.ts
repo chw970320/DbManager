@@ -256,6 +256,36 @@ describe('Profiling browse page', () => {
 		expect(screen.getAllByRole('button', { name: /프로파일링 실행$/ })).toHaveLength(2);
 	});
 
+	it('should use the shared search control to filter profile targets', async () => {
+		render(Page);
+
+		await waitFor(() => {
+			expect(screen.getByLabelText('저장된 데이터 소스')).toBeInTheDocument();
+		});
+
+		await fireEvent.click(screen.getByRole('button', { name: '테이블 불러오기' }));
+
+		await waitFor(() => {
+			expect(screen.getByRole('search', { name: '검색 조건' })).toBeInTheDocument();
+		});
+
+		const searchInput = screen.getByPlaceholderText('schema.table 또는 테이블명으로 검색');
+		await fireEvent.input(searchInput, { target: { value: 'table_02' } });
+
+		await waitFor(() => {
+			expect(screen.getByText('table_02')).toBeInTheDocument();
+		});
+
+		expect(screen.queryByText('customers')).not.toBeInTheDocument();
+		expect(screen.getAllByRole('button', { name: /프로파일링 실행$/ })).toHaveLength(1);
+
+		const advancedButton = screen.getByRole('button', { name: '고급 검색' });
+		await fireEvent.click(advancedButton);
+
+		expect(advancedButton).toHaveAttribute('aria-expanded', 'true');
+		expect(screen.getByLabelText('검색 범위')).toBeInTheDocument();
+	});
+
 	it('should show an empty state when there are no saved data sources', async () => {
 		mockFetch.mockImplementationOnce(() =>
 			Promise.resolve(

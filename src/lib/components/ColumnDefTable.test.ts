@@ -98,6 +98,11 @@ describe('ColumnDefTable', () => {
 		});
 
 		expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+		expect(screen.getByRole('table', { name: '컬럼 정의서 목록' })).toHaveAttribute(
+			'aria-busy',
+			'true'
+		);
+		expect(screen.getByText('컬럼 정의서 목록을 불러오는 중입니다.')).toBeInTheDocument();
 		await fireEvent.click(screen.getByRole('button', { name: '컬럼한글명로 정렬' }));
 		await fireEvent.click(screen.getByRole('button', { name: '다음' }));
 

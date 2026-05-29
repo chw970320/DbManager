@@ -69,6 +69,11 @@ describe('AttributeTable', () => {
 		});
 
 		expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+		expect(screen.getByRole('table', { name: '속성 정의서 목록' })).toHaveAttribute(
+			'aria-busy',
+			'true'
+		);
+		expect(screen.getByText('속성 정의서 목록을 불러오는 중입니다.')).toBeInTheDocument();
 		await fireEvent.click(screen.getByRole('button', { name: '속성명로 정렬' }));
 		await fireEvent.click(screen.getByRole('button', { name: '다음' }));
 

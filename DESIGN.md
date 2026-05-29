@@ -5,7 +5,7 @@
 - Status: Active
 - Last refreshed: 2026-05-29
 - This root `DESIGN.md` is the canonical product/UI design guide.
-- Legacy design drafts such as `docs/DESIGN.md`, if restored from history or `.omx/backups/`, are reference-only inputs and must not override this file.
+- Legacy design drafts such as `docs/DESIGN.md`, if restored from history, are reference-only inputs and must not override this file.
 - Root `AGENTS.md` is the canonical agent workflow guide.
 - Detailed contracts remain in `docs/specs/api-reference.md` and `docs/specs/data-model.md`.
 - Primary product surfaces:
@@ -17,7 +17,7 @@
   - Product/domain guidance from `README.md`, `docs/USER_GUIDE.md`, and `docs/QUICK_START.md`
   - Current API/data contracts from `docs/specs/api-reference.md` and `docs/specs/data-model.md`
   - Existing Tailwind/Svelte implementation evidence from `src/app.css`, `tailwind.config.js`, `src/routes/+layout.svelte`, `src/routes/+page.svelte`, and shared components under `src/lib/components/`
-  - Legacy/reference design draft backed up at `.omx/backups/docs-DESIGN.20260529T001215Z.md`
+  - Legacy/reference design draft formerly located at `docs/DESIGN.md`; its usable guidance is summarized here and any restored copy remains reference-only
 
 ## Product identity
 

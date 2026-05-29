@@ -35,6 +35,7 @@
 	} = $props();
 
 	let showAdvanced = $state(false);
+	const advancedOptionsId = 'search-advanced-options';
 
 	// 검색 입력 필드 참조
 	let searchInput: HTMLInputElement | undefined;
@@ -102,7 +103,12 @@
 </script>
 
 <!-- 검색바 컴포넌트 -->
-<div class="w-full rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+<div
+	class="w-full rounded-lg border border-border bg-surface p-4 shadow-sm"
+	role="search"
+	aria-label="검색 조건"
+	aria-busy={loading ? 'true' : 'false'}
+>
 	<!-- 메인 검색 영역 -->
 	<div class="flex flex-col gap-4 lg:flex-row lg:items-center">
 		<!-- 검색 입력 -->
@@ -110,7 +116,7 @@
 			<div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
 				<!-- 검색 아이콘 -->
 				<svg
-					class="h-5 w-5 text-gray-600"
+					class="h-5 w-5 text-content-muted"
 					xmlns="http://www.w3.org/2000/svg"
 					viewBox="0 0 20 20"
 					fill="currentColor"
@@ -139,7 +145,7 @@
 			<div class="absolute inset-y-0 right-0 flex items-center pr-3">
 				{#if loading}
 					<svg
-						class="h-4 w-4 animate-spin text-gray-600"
+						class="h-4 w-4 animate-spin text-content-muted"
 						xmlns="http://www.w3.org/2000/svg"
 						fill="none"
 						viewBox="0 0 24 24"
@@ -152,11 +158,12 @@
 							d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
 						></path>
 					</svg>
+					<span class="sr-only">검색 결과를 불러오는 중입니다.</span>
 				{:else if query}
 					<button
 						type="button"
 						onclick={clearSearch}
-						class="rounded text-gray-600 transition-colors hover:text-gray-800 focus:text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-1"
+						class="rounded text-content-muted transition-colors hover:text-content focus:text-content focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-1"
 						aria-label="검색어 지우기"
 					>
 						<svg class="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
@@ -176,6 +183,8 @@
 			type="button"
 			onclick={() => (showAdvanced = !showAdvanced)}
 			class="btn btn-outline text-sm"
+			aria-expanded={showAdvanced}
+			aria-controls={advancedOptionsId}
 		>
 			<svg
 				class="mr-2 h-4 w-4 transition-transform {showAdvanced ? 'rotate-180' : ''}"
@@ -191,11 +200,11 @@
 
 	<!-- 고급 검색 옵션 -->
 	{#if showAdvanced}
-		<div class="mt-4 border-t border-gray-200 pt-4">
+		<div id={advancedOptionsId} class="mt-4 border-t border-border pt-4">
 			<div class="grid grid-cols-1 gap-4 md:grid-cols-2">
 				<!-- 검색 필드 선택 -->
 				<div>
-					<label for="search-field" class="mb-1 block text-sm font-medium text-gray-900">
+					<label for="search-field" class="mb-1 block text-sm font-medium text-content">
 						검색 범위
 					</label>
 					<select
@@ -219,16 +228,16 @@
 							bind:checked={exact}
 							onchange={handleExactChange}
 							{disabled}
-							class="h-4 w-4 rounded border-gray-400 text-blue-700 focus:ring-blue-600"
+							class="h-4 w-4 rounded border-border-strong text-brand focus:ring-border-focus"
 						/>
-						<span class="text-sm text-gray-900">정확히 일치</span>
+						<span class="text-sm text-content">정확히 일치</span>
 					</label>
 				</div>
 			</div>
 
 			<!-- 검색 통계 정보 -->
 			{#if query}
-				<div class="mt-3 text-sm text-gray-500">
+				<div class="mt-3 text-sm text-content-muted">
 					<span class="font-medium">"{query}"</span>
 					{field !== 'all' ? `(${searchFields.find((f) => f.value === field)?.label})` : ''}
 					{exact ? '(정확 일치)' : ''}로 검색 중...

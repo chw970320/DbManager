@@ -1,41 +1,52 @@
 # DbManager Agent Guide
 
-## Purpose
+## Authority
 
-- Use the smallest relevant set of project documents before changing code.
-- Keep code changes and documentation updates in the same task when behavior changes.
-- Check whether `README.md` should also change when work affects user-facing behavior, setup, workflow, supported features, or repository-level guidance.
+- This file is the canonical workflow guide for DbManager agents.
+- Load this file first, then load only the smallest relevant docs or source files for the task.
+- Do not use a separate DbManager workflow skill or `references/doc-map.md` as a routing source; any external skill must defer to this file.
 
-## Document Routing
+## Minimal Context Routing
 
-- Feature development, bug fixes, refactors, and API changes:
-  Read `docs/TDD_GUIDE.md` and `docs/CONVENTIONS.md` first.
-- API contract, JSON shape, import/export format, or data model changes:
-  Also read `docs/specs/api-reference.md` and `docs/specs/data-model.md`.
-- Project analysis, code review, architecture review, and impact analysis:
-  Read `docs/AI_CONTEXT.md` and `docs/PROJECT_DEEP_ANALYSIS.md` first.
-- Work where recent behavior matters:
-  Check `docs/CHANGELOG.md`.
-- Frontend or UX work:
-  Also read `docs/FRONTEND_UI_UX_GUIDE.md`.
-- File manager, upload/download, mapping, registry, and sample data work:
-  Also inspect `references/`.
-- Tasks continuing from a repository prompt template:
-  Read the specific file under `prompts/` that matches the task.
-- Work that changes repository summary, onboarding, setup, or user-visible capabilities:
-  Also review `README.md`.
+Start with code and the fewest documents that can answer the task.
+
+| Task shape                                    | Load first                                                 | Expand only if needed                      |
+| --------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------ |
+| Feature, bug fix, refactor                    | relevant source/tests, analogous existing flow             | API/data-model specs when contracts change |
+| API, JSON shape, import/export, storage model | `docs/specs/api-reference.md`, `docs/specs/data-model.md`  | related route/component tests              |
+| User-facing behavior or setup                 | `README.md`, `docs/QUICK_START.md`, `docs/USER_GUIDE.md`   | changelog when recent behavior matters     |
+| UI/UX or visual design                        | `DESIGN.md`, analogous components in `src/lib/components/` | implementation source and tests            |
+| Release/history check                         | `docs/CHANGELOG.md`                                        | git history and relevant specs             |
+| Documentation topology or workflow cleanup    | this file, `docs/README.md`, current file inventory        | repo-wide Markdown/reference scan          |
 
 ## Working Rules
 
-- Do not read the entire `docs/` folder up front. Start with the most relevant 1-3 documents and expand only if needed.
-- Before substantial implementation or analysis, briefly state which documents are being used.
-- When a shared behavior already exists in another menu or component, inspect the analogous implementation before editing.
-- For DB, Entity, Attribute, Table, and Column features, align overlapping UX and behavior with the existing Vocabulary, Domain, and Term flows unless the user asks for a deliberate change.
-- Any change to behavior, API, UX, workflow, validation, or data model must include updates to the relevant files under `docs/` in the same task.
-- When a change materially affects repository-level guidance, contributors' first-run understanding, or feature summaries, update `README.md` in the same task.
-- When a coherent work unit is fully implemented, verified, and documented, create a separate Git commit for that work unit before moving on unless the user explicitly says not to commit.
-- Keep each work-unit commit scoped to the relevant files only. Do not mix unrelated user changes into the commit; if clean separation is not possible, report the blocker explicitly.
-- Commit messages for this repository must always be written in Korean.
-- Immediately before every commit, re-check the repository commit-message rule and ensure the actual commit subject/body are written in Korean.
-- Default to working directly on `main`. Do not create a separate branch unless the user explicitly asks for it or the work clearly requires temporary isolation.
-- If feature work is done on a separate branch, do not stop at implementation only. Before closing the task, make the branch merge-ready for `main` by reflecting the latest `main` baseline into the working branch when possible, resolving conflicts, rerunning the relevant validation/test commands, merging the branch back into `main`, and deleting the branch when possible. If that cannot be completed, report the blocker explicitly.
+- Do not read the whole `docs/` tree up front.
+- Before substantial implementation or analysis, state the small doc/source set being used.
+- Prefer existing source, tests, and analogous components over stale narrative docs.
+- For DB, Entity, Attribute, Table, and Column flows, align overlapping UX/behavior with Vocabulary, Domain, and Term flows unless the user asks for a deliberate difference.
+- If behavior, API, UX, workflow, validation, storage shape, or documentation topology changes, update the matching docs/indexes in the same task.
+- Update root `README.md` only when repository-level guidance, setup, supported features, or visible document entry points change.
+- Keep diffs small and scoped. Do not revert or commit unrelated working-tree changes.
+
+## Documentation Maintenance
+
+- `docs/README.md` is the current documentation index and cleanup summary.
+- Keep `docs/` focused on user-facing guides, current specs, and current history.
+- Prefer deleting or merging stale one-off design notes, generated test descriptions, and duplicate AI context docs; preserve rationale in git history, commit messages, or a tracked index summary.
+- Before deleting docs, scan repo Markdown/instruction files, including untracked non-ignored files, for inbound references and update active links.
+- Untracked docs must be added, merged, or backed up before deletion; external user skill files must be backed up before modification.
+
+## Verification
+
+- For code changes: run targeted tests first, then `pnpm check`, `pnpm run lint`, or `pnpm run validate` as appropriate.
+- For docs/workflow-only changes: run Markdown link/reference checks, `git diff --check`, and `pnpm run format:check` unless an existing unrelated formatting issue is documented.
+- Report validation evidence before claiming completion.
+
+## Commit Rules
+
+- Default branch is `main`; do not create a branch unless the user asks or isolation is clearly required.
+- When a coherent work unit is implemented, verified, and documented, create a separate scoped commit unless the user explicitly says not to commit.
+- Commit messages must keep the repository convention: start the first line with a Conventional Commit type prefix such as `feat:`, `fix:`, `docs:`, `test:`, `refactor:`, or `chore:`.
+- After the type prefix, write the subject in Korean and keep it concise; avoid replacing the required prefix with a plain descriptive sentence.
+- Follow the Lore protocol in the commit body: intent line first, then useful trailers such as `Constraint:`, `Rejected:`, `Confidence:`, `Scope-risk:`, `Directive:`, `Tested:`, and `Not-tested:`.

@@ -1,5 +1,19 @@
 # 변경 이력
 
+## 2026-05-29
+
+### 요약
+
+- `AGENTS.md`를 DbManager 에이전트 작업 지침의 단일 기준으로 정리했습니다.
+- `docs/` 문서를 사용자 가이드, 현재 API/데이터 모델 명세, 변경 이력 중심으로 경량화했습니다.
+- 전역 `dbmanager-workflow` 스킬은 저장소 `AGENTS.md`로 위임하는 포인터로 축소했습니다.
+
+### 상세 변경
+
+- 삭제/병합 대상 문서는 `docs/README.md`의 2026-05-29 cleanup audit summary에 남겼습니다.
+- 루트 `DESIGN.md`를 제품/UI 디자인 기준으로 추가하고, legacy `docs/DESIGN.md` 초안은 백업 후 제거했습니다.
+- 관계 동기화 정책의 활성 참조를 `docs/specs/data-model.md`로 통합했습니다.
+
 ## 2026-05-28
 
 ### 요약

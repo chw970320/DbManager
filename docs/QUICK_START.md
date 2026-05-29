@@ -127,7 +127,7 @@ docker-compose up --build
 ## 📖 다음 단계
 
 - **[사용자 가이드](./USER_GUIDE.md)**: 각 기능의 상세한 사용법
-- **[프로젝트 본질 분석](./PROJECT_DEEP_ANALYSIS.md)**: 프로젝트의 핵심 개념 이해
+- **[프로젝트 개요](../README.md)**: 핵심 기능, 실행 방법, 문서 진입점
 - **[API 레퍼런스](./specs/api-reference.md)**: API 엔드포인트 상세 정보
 - **[데이터 모델](./specs/data-model.md)**: 데이터 구조 이해
 

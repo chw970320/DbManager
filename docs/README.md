@@ -1,60 +1,41 @@
-# 📚 문서 디렉토리
+# DbManager Documentation
 
-이 디렉토리는 프로젝트의 문서를 체계적으로 관리하기 위한 구조입니다.
+This directory keeps only the current user-facing guides, technical specs, and release history. Root `AGENTS.md` is the canonical agent workflow guide; root `DESIGN.md` is the canonical product/UI design guide.
 
-## 📁 디렉토리 구조
+## Current entry points
 
-| 폴더/파일                    | 용도                               | 대상 사용자        |
-| ---------------------------- | ---------------------------------- | ------------------ |
-| **PROJECT_DEEP_ANALYSIS.md** | 프로젝트 본질 및 핵심 가치 분석    | 모든 사용자 (필수) |
-| **AI_CONTEXT.md**            | AI 컨텍스트 문서 (프로젝트 이해용) | AI, 개발자         |
-| **CONVENTIONS.md**           | 개발 컨벤션 및 코딩 스타일 가이드  | 개발자             |
-| **FRONTEND_UI_UX_GUIDE.md**  | 프론트엔드 UI/UX 구현 가이드       | 프론트엔드 개발자  |
-| **CHANGELOG.md**             | 코드/아키텍처 변경 이력            | 개발자             |
-| **QUICK_START.md**           | 빠른 시작 가이드                   | 모든 사용자        |
-| **USER_GUIDE.md**            | 사용자 가이드 (상세 매뉴얼)        | 실제 사용자        |
-| **specs/**                   | 데이터 모델, API 레퍼런스          | 개발자             |
-| **template/**                | 문서 자동화 가이드                 | 문서 관리자        |
+| Document                                             | Purpose                                                                                                                  | Audience                |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ----------------------- |
+| [`QUICK_START.md`](./QUICK_START.md)                 | Install/run the app and try the first core flow.                                                                         | New users, contributors |
+| [`USER_GUIDE.md`](./USER_GUIDE.md)                   | Detailed feature usage for vocabulary, domain, term, DB design, ERD, profiling, snapshots, uploads, and troubleshooting. | Users, QA               |
+| [`CHANGELOG.md`](./CHANGELOG.md)                     | Chronological product/code/documentation history.                                                                        | Maintainers             |
+| [`specs/api-reference.md`](./specs/api-reference.md) | Current API endpoint reference.                                                                                          | Developers              |
+| [`specs/data-model.md`](./specs/data-model.md)       | Current data/storage model reference.                                                                                    | Developers              |
 
-## 🎯 문서 사용 가이드
+Related root-level guidance:
 
-### 처음 시작하는 경우
+- [`../AGENTS.md`](../AGENTS.md): canonical agent workflow, routing, verification, and commit rules.
+- [`../DESIGN.md`](../DESIGN.md): canonical product/UI design source of truth.
+- [`../README.md`](../README.md): repository overview, setup, scripts, and visible document links.
 
-1. **[빠른 시작 가이드](./QUICK_START.md)**: 프로젝트 설치 및 첫 번째 용어 생성
-2. **[프로젝트 본질 분석](./PROJECT_DEEP_ANALYSIS.md)**: 프로젝트의 핵심 개념 이해
-3. **[사용자 가이드](./USER_GUIDE.md)**: 각 기능의 상세한 사용법
-4. **[변경 이력](./CHANGELOG.md)**: 최근 릴리스/리팩터링 내역 확인
+## Loading policy for agents
 
-### 개발자를 위한 문서
+1. Read `AGENTS.md` first.
+2. Load only the entry point that matches the task.
+3. Prefer current source/tests over old narrative docs.
+4. If documentation topology changes, update this index and root `README.md` links in the same task.
 
-1. **[프로젝트 본질 분석](./PROJECT_DEEP_ANALYSIS.md)**: 프로젝트의 핵심 개념 및 아키텍처
-2. **[개발 컨벤션](./CONVENTIONS.md)**: 코딩 스타일 및 개발 가이드
-3. **[프론트엔드 UI/UX 가이드](./FRONTEND_UI_UX_GUIDE.md)**: 공통 컴포넌트/디자인 토큰 사용 기준
-4. **[API 레퍼런스](./specs/api-reference.md)**: API 엔드포인트 상세 정보
-5. **[데이터 모델](./specs/data-model.md)**: 데이터 구조 및 타입 정의
-6. **[AI 컨텍스트](./AI_CONTEXT.md)**: AI가 프로젝트를 이해하기 위한 컨텍스트
-7. **[변경 이력](./CHANGELOG.md)**: 레지스트리/매핑/프론트엔드 최신 변경점
+## 2026-05-29 cleanup audit summary
 
-### 문서 관리자
+The detailed audit was generated during the cleanup in `.omx/plans/docs-workflow-audit.md` and summarized here so the durable tracked repository records the decision.
 
-- **[문서 현행화 자동화 지침](./template/documentation-sync-guide.md)**: 코드 변경 시 문서 자동화 방법
+| Decision                            | Files                                                                                                                                              | Rationale / recovery                                                                                                                                                                                    |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Keep                                | `QUICK_START.md`, `USER_GUIDE.md`, `CHANGELOG.md`, `specs/api-reference.md`, `specs/data-model.md`                                                 | Current user-facing guides, current specs, and release history.                                                                                                                                         |
+| Merge into `AGENTS.md`              | `CONVENTIONS.md`, `TDD_GUIDE.md`, `template/documentation-sync-guide.md`                                                                           | Operational workflow, doc-sync, verification, and commit rules now live in root `AGENTS.md`; originals are recoverable from git history.                                                                |
+| Merge into root `DESIGN.md`         | `FRONTEND_UI_UX_GUIDE.md`, legacy `docs/DESIGN.md` draft                                                                                           | Design guidance now has a single root source of truth; legacy design drafts are reference-only and the untracked `docs/DESIGN.md` draft was backed up before deletion.                                  |
+| Remove historical one-off docs      | `release/alignment-release-checklist.md`, `specs/HISTORY_REMOVAL_DESIGN.md`, `specs/alignment-operation-guide.md`, `specs/relation-sync-policy.md` | Superseded by current specs, changelog, and git history. Alignment/validation endpoint contracts moved to `specs/api-reference.md`; relationship sync ownership is summarized in `specs/data-model.md`. |
+| Remove generated test descriptions  | `tests/*_TEST_DESCRIPTION.md`                                                                                                                      | Executable tests are the source of truth; deleted descriptions are recoverable from git history.                                                                                                        |
+| Remove duplicate AI/project context | `AI_CONTEXT.md`, `PROJECT_DEEP_ANALYSIS.md`                                                                                                        | Agent routing belongs in `AGENTS.md`; product/design context belongs in `README.md`, `USER_GUIDE.md`, and root `DESIGN.md`.                                                                             |
 
-## 📊 문서 간 관계
-
-```
-PROJECT_DEEP_ANALYSIS.md (프로젝트 본질)
-       ↓
-QUICK_START.md (빠른 시작)
-       ↓
-USER_GUIDE.md (상세 가이드)
-       ↓
-CHANGELOG.md (변경 이력)
-       ↓
-specs/ (기술 문서)
-```
-
-## 🤖 문서 현행화 자동화
-
-문서와 코드 간의 동기화를 자동화하기 위한 지침이 제공됩니다.
-
-- **[문서 현행화 자동화 지침](./template/documentation-sync-guide.md)**: 코드 변경 시 문서를 자동으로 감지하고 업데이트하는 방법
+Historical mentions in `CHANGELOG.md` may still refer to removed files as past artifacts. Active indexes and workflow routing should not point to deleted docs.

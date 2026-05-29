@@ -17,6 +17,8 @@
 - [Quality Rule API](#quality-rule-api)
 - [Design Snapshot API](#design-snapshot-api)
 - [ERD API](#erd-api)
+- [Alignment API](#alignment-api)
+- [Validation Report API](#validation-report-api)
 - [Forbidden Words API](#forbidden-words-api)
 - [Search API](#search-api)
 - [Settings API](#settings-api)
@@ -2460,7 +2462,158 @@ ERD 대상 테이블 목록을 조회합니다.
   - `Table -> Column`: `schemaName`, `tableEnglishName`, `relatedEntityName` 보정
   - `Attribute -> Column`: 자동 수정 없이 추천 후보만 제공
 - 충돌 정책:
-  - 관계 동기화와 컬럼 동기화(`POST /api/column/sync-term`)의 필드 소유권/실행 순서는 `docs/specs/relation-sync-policy.md`를 따릅니다.
+  - 관계 동기화와 컬럼 동기화(`POST /api/column/sync-term`)의 필드 소유권/실행 순서는 `docs/specs/data-model.md`의 관계 정합성/동기화 충돌 정책을 따릅니다.
+
+---
+
+## Alignment API
+
+### POST /api/alignment/sync
+
+단어집/도메인/용어/관계/컬럼 정합화를 한 번의 표준 순서로 실행합니다. 업로드 후처리(`src/lib/utils/upload-postprocess.ts`)도 이 엔드포인트를 사용합니다.
+
+#### 요청 파라미터
+
+Query string 또는 JSON body에서 다음 값을 받을 수 있습니다.
+
+| 필드                            | 타입    | 기본값            | 설명                                                   |
+| ------------------------------- | ------- | ----------------- | ------------------------------------------------------ |
+| `apply`                         | boolean | `true`            | `false`이면 미리보기 모드, `true`이면 동기화 적용 모드 |
+| `vocabularyFilename`            | string  | `vocabulary.json` | 단어집 파일명                                          |
+| `termFilename`                  | string  | `term.json`       | 용어 파일명                                            |
+| `domainFilename`                | string  | `domain.json`     | 도메인 파일명                                          |
+| `databaseFile`                  | string  | 공통 매핑         | 데이터베이스 정의서 파일명                             |
+| `entityFile`                    | string  | 공통 매핑         | 엔터티 정의서 파일명                                   |
+| `attributeFile`                 | string  | 공통 매핑         | 속성 정의서 파일명                                     |
+| `tableFile`                     | string  | 공통 매핑         | 테이블 정의서 파일명                                   |
+| `columnFile` / `columnFilename` | string  | `column.json`     | 컬럼 정의서 파일명                                     |
+
+#### 실행 순서
+
+1. `POST /api/vocabulary/sync-domain`
+2. `POST /api/term/sync`
+3. `POST /api/erd/relations/sync`
+4. `POST /api/column/sync-term`
+5. `GET /api/validation/report`
+
+관계 동기화와 컬럼-용어 동기화의 필드 소유권/충돌 순서는 `docs/specs/data-model.md`의 관계 정합성/동기화 정책을 따릅니다.
+
+#### 응답
+
+```typescript
+{
+	success: true;
+	data: {
+		mode: 'apply' | 'preview';
+		applied: boolean;
+		steps: {
+			vocabulary: {
+				data: unknown;
+			}
+			term: {
+				data: unknown;
+			}
+			relation: {
+				data: unknown;
+			}
+			column: {
+				data: unknown;
+			}
+			validation: {
+				data: unknown;
+			}
+		}
+		summary: {
+			appliedVocabularyUpdates: number;
+			appliedTermUpdates: number;
+			appliedRelationUpdates: number;
+			appliedColumnUpdates: number;
+			remainingTermFailed: number;
+			relationUnmatchedCount: number;
+			totalIssues: number;
+		}
+	}
+	message: string;
+}
+```
+
+실패 시 `data.failedStep`에 `vocabulary`, `term`, `relation`, `column`, `validation` 중 실패한 단계가 포함됩니다.
+
+---
+
+## Validation Report API
+
+### GET /api/validation/report
+
+용어 전체 검증(`GET /api/term/validate-all`)과 5개 정의서 관계 진단(`GET /api/erd/relations`)을 하나의 이슈 목록으로 통합합니다.
+
+#### Query Parameters
+
+| 파라미터                    | 타입   | 기본값      | 설명                       |
+| --------------------------- | ------ | ----------- | -------------------------- |
+| `termFile` / `termFilename` | string | `term.json` | 용어 파일명                |
+| `databaseFile`              | string | 공통 매핑   | 데이터베이스 정의서 파일명 |
+| `entityFile`                | string | 공통 매핑   | 엔터티 정의서 파일명       |
+| `attributeFile`             | string | 공통 매핑   | 속성 정의서 파일명         |
+| `tableFile`                 | string | 공통 매핑   | 테이블 정의서 파일명       |
+| `columnFile`                | string | 공통 매핑   | 컬럼 정의서 파일명         |
+
+#### 응답
+
+```typescript
+{
+	success: true;
+	data: {
+		files: {
+			term: string;
+			database: string | null;
+			entity: string | null;
+			attribute: string | null;
+			table: string | null;
+			column: string | null;
+		}
+		summary: {
+			totalIssues: number;
+			errorCount: number;
+			autoFixableCount: number;
+			warningCount: number;
+			infoCount: number;
+			termFailedCount: number;
+			relationUnmatchedCount: number;
+		}
+		sections: {
+			term: {
+				totalCount: number;
+				passedCount: number;
+				failedCount: number;
+			}
+			relation: unknown;
+		}
+		issues: Array<{
+			source: 'term' | 'relation';
+			level: 'error' | 'auto-fixable' | 'warning' | 'info';
+			code: string;
+			message: string;
+			entryId: string;
+			label: string;
+			field?: string;
+			priority: number;
+			metadata?: Record<string, unknown>;
+		}>;
+	}
+	message: string;
+}
+```
+
+#### 이슈 정렬 규칙
+
+1. `error`
+2. `auto-fixable`
+3. `warning`
+4. `info`
+5. 동일 레벨 내 `priority`, 이후 `code`
+
+Relation 이슈는 관계 진단의 `severity`를 따르고, Term 이슈는 자동보정 제안이 있으면 `auto-fixable`로 분류합니다.
 
 ---
 

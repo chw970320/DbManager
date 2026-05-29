@@ -3,7 +3,9 @@
 	import { getHighlightedSegments } from '$lib/utils/text-highlight';
 	import { createEventDispatcher } from 'svelte';
 	import ColumnFilter from './ColumnFilter.svelte';
+	import EmptyState from './EmptyState.svelte';
 	import HighlightedText from './HighlightedText.svelte';
+	import Skeleton from './Skeleton.svelte';
 
 	type SortEvent = {
 		column: string;
@@ -199,6 +201,7 @@
 
 	// 활성 필터가 있는지 확인
 	let hasActiveFilters = $derived(Object.keys(activeFilters).length > 0);
+	let displayedCount = $derived(totalCount > 0 ? totalCount : entries.length);
 
 	/**
 	 * 컬럼별 고유값 목록 추출
@@ -310,20 +313,22 @@
 </script>
 
 <!-- 도메인 테이블 컴포넌트 -->
-<div class="overflow-x-auto rounded-lg border border-gray-300 shadow-md">
+<div class="max-w-full rounded-lg border border-border bg-surface shadow-md">
 	<!-- 테이블 헤더 -->
-	<div class="border-b border-gray-200 px-6 py-4">
+	<div class="border-b border-border px-6 py-4">
 		<div class="flex items-center justify-between">
-			<h3 class="text-lg font-medium text-gray-900">
+			<h3 class="text-lg font-medium text-content">
 				도메인 목록
-				<span class="ml-2 text-sm font-normal text-gray-500">
-					총 {totalCount.toLocaleString()}개 항목
-				</span>
+				{#if displayedCount > 0}
+					<span class="ml-2 text-sm font-normal text-content-muted">
+						총 {displayedCount.toLocaleString()}개 항목
+					</span>
+				{/if}
 			</h3>
 
 			<div class="flex items-center gap-4">
 				{#if searchQuery}
-					<div class="text-sm text-gray-500">
+					<div class="text-sm text-content-muted">
 						<span class="font-medium">"{searchQuery}"</span> 검색 결과
 					</div>
 				{/if}
@@ -331,7 +336,7 @@
 					<button
 						type="button"
 						onclick={() => onClearAllFilters?.()}
-						class="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+						class="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-1.5 text-xs font-medium text-content-secondary transition-colors hover:bg-surface-muted focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-1"
 						title="모든 필터 초기화"
 					>
 						<svg
@@ -357,22 +362,27 @@
 
 	<!-- 테이블 컨테이너 (가로 스크롤 지원) -->
 	<div class="overflow-x-auto px-1 pb-6">
-		<table class="min-w-full divide-y divide-gray-200">
+		<table class="min-w-full divide-y divide-border" aria-label="도메인 목록" aria-busy={loading}>
+			<caption class="sr-only">
+				{loading
+					? '도메인 목록을 불러오는 중입니다.'
+					: `도메인 ${displayedCount.toLocaleString()}개 항목`}
+			</caption>
 			<!-- 테이블 헤더 -->
-			<thead class="overflow-visible bg-gray-100">
+			<thead class="overflow-visible bg-surface-muted">
 				<tr>
 					{#each columns as column (column.key)}
 						<th
 							scope="col"
-							class="relative whitespace-nowrap px-6 py-3 text-xs font-medium uppercase tracking-wider text-gray-700 {column.width} {column.align ===
+							class="relative whitespace-nowrap px-6 py-3 text-xs font-medium uppercase tracking-wider text-content-secondary {column.width} {column.align ===
 							'center'
 								? 'text-center'
 								: column.align === 'right'
 									? 'text-right'
 									: 'text-left'} {column.sortable
-								? 'cursor-pointer hover:bg-gray-200'
+								? 'cursor-pointer hover:bg-surface-raised'
 								: ''} {column.filterable ? 'overflow-visible' : ''}"
-							class:bg-gray-200={getSortDirection(column.key) !== null}
+							class:bg-surface-raised={getSortDirection(column.key) !== null}
 							onclick={() => column.sortable && handleSort(column.key)}
 							onkeydown={(e) => {
 								if ((e.key === 'Enter' || e.key === ' ') && column.sortable) {
@@ -389,7 +399,9 @@
 								{#if column.sortable}
 									{@const colSortDir = getSortDirection(column.key)}
 									<svg
-										class="h-4 w-4 {colSortDir !== null ? 'text-gray-600' : 'text-gray-600'}"
+										class="h-4 w-4 {colSortDir !== null
+											? 'text-content-secondary'
+											: 'text-content-secondary'}"
 										fill="none"
 										stroke="currentColor"
 										viewBox="0 0 24 24"
@@ -443,16 +455,22 @@
 			</thead>
 
 			<!-- 테이블 바디 -->
-			<tbody class="divide-y divide-gray-200 bg-white">
+			<tbody class="divide-y divide-border bg-surface">
 				{#if loading}
 					<!-- 로딩 상태 -->
 					{#each Array(pageSize) as _, i (i)}
-						<tr class="animate-pulse">
-							{#each columns as column (column.key)}
+						<tr aria-hidden="true">
+							{#each columns as column, columnIndex (column.key)}
 								<td class="whitespace-nowrap px-6 py-4">
-									<div
-										class="h-4 rounded bg-gray-200 {column.width === 'w-20' ? 'w-12' : 'w-3/4'}"
-									></div>
+									<Skeleton
+										width={columnIndex % 3 === 0
+											? '75%'
+											: column.align === 'center'
+												? '50%'
+												: '66%'}
+										height="1rem"
+										class="max-w-full"
+									/>
 								</td>
 							{/each}
 						</tr>
@@ -461,37 +479,20 @@
 					<!-- 데이터 없음 -->
 					<tr>
 						<td colspan={columns.length} class="px-6 py-12 text-center">
-							<div class="flex flex-col items-center space-y-3">
-								<svg
-									class="h-12 w-12 text-gray-600"
-									fill="none"
-									stroke="currentColor"
-									viewBox="0 0 24 24"
-								>
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-									/>
-								</svg>
-								<div class="text-gray-500">
-									{#if searchQuery}
-										<p class="text-lg font-medium">검색 결과가 없습니다</p>
-										<p class="text-sm">다른 검색어를 시도해보세요</p>
-									{:else}
-										<p class="text-lg font-medium">표시할 데이터가 없습니다</p>
-										<p class="text-sm">먼저 파일을 업로드하여 도메인을 등록해주세요.</p>
-									{/if}
-								</div>
-							</div>
+							<EmptyState
+								icon={searchQuery ? 'search' : 'file'}
+								title={searchQuery ? '검색 결과가 없습니다' : '표시할 데이터가 없습니다'}
+								description={searchQuery
+									? '다른 검색어를 시도해보세요.'
+									: '먼저 파일을 업로드하여 도메인을 등록해주세요.'}
+							/>
 						</td>
 					</tr>
 				{:else}
 					<!-- 데이터 행 -->
 					{#each entries as entry (entry.id)}
 						<tr
-							class="cursor-pointer border-t border-gray-300 transition-colors hover:bg-blue-50"
+							class="cursor-pointer border-t border-border transition-colors hover:bg-surface-muted/70"
 							onclick={(e: MouseEvent) => handleRowClick(entry, e)}
 							role="button"
 							tabindex="0"
@@ -511,7 +512,7 @@
 									searchField === 'all' || searchField === column.key
 								)}
 								<td
-									class="whitespace-normal break-words px-6 py-4 text-sm text-gray-700 {column.align ===
+									class="whitespace-normal break-words px-6 py-4 text-sm text-content-secondary {column.align ===
 									'center'
 										? 'text-center'
 										: column.align === 'right'
@@ -539,10 +540,10 @@
 	<!-- 테이블 푸터 (페이지네이션) -->
 	{#if totalPages > 1}
 		<div
-			class="flex flex-col items-center justify-between space-y-4 border-t border-gray-200 px-6 py-4 md:flex-row md:space-y-0"
+			class="flex flex-col items-center justify-between space-y-4 border-t border-border px-6 py-4 md:flex-row md:space-y-0"
 		>
 			<!-- 페이지 정보 -->
-			<div class="text-sm text-gray-600">
+			<div class="text-sm text-content-muted">
 				총 <span class="font-medium">{totalPages}</span> 페이지 중
 				<span class="font-medium">{currentPage}</span> 페이지
 			</div>
@@ -553,7 +554,7 @@
 				<button
 					onclick={() => handlePageChange(currentPage - 1)}
 					disabled={currentPage === 1 || loading}
-					class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-600 ring-1 ring-inset ring-gray-300 transition-colors hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
+					class="relative inline-flex items-center rounded-l-md px-2 py-2 text-content-muted ring-1 ring-inset ring-border transition-colors hover:bg-surface-muted focus:z-20 focus:outline-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
 				>
 					<span class="sr-only">이전</span>
 					<svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -571,16 +572,16 @@
 						<button
 							onclick={() => handlePageChange(page)}
 							disabled={loading}
-							class="relative inline-flex items-center px-4 py-2 text-sm font-semibold ring-1 ring-inset ring-gray-300 transition-colors focus:z-20 focus:outline-offset-0 disabled:cursor-not-allowed disabled:opacity-50 {currentPage ===
+							class="relative inline-flex items-center px-4 py-2 text-sm font-semibold ring-1 ring-inset ring-border transition-colors focus:z-20 focus:outline-offset-0 disabled:cursor-not-allowed disabled:opacity-50 {currentPage ===
 							page
-								? 'z-10 bg-purple-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-purple-600'
-								: 'text-gray-900 hover:bg-gray-50'}"
+								? 'z-10 bg-brand text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand'
+								: 'text-content hover:bg-surface-muted'}"
 						>
 							{page}
 						</button>
 					{:else}
 						<span
-							class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300"
+							class="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-content-secondary ring-1 ring-inset ring-border"
 						>
 							...
 						</span>
@@ -591,7 +592,7 @@
 				<button
 					onclick={() => handlePageChange(currentPage + 1)}
 					disabled={currentPage === totalPages || loading}
-					class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-600 ring-1 ring-inset ring-gray-300 transition-colors hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
+					class="relative inline-flex items-center rounded-r-md px-2 py-2 text-content-muted ring-1 ring-inset ring-border transition-colors hover:bg-surface-muted focus:z-20 focus:outline-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
 				>
 					<span class="sr-only">다음</span>
 					<svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

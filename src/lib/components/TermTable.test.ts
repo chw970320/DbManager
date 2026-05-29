@@ -67,6 +67,8 @@ describe('TermTable', () => {
 		});
 
 		expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
+		expect(screen.getByRole('table', { name: '용어 목록' })).toHaveAttribute('aria-busy', 'true');
+		expect(screen.getByText('용어 목록을 불러오는 중입니다.')).toBeInTheDocument();
 		await fireEvent.click(screen.getByRole('button', { name: '용어명로 정렬' }));
 		await fireEvent.click(screen.getByRole('button', { name: '다음' }));
 

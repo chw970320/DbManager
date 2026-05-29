@@ -122,7 +122,10 @@
 		'term',
 		'domain'
 	];
-	const systemParamNames: Record<SystemFileType, 'vocabularyFilename' | 'termFilename' | 'domainFilename'> = {
+	const systemParamNames: Record<
+		SystemFileType,
+		'vocabularyFilename' | 'termFilename' | 'domainFilename'
+	> = {
 		vocabulary: 'vocabularyFilename',
 		term: 'termFilename',
 		domain: 'domainFilename'
@@ -160,6 +163,16 @@
 		return [...validation.summaries]
 			.filter((summary) => summary.unmatched > 0)
 			.sort((a, b) => b.unmatched - a.unmatched);
+	}
+
+	function relationSeverityLabel(
+		summary: DesignRelationValidationResult['summaries'][number]
+	): string {
+		return summary.severity === 'error' ? '오류' : '경고';
+	}
+
+	function syncModeLabel(mode: RelationSyncPayload['mode']): string {
+		return mode === 'preview' ? '응답 모드: 미리보기' : '응답 모드: 반영 결과';
 	}
 
 	function currentFileParamName(type: DefinitionType): `${DefinitionType}File` {
@@ -215,7 +228,11 @@
 			return fileMapping?.[type] || DEFAULT_FILENAMES[type];
 		}
 
-		return validationData?.files[type as DefinitionType] || fileMapping?.[type] || DEFAULT_FILENAMES[type];
+		return (
+			validationData?.files[type as DefinitionType] ||
+			fileMapping?.[type] ||
+			DEFAULT_FILENAMES[type]
+		);
 	}
 
 	async function loadValidation() {
@@ -306,7 +323,6 @@
 				files: result.data.files,
 				validation: result.data.validationAfter
 			};
-
 		} catch (err) {
 			console.error('관계 보정 미리보기 오류:', err);
 			error = err instanceof Error ? err.message : '관계 보정 미리보기 중 오류가 발생했습니다.';
@@ -316,13 +332,17 @@
 	}
 
 	onMount(async () => {
-		const mappingKey = sharedFileTypes.map((type) => `${type}:${fileMapping?.[type] || ''}`).join('|');
+		const mappingKey = sharedFileTypes
+			.map((type) => `${type}:${fileMapping?.[type] || ''}`)
+			.join('|');
 		lastLoadedKey = `${currentType}:${currentFilename}:${mappingKey}`;
 		await loadAllValidations();
 	});
 
 	$effect(() => {
-		const mappingKey = sharedFileTypes.map((type) => `${type}:${fileMapping?.[type] || ''}`).join('|');
+		const mappingKey = sharedFileTypes
+			.map((type) => `${type}:${fileMapping?.[type] || ''}`)
+			.join('|');
 		const nextKey = `${currentType}:${currentFilename}:${mappingKey}`;
 		if (nextKey === lastLoadedKey) return;
 		lastLoadedKey = nextKey;
@@ -332,7 +352,9 @@
 	});
 </script>
 
-<section class="mb-8 rounded-2xl border border-amber-200/70 bg-amber-50/90 p-4 shadow-sm backdrop-blur-sm">
+<section
+	class="mb-8 rounded-2xl border border-amber-200/70 bg-amber-50/90 p-4 shadow-sm backdrop-blur-sm"
+>
 	<div class="mb-3 flex flex-wrap items-center justify-between gap-2">
 		<div>
 			<h2 class="text-lg font-semibold text-amber-800">8종 공통 연관 상태</h2>
@@ -351,17 +373,23 @@
 	</div>
 
 	{#if collapsed}
-		<div class="mb-3 rounded-md border border-amber-200 bg-white/80 px-3 py-2 text-xs text-amber-800">
+		<div
+			class="mb-3 rounded-md border border-amber-200 bg-white/80 px-3 py-2 text-xs text-amber-800"
+		>
 			<div class="mb-1 font-semibold text-amber-900">요약</div>
 			{#if validationData}
 				<div class="grid grid-cols-2 gap-2 sm:grid-cols-4">
-					<div class="rounded border border-green-200 bg-white px-2 py-1 text-center text-green-700">
+					<div
+						class="rounded border border-green-200 bg-white px-2 py-1 text-center text-green-700"
+					>
 						매칭 {validationData.validation.totals.matched}
 					</div>
 					<div class="rounded border border-red-200 bg-white px-2 py-1 text-center text-red-700">
 						오류 {validationData.validation.totals.errorCount}
 					</div>
-					<div class="rounded border border-yellow-200 bg-white px-2 py-1 text-center text-yellow-700">
+					<div
+						class="rounded border border-yellow-200 bg-white px-2 py-1 text-center text-yellow-700"
+					>
 						경고 {validationData.validation.totals.warningCount}
 					</div>
 					<div class="rounded border border-gray-200 bg-white px-2 py-1 text-center text-gray-700">
@@ -373,13 +401,17 @@
 			{/if}
 			{#if unifiedValidationData}
 				<div class="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-					<div class="rounded border border-indigo-200 bg-white px-2 py-1 text-center text-indigo-700">
+					<div
+						class="rounded border border-indigo-200 bg-white px-2 py-1 text-center text-indigo-700"
+					>
 						통합 이슈 {unifiedValidationData.summary.totalIssues}
 					</div>
 					<div class="rounded border border-rose-200 bg-white px-2 py-1 text-center text-rose-700">
 						용어 실패 {unifiedValidationData.summary.termFailedCount}
 					</div>
-					<div class="rounded border border-amber-200 bg-white px-2 py-1 text-center text-amber-700">
+					<div
+						class="rounded border border-amber-200 bg-white px-2 py-1 text-center text-amber-700"
+					>
 						관계 미매칭 {unifiedValidationData.summary.relationUnmatchedCount}
 					</div>
 				</div>
@@ -407,231 +439,269 @@
 			</button>
 		</div>
 
-	<div class="mb-3 space-y-2 rounded-md border border-amber-200 bg-white/80 px-3 py-2 text-[11px] text-amber-800">
-		<div class="font-semibold text-amber-900">실행 기능 안내</div>
-		<div class="grid grid-cols-1 gap-2 sm:grid-cols-2 mb-3">
-			<div class="rounded border border-amber-100 bg-amber-50/40 px-2 py-1">
-				<div class="font-medium text-amber-900">정합성 조회</div>
-				<div>현재 상태를 다시 계산해 오류/경고/미매칭 원인을 확인합니다. 파일 저장은 하지 않습니다.</div>
-			</div>
-			<div class="rounded border border-amber-100 bg-amber-50/40 px-2 py-1">
-				<div class="font-medium text-amber-900">보정 미리보기</div>
-				<div>관계 보정 후보를 계산해 예상 변경 건수를 보여줍니다. 실제 데이터 반영은 하지 않습니다.</div>
-			</div>
-		</div>
-		<div class="rounded border border-indigo-100 bg-indigo-50/40 px-2 py-1 text-indigo-900">
-			<div class="font-medium text-indigo-800">자동 반영 정책</div>
-			<div>
-				파일 매핑 저장, CRUD, 업로드 같은 쓰기 작업에서 표준/관계 보정은 자동 반영됩니다. 이 패널은 결과 진단과
-				미리보기 확인 용도로만 사용합니다.
-			</div>
-		</div>
-	</div>
-
-	{#if validationData}
-		<div class="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
-			{#each sharedFileTypes as type (type)}
-				<div class="rounded border border-amber-200 bg-white px-2 py-1">
-					<div class="text-[11px] font-semibold {type === currentType ? 'text-blue-700' : 'text-amber-700'}">
-						{sharedFileLabels[type]}
-					</div>
-					<div
-						class="truncate text-[11px] text-gray-700"
-						title={resolveDisplayFilename(type)}
-					>
-						{resolveDisplayFilename(type)}
+		<div
+			class="mb-3 space-y-2 rounded-md border border-amber-200 bg-white/80 px-3 py-2 text-[11px] text-amber-800"
+		>
+			<div class="font-semibold text-amber-900">실행 기능 안내</div>
+			<div class="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+				<div class="rounded border border-amber-100 bg-amber-50/40 px-2 py-1">
+					<div class="font-medium text-amber-900">정합성 조회</div>
+					<div>
+						현재 상태를 다시 계산해 오류/경고/미매칭 원인을 확인합니다. 파일 저장은 하지 않습니다.
 					</div>
 				</div>
-			{/each}
-		</div>
-
-		<div class="mb-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
-			<div class="rounded border border-green-200 bg-white p-2 text-center">
-				<div class="font-semibold text-green-700">{validationData.validation.totals.matched}</div>
-				<div class="text-green-600">매칭</div>
-			</div>
-			<div class="rounded border border-red-200 bg-white p-2 text-center">
-				<div class="font-semibold text-red-700">{validationData.validation.totals.errorCount}</div>
-				<div class="text-red-600">오류</div>
-			</div>
-			<div class="rounded border border-yellow-200 bg-white p-2 text-center">
-				<div class="font-semibold text-yellow-700">{validationData.validation.totals.warningCount}</div>
-				<div class="text-yellow-600">경고</div>
-			</div>
-			<div class="rounded border border-gray-200 bg-white p-2 text-center">
-				<div class="font-semibold text-gray-700">{validationData.validation.totals.unmatched}</div>
-				<div class="text-gray-600">미매칭</div>
-			</div>
-		</div>
-
-		<div class="grid grid-cols-1 gap-1 text-xs sm:grid-cols-2">
-			{#each validationData.validation.summaries as summary (summary.relationId)}
-				<div class="flex items-center justify-between rounded border border-amber-100 bg-white px-2 py-1">
-					<span class="truncate text-gray-700">{summary.relationName}</span>
-					<span class={summary.severity === 'error' ? 'font-semibold text-red-700' : 'font-semibold text-yellow-700'}>
-						{summary.unmatched}
-					</span>
+				<div class="rounded border border-amber-100 bg-amber-50/40 px-2 py-1">
+					<div class="font-medium text-amber-900">보정 미리보기</div>
+					<div>
+						관계 보정 후보를 계산해 예상 변경 건수를 보여줍니다. 실제 데이터 반영은 하지 않습니다.
+					</div>
 				</div>
-			{/each}
+			</div>
+			<div class="rounded border border-indigo-100 bg-indigo-50/40 px-2 py-1 text-indigo-900">
+				<div class="font-medium text-indigo-800">자동 반영 정책</div>
+				<div>
+					파일 매핑 저장, CRUD, 업로드 같은 쓰기 작업에서 표준/관계 보정은 자동 반영됩니다. 이
+					패널은 결과 진단과 미리보기 확인 용도로만 사용합니다.
+				</div>
+			</div>
 		</div>
 
-		{#if getUnmatchedSummaries(validationData.validation).length > 0}
-			<div class="mt-3 rounded-lg border border-red-200 bg-red-50/60 p-3 text-xs">
-				<div class="mb-2 font-semibold text-red-800">무엇이 문제인지 / 어떻게 고칠지</div>
-				<div class="space-y-2">
-					{#each getUnmatchedSummaries(validationData.validation).slice(0, 4) as summary (summary.relationId)}
-						<div class="rounded border border-red-100 bg-white px-2 py-1">
-							<div class="font-medium text-red-700">
-								{summary.relationName} · 미매칭 {summary.unmatched}건
-							</div>
-							<div class="text-gray-700">
-								원인: {summary.issues[0]?.reason || relationGuides[summary.relationId].problem}
-							</div>
-							<div class="text-gray-700">해결: {relationGuides[summary.relationId].fix}</div>
+		{#if validationData}
+			<div class="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+				{#each sharedFileTypes as type (type)}
+					<div class="rounded border border-amber-200 bg-white px-2 py-1">
+						<div
+							class="text-[11px] font-semibold {type === currentType
+								? 'text-blue-700'
+								: 'text-amber-700'}"
+						>
+							{sharedFileLabels[type]}
 						</div>
-					{/each}
+						<div class="truncate text-[11px] text-gray-700" title={resolveDisplayFilename(type)}>
+							{resolveDisplayFilename(type)}
+						</div>
+					</div>
+				{/each}
+			</div>
+
+			<div class="mb-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+				<div class="rounded border border-green-200 bg-white p-2 text-center">
+					<div class="font-semibold text-green-700">{validationData.validation.totals.matched}</div>
+					<div class="text-green-600">매칭</div>
+				</div>
+				<div class="rounded border border-red-200 bg-white p-2 text-center">
+					<div class="font-semibold text-red-700">
+						{validationData.validation.totals.errorCount}
+					</div>
+					<div class="text-red-600">오류</div>
+				</div>
+				<div class="rounded border border-yellow-200 bg-white p-2 text-center">
+					<div class="font-semibold text-yellow-700">
+						{validationData.validation.totals.warningCount}
+					</div>
+					<div class="text-yellow-600">경고</div>
+				</div>
+				<div class="rounded border border-gray-200 bg-white p-2 text-center">
+					<div class="font-semibold text-gray-700">
+						{validationData.validation.totals.unmatched}
+					</div>
+					<div class="text-gray-600">미매칭</div>
+				</div>
+			</div>
+
+			<div class="grid grid-cols-1 gap-1 text-xs sm:grid-cols-2">
+				{#each validationData.validation.summaries as summary (summary.relationId)}
+					<div
+						class="flex items-center justify-between rounded border border-amber-100 bg-white px-2 py-1"
+					>
+						<span class="truncate text-gray-700">{summary.relationName}</span>
+						<span
+							class={summary.severity === 'error'
+								? 'font-semibold text-red-700'
+								: 'font-semibold text-yellow-700'}
+						>
+							{relationSeverityLabel(summary)}
+							{summary.unmatched}건
+						</span>
+					</div>
+				{/each}
+			</div>
+
+			{#if getUnmatchedSummaries(validationData.validation).length > 0}
+				<div class="mt-3 rounded-lg border border-red-200 bg-red-50/60 p-3 text-xs">
+					<div class="mb-2 font-semibold text-red-800">무엇이 문제인지 / 어떻게 고칠지</div>
+					<div class="space-y-2">
+						{#each getUnmatchedSummaries(validationData.validation).slice(0, 4) as summary (summary.relationId)}
+							<div class="rounded border border-red-100 bg-white px-2 py-1">
+								<div class="font-medium text-red-700">
+									{summary.relationName} · 미매칭 {summary.unmatched}건
+								</div>
+								<div class="text-gray-700">출처: {summary.mappingKey}</div>
+								<div class="text-gray-700">
+									원인: {summary.issues[0]?.reason || relationGuides[summary.relationId].problem}
+								</div>
+								<div class="text-gray-700">해결: {relationGuides[summary.relationId].fix}</div>
+							</div>
+						{/each}
+					</div>
+				</div>
+			{/if}
+		{/if}
+
+		{#if unifiedValidationData}
+			<div class="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 p-3">
+				<div class="mb-2 text-xs font-semibold uppercase tracking-wider text-indigo-700">
+					통합 정합성 요약
+				</div>
+				<div class="mb-2 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
+					<div class="rounded border border-amber-200 bg-white p-2 text-center">
+						<div class="font-semibold text-amber-700">
+							{unifiedValidationData.summary.relationUnmatchedCount}
+						</div>
+						<div class="text-amber-600">관계 미매칭</div>
+					</div>
+					<div class="rounded border border-rose-200 bg-white p-2 text-center">
+						<div class="font-semibold text-rose-700">
+							{unifiedValidationData.summary.termFailedCount}
+						</div>
+						<div class="text-rose-600">용어계 실패</div>
+					</div>
+					<div class="rounded border border-green-200 bg-white p-2 text-center">
+						<div class="font-semibold text-green-700">
+							{unifiedValidationData.sections.term.passedCount}
+						</div>
+						<div class="text-green-600">용어계 통과</div>
+					</div>
+					<div class="rounded border border-gray-200 bg-white p-2 text-center">
+						<div class="font-semibold text-gray-700">
+							{unifiedValidationData.summary.totalIssues}
+						</div>
+						<div class="text-gray-600">통합 이슈</div>
+					</div>
+				</div>
+				<div class="grid grid-cols-2 gap-2 text-[11px] sm:grid-cols-4">
+					<div class="rounded border border-red-200 bg-white p-1 text-center text-red-700">
+						Error {unifiedValidationData.summary.errorCount}
+					</div>
+					<div class="rounded border border-yellow-200 bg-white p-1 text-center text-yellow-700">
+						Auto-fixable {unifiedValidationData.summary.autoFixableCount}
+					</div>
+					<div class="rounded border border-amber-200 bg-white p-1 text-center text-amber-700">
+						Warning {unifiedValidationData.summary.warningCount}
+					</div>
+					<div class="rounded border border-slate-200 bg-white p-1 text-center text-slate-700">
+						Info {unifiedValidationData.summary.infoCount}
+					</div>
 				</div>
 			</div>
 		{/if}
-	{/if}
 
-	{#if unifiedValidationData}
-		<div class="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 p-3">
-			<div class="mb-2 text-xs font-semibold uppercase tracking-wider text-indigo-700">
-				통합 정합성 요약
-			</div>
-			<div class="mb-2 grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
-				<div class="rounded border border-amber-200 bg-white p-2 text-center">
-					<div class="font-semibold text-amber-700">
-						{unifiedValidationData.summary.relationUnmatchedCount}
+		{#if syncData}
+			<div class="mt-3 rounded-lg border border-blue-200 bg-white p-3 text-xs">
+				<div class="mb-1 flex items-center justify-between">
+					<div class="font-semibold text-blue-700">보정 미리보기 결과</div>
+					<button
+						type="button"
+						onclick={() => (showSyncDetails = !showSyncDetails)}
+						class="rounded border border-blue-200 px-2 py-1 text-[11px] font-medium text-blue-700 hover:bg-blue-50"
+					>
+						{showSyncDetails ? '상세 숨기기' : '상세 보기'}
+					</button>
+				</div>
+				<div class="mb-2 text-[11px] font-medium text-blue-800">
+					요청: 미리보기(저장 없음) · {syncModeLabel(syncData.mode)}
+				</div>
+				<div class="grid grid-cols-2 gap-1 text-gray-700 sm:grid-cols-4">
+					<div>테이블 후보: {syncData.counts.tableCandidates}</div>
+					<div>컬럼 후보: {syncData.counts.columnCandidates}</div>
+					<div>추천 후보: {syncData.counts.attributeColumnSuggestions}</div>
+					<div>실제 반영: {syncData.counts.appliedTotalUpdates}</div>
+				</div>
+				<div class="mt-1 text-gray-600">
+					정합성 변화: {syncData.validationBefore.totals.unmatched} -> {syncData.validationAfter
+						.totals.unmatched}
+				</div>
+				{#if syncData.validationAfter.totals.unmatched > 0}
+					<div
+						class="mt-2 rounded border border-blue-100 bg-blue-50/40 px-2 py-1 text-[11px] text-blue-900"
+					>
+						미리보기 기준으로도 미매칭이 남습니다. 자동 보정 후보가 없는 항목은 수동 교정이
+						필요합니다.
 					</div>
-					<div class="text-amber-600">관계 미매칭</div>
-				</div>
-				<div class="rounded border border-rose-200 bg-white p-2 text-center">
-					<div class="font-semibold text-rose-700">
-						{unifiedValidationData.summary.termFailedCount}
-					</div>
-					<div class="text-rose-600">용어계 실패</div>
-				</div>
-				<div class="rounded border border-green-200 bg-white p-2 text-center">
-					<div class="font-semibold text-green-700">
-						{unifiedValidationData.sections.term.passedCount}
-					</div>
-					<div class="text-green-600">용어계 통과</div>
-				</div>
-				<div class="rounded border border-gray-200 bg-white p-2 text-center">
-					<div class="font-semibold text-gray-700">{unifiedValidationData.summary.totalIssues}</div>
-					<div class="text-gray-600">통합 이슈</div>
-				</div>
-			</div>
-			<div class="grid grid-cols-2 gap-2 text-[11px] sm:grid-cols-4">
-				<div class="rounded border border-red-200 bg-white p-1 text-center text-red-700">
-					Error {unifiedValidationData.summary.errorCount}
-				</div>
-				<div class="rounded border border-yellow-200 bg-white p-1 text-center text-yellow-700">
-					Auto-fixable {unifiedValidationData.summary.autoFixableCount}
-				</div>
-				<div class="rounded border border-amber-200 bg-white p-1 text-center text-amber-700">
-					Warning {unifiedValidationData.summary.warningCount}
-				</div>
-				<div class="rounded border border-slate-200 bg-white p-1 text-center text-slate-700">
-					Info {unifiedValidationData.summary.infoCount}
-				</div>
-			</div>
-		</div>
-	{/if}
+				{/if}
 
-	{#if syncData}
-		<div class="mt-3 rounded-lg border border-blue-200 bg-white p-3 text-xs">
-			<div class="mb-1 flex items-center justify-between">
-				<div class="font-semibold text-blue-700">
-					보정 미리보기 결과
-				</div>
-				<button
-					type="button"
-					onclick={() => (showSyncDetails = !showSyncDetails)}
-					class="rounded border border-blue-200 px-2 py-1 text-[11px] font-medium text-blue-700 hover:bg-blue-50"
-				>
-					{showSyncDetails ? '상세 숨기기' : '상세 보기'}
-				</button>
-			</div>
-			<div class="grid grid-cols-2 gap-1 text-gray-700 sm:grid-cols-4">
-				<div>테이블 후보: {syncData.counts.tableCandidates}</div>
-				<div>컬럼 후보: {syncData.counts.columnCandidates}</div>
-				<div>추천 후보: {syncData.counts.attributeColumnSuggestions}</div>
-				<div>실제 반영: {syncData.counts.appliedTotalUpdates}</div>
-			</div>
-			<div class="mt-1 text-gray-600">
-				정합성 변화: {syncData.validationBefore.totals.unmatched} -> {syncData.validationAfter.totals.unmatched}
-			</div>
-			{#if syncData.validationAfter.totals.unmatched > 0}
-				<div class="mt-2 rounded border border-blue-100 bg-blue-50/40 px-2 py-1 text-[11px] text-blue-900">
-					미리보기 기준으로도 미매칭이 남습니다. 자동 보정 후보가 없는 항목은 수동 교정이 필요합니다.
-				</div>
-			{/if}
-
-			{#if getUnmatchedSummaries(syncData.validationAfter).length > 0}
-				<div class="mt-2 space-y-1 rounded border border-blue-100 bg-blue-50/20 p-2">
-					<div class="font-semibold text-blue-800">미해결 원인(상위 3개)</div>
-					{#each getUnmatchedSummaries(syncData.validationAfter).slice(0, 3) as summary (summary.relationId)}
-						<div class="rounded border border-blue-100 bg-white px-2 py-1 text-[11px] text-gray-700">
-							<div class="font-medium text-blue-700">{summary.relationName} · {summary.unmatched}건</div>
-							<div>해결: {relationGuides[summary.relationId].fix}</div>
-						</div>
-					{/each}
-				</div>
-			{/if}
-
-			{#if showSyncDetails}
-				<div class="mt-2 grid grid-cols-1 gap-2 lg:grid-cols-2">
-					<div class="rounded border border-blue-100 bg-blue-50/40 p-2">
-						<div class="mb-1 font-semibold text-blue-800">
-							변경 후보 ({Math.min(syncData.changes.length, 15)} / {syncData.changes.length})
-						</div>
-						<div class="max-h-48 space-y-1 overflow-y-auto pr-1">
-							{#each syncData.changes.slice(0, 15) as change (change.targetId + change.field)}
-								<div class="rounded border border-blue-100 bg-white px-2 py-1 text-[11px] text-gray-700">
-									<div class="font-medium text-blue-700">
-										{change.targetType.toUpperCase()} · {change.targetLabel}
-									</div>
-									<div>{change.field}: "{change.before || '-'}" -> "{change.after || '-'}"</div>
+				{#if getUnmatchedSummaries(syncData.validationAfter).length > 0}
+					<div class="mt-2 space-y-1 rounded border border-blue-100 bg-blue-50/20 p-2">
+						<div class="font-semibold text-blue-800">미해결 원인(상위 3개)</div>
+						{#each getUnmatchedSummaries(syncData.validationAfter).slice(0, 3) as summary (summary.relationId)}
+							<div
+								class="rounded border border-blue-100 bg-white px-2 py-1 text-[11px] text-gray-700"
+							>
+								<div class="font-medium text-blue-700">
+									{summary.relationName} · {summary.unmatched}건
 								</div>
-							{/each}
-							{#if syncData.changes.length === 0}
-								<div class="text-[11px] text-gray-500">변경 후보가 없습니다.</div>
-							{/if}
+								<div>해결: {relationGuides[summary.relationId].fix}</div>
+							</div>
+						{/each}
+					</div>
+				{/if}
+
+				{#if showSyncDetails}
+					<div class="mt-2 grid grid-cols-1 gap-2 lg:grid-cols-2">
+						<div class="rounded border border-blue-100 bg-blue-50/40 p-2">
+							<div class="mb-1 font-semibold text-blue-800">
+								변경 후보 ({Math.min(syncData.changes.length, 15)} / {syncData.changes.length})
+							</div>
+							<div class="max-h-48 space-y-1 overflow-y-auto pr-1">
+								{#each syncData.changes.slice(0, 15) as change (change.targetId + change.field)}
+									<div
+										class="rounded border border-blue-100 bg-white px-2 py-1 text-[11px] text-gray-700"
+									>
+										<div class="font-medium text-blue-700">
+											{change.targetType.toUpperCase()} · {change.targetLabel}
+										</div>
+										<div>{change.field}: "{change.before || '-'}" -> "{change.after || '-'}"</div>
+										<div>근거: {change.reason}</div>
+									</div>
+								{/each}
+								{#if syncData.changes.length === 0}
+									<div class="text-[11px] text-gray-500">변경 후보가 없습니다.</div>
+								{/if}
+							</div>
+						</div>
+
+						<div class="rounded border border-indigo-100 bg-indigo-50/40 p-2">
+							<div class="mb-1 font-semibold text-indigo-800">
+								속성-컬럼 추천 ({Math.min(syncData.suggestions.length, 10)} / {syncData.suggestions
+									.length})
+							</div>
+							<div class="max-h-48 space-y-1 overflow-y-auto pr-1">
+								{#each syncData.suggestions.slice(0, 10) as suggestion (suggestion.attributeId)}
+									<div
+										class="rounded border border-indigo-100 bg-white px-2 py-1 text-[11px] text-gray-700"
+									>
+										<div class="font-medium text-indigo-700">
+											{suggestion.attributeName} ({suggestion.schemaName}.{suggestion.entityName})
+										</div>
+										<div class="truncate">
+											후보: {suggestion.candidates.map((c) => c.columnLabel).join(', ')}
+										</div>
+									</div>
+								{/each}
+								{#if syncData.suggestions.length === 0}
+									<div class="text-[11px] text-gray-500">추천 후보가 없습니다.</div>
+								{/if}
+							</div>
 						</div>
 					</div>
+				{/if}
+			</div>
+		{/if}
 
-					<div class="rounded border border-indigo-100 bg-indigo-50/40 p-2">
-						<div class="mb-1 font-semibold text-indigo-800">
-							속성-컬럼 추천 ({Math.min(syncData.suggestions.length, 10)} / {syncData.suggestions.length})
-						</div>
-						<div class="max-h-48 space-y-1 overflow-y-auto pr-1">
-							{#each syncData.suggestions.slice(0, 10) as suggestion (suggestion.attributeId)}
-								<div class="rounded border border-indigo-100 bg-white px-2 py-1 text-[11px] text-gray-700">
-									<div class="font-medium text-indigo-700">
-										{suggestion.attributeName} ({suggestion.schemaName}.{suggestion.entityName})
-									</div>
-									<div class="truncate">
-										후보: {suggestion.candidates.map((c) => c.columnLabel).join(', ')}
-									</div>
-								</div>
-							{/each}
-							{#if syncData.suggestions.length === 0}
-								<div class="text-[11px] text-gray-500">추천 후보가 없습니다.</div>
-							{/if}
-						</div>
-					</div>
-				</div>
-			{/if}
-		</div>
-	{/if}
-
-	{#if error}
-		<div class="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-			{error}
-		</div>
-	{/if}
+		{#if error}
+			<div class="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+				{error}
+			</div>
+		{/if}
 	{/if}
 </section>

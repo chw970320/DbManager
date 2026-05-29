@@ -43,7 +43,7 @@ function createSyncResponse() {
 	return {
 		success: true,
 		data: {
-			mode: 'apply',
+			mode: 'preview',
 			files: {
 				database: 'database.json',
 				entity: 'entity.json',
@@ -61,7 +61,17 @@ function createSyncResponse() {
 				appliedColumnUpdates: 2,
 				appliedTotalUpdates: 3
 			},
-			changes: [],
+			changes: [
+				{
+					targetType: 'table',
+					targetId: 'table-1',
+					targetLabel: 'public.customers',
+					field: 'relatedEntityName',
+					before: '',
+					after: '고객',
+					reason: '테이블명 기준 관계 보정'
+				}
+			],
 			suggestions: [],
 			validationBefore: {
 				specs: [],
@@ -156,6 +166,8 @@ describe('DesignRelationPanel', () => {
 		await waitFor(() => {
 			expect(screen.getByText('table.json')).toBeInTheDocument();
 			expect(screen.getByText('테이블 -> 컬럼')).toBeInTheDocument();
+			expect(screen.getByText('오류 1건')).toBeInTheDocument();
+			expect(screen.getByText('출처: schemaName + tableEnglishName')).toBeInTheDocument();
 			expect(screen.getByText('통합 정합성 요약')).toBeInTheDocument();
 			expect(screen.getByText('용어계 실패')).toBeInTheDocument();
 		});
@@ -193,9 +205,19 @@ describe('DesignRelationPanel', () => {
 
 		await waitFor(() => {
 			expect(screen.getByText('보정 미리보기 결과')).toBeInTheDocument();
+			expect(
+				screen.getByText('요청: 미리보기(저장 없음) · 응답 모드: 미리보기')
+			).toBeInTheDocument();
 			expect(screen.getByText('실제 반영: 3')).toBeInTheDocument();
 			expect(screen.getByText('정합성 변화: 3 -> 1')).toBeInTheDocument();
 			expect(onApplied).not.toHaveBeenCalled();
+		});
+
+		screen.getByRole('button', { name: '상세 보기' }).click();
+
+		await waitFor(() => {
+			expect(screen.getByText('TABLE · public.customers')).toBeInTheDocument();
+			expect(screen.getByText('근거: 테이블명 기준 관계 보정')).toBeInTheDocument();
 		});
 	});
 

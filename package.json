@@ -77,14 +77,8 @@
 	"keywords": [
 		"svelte"
 	],
-	"pnpm": {
-		"onlyBuiltDependencies": [
-			"esbuild"
-		]
-	},
 	"dependencies": {
 		"pg": "^8.20.0",
-		"svelte-copy-to-clipboard": "^0.2.5",
 		"uuid": "^11.1.0",
 		"xlsx": "^0.18.5",
 		"xlsx-js-style": "^1.2.0"

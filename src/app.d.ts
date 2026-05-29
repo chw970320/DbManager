@@ -77,9 +77,4 @@ declare global {
 	type ColumnEntry = ColumnEntryType;
 }
 
-declare module 'svelte-copy-to-clipboard' {
-	import type { SvelteComponent } from 'svelte';
-	export default class CopyToClipboard extends SvelteComponent {}
-}
-
 export {};

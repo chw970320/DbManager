@@ -83,6 +83,7 @@
 
 	// 필터 활성화 여부 (props 기반 파생 상태)
 	const isActive = $derived(currentValue !== null && currentValue !== '');
+	const currentSelectionText = $derived(isActive ? currentValue : '전체');
 </script>
 
 <div class="relative inline-block">
@@ -92,14 +93,24 @@
 		type="button"
 		onclick={toggleFilter}
 		class="ml-1 inline-flex items-center rounded p-1 transition-colors hover:text-content-secondary focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-1 {isActive
-			? 'text-brand'
+			? 'bg-brand-50 text-brand'
 			: 'text-content-muted'}"
 		aria-label="{columnLabel} 필터"
 		aria-expanded={externalIsOpen}
 		aria-haspopup="dialog"
+		aria-pressed={isActive}
 		title="{columnLabel} 필터"
 	>
 		<Icon name="filter" size="sm" class={isActive ? 'fill-current' : ''} />
+		{#if isActive}
+			<span
+				class="ml-1 rounded-full border border-brand bg-surface px-1 text-[10px] font-semibold leading-4 text-brand"
+				aria-hidden="true"
+			>
+				적용
+			</span>
+			<span class="sr-only">필터 적용됨</span>
+		{/if}
 	</button>
 
 	<!-- 필터 드롭다운 (absolute 포지셔닝, header cell 아래에 배치) -->
@@ -117,6 +128,7 @@
 				<!-- 헤더 -->
 				<div class="mb-2">
 					<h4 class="text-xs font-medium text-content">{columnLabel} 필터</h4>
+					<p class="mt-1 text-[11px] text-content-muted">현재 선택: {currentSelectionText}</p>
 				</div>
 
 				<!-- 선택 필드 (모든 필터를 selectbox로) -->

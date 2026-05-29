@@ -18,6 +18,7 @@
 - 관계 동기화 정책의 활성 참조를 `docs/specs/data-model.md`로 통합했습니다.
 - `DatabaseTable`과 공통 `ColumnFilter`의 raw Tailwind color 조합을 `brand`/`surface`/`content`/`border`/`status` 토큰 기반 표현으로 정리했습니다.
 - `ColumnFilter`의 미구현 `text|select` 분기 계약을 제거하고 현재 동작인 고유값 선택 필터로 API를 명확히 했습니다.
+- `ColumnFilter`의 활성 필터 상태를 `적용` 배지, `aria-pressed`, 현재 선택값 안내로 보강해 색상만으로 상태를 구분하지 않게 했습니다.
 - 빈 결과 UI는 공통 `EmptyState`, 로딩 행은 공통 `Skeleton`을 사용하도록 바꾸고 table `aria-busy`/caption으로 로딩 상태를 노출했습니다.
 - DB 설계/표준화 테이블의 검색어 하이라이트는 `{@html}` 삽입 대신 공통 텍스트 세그먼트 helper와 `<mark>`를 직접 렌더링하도록 바꿔 업로드 데이터의 HTML 문자열이 실행되지 않게 했습니다.
 - `Skeleton`도 `bg-surface-raised` 기반 토큰을 사용하도록 조정해 향후 테이블 상태 UI 수렴의 기준을 마련했습니다.

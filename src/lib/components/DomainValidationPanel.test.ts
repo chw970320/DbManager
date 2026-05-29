@@ -36,7 +36,10 @@ describe('DomainValidationPanel', () => {
 		});
 
 		expect(screen.getByText('도메인 유효성 검사 결과')).toBeInTheDocument();
+		expect(screen.getByText('상태: 검토 필요')).toBeInTheDocument();
 		expect(screen.getByText('WRONG')).toBeInTheDocument();
+		expect(screen.getByText('오류')).toBeInTheDocument();
+		expect(screen.getAllByText('DOMAIN_NAME_MISMATCH')).toHaveLength(2);
 		expect(screen.getByText('도메인명 불일치')).toBeInTheDocument();
 	});
 });

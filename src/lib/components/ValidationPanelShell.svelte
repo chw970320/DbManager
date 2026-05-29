@@ -41,15 +41,32 @@
 	}
 
 	const panelId = `validation-panel-${Math.random().toString(36).slice(2, 8)}`;
+
+	let validationStatus = $derived(
+		loading
+			? {
+					label: '검사 중',
+					badge: 'badge-info',
+					description: '검증 결과를 계산 중입니다.'
+				}
+			: failedCount > 0
+				? {
+						label: '검토 필요',
+						badge: 'badge-error',
+						description: `${failedCount.toLocaleString()}개 항목의 오류를 확인하세요.`
+					}
+				: {
+						label: '통과',
+						badge: 'badge-success',
+						description: '현재 필터 기준으로 모든 항목이 통과했습니다.'
+					}
+	);
 </script>
 
 {#if open}
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div
-		class="fixed inset-0 z-50 bg-black/50 transition-opacity"
-		onclick={handleClose}
-	></div>
+	<div class="fixed inset-0 z-50 bg-black/50 transition-opacity" onclick={handleClose}></div>
 
 	<div
 		class="fixed right-0 top-0 z-50 flex h-full w-full max-w-4xl flex-col bg-surface shadow-xl sm:w-2/3 lg:w-1/2"
@@ -58,13 +75,19 @@
 		aria-labelledby="{panelId}-title"
 	>
 		<!-- 헤더 -->
-		<div class="flex items-center justify-between border-b border-border bg-surface-muted px-6 py-4">
+		<div
+			class="flex items-center justify-between border-b border-border bg-surface-muted px-6 py-4"
+		>
 			<div>
 				<h2 id="{panelId}-title" class="text-lg font-semibold text-content">{title}</h2>
 				<p class="mt-1 text-sm text-content-muted">
 					전체 {totalCount.toLocaleString()}개 중 {passedCount.toLocaleString()}개 통과,
 					{failedCount.toLocaleString()}개 실패
 				</p>
+				<div class="mt-2 flex flex-wrap items-center gap-2">
+					<span class="badge {validationStatus.badge}">상태: {validationStatus.label}</span>
+					<span class="text-xs text-content-secondary">{validationStatus.description}</span>
+				</div>
 			</div>
 			<button
 				type="button"
@@ -80,7 +103,10 @@
 		<div class="border-b border-border bg-surface px-6 py-4">
 			<div class="flex flex-col gap-4 sm:flex-row">
 				<div class="flex-1">
-					<label for="{panelId}-error-filter" class="block text-xs font-medium text-content-secondary">오류 유형</label>
+					<label
+						for="{panelId}-error-filter"
+						class="block text-xs font-medium text-content-secondary">오류 유형</label
+					>
 					<select
 						id="{panelId}-error-filter"
 						bind:value={selectedErrorType}
@@ -93,7 +119,9 @@
 					</select>
 				</div>
 				<div class="flex-1">
-					<label for="{panelId}-search" class="block text-xs font-medium text-content-secondary">검색</label>
+					<label for="{panelId}-search" class="block text-xs font-medium text-content-secondary"
+						>검색</label
+					>
 					<input
 						id="{panelId}-search"
 						type="text"

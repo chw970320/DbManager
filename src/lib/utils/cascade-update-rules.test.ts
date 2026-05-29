@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	applyVocabularyDomainMapping,
+	classifyEditorSaveImpact,
 	recommendDomainNamesForSuffix,
 	replaceExactUnderscoreToken
 } from './cascade-update-rules.js';
@@ -90,14 +91,46 @@ describe('cascade-update-rules', () => {
 	});
 
 	it('recommends domain names from the last suffix token only', () => {
+		expect(recommendDomainNamesForSuffix('접속_사용자', vocabularyEntries, domainEntries)).toEqual([
+			'사용자분류_VARCHAR(50)'
+		]);
+		expect(recommendDomainNamesForSuffix('사용자_상태', vocabularyEntries, domainEntries)).toEqual([
+			'상태분류_CHAR(1)'
+		]);
 		expect(
-			recommendDomainNamesForSuffix('접속_사용자', vocabularyEntries, domainEntries)
-		).toEqual(['사용자분류_VARCHAR(50)']);
+			recommendDomainNamesForSuffix('SUPERUSER_NAME', vocabularyEntries, domainEntries)
+		).toEqual([]);
+	});
+
+	it('classifies editor save impact with fail-closed conflict handling', () => {
+		const basePreview = {
+			blocked: false,
+			summary: {
+				sourceChangeCount: 0,
+				relatedChangeCount: 0,
+				totalChangedFiles: 0,
+				conflictCount: 0
+			}
+		};
+
+		expect(classifyEditorSaveImpact(basePreview)).toBe('neutral');
 		expect(
-			recommendDomainNamesForSuffix('사용자_상태', vocabularyEntries, domainEntries)
-		).toEqual(['상태분류_CHAR(1)']);
-		expect(recommendDomainNamesForSuffix('SUPERUSER_NAME', vocabularyEntries, domainEntries)).toEqual(
-			[]
-		);
+			classifyEditorSaveImpact({
+				...basePreview,
+				summary: { ...basePreview.summary, sourceChangeCount: 1 }
+			})
+		).toBe('source');
+		expect(
+			classifyEditorSaveImpact({
+				...basePreview,
+				summary: { ...basePreview.summary, relatedChangeCount: 1 }
+			})
+		).toBe('related');
+		expect(
+			classifyEditorSaveImpact({
+				...basePreview,
+				summary: { ...basePreview.summary, conflictCount: 1 }
+			})
+		).toBe('blocked');
 	});
 });

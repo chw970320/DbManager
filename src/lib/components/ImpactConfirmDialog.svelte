@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { createEventDispatcher } from 'svelte';
 	import type { EditorSaveImpactPreview } from '$lib/types/change-impact.js';
+	import { getEditorSaveTypeLabel } from '$lib/utils/cascade-update-rules.js';
 	import Icon from './Icon.svelte';
+	import { getEditorSaveImpactStatus } from './editor-save-impact-status.js';
 
 	interface Props {
 		isOpen?: boolean;
@@ -36,17 +38,13 @@
 			dispatch('cancel');
 		}
 	}
-
-	const typeLabels: Record<string, string> = {
-		vocabulary: '단어집',
-		domain: '도메인',
-		term: '용어집'
-	};
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
 
 {#if isOpen && preview}
+	{@const impactStatus = getEditorSaveImpactStatus(preview)}
+	{@const isSaveBlocked = impactStatus.kind === 'blocked'}
 	<!-- svelte-ignore a11y_click_events_have_key_events -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
@@ -62,19 +60,13 @@
 		>
 			<div class="flex items-start gap-3">
 				<div
-					class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full {preview.blocked
-						? 'bg-status-error-bg'
-						: 'bg-status-warning-bg'}"
+					class="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full {impactStatus.iconWrapClass}"
 				>
-					<Icon
-						name={preview.blocked ? 'warning' : 'info'}
-						size="md"
-						class={preview.blocked ? 'text-status-error' : 'text-status-warning'}
-					/>
+					<Icon name={impactStatus.icon} size="md" class={impactStatus.iconClass} />
 				</div>
 				<div class="flex-1">
 					<h2 id="impact-confirm-title" class="text-xl font-semibold text-content">
-						{#if preview.blocked}
+						{#if isSaveBlocked}
 							자동 반영 충돌 확인
 						{:else}
 							저장 전 영향도 확인
@@ -84,6 +76,20 @@
 						{preview.sourceEntryName} 변경을 저장하기 전에 자동 반영 범위를 확인하세요.
 					</p>
 				</div>
+			</div>
+
+			<div class="mt-5 rounded-xl border px-4 py-3 {impactStatus.panelClass}">
+				<div class="flex flex-wrap items-center gap-2">
+					<span class="badge {impactStatus.badgeClass}">{impactStatus.label}</span>
+					<span class="text-sm font-medium text-content">{impactStatus.dialogTitle}</span>
+				</div>
+				<p class="mt-2 text-sm text-content-secondary">{impactStatus.dialogDescription}</p>
+				<p class="mt-2 text-xs text-content-muted">
+					대상: {getEditorSaveTypeLabel(preview.sourceType)} · {preview.sourceFilename} · {preview.mode ===
+					'create'
+						? '신규 저장'
+						: '기존 항목 수정'} · 취소하면 나열된 원본/연관 파일은 변경되지 않습니다.
+				</p>
 			</div>
 
 			<div class="mt-5 grid gap-3 sm:grid-cols-4">
@@ -135,15 +141,18 @@
 			<div class="mt-5 space-y-3">
 				{#each preview.fileSummaries as summary (`${summary.type}-${summary.filename}-${summary.role}`)}
 					<div class="rounded-xl border border-border px-4 py-3">
-						<div class="flex items-center justify-between gap-3">
+						<div class="flex items-start justify-between gap-3">
 							<div>
 								<div class="text-sm font-medium text-content">
-									{typeLabels[summary.type]} · {summary.filename}
+									{getEditorSaveTypeLabel(summary.type)} · {summary.filename}
 								</div>
 								<div class="mt-1 text-xs text-content-secondary">
 									{summary.role === 'source' ? '원본 저장' : '연관 자동 반영'} · {summary.changedCount}건
 								</div>
 							</div>
+							<span class="badge {summary.role === 'source' ? 'badge-info' : 'badge-warning'}">
+								{summary.role === 'source' ? '원본' : '연관'}
+							</span>
 						</div>
 						{#if summary.samples.length > 0}
 							<div class="mt-3 space-y-2">
@@ -200,9 +209,9 @@
 					disabled={isSubmitting}
 					onclick={() => dispatch('cancel')}
 				>
-					{preview.blocked ? '닫기' : '취소'}
+					{isSaveBlocked ? '닫기' : '취소'}
 				</button>
-				{#if !preview.blocked}
+				{#if !isSaveBlocked}
 					<button
 						class="btn btn-primary"
 						disabled={isSubmitting}

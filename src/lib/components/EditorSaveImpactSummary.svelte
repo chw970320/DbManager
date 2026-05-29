@@ -2,6 +2,7 @@
 	import type { EditorSaveImpactPreview } from '$lib/types/change-impact.js';
 	import { getEditorSaveTypeLabel } from '$lib/utils/cascade-update-rules.js';
 	import { createEventDispatcher } from 'svelte';
+	import { getEditorSaveImpactStatus } from './editor-save-impact-status.js';
 
 	interface Props {
 		preview?: EditorSaveImpactPreview | null;
@@ -66,7 +67,9 @@
 		{#if refreshable}
 			<button
 				type="button"
-				class="rounded-md border bg-white px-3 py-1.5 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-50 {accentTone[accent].button}"
+				class="rounded-md border bg-white px-3 py-1.5 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-50 {accentTone[
+					accent
+				].button}"
 				disabled={loading || refreshDisabled}
 				onclick={() => dispatch('refresh')}
 			>
@@ -78,6 +81,23 @@
 	{#if loading}
 		<p class="text-xs {accentTone[accent].text}">입력값 기준 영향도를 계산하는 중입니다.</p>
 	{:else if preview}
+		{@const impactStatus = getEditorSaveImpactStatus(preview)}
+		<div class="mb-3 rounded-lg border px-3 py-2 {impactStatus.panelClass}">
+			<div class="flex flex-wrap items-center gap-2">
+				<span class="badge {impactStatus.badgeClass}">{impactStatus.label}</span>
+				<span class="text-xs font-semibold {impactStatus.textClass}">
+					{impactStatus.summaryTitle}
+				</span>
+			</div>
+			<p class="mt-1 text-xs text-content-secondary">{impactStatus.summaryDescription}</p>
+			<p class="mt-1 text-xs text-content-muted">
+				대상: {getEditorSaveTypeLabel(preview.sourceType)} · {preview.sourceFilename} · {preview.mode ===
+				'create'
+					? '신규 저장'
+					: '기존 항목 수정'}
+			</p>
+		</div>
+
 		<div class="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
 			<div class="rounded-lg border border-white/70 bg-white px-3 py-2">
 				<div class="text-slate-500">원본 저장</div>
@@ -120,8 +140,13 @@
 		<div class="mt-3 grid gap-2 sm:grid-cols-2">
 			{#each preview.fileSummaries as summary (`${summary.type}-${summary.filename}-${summary.role}`)}
 				<div class="rounded-lg border border-white/70 bg-white px-3 py-2 text-xs">
-					<div class="font-medium text-slate-800">
-						{getEditorSaveTypeLabel(summary.type)} · {summary.changedCount}건
+					<div class="flex items-center justify-between gap-2">
+						<div class="font-medium text-slate-800">
+							{getEditorSaveTypeLabel(summary.type)} · {summary.changedCount}건
+						</div>
+						<span class="badge {summary.role === 'source' ? 'badge-info' : 'badge-warning'}">
+							{summary.role === 'source' ? '원본' : '연관'}
+						</span>
 					</div>
 					<div class="mt-1 text-slate-500">{summary.filename}</div>
 					<div class="mt-2 space-y-2">

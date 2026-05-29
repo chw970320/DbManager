@@ -1,6 +1,7 @@
 import type { DomainEntry } from '$lib/types/domain.js';
 import type { TermEntry } from '$lib/types/term.js';
 import type { VocabularyEntry } from '$lib/types/vocabulary.js';
+import type { EditorSaveImpactPreview } from '$lib/types/change-impact.js';
 import { normalizeKey } from '$lib/utils/mapping-key.js';
 
 export type PlannedFieldChange = {
@@ -106,6 +107,19 @@ export function getEditorSaveTypeLabel(type: 'vocabulary' | 'domain' | 'term'): 
 	if (type === 'vocabulary') return '단어집';
 	if (type === 'domain') return '도메인';
 	return '용어집';
+}
+
+export type EditorSaveImpactStatusKind = 'blocked' | 'related' | 'source' | 'neutral';
+
+export function classifyEditorSaveImpact(
+	preview: Pick<EditorSaveImpactPreview, 'blocked' | 'summary'>
+): EditorSaveImpactStatusKind {
+	if (preview.blocked || preview.summary.conflictCount > 0) return 'blocked';
+	if (preview.summary.relatedChangeCount > 0) return 'related';
+	if (preview.summary.sourceChangeCount > 0 || preview.summary.totalChangedFiles > 0) {
+		return 'source';
+	}
+	return 'neutral';
 }
 
 export function getVocabularyEntryLabel(entry: Pick<VocabularyEntry, 'standardName'>): string {

@@ -55,7 +55,9 @@
 	function getFilteredResults() {
 		let filtered = results;
 		if (selectedErrorType !== 'ALL') {
-			filtered = filtered.filter((result) => result.errors.some((error) => error.type === selectedErrorType));
+			filtered = filtered.filter((result) =>
+				result.errors.some((error) => error.type === selectedErrorType)
+			);
 		}
 		if (searchQuery.trim()) {
 			const query = searchQuery.toLowerCase();
@@ -73,6 +75,10 @@
 
 	function handleEdit(entryId: string) {
 		dispatch('edit', { entryId });
+	}
+
+	function getIssueLabel(error: ValidationIssue) {
+		return error.field ? `${error.code} · ${error.field}` : error.code;
 	}
 </script>
 
@@ -99,7 +105,15 @@
 				</div>
 				<div class="mb-3 space-y-1">
 					{#each result.errors as error (error.type + error.message)}
-						<div class="text-xs text-status-error">{error.message}</div>
+						<div
+							class="rounded-md border border-status-error-border bg-status-error-bg px-2 py-1.5 text-xs"
+						>
+							<div class="flex flex-wrap items-center gap-2">
+								<span class="badge badge-error">오류</span>
+								<span class="font-medium text-status-error">{getIssueLabel(error)}</span>
+							</div>
+							<div class="mt-1 text-status-error">{error.message}</div>
+						</div>
 					{/each}
 				</div>
 				<div class="flex justify-end">

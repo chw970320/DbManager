@@ -1,9 +1,15 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import TermValidationPanel from './TermValidationPanel.svelte';
-import type { ValidationResult } from '$lib/types/term';
+import type { AutoFixSuggestion, ValidationResult } from '$lib/types/term';
 
-// 테스트용 Mock 데이터
+const autoFixSuggestion: AutoFixSuggestion = {
+	termName: '사용자명',
+	columnName: 'USER_NM',
+	reason: '용어명과 컬럼명 표준화를 적용합니다.',
+	actionType: 'FIX_TERM_NAME'
+};
+
 const createMockValidationResults = (): ValidationResult[] => [
 	{
 		entry: {
@@ -22,14 +28,15 @@ const createMockValidationResults = (): ValidationResult[] => [
 				type: 'TERM_NAME_MAPPING',
 				message: '용어명의 일부가 단어집에 없습니다.'
 			}
-		]
+		],
+		suggestions: autoFixSuggestion
 	},
 	{
 		entry: {
 			id: 'entry-2',
 			termName: '관리자_이름',
 			columnName: 'ADMIN_NAME',
-			domainName: '사용자분류_VARCHAR(50)',
+			domainName: '관리자분류_VARCHAR(50)',
 			isMappedTerm: true,
 			isMappedColumn: true,
 			isMappedDomain: true,
@@ -40,109 +47,105 @@ const createMockValidationResults = (): ValidationResult[] => [
 	}
 ];
 
+function renderOpenPanel(props = {}) {
+	return render(TermValidationPanel, {
+		props: {
+			results: createMockValidationResults(),
+			totalCount: 2,
+			failedCount: 1,
+			passedCount: 1,
+			open: true,
+			...props
+		}
+	});
+}
+
 describe('TermValidationPanel', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
 
-	describe('Rendering', () => {
-		it('should render validation results when open', async () => {
-			const mockResults = createMockValidationResults();
-			render(TermValidationPanel, {
-				props: {
-					results: mockResults,
-					totalCount: 2,
-					failedCount: 1,
-					passedCount: 1,
-					open: true
-				}
-			});
+	it('renders validation statistics, progress, and result context when open', () => {
+		renderOpenPanel();
 
-			await waitFor(() => {
-				expect(screen.getByText(/유효성 검사 결과/)).toBeInTheDocument();
-			});
+		const dialog = screen.getByRole('dialog', { name: '유효성 검사 결과' });
+		expect(dialog).toHaveTextContent('전체 2개 중 1개 통과, 1개 실패');
+		expect(dialog).toHaveTextContent('진행률');
+		expect(dialog).toHaveTextContent('50%');
+		expect(dialog).toHaveTextContent('표시 중: 2개 / 전체: 2개');
+		expect(dialog).toHaveTextContent('사용자_이름');
+		expect(dialog).toHaveTextContent('관리자_이름');
+		expect(dialog).toHaveTextContent('용어명 매핑');
+		expect(dialog).toHaveTextContent('수정 가이드');
+	});
+
+	it('filters results by validation error type', async () => {
+		renderOpenPanel();
+
+		await fireEvent.change(screen.getByLabelText('오류 유형'), {
+			target: { value: 'TERM_NAME_MAPPING' }
 		});
 
-		it('should display validation statistics', async () => {
-			const mockResults = createMockValidationResults();
-			render(TermValidationPanel, {
-				props: {
-					results: mockResults,
-					totalCount: 2,
-					failedCount: 1,
-					passedCount: 1,
-					open: true
-				}
-			});
+		await waitFor(() => {
+			expect(screen.getByText('사용자_이름')).toBeInTheDocument();
+			expect(screen.queryByText('관리자_이름')).not.toBeInTheDocument();
+		});
+		expect(screen.getByText('표시 중: 1개 / 전체: 2개')).toBeInTheDocument();
+	});
 
-			await waitFor(() => {
-				// 통계 정보가 표시되는지 확인
-				expect(screen.getByText(/유효성 검사 결과/)).toBeInTheDocument();
-			});
+	it('filters results by search query across term, column, domain, and error text', async () => {
+		renderOpenPanel();
+
+		await fireEvent.input(screen.getByLabelText('검색'), { target: { value: 'ADMIN_NAME' } });
+
+		await waitFor(() => {
+			expect(screen.getByText('관리자_이름')).toBeInTheDocument();
+			expect(screen.queryByText('사용자_이름')).not.toBeInTheDocument();
+		});
+		expect(screen.getByText('표시 중: 1개 / 전체: 2개')).toBeInTheDocument();
+	});
+
+	it('emits edit details with the selected entry and available suggestions', async () => {
+		const onedit = vi.fn();
+		renderOpenPanel({ onedit });
+
+		await fireEvent.click(screen.getAllByRole('button', { name: '용어 수정' })[0]);
+
+		expect(onedit).toHaveBeenCalledWith({
+			entryId: 'entry-1',
+			suggestions: autoFixSuggestion
 		});
 	});
 
-	describe('Filtering', () => {
-		it('should filter results by error type', async () => {
-			const mockResults = createMockValidationResults();
-			render(TermValidationPanel, {
-				props: {
-					results: mockResults,
-					totalCount: 2,
-					failedCount: 1,
-					passedCount: 1,
-					open: true
-				}
-			});
+	it('emits autofix details only when a result has a safe suggestion action', async () => {
+		const onautofix = vi.fn();
+		renderOpenPanel({ onautofix });
 
-			// 오류 유형 필터 적용 확인 (실제 컴포넌트 구조에 따라 조정)
-		});
+		const firstResultCard = screen.getByText('사용자_이름').closest('.rounded-lg');
+		expect(firstResultCard).not.toBeNull();
 
-		it('should filter results by search query', async () => {
-			const mockResults = createMockValidationResults();
-			render(TermValidationPanel, {
-				props: {
-					results: mockResults,
-					totalCount: 2,
-					failedCount: 1,
-					passedCount: 1,
-					open: true
-				}
-			});
+		await fireEvent.click(
+			within(firstResultCard as HTMLElement).getByRole('button', { name: '자동 수정' })
+		);
 
-			// 검색 필터 적용 확인 (실제 컴포넌트 구조에 따라 조정)
-		});
+		expect(onautofix).toHaveBeenCalledWith(
+			expect.objectContaining({
+				entryId: 'entry-1',
+				suggestions: autoFixSuggestion,
+				result: expect.objectContaining({
+					entry: expect.objectContaining({ id: 'entry-1' })
+				})
+			})
+		);
+		expect(screen.getAllByRole('button', { name: '자동 수정' })).toHaveLength(1);
 	});
 
-	describe('Actions', () => {
-		it('should trigger edit event when edit button is clicked', async () => {
-			const mockResults = createMockValidationResults();
-			render(TermValidationPanel, {
-				props: {
-					results: mockResults,
-					totalCount: 2,
-					failedCount: 1,
-					passedCount: 1,
-					open: true
-				}
-			});
+	it('emits close when the dismiss control is clicked', async () => {
+		const onclose = vi.fn();
+		renderOpenPanel({ onclose });
 
-			// 편집 버튼 클릭 시 edit 이벤트 발생 확인 (실제 컴포넌트 구조에 따라 조정)
-		});
+		await fireEvent.click(screen.getByRole('button', { name: '닫기' }));
 
-		it('should trigger autofix event when autofix button is clicked', async () => {
-			const mockResults = createMockValidationResults();
-			render(TermValidationPanel, {
-				props: {
-					results: mockResults,
-					totalCount: 2,
-					failedCount: 1,
-					passedCount: 1,
-					open: true
-				}
-			});
-
-			// 자동 수정 버튼 클릭 시 autofix 이벤트 발생 확인 (실제 컴포넌트 구조에 따라 조정)
-		});
+		expect(onclose).toHaveBeenCalledTimes(1);
 	});
 });

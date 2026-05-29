@@ -13,6 +13,13 @@
 		passedCount?: number;
 		loading?: boolean;
 		open?: boolean;
+		onclose?: () => void;
+		onedit?: (detail: { entryId: string; suggestions?: AutoFixSuggestion }) => void;
+		onautofix?: (detail: {
+			entryId: string;
+			suggestions: AutoFixSuggestion;
+			result: ValidationResult;
+		}) => void;
 	}
 
 	let {
@@ -21,7 +28,10 @@
 		failedCount = 0,
 		passedCount = 0,
 		loading = false,
-		open = false
+		open = false,
+		onclose,
+		onedit,
+		onautofix
 	}: Props = $props();
 
 	const dispatch = createEventDispatcher<{
@@ -29,21 +39,6 @@
 		edit: { entryId: string; suggestions?: AutoFixSuggestion };
 		autofix: { entryId: string; suggestions: AutoFixSuggestion; result: ValidationResult };
 	}>();
-
-	// 디버깅: props 확인
-	$effect(() => {
-		if (open) {
-			console.log('TermValidationPanel - Props:', {
-				resultsLength: results?.length || 0,
-				results: results,
-				totalCount,
-				failedCount,
-				passedCount,
-				loading,
-				open
-			});
-		}
-	});
 
 	// 필터 상태
 	let selectedErrorType = $state<ValidationErrorType | 'ALL'>('ALL');
@@ -121,16 +116,20 @@
 	}
 
 	function handleEdit(entryId: string, suggestions?: AutoFixSuggestion) {
-		dispatch('edit', { entryId, suggestions });
+		const detail = { entryId, suggestions };
+		dispatch('edit', detail);
+		onedit?.(detail);
 	}
 
 	function handleAutoFix(result: ValidationResult) {
 		if (result.suggestions && result.suggestions.actionType) {
-			dispatch('autofix', {
+			const detail = {
 				entryId: result.entry.id,
 				suggestions: result.suggestions,
 				result
-			});
+			};
+			dispatch('autofix', detail);
+			onautofix?.(detail);
 		}
 	}
 
@@ -140,6 +139,7 @@
 
 	function handleClose() {
 		dispatch('close');
+		onclose?.();
 	}
 
 	// 진행률 계산

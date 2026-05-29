@@ -111,8 +111,15 @@ describe('Quality rule browse page', () => {
 		});
 
 		expect(screen.getByText('활성 규칙')).toBeInTheDocument();
-		expect(screen.getByText('warning')).toBeInTheDocument();
-		expect(screen.getByText('column')).toBeInTheDocument();
+		const ruleRow = screen.getByText('고객 이메일 NULL 비율 5% 이하').closest('tr');
+		expect(ruleRow).not.toBeNull();
+		expect(screen.getByText('심각도: 경고 (warning)')).toBeInTheDocument();
+		expect(ruleRow).toHaveTextContent('column');
+		expect(ruleRow).toHaveTextContent('nullRatio');
+		expect(ruleRow).toHaveTextContent('lte');
+		expect(ruleRow).toHaveTextContent('0.05');
+		expect(ruleRow).toHaveTextContent('public.customers.email');
+		expect(ruleRow).toHaveTextContent('평가 포함');
 	});
 
 	it('should allow creating a rule from the editor modal', async () => {

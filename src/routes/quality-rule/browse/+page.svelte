@@ -14,7 +14,11 @@
 	import { showConfirm } from '$lib/stores/confirm-store';
 	import { addToast } from '$lib/stores/toast-store';
 	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
-	import type { QualityRuleData, QualityRuleEntry } from '$lib/types/data-quality-rule.js';
+	import type {
+		QualityRuleData,
+		QualityRuleEntry,
+		QualityRuleSeverity
+	} from '$lib/types/data-quality-rule.js';
 
 	type ApiResponse<T> = { success: true; data: T } | { success: false; error?: string };
 
@@ -36,6 +40,12 @@
 		{ value: 'scope', label: '범위' },
 		{ value: 'metric', label: '메트릭' }
 	];
+
+	const severityLabels: Record<QualityRuleSeverity, string> = {
+		error: '오류',
+		warning: '경고',
+		info: '정보'
+	};
 
 	let entries = $state<QualityRuleEntry[]>([]);
 	let loading = $state(false);
@@ -109,6 +119,12 @@
 		}
 
 		return `${schema}.${table}`;
+	}
+
+	function severityBadgeClass(severity: QualityRuleSeverity): string {
+		if (severity === 'error') return 'badge-danger';
+		if (severity === 'warning') return 'badge-warning';
+		return 'badge-info';
 	}
 
 	async function loadEntries() {
@@ -368,8 +384,8 @@
 											</div>
 										</td>
 										<td class="px-4 py-3 align-top">
-											<span class={`badge ${entry.enabled ? 'badge-success' : 'badge-info'}`}>
-												{entry.severity}
+											<span class={`badge ${severityBadgeClass(entry.severity)}`}>
+												심각도: {severityLabels[entry.severity]} ({entry.severity})
 											</span>
 										</td>
 										<td class="px-4 py-3 align-top text-content-secondary">{entry.scope}</td>

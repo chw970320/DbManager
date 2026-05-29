@@ -50,27 +50,47 @@ describe('DatabaseTable', () => {
 				}
 			});
 
-			// 테이블 헤더는 표시되어야 함
 			expect(screen.getByText(/기관명/)).toBeInTheDocument();
+			expect(screen.getByText('표시할 데이터가 없습니다')).toBeInTheDocument();
+			expect(
+				screen.getByText('먼저 파일을 업로드하여 데이터베이스 정의서를 등록해주세요.')
+			).toBeInTheDocument();
 		});
 
-		it('로딩 상태 표시', () => {
+		it('검색 결과가 없을 때 검색 맥락의 EmptyState를 표시', () => {
 			render(DatabaseTable, {
 				props: {
 					entries: [],
-					loading: true,
+					searchQuery: '없는DB',
 					onsort: vi.fn(),
 					onpagechange: vi.fn()
 				}
 			});
 
-			// 로딩 메시지나 스피너가 표시되는지 확인
-			// 실제 컴포넌트 구현에 따라 조정 필요
+			expect(screen.getByText('검색 결과가 없습니다')).toBeInTheDocument();
+			expect(screen.getByText('다른 검색어를 시도해보세요.')).toBeInTheDocument();
+		});
+
+		it('로딩 상태 표시', () => {
+			const { container } = render(DatabaseTable, {
+				props: {
+					entries: [],
+					loading: true,
+					pageSize: 3,
+					onsort: vi.fn(),
+					onpagechange: vi.fn()
+				}
+			});
+
+			const table = screen.getByRole('table', { name: '데이터베이스 정의서 목록' });
+			expect(table).toHaveAttribute('aria-busy', 'true');
+			expect(screen.getByText('데이터베이스 정의서 목록을 불러오는 중입니다.')).toBeInTheDocument();
+			expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
 		});
 	});
 
 	describe('Sorting', () => {
-		it('컬럼 헤더 클릭 시 정렬 이벤트 발생', () => {
+		it('컬럼 헤더 클릭 시 정렬 이벤트 발생', async () => {
 			const onsort = vi.fn();
 			const entries = [createMockEntry()];
 
@@ -82,17 +102,15 @@ describe('DatabaseTable', () => {
 				}
 			});
 
-			// 정렬 가능한 컬럼 헤더 찾기 (실제 컴포넌트 구조에 따라 조정 필요)
-			const sortableHeader = screen.getByText(/기관명/);
-			if (sortableHeader) {
-				fireEvent.click(sortableHeader);
-				// onsort가 호출되었는지 확인 (실제 구현에 따라 조정)
-			}
+			const sortableHeader = screen.getByRole('button', { name: '기관명로 정렬' });
+			await fireEvent.click(sortableHeader);
+
+			expect(onsort).toHaveBeenCalledWith({ column: 'organizationName', direction: 'asc' });
 		});
 	});
 
 	describe('Pagination', () => {
-		it('페이지 변경 시 이벤트 발생', () => {
+		it('페이지 변경 시 이벤트 발생', async () => {
 			const onpagechange = vi.fn();
 			const entries = Array.from({ length: 25 }, (_, i) => ({
 				...createMockEntry(),
@@ -110,17 +128,15 @@ describe('DatabaseTable', () => {
 				}
 			});
 
-			// 페이지네이션 버튼 찾기 및 클릭 (실제 컴포넌트 구조에 따라 조정)
-			// const nextButton = screen.getByRole('button', { name: /다음/ });
-			// if (nextButton) {
-			//   fireEvent.click(nextButton);
-			//   expect(onpagechange).toHaveBeenCalled();
-			// }
+			const nextButton = screen.getByRole('button', { name: '다음' });
+			await fireEvent.click(nextButton);
+
+			expect(onpagechange).toHaveBeenCalledWith({ page: 2 });
 		});
 	});
 
 	describe('Row Click', () => {
-		it('행 클릭 시 entryclick 이벤트 발생', () => {
+		it('행 클릭 시 entryclick 이벤트 발생', async () => {
 			const onentryclick = vi.fn();
 			const entry = createMockEntry();
 			const entries = [entry];
@@ -137,7 +153,7 @@ describe('DatabaseTable', () => {
 			// 행 찾기 및 클릭 (실제 컴포넌트 구조에 따라 조정)
 			const row = screen.getByText('기관1').closest('tr');
 			if (row) {
-				fireEvent.click(row);
+				await fireEvent.click(row);
 				expect(onentryclick).toHaveBeenCalled();
 				const detail = onentryclick.mock.calls[0][0] as { entry: DatabaseEntry };
 				expect(detail.entry.id).toBe('entry-1');
@@ -161,11 +177,13 @@ describe('DatabaseTable', () => {
 				}
 			});
 
-			// 필터 UI가 표시되는지 확인 (실제 컴포넌트 구조에 따라 조정)
+			expect(screen.getByRole('button', { name: '기관명 필터' })).toBeInTheDocument();
+			expect(screen.getByRole('button', { name: 'DBMS정보 필터' })).toBeInTheDocument();
 		});
 
-		it('필터 적용 시 이벤트 발생', () => {
+		it('필터 적용 시 이벤트 발생', async () => {
 			const onfilter = vi.fn();
+			const onsort = vi.fn();
 			const filterOptions = {
 				organizationName: ['기관1', '기관2']
 			};
@@ -174,13 +192,42 @@ describe('DatabaseTable', () => {
 				props: {
 					entries: [createMockEntry()],
 					filterOptions,
-					onsort: vi.fn(),
+					onsort,
 					onpagechange: vi.fn(),
 					onfilter
 				}
 			});
 
-			// 필터 선택 및 이벤트 확인 (실제 컴포넌트 구조에 따라 조정)
+			await fireEvent.click(screen.getByRole('button', { name: '기관명 필터' }));
+
+			expect(screen.getByRole('dialog', { name: '기관명 필터' })).toBeInTheDocument();
+			expect(onsort).not.toHaveBeenCalled();
+
+			await fireEvent.change(screen.getByRole('combobox'), { target: { value: '기관1' } });
+
+			expect(onfilter).toHaveBeenCalledWith({ column: 'organizationName', value: '기관1' });
+		});
+
+		it('검색어 하이라이트는 HTML을 실행하지 않고 텍스트로 렌더링한다', () => {
+			const entries = [
+				{
+					...createMockEntry(),
+					organizationName: '<img src=x onerror=alert(1)>기관1'
+				}
+			];
+
+			const { container } = render(DatabaseTable, {
+				props: {
+					entries,
+					searchQuery: '기관1',
+					onsort: vi.fn(),
+					onpagechange: vi.fn()
+				}
+			});
+
+			expect(container).toHaveTextContent('<img src=x onerror=alert(1)>기관1');
+			expect(screen.getByText('기관1', { selector: 'mark' })).toBeInTheDocument();
+			expect(container.querySelector('img')).not.toBeInTheDocument();
 		});
 	});
 });

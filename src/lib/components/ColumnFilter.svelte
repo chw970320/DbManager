@@ -1,36 +1,28 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-
-	type FilterType = 'text' | 'select';
+	import Icon from './Icon.svelte';
 
 	type Props = {
 		columnKey: string;
 		columnLabel: string;
-		filterType?: FilterType;
 		currentValue?: string | null;
 		options?: string[];
 		isOpen?: boolean;
 		onOpen?: (columnKey: string) => void;
 		onClose?: () => void;
 		onApply?: (value: string | null) => void;
-		onClear?: () => void;
 	};
 
 	let {
 		columnKey,
 		columnLabel,
-		filterType: _filterType = 'text',
 		currentValue = null,
 		options = [],
 		isOpen: externalIsOpen = false,
 		onOpen,
 		onClose,
-		onApply,
-		onClear
+		onApply
 	}: Props = $props();
-
-	// 현재는 필터 타입별 분기 처리가 없지만, API 호환성을 위해 props로 유지
-	void _filterType;
 
 	let inputValue = $state(currentValue || '');
 	let filterButtonRef = $state<HTMLButtonElement | null>(null);
@@ -99,33 +91,22 @@
 		bind:this={filterButtonRef}
 		type="button"
 		onclick={toggleFilter}
-		class="ml-1 inline-flex items-center rounded p-1 transition-colors hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 {isActive
-			? 'text-blue-600'
-			: 'text-gray-600'}"
+		class="ml-1 inline-flex items-center rounded p-1 transition-colors hover:text-content-secondary focus:outline-none focus:ring-2 focus:ring-border-focus focus:ring-offset-1 {isActive
+			? 'text-brand'
+			: 'text-content-muted'}"
 		aria-label="{columnLabel} 필터"
+		aria-expanded={externalIsOpen}
+		aria-haspopup="dialog"
 		title="{columnLabel} 필터"
 	>
-		<svg
-			class="h-4 w-4"
-			fill={isActive ? 'currentColor' : 'none'}
-			stroke="currentColor"
-			viewBox="0 0 24 24"
-			xmlns="http://www.w3.org/2000/svg"
-		>
-			<path
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				stroke-width="2"
-				d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-			/>
-		</svg>
+		<Icon name="filter" size="sm" class={isActive ? 'fill-current' : ''} />
 	</button>
 
 	<!-- 필터 드롭다운 (absolute 포지셔닝, header cell 아래에 배치) -->
 	{#if externalIsOpen}
 		<div
 			bind:this={dropdownRef}
-			class="absolute right-[-10px] top-full z-50 mt-1 w-32 rounded-md border border-gray-300 bg-white shadow-lg"
+			class="absolute right-[-10px] top-full z-50 mt-1 w-32 rounded-md border border-border bg-surface shadow-lg"
 			onclick={(e) => e.stopPropagation()}
 			onkeydown={(e) => e.stopPropagation()}
 			role="dialog"
@@ -135,14 +116,14 @@
 			<div class="p-3">
 				<!-- 헤더 -->
 				<div class="mb-2">
-					<h4 class="text-xs font-medium text-gray-900">{columnLabel} 필터</h4>
+					<h4 class="text-xs font-medium text-content">{columnLabel} 필터</h4>
 				</div>
 
 				<!-- 선택 필드 (모든 필터를 selectbox로) -->
 				<select
 					bind:value={inputValue}
 					onchange={handleValueChange}
-					class="w-full rounded-md border border-gray-300 px-2 py-1.5 text-xs focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+					class="w-full rounded-md border border-border-strong bg-surface px-2 py-1.5 text-xs text-content focus:border-border-focus focus:outline-none focus:ring-1 focus:ring-border-focus"
 					onclick={(e) => e.stopPropagation()}
 				>
 					<option value="">전체</option>

@@ -1,7 +1,9 @@
 <script lang="ts">
 	import type { DomainEntry } from '$lib/types/domain.js';
+	import { getHighlightedSegments } from '$lib/utils/text-highlight';
 	import { createEventDispatcher } from 'svelte';
 	import ColumnFilter from './ColumnFilter.svelte';
+	import HighlightedText from './HighlightedText.svelte';
 
 	type SortEvent = {
 		column: string;
@@ -87,7 +89,6 @@
 		label: string;
 		sortable: boolean;
 		filterable: boolean;
-		filterType?: 'text' | 'select';
 		filterOptions?: string[];
 		width: string;
 		align: ColumnAlignment;
@@ -97,7 +98,6 @@
 			label: '제정차수',
 			sortable: false,
 			filterable: true,
-			filterType: 'select',
 			width: 'min-w-[100px]',
 			align: 'center'
 		},
@@ -106,7 +106,6 @@
 			label: '도메인그룹명',
 			sortable: true,
 			filterable: true,
-			filterType: 'text',
 			width: 'min-w-[150px]',
 			align: 'left' as const
 		},
@@ -115,7 +114,6 @@
 			label: '도메인분류명',
 			sortable: true,
 			filterable: true,
-			filterType: 'text',
 			width: 'min-w-[150px]',
 			align: 'left' as const
 		},
@@ -124,7 +122,6 @@
 			label: '도메인명',
 			sortable: true,
 			filterable: true,
-			filterType: 'text',
 			width: 'min-w-[150px]',
 			align: 'left'
 		},
@@ -141,7 +138,6 @@
 			label: '데이터타입',
 			sortable: true,
 			filterable: true,
-			filterType: 'select',
 			width: 'min-w-[150px]',
 			align: 'left'
 		},
@@ -265,25 +261,6 @@
 	}
 
 	/**
-	 * 검색어 하이라이팅
-	 */
-	function highlightSearchTerm(text: string, query: string, columnKey: string): string {
-		if (!query || !text || (searchField !== 'all' && searchField !== columnKey)) {
-			return text;
-		}
-
-		const regex = new RegExp(`(${escapeRegExp(query)})`, 'gi');
-		return text.replace(regex, '<mark class="bg-yellow-200 px-1 rounded">$1</mark>');
-	}
-
-	/**
-	 * 정규식 특수문자 이스케이프
-	 */
-	function escapeRegExp(string: string): string {
-		return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-	}
-
-	/**
 	 * 페이지네이션 번호 생성
 	 */
 	function getPageNumbers(): (number | string)[] {
@@ -329,14 +306,6 @@
 			return '-';
 		}
 		return String(value);
-	}
-
-	/**
-	 * HTML 태그 및 스크립트 태그 제거 (mark 태그만 허용)
-	 */
-	function sanitizeHtml(html: string): string {
-		// mark 태그만 허용, 나머지 태그는 모두 제거
-		return html.replace(/<(?!\/?mark(?=>|\s.*>))\/?[^>]+>/gi, '');
 	}
 </script>
 
@@ -453,7 +422,6 @@
 									<ColumnFilter
 										columnKey={column.key}
 										columnLabel={column.label}
-										filterType="select"
 										currentValue={activeFilters[column.key] || null}
 										options={filterOptions[column.key] ||
 											column.filterOptions ||
@@ -466,7 +434,6 @@
 											openFilterColumn = null;
 										}}
 										onApply={(value) => handleFilter(column.key, value)}
-										onClear={() => handleFilter(column.key, null)}
 									/>
 								{/if}
 							</div>
@@ -537,6 +504,12 @@
 							aria-label="항목 클릭하여 상세 정보 보기"
 						>
 							{#each columns as column (column.key)}
+								{@const formattedValue = formatValue(entry[column.key as keyof DomainEntry])}
+								{@const highlightedSegments = getHighlightedSegments(
+									formattedValue,
+									searchQuery,
+									searchField === 'all' || searchField === column.key
+								)}
 								<td
 									class="whitespace-normal break-words px-6 py-4 text-sm text-gray-700 {column.align ===
 									'center'
@@ -547,26 +520,11 @@
 								>
 									{#if column.key === 'dataLength' || column.key === 'decimalPlaces'}
 										<span class="block">
-											{@html sanitizeHtml(
-												highlightSearchTerm(
-													formatValue(entry[column.key as keyof DomainEntry]),
-													searchQuery,
-													column.key
-												)
-											)}
+											<HighlightedText segments={highlightedSegments} />
 										</span>
 									{:else}
-										<div
-											class="max-w-xs break-words"
-											title={formatValue(entry[column.key as keyof DomainEntry])}
-										>
-											{@html sanitizeHtml(
-												highlightSearchTerm(
-													formatValue(entry[column.key as keyof DomainEntry]),
-													searchQuery,
-													column.key
-												)
-											)}
+										<div class="max-w-xs break-words" title={formattedValue}>
+											<HighlightedText segments={highlightedSegments} />
 										</div>
 									{/if}
 								</td>

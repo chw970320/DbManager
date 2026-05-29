@@ -7,12 +7,19 @@
 - `AGENTS.md`를 DbManager 에이전트 작업 지침의 단일 기준으로 정리했습니다.
 - `docs/` 문서를 사용자 가이드, 현재 API/데이터 모델 명세, 변경 이력 중심으로 경량화했습니다.
 - 전역 `dbmanager-workflow` 스킬은 저장소 `AGENTS.md`로 위임하는 포인터로 축소했습니다.
+- 데이터베이스 정의서 테이블과 공통 컬럼 필터를 대표 UI 슬라이스로 삼아 루트 `DESIGN.md`의 시맨틱 토큰/공통 상태 패턴을 실제 코드에 반영했습니다.
 
 ### 상세 변경
 
 - 삭제/병합 대상 문서는 `docs/README.md`의 2026-05-29 cleanup audit summary에 남겼습니다.
 - 루트 `DESIGN.md`를 제품/UI 디자인 기준으로 추가하고, legacy `docs/DESIGN.md` 초안은 백업 후 제거했습니다.
 - 관계 동기화 정책의 활성 참조를 `docs/specs/data-model.md`로 통합했습니다.
+- `DatabaseTable`과 공통 `ColumnFilter`의 raw Tailwind color 조합을 `brand`/`surface`/`content`/`border`/`status` 토큰 기반 표현으로 정리했습니다.
+- `ColumnFilter`의 미구현 `text|select` 분기 계약을 제거하고 현재 동작인 고유값 선택 필터로 API를 명확히 했습니다.
+- 빈 결과 UI는 공통 `EmptyState`, 로딩 행은 공통 `Skeleton`을 사용하도록 바꾸고 table `aria-busy`/caption으로 로딩 상태를 노출했습니다.
+- DB 설계/표준화 테이블의 검색어 하이라이트는 `{@html}` 삽입 대신 공통 텍스트 세그먼트 helper와 `<mark>`를 직접 렌더링하도록 바꿔 업로드 데이터의 HTML 문자열이 실행되지 않게 했습니다.
+- `Skeleton`도 `bg-surface-raised` 기반 토큰을 사용하도록 조정해 향후 테이블 상태 UI 수렴의 기준을 마련했습니다.
+- 표준화/DB 설계 테이블과 컬럼 필터 테스트에 빈 상태, 검색 빈 상태, 로딩 접근성, 안전한 하이라이트, 정렬, 페이지 이동, 필터 적용 회귀 검증을 보강했습니다.
 
 ## 2026-05-28
 

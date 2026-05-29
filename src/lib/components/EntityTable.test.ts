@@ -63,6 +63,28 @@ describe('EntityTable', () => {
 
 			// 로딩 상태 표시 확인 (실제 컴포넌트 구조에 따라 조정)
 		});
+
+		it('검색어 하이라이트는 HTML을 실행하지 않고 텍스트로 렌더링한다', () => {
+			const entries = [
+				{
+					...createMockEntries()[0],
+					entityName: '<img src=x onerror=alert(1)>위험엔터티'
+				}
+			];
+
+			const { container } = render(EntityTable, {
+				props: {
+					entries,
+					searchQuery: '위험엔터티',
+					onsort: vi.fn(),
+					onpagechange: vi.fn()
+				}
+			});
+
+			expect(container).toHaveTextContent('<img src=x onerror=alert(1)>위험엔터티');
+			expect(screen.getByText('위험엔터티', { selector: 'mark' })).toBeInTheDocument();
+			expect(container.querySelector('img')).not.toBeInTheDocument();
+		});
 	});
 
 	describe('Sorting', () => {

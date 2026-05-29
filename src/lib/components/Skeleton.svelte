@@ -23,19 +23,22 @@
 	<div class="space-y-3 {className}">
 		{#each Array(lines) as _, i (i)}
 			<div
-				class="animate-pulse rounded bg-gray-200"
+				class="animate-pulse rounded bg-surface-raised"
 				style="width: {i === lines - 1 ? '75%' : width}; height: {resolvedHeight}"
+				aria-hidden="true"
 			></div>
 		{/each}
 	</div>
 {:else if variant === 'circle'}
 	<div
-		class="animate-pulse rounded-full bg-gray-200 {className}"
+		class="animate-pulse rounded-full bg-surface-raised {className}"
 		style="width: {width}; height: {width}"
+		aria-hidden="true"
 	></div>
 {:else}
 	<div
-		class="animate-pulse rounded bg-gray-200 {className}"
+		class="animate-pulse rounded bg-surface-raised {className}"
 		style="width: {width}; height: {resolvedHeight}"
+		aria-hidden="true"
 	></div>
 {/if}

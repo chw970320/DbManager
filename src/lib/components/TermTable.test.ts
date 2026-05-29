@@ -67,6 +67,31 @@ describe('TermTable', () => {
 
 			// 로딩 상태 표시 확인 (실제 컴포넌트 구조에 따라 조정)
 		});
+
+		it('검색어와 미매핑 하이라이트는 HTML을 실행하지 않고 텍스트로 렌더링한다', () => {
+			const entries = [
+				{
+					...createMockEntries()[0],
+					termName: '<mark onmouseover=alert(1)>위험_용어',
+					isMappedTerm: false,
+					unmappedTermParts: ['용어']
+				}
+			];
+
+			const { container } = render(TermTable, {
+				props: {
+					entries,
+					searchQuery: '위험',
+					onsort: mockSort,
+					onpagechange: mockPageChange
+				}
+			});
+
+			expect(container).toHaveTextContent('<mark onmouseover=alert(1)>위험_용어');
+			expect(screen.getByText('위험', { selector: 'mark' })).toBeInTheDocument();
+			expect(screen.getByText('용어', { selector: 'mark' })).toBeInTheDocument();
+			expect(container.querySelector('[onmouseover]')).not.toBeInTheDocument();
+		});
 	});
 
 	describe('Sorting', () => {

@@ -1,8 +1,10 @@
 <script lang="ts">
 	// @ts-nocheck
 	import type { ColumnEntry } from '$lib/types/database-design.js';
+	import { getHighlightedSegments } from '$lib/utils/text-highlight';
 	import { createEventDispatcher } from 'svelte';
 	import ColumnFilter from './ColumnFilter.svelte';
+	import HighlightedText from './HighlightedText.svelte';
 
 	type SortEvent = { column: string; direction: 'asc' | 'desc' | null };
 	type PageChangeEvent = { page: number };
@@ -62,7 +64,6 @@
 		label: string;
 		sortable: boolean;
 		filterable: boolean;
-		filterType?: 'text' | 'select';
 		width: string;
 		align: ColumnAlignment;
 	}> = [
@@ -71,7 +72,6 @@
 			label: '사업범위여부',
 			sortable: false,
 			filterable: true,
-			filterType: 'select',
 			width: 'min-w-[100px]',
 			align: 'center'
 		},
@@ -80,7 +80,6 @@
 			label: '주제영역',
 			sortable: true,
 			filterable: true,
-			filterType: 'text',
 			width: 'min-w-[120px]',
 			align: 'left'
 		},
@@ -89,7 +88,6 @@
 			label: '스키마명',
 			sortable: true,
 			filterable: true,
-			filterType: 'text',
 			width: 'min-w-[120px]',
 			align: 'left'
 		},
@@ -98,7 +96,6 @@
 			label: '테이블영문명',
 			sortable: true,
 			filterable: true,
-			filterType: 'text',
 			width: 'min-w-[150px]',
 			align: 'left'
 		},
@@ -107,7 +104,6 @@
 			label: '컬럼영문명',
 			sortable: true,
 			filterable: true,
-			filterType: 'text',
 			width: 'min-w-[150px]',
 			align: 'left'
 		},
@@ -116,7 +112,6 @@
 			label: '컬럼한글명',
 			sortable: true,
 			filterable: true,
-			filterType: 'text',
 			width: 'min-w-[150px]',
 			align: 'left'
 		},
@@ -125,7 +120,6 @@
 			label: '연관엔터티명',
 			sortable: true,
 			filterable: true,
-			filterType: 'text',
 			width: 'min-w-[150px]',
 			align: 'left'
 		},
@@ -134,7 +128,6 @@
 			label: '도메인명',
 			sortable: true,
 			filterable: true,
-			filterType: 'text',
 			width: 'min-w-[140px]',
 			align: 'left'
 		},
@@ -143,7 +136,6 @@
 			label: '자료타입',
 			sortable: false,
 			filterable: true,
-			filterType: 'select',
 			width: 'min-w-[100px]',
 			align: 'center'
 		},
@@ -176,7 +168,6 @@
 			label: 'NOT NULL',
 			sortable: false,
 			filterable: true,
-			filterType: 'select',
 			width: 'min-w-[80px]',
 			align: 'center'
 		},
@@ -185,7 +176,6 @@
 			label: 'PK',
 			sortable: false,
 			filterable: true,
-			filterType: 'select',
 			width: 'min-w-[60px]',
 			align: 'center'
 		},
@@ -194,7 +184,6 @@
 			label: 'FK',
 			sortable: false,
 			filterable: true,
-			filterType: 'select',
 			width: 'min-w-[60px]',
 			align: 'center'
 		},
@@ -219,7 +208,6 @@
 			label: 'AK',
 			sortable: false,
 			filterable: true,
-			filterType: 'select',
 			width: 'min-w-[60px]',
 			align: 'center'
 		},
@@ -236,7 +224,6 @@
 			label: '개인정보여부',
 			sortable: false,
 			filterable: true,
-			filterType: 'select',
 			width: 'min-w-[100px]',
 			align: 'center'
 		},
@@ -245,7 +232,6 @@
 			label: '암호화여부',
 			sortable: false,
 			filterable: true,
-			filterType: 'select',
 			width: 'min-w-[100px]',
 			align: 'center'
 		},
@@ -254,7 +240,6 @@
 			label: '공개/비공개여부',
 			sortable: false,
 			filterable: true,
-			filterType: 'select',
 			width: 'min-w-[120px]',
 			align: 'center'
 		},
@@ -328,17 +313,6 @@
 		if (!loading && page !== currentPage && page >= 1 && page <= totalPages) {
 			onpagechange({ page });
 		}
-	}
-
-	function highlightText(
-		text: string | undefined | null,
-		query: string,
-		columnKey: string
-	): string {
-		if (!text) return '-';
-		if (!query || (searchField !== 'all' && searchField !== columnKey)) return text;
-		const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-		return text.replace(regex, '<mark class="bg-yellow-200 px-1 rounded">$1</mark>');
 	}
 
 	function formatFieldValue(entry: ColumnEntry, columnKey: string): string {
@@ -462,7 +436,6 @@
 									<ColumnFilter
 										columnKey={column.key}
 										columnLabel={column.label}
-										filterType="select"
 										currentValue={activeFilters[column.key] || null}
 										options={filterOptions[column.key] || getUniqueValues(column.key)}
 										isOpen={openFilterColumn === column.key}
@@ -473,7 +446,6 @@
 											openFilterColumn = null;
 										}}
 										onApply={(value) => handleFilter(column.key, value)}
-										onClear={() => handleFilter(column.key, null)}
 									/>
 								{/if}
 							</div>
@@ -539,6 +511,11 @@
 						>
 							{#each columns as column (column.key)}
 								{@const formattedValue = formatFieldValue(entry, column.key)}
+								{@const highlightedSegments = getHighlightedSegments(
+									formattedValue === '-' ? '' : formattedValue,
+									searchQuery,
+									searchField === 'all' || searchField === column.key
+								)}
 								<td
 									class="whitespace-normal break-words px-6 py-4 text-sm text-gray-700 {column.align ===
 									'center'
@@ -548,11 +525,7 @@
 											: 'text-left'}"
 								>
 									<p class="break-words px-2 py-1">
-										{@html highlightText(
-											formattedValue === '-' ? '' : formattedValue,
-											searchQuery,
-											column.key
-										) || '-'}
+										<HighlightedText segments={highlightedSegments} />
 									</p>
 								</td>
 							{/each}

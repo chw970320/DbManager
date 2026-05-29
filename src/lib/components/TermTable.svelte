@@ -1,7 +1,9 @@
 <script lang="ts">
 	import type { TermEntry } from '$lib/types/term.js';
+	import { getHighlightedSegments, type HighlightSegment } from '$lib/utils/text-highlight';
 	import { createEventDispatcher } from 'svelte';
 	import ColumnFilter from './ColumnFilter.svelte';
+	import HighlightedText from './HighlightedText.svelte';
 
 	type SortEvent = {
 		column: string;
@@ -66,7 +68,6 @@
 		label: string;
 		sortable: boolean;
 		filterable: boolean;
-		filterType?: 'text' | 'select';
 		filterOptions?: string[];
 		width: string;
 		align: ColumnAlignment;
@@ -76,7 +77,6 @@
 			label: '용어명',
 			sortable: true,
 			filterable: true,
-			filterType: 'text',
 			width: 'min-w-[200px]',
 			align: 'left'
 		},
@@ -85,7 +85,6 @@
 			label: '컬럼명',
 			sortable: true,
 			filterable: true,
-			filterType: 'text',
 			width: 'min-w-[200px]',
 			align: 'left'
 		},
@@ -94,7 +93,6 @@
 			label: '도메인',
 			sortable: true,
 			filterable: true,
-			filterType: 'text',
 			width: 'min-w-[200px]',
 			align: 'left'
 		}
@@ -169,116 +167,58 @@
 		}
 	}
 
-	/**
-	 * 매핑되지 않은 부분 하이라이팅
-	 */
-	function highlightUnmappedParts(text: string, entry: TermEntry, columnKey: string): string {
-		if (!text) return text;
+	function getUnmappedSegments(
+		text: string,
+		entry: TermEntry,
+		columnKey: string
+	): HighlightSegment[] {
+		if (!text) return [{ text: '-', matched: false }];
 
-		// 용어명: 언더스코어로 분리하여 매핑되지 않은 부분만 하이라이팅
-		if (columnKey === 'termName' && entry.unmappedTermParts && entry.unmappedTermParts.length > 0) {
-			// 언더스코어로 분리
-			const parts = text.split('_');
-			const unmappedSet = new Set(entry.unmappedTermParts.map((p) => p.toLowerCase()));
-
-			// 각 부분이 매핑되지 않은 부분인지 확인하여 하이라이팅
-			const highlightedParts = parts.map((part) => {
-				if (unmappedSet.has(part.toLowerCase())) {
-					return `<mark class="bg-red-200 px-1 rounded">${part}</mark>`;
+		const getPartSegments = (parts: string[], unmappedParts: string[]): HighlightSegment[] => {
+			const unmappedSet = new Set(unmappedParts.map((part) => part.toLowerCase()));
+			return parts.flatMap((part, index) => {
+				const segments: HighlightSegment[] = [];
+				if (index > 0) {
+					segments.push({ text: '_', matched: false });
 				}
-				return part;
+				segments.push({
+					text: part,
+					matched: unmappedSet.has(part.toLowerCase()),
+					tone: unmappedSet.has(part.toLowerCase()) ? 'error' : undefined
+				});
+				return segments;
 			});
+		};
 
-			return highlightedParts.join('_');
+		if (columnKey === 'termName' && entry.unmappedTermParts?.length) {
+			return getPartSegments(text.split('_'), entry.unmappedTermParts);
 		}
 
-		// 컬럼명: 언더스코어로 분리하여 매핑되지 않은 부분만 하이라이팅
-		if (
-			columnKey === 'columnName' &&
-			entry.unmappedColumnParts &&
-			entry.unmappedColumnParts.length > 0
-		) {
-			// 언더스코어로 분리
-			const parts = text.split('_');
-			const unmappedSet = new Set(entry.unmappedColumnParts.map((p) => p.toLowerCase()));
-
-			// 각 부분이 매핑되지 않은 부분인지 확인하여 하이라이팅
-			const highlightedParts = parts.map((part) => {
-				if (unmappedSet.has(part.toLowerCase())) {
-					return `<mark class="bg-red-200 px-1 rounded">${part}</mark>`;
-				}
-				return part;
-			});
-
-			return highlightedParts.join('_');
+		if (columnKey === 'columnName' && entry.unmappedColumnParts?.length) {
+			return getPartSegments(text.split('_'), entry.unmappedColumnParts);
 		}
 
-		// 도메인명: 전체가 매핑되지 않으면 전체 하이라이팅
 		if (columnKey === 'domainName' && !entry.isMappedDomain) {
-			return `<mark class="bg-red-200 px-1 rounded">${text}</mark>`;
+			return [{ text, matched: true, tone: 'error' }];
 		}
 
-		return text;
+		return [{ text, matched: false }];
 	}
 
-	/**
-	 * 검색어 하이라이팅
-	 */
-	function highlightSearchTerm(text: string, query: string, columnKey: string): string {
-		if (!query || !text || (searchField !== 'all' && searchField !== columnKey)) {
-			return text;
-		}
-
-		const regex = new RegExp(`(${escapeRegExp(query)})`, 'gi');
-		return text.replace(regex, '<mark class="bg-yellow-200 px-1 rounded">$1</mark>');
-	}
-
-	/**
-	 * 매핑 실패 부분과 검색어 하이라이팅 통합
-	 */
-	function highlightCellContent(
+	function getCellHighlightSegments(
 		text: string,
 		entry: TermEntry,
 		columnKey: string,
 		query: string
-	): string {
-		// 먼저 매핑 실패 부분 하이라이팅
-		let result = highlightUnmappedParts(text, entry, columnKey);
-
-		// 검색어 하이라이팅 (이미 하이라이팅된 부분은 제외)
-		if (query && (searchField === 'all' || searchField === columnKey)) {
-			// 이미 하이라이팅된 부분을 임시로 치환
-			const placeholder = '___HIGHLIGHTED___';
-			const highlightedParts: string[] = [];
-			let placeholderIndex = 0;
-
-			// 매핑 실패로 하이라이팅된 부분을 임시로 치환
-			result = result.replace(
-				/<mark class="bg-red-200[^"]*">([^<]+)<\/mark>/g,
-				(match, content) => {
-					highlightedParts.push(match);
-					return `${placeholder}${placeholderIndex++}${placeholder}`;
-				}
-			);
-
-			// 검색어 하이라이팅 적용
-			const regex = new RegExp(`(${escapeRegExp(query)})`, 'gi');
-			result = result.replace(regex, '<mark class="bg-yellow-200 px-1 rounded">$1</mark>');
-
-			// 임시 치환된 부분을 원래대로 복원
-			highlightedParts.forEach((part, index) => {
-				result = result.replace(`${placeholder}${index}${placeholder}`, part);
-			});
+	): HighlightSegment[] {
+		const unmappedSegments = getUnmappedSegments(text, entry, columnKey);
+		if (!query || (searchField !== 'all' && searchField !== columnKey)) {
+			return unmappedSegments;
 		}
 
-		return result;
-	}
-
-	/**
-	 * 정규식 특수문자 이스케이프
-	 */
-	function escapeRegExp(string: string): string {
-		return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+		return unmappedSegments.flatMap((segment) =>
+			segment.tone === 'error' ? [segment] : getHighlightedSegments(segment.text, query, true)
+		);
 	}
 
 	/**
@@ -327,14 +267,6 @@
 			return '-';
 		}
 		return String(value);
-	}
-
-	/**
-	 * HTML 태그 및 스크립트 태그 제거 (mark 태그만 허용)
-	 */
-	function sanitizeHtml(html: string): string {
-		// mark 태그만 허용, 나머지 태그는 모두 제거
-		return html.replace(/<(?!\/?mark(?=>|\s.*>))\/?[^>]+>/gi, '');
 	}
 </script>
 
@@ -451,7 +383,6 @@
 									<ColumnFilter
 										columnKey={column.key}
 										columnLabel={column.label}
-										filterType="select"
 										currentValue={activeFilters[column.key] || null}
 										options={filterOptions[column.key] ||
 											column.filterOptions ||
@@ -464,7 +395,6 @@
 											openFilterColumn = null;
 										}}
 										onApply={(value) => handleFilter(column.key, value)}
-										onClear={() => handleFilter(column.key, null)}
 									/>
 								{/if}
 							</div>
@@ -523,6 +453,13 @@
 					{#each entries as entry (entry.id)}
 						<tr class="border-t border-gray-300">
 							{#each columns as column (column.key)}
+								{@const formattedValue = formatValue(entry[column.key as keyof TermEntry])}
+								{@const highlightedSegments = getCellHighlightSegments(
+									formattedValue,
+									entry,
+									column.key,
+									searchQuery
+								)}
 								<td
 									class="whitespace-normal break-words px-6 py-4 text-sm text-gray-700 {column.align ===
 									'center'
@@ -531,18 +468,8 @@
 											? 'text-right'
 											: 'text-left'}"
 								>
-									<div
-										class="max-w-xs break-words"
-										title={formatValue(entry[column.key as keyof TermEntry])}
-									>
-										{@html sanitizeHtml(
-											highlightCellContent(
-												formatValue(entry[column.key as keyof TermEntry]),
-												entry,
-												column.key,
-												searchQuery
-											)
-										)}
+									<div class="max-w-xs break-words" title={formattedValue}>
+										<HighlightedText segments={highlightedSegments} />
 									</div>
 								</td>
 							{/each}

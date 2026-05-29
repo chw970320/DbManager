@@ -1,8 +1,10 @@
 <script lang="ts">
 	// @ts-nocheck
 	import type { VocabularyEntry } from '$lib/types/vocabulary.js';
+	import { getHighlightedSegments } from '$lib/utils/text-highlight';
 	import { createEventDispatcher } from 'svelte';
 	import ColumnFilter from './ColumnFilter.svelte';
+	import HighlightedText from './HighlightedText.svelte';
 
 	type SortEvent = {
 		column: string;
@@ -91,7 +93,6 @@
 		label: string;
 		sortable: boolean;
 		filterable: boolean;
-		filterType?: 'text' | 'select';
 		filterOptions?: string[];
 		width: string;
 		align: ColumnAlignment;
@@ -101,7 +102,6 @@
 			label: '표준단어명',
 			sortable: true,
 			filterable: true,
-			filterType: 'text',
 			width: 'min-w-[150px] max-w-[200px]',
 			align: 'left'
 		},
@@ -110,7 +110,6 @@
 			label: '영문약어',
 			sortable: true,
 			filterable: true,
-			filterType: 'text',
 			width: 'min-w-[150px] max-w-[200px]',
 			align: 'left'
 		},
@@ -119,7 +118,6 @@
 			label: '영문명',
 			sortable: true,
 			filterable: true,
-			filterType: 'text',
 			width: 'min-w-[150px] max-w-[250px]',
 			align: 'left'
 		},
@@ -136,7 +134,6 @@
 			label: '형식단어여부',
 			sortable: false,
 			filterable: true,
-			filterType: 'select',
 			filterOptions: ['Y', 'N'],
 			width: 'min-w-[100px]',
 			align: 'center'
@@ -146,7 +143,6 @@
 			label: '도메인그룹명',
 			sortable: true,
 			filterable: true,
-			filterType: 'text',
 			width: 'min-w-[150px]',
 			align: 'left'
 		},
@@ -155,7 +151,6 @@
 			label: '도메인분류명',
 			sortable: false,
 			filterable: true,
-			filterType: 'text',
 			width: 'min-w-[100px]',
 			align: 'left'
 		},
@@ -180,7 +175,6 @@
 			label: '출처',
 			sortable: false,
 			filterable: true,
-			filterType: 'select',
 			width: 'min-w-[200px]',
 			align: 'left'
 		}
@@ -278,33 +272,6 @@
 		if (!loading && page !== currentPage && page >= 1 && page <= totalPages) {
 			onpagechange({ page });
 		}
-	}
-
-	/**
-	 * 검색어 하이라이팅
-	 */
-	function highlightSearchTerm(text: string, query: string, columnKey: string): string {
-		if (!query || !text || (searchField !== 'all' && searchField !== columnKey)) {
-			return text;
-		}
-
-		const regex = new RegExp(`(${escapeRegExp(query)})`, 'gi');
-		return text.replace(regex, '<mark class="bg-yellow-200 px-1 rounded">$1</mark>');
-	}
-
-	/**
-	 * 정규식 특수문자 이스케이프
-	 */
-	function escapeRegExp(string: string): string {
-		return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-	}
-
-	/**
-	 * HTML 태그 및 스크립트 태그 제거 (mark 태그만 허용)
-	 */
-	function sanitizeHtml(html: string): string {
-		// mark 태그만 허용, 나머지 태그는 모두 제거
-		return html.replace(/<(?!\/?mark(?=>|\s.*>))\/?[^>]+>/gi, '');
 	}
 
 	/**
@@ -497,7 +464,6 @@
 									<ColumnFilter
 										columnKey={column.key}
 										columnLabel={column.label}
-										filterType="select"
 										currentValue={activeFilters[column.key] || null}
 										options={filterOptions[column.key] ||
 											column.filterOptions ||
@@ -510,7 +476,6 @@
 											openFilterColumn = null;
 										}}
 										onApply={(value) => handleFilter(column.key, value)}
-										onClear={() => handleFilter(column.key, null)}
 									/>
 								{/if}
 							</div>
@@ -592,6 +557,11 @@
 									column.key
 								)}
 								{@const formattedValue = formatFieldValue(entry, column.key)}
+								{@const highlightedSegments = getHighlightedSegments(
+									formattedValue === '-' ? '' : formattedValue,
+									searchQuery,
+									searchField === 'all' || searchField === column.key
+								)}
 								{@const isDomainCategoryCell = column.key === 'domainCategory'}
 								<td
 									class="whitespace-normal break-words px-6 py-4 text-sm text-gray-700 {column.align ===
@@ -604,9 +574,7 @@
 										: ''}"
 								>
 									<p class="break-words px-2 py-1">
-										{@html sanitizeHtml(
-											highlightSearchTerm(formattedValue, searchQuery, column.key)
-										)}
+										<HighlightedText segments={highlightedSegments} />
 									</p>
 								</td>
 							{/each}

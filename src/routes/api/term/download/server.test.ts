@@ -83,6 +83,7 @@ describe('Term Download API: /api/term/download', () => {
 		);
 		expect(response.headers.get('Content-Disposition')).toContain('attachment');
 		expect(response.headers.get('Content-Disposition')).toContain('.xlsx');
+		expect(response.headers.get('Cache-Control')).toBeNull();
 	});
 
 	it('should return 404 when no entries exist', async () => {

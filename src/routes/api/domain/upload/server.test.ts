@@ -189,6 +189,7 @@ describe('Domain Upload API: /api/domain/upload', () => {
 			expect(response.status).toBe(200);
 			expect(result.success).toBe(true);
 			expect(result.data.uploadedCount).toBe(1);
+			expect(result.data.postProcess).toEqual({ mode: 'none', steps: [] });
 			expect(captureUploadReplaceHistory).toHaveBeenCalledWith('domain', 'domain.json');
 		});
 

@@ -88,6 +88,7 @@ describe('Database Download API: /api/database/download', () => {
 		);
 		expect(response.headers.get('Content-Disposition')).toContain('attachment');
 		expect(response.headers.get('Content-Disposition')).toContain('.xlsx');
+		expect(response.headers.get('Cache-Control')).toBe('no-cache, no-store, must-revalidate');
 	});
 
 	it('filename 파라미터로 특정 파일 다운로드', async () => {

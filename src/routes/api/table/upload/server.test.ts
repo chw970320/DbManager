@@ -178,6 +178,7 @@ describe('Table Upload API: /api/table/upload', () => {
 			expect(response.status).toBe(200);
 			expect(result.success).toBe(true);
 			expect(result.data.uploadedCount).toBe(1);
+			expect(result.data.postProcess).toEqual({ mode: 'none', steps: [] });
 			expect(captureUploadReplaceHistory).toHaveBeenCalledWith('table', 'table.json');
 		});
 

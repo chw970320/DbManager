@@ -161,6 +161,7 @@ describe('Upload API: /api/upload', () => {
 
 		expect(response.status).toBe(200);
 		expect(result.success).toBe(true);
+		expect(result.data.postProcess).toEqual({ mode: 'none', steps: [] });
 		expect(validateXlsxFile).toHaveBeenCalledWith(mockFile);
 		expect(captureUploadReplaceHistory).toHaveBeenCalledWith('vocabulary', 'vocabulary.json');
 		expect(mergeVocabularyData).toHaveBeenCalled();

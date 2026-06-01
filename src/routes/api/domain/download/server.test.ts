@@ -91,6 +91,7 @@ describe('Domain Download API: /api/domain/download', () => {
 		);
 		expect(response.headers.get('Content-Disposition')).toContain('attachment');
 		expect(response.headers.get('Content-Disposition')).toContain('.xlsx');
+		expect(response.headers.get('Cache-Control')).toBe('no-cache, no-store, must-revalidate');
 	});
 
 	it('should apply sortBy and sortOrder correctly', async () => {

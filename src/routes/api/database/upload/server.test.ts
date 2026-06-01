@@ -192,6 +192,7 @@ describe('Database Upload API: /api/database/upload', () => {
 			expect(response.status).toBe(200);
 			expect(result.success).toBe(true);
 			expect(result.data.uploadedCount).toBe(1);
+			expect(result.data.postProcess).toEqual({ mode: 'none', steps: [] });
 			expect(captureUploadReplaceHistory).toHaveBeenCalledWith('database', 'database.json');
 			expect(mergeDatabaseData).toHaveBeenCalledWith(
 				expect.arrayContaining([expect.any(Object)]),

@@ -208,6 +208,7 @@ describe('Term Upload API: /api/term/upload', () => {
 			expect(response.status).toBe(200);
 			expect(result.success).toBe(true);
 			expect(result.data.uploadedCount).toBe(1);
+			expect(result.data.postProcess).toEqual({ mode: 'none', steps: [] });
 			expect(captureUploadReplaceHistory).toHaveBeenCalledWith('term', 'term.json');
 		});
 

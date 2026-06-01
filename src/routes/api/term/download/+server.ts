@@ -75,6 +75,8 @@ import {
 	invalidateAllCaches
 } from '$lib/registry/cache-registry';
 
+import { createXlsxDownloadResponse } from '$lib/server/xlsx-download-response';
+
 import { exportTermToXlsxBuffer } from '$lib/utils/xlsx-parser.js';
 
 /**
@@ -100,12 +102,9 @@ export async function GET({ url }: RequestEvent) {
 		const downloadFilename = `term_${currentDate}.xlsx`;
 
 		// 응답 헤더 설정
-		return new Response(buffer, {
-			headers: {
-				'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-				'Content-Disposition': `attachment; filename="${downloadFilename}"`,
-				'Content-Length': buffer.length.toString()
-			}
+		return createXlsxDownloadResponse(buffer, {
+			filename: downloadFilename,
+			contentLength: buffer.length
 		});
 	} catch (err) {
 		console.error('용어 다운로드 중 오류:', err);

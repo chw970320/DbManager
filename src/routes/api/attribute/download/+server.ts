@@ -75,6 +75,11 @@ import {
 	invalidateAllCaches
 } from '$lib/registry/cache-registry';
 
+import {
+	createXlsxDownloadResponse,
+	NO_STORE_DOWNLOAD_CACHE_CONTROL
+} from '$lib/server/xlsx-download-response';
+
 import { exportAttributeToXlsxBuffer } from '$lib/utils/database-design-xlsx-parser.js';
 
 export async function GET({ url }: RequestEvent) {
@@ -111,12 +116,9 @@ export async function GET({ url }: RequestEvent) {
 		const today = new Date();
 		const filename = `attribute_${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}.xlsx`;
 
-		return new Response(buffer as unknown as BodyInit, {
-			headers: {
-				'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-				'Content-Disposition': `attachment; filename="${filename}"`,
-				'Cache-Control': 'no-cache, no-store, must-revalidate'
-			}
+		return createXlsxDownloadResponse(buffer as unknown as BodyInit, {
+			filename,
+			cacheControl: NO_STORE_DOWNLOAD_CACHE_CONTROL
 		});
 	} catch (error) {
 		console.error('XLSX 다운로드 중 오류:', error);

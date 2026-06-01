@@ -76,6 +76,11 @@ import {
 } from '$lib/registry/cache-registry';
 import type { VocabularyData } from '$lib/types/vocabulary';
 
+import {
+	createXlsxDownloadResponse,
+	NO_STORE_DOWNLOAD_CACHE_CONTROL
+} from '$lib/server/xlsx-download-response';
+
 import { getDuplicateDetails } from '$lib/utils/duplicate-handler.js';
 import { exportJsonToXlsxBuffer } from '$lib/utils/xlsx-parser.js';
 
@@ -190,16 +195,12 @@ export async function GET({ url }: RequestEvent) {
 		const downloadFilename = `vocabulary_${currentDate}.xlsx`;
 
 		// XLSX 파일로 응답
-		return new Response(xlsxBuffer, {
+		return createXlsxDownloadResponse(xlsxBuffer, {
 			status: 200,
-			headers: {
-				'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-				'Content-Disposition': `attachment; filename="${downloadFilename}"`,
-				'Content-Length': xlsxBuffer.length.toString(),
-				'Cache-Control': 'no-cache, no-store, must-revalidate',
-				Pragma: 'no-cache',
-				Expires: '0'
-			}
+			filename: downloadFilename,
+			contentLength: xlsxBuffer.length,
+			cacheControl: NO_STORE_DOWNLOAD_CACHE_CONTROL,
+			includeLegacyNoCacheHeaders: true
 		});
 	} catch (error) {
 		console.error('단어집 XLSX 다운로드 중 오류:', error);

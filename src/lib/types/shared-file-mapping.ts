@@ -1,6 +1,7 @@
 import type { DataType } from './base.js';
 
 export type SharedFileMappingBundle = Record<DataType, string>;
+export type SharedFileMappingRegistryVersion = '1.0' | '2.0';
 
 export interface SharedFileMappingBundleEntry {
 	id: string;
@@ -11,7 +12,7 @@ export interface SharedFileMappingBundleEntry {
 }
 
 export interface SharedFileMappingRegistryData {
-	version: '1.0';
+	version: SharedFileMappingRegistryVersion;
 	bundles: SharedFileMappingBundleEntry[];
 	lastUpdated: string;
 }

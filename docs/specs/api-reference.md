@@ -58,13 +58,13 @@ http://localhost:5173/api
 
 ---
 
-## 최근 변경 사항 (2026-02-13)
+## 최근 변경 사항 (2026-06-01)
 
-아래 API들은 직접 관계 파일 해석 시 공통으로 3단계 폴백을 사용합니다.
+아래 API들은 관련 파일 해석 시 v2 공통 파일 매핑 정본을 사용합니다.
 
-1. `registry.json`의 직접 관계
-2. 레거시 각 파일의 `mapping` 필드
-3. 기본 파일명(`vocabulary.json`, `domain.json`, `term.json` 등)
+1. `static/data/settings/shared-file-mappings.json` v2의 8종 번들
+2. 기본 파일명은 기본 번들 또는 신규 파일 seed에만 사용
+3. `registry.json`과 레거시 각 파일의 `mapping` 필드는 자동 마이그레이션 입력 전용
 
 적용 API:
 
@@ -157,9 +157,11 @@ http://localhost:5173/api
 - `GET/PUT /api/table/files/mapping`
 - `GET/PUT /api/column/files/mapping`
   - 8종 파일 매핑 응답은 각 화면의 직접 연결 일부만이 아니라, `vocabulary/domain/term/database/entity/attribute/table/column` 전체 연결 상태를 공유 번들로 반환합니다.
-  - 정본 저장소는 `static/data/settings/shared-file-mappings.json`이며, 각 번들은 8개 파일명을 한 번에 보관합니다.
+  - 정본 저장소는 `static/data/settings/shared-file-mappings.json` v2이며, 각 번들은 8개 파일명을 한 번에 보관합니다.
   - 각 `PUT` 요청은 현재 파일을 제외한 나머지 7개 파일명을 모두 받아 저장합니다.
-  - 저장 시 공통 매핑 파일을 우선 갱신하고, 직접 레지스트리 관계는 파생 정보로 best-effort 동기화합니다.
+  - 저장 시 공통 매핑 파일만 갱신하며, `registry.json` 직접 관계는 더 이상 파일 매핑 런타임 fallback 또는 best-effort dual-write 대상이 아닙니다.
+  - 서버 시작 또는 첫 registry 접근 시 기존 v1 공유 매핑, `registry.json`, 레거시 파일 내 `mapping`을 v2 정본으로 자동 마이그레이션합니다.
+  - 마이그레이션 후 비기본 파일에 해당하는 공유 번들이 없으면 `GET`/관련 파일 해석은 fail-fast 오류를 반환합니다.
   - 개별 데이터 JSON의 `mapping`은 저장 정본이 아니며, 로드/API 응답 시 공통 매핑 파일 기준으로 런타임 주입될 수 있습니다.
   - DB 5개 browse 화면의 연관 상태 상세/정렬 동기화도 같은 8종 파일 번들을 사용합니다.
 

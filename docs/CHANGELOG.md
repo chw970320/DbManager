@@ -1,5 +1,20 @@
 # 변경 이력
 
+## 2026-06-01
+
+### 요약
+
+- 8종 파일 매핑 정본을 `shared-file-mappings.json` v2로 고정했습니다.
+- 서버 시작/첫 registry 접근에서 기존 공유 매핑, `registry.json`, 레거시 `mapping` 필드를 자동 마이그레이션합니다.
+- 마이그레이션 후 `registry.json`과 파일 내 `mapping`은 런타임 fallback이 아니라 마이그레이션 입력으로만 사용합니다.
+
+### 상세 변경
+
+- `/api/*/files/mapping` 응답 shape은 유지하면서 canonical shared bundle만 조회/저장하도록 정리했습니다.
+- 비기본 파일에 v2 공유 번들이 없거나 v2 파일이 손상된 경우 fail-fast 오류를 반환합니다.
+- 파일 생성은 기본 관련 파일을 가진 v2 공유 번들을 seed하고, rename/delete는 공통 매핑 파일만 결정적으로 동기화합니다.
+- `registry.json` 파일 매핑 dual-write와 best-effort 동기화를 제거했습니다.
+
 ## 2026-05-29
 
 ### 요약

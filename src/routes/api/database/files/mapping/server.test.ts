@@ -68,6 +68,21 @@ describe('Database Mapping API: /api/database/files/mapping', () => {
 		expect(result.data.mapping).toEqual(createCurrentMapping('database'));
 	});
 
+	it('GET should surface canonical mapping guard failures', async () => {
+		vi.mocked(resolveDbDesignFileMappingBundle).mockRejectedValue(
+			new Error('공통 파일 매핑을 찾을 수 없습니다')
+		);
+
+		const response = await GET(
+			createMockRequestEvent({ searchParams: { filename: 'database-a.json' } })
+		);
+		const result = await response.json();
+
+		expect(response.status).toBe(500);
+		expect(result.success).toBe(false);
+		expect(result.error).toContain('공통 파일 매핑을 찾을 수 없습니다');
+	});
+
 	it('PUT should save the shared mapping bundle', async () => {
 		const mapping = {
 			vocabulary: 'vocabulary-b.json',

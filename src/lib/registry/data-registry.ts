@@ -13,10 +13,15 @@ import { safeWriteFile, safeReadFile, FileReadError } from '$lib/utils/file-lock
 import { isValidUUID, isValidISODate } from '$lib/utils/validation';
 import {
 	buildDbDesignStoredMapping,
-	extractDbDesignRelatedMapping,
-	mergeDbDesignRelatedMapping
+	createDbDesignMappingBundle
 } from '$lib/utils/db-design-file-mapping';
-import { resolveSharedFileMappingBundle } from '$lib/registry/shared-file-mapping-registry';
+import {
+	ensureFileMappingMigrated,
+	resolveSharedFileMappingBundle,
+	saveSharedFileMappingBundle,
+	syncSharedFileMappingsOnDelete,
+	syncSharedFileMappingsOnRename
+} from '$lib/registry/shared-file-mapping-registry';
 
 // ============================================================================
 // 디렉토리 설정
@@ -159,12 +164,14 @@ async function applyRuntimeFileMapping<T extends DataType>(
 	data: DataTypeMap[T]
 ): Promise<DataTypeMap[T]> {
 	const sharedBundle = await resolveSharedFileMappingBundle(type, filename);
-	const rawMapping = extractDbDesignRelatedMapping(
-		(data as { mapping?: Record<string, unknown> }).mapping
-	);
-	const mapping = sharedBundle
-		? buildDbDesignStoredMapping(type, sharedBundle)
-		: mergeDbDesignRelatedMapping(type, rawMapping);
+	if (!sharedBundle && filename !== DEFAULT_FILENAMES[type]) {
+		throw new Error(
+			`공통 파일 매핑을 찾을 수 없습니다: ${type}/${filename}. v2 매핑 마이그레이션 결과를 확인하세요.`
+		);
+	}
+
+	const bundle = sharedBundle ?? createDbDesignMappingBundle(type, filename);
+	const mapping = buildDbDesignStoredMapping(type, bundle);
 
 	return {
 		...(data as object),
@@ -267,6 +274,7 @@ export async function loadData<T extends DataType>(
 	const config = getTypeConfig(type);
 
 	try {
+		await ensureFileMappingMigrated();
 		await ensureDirectories([type]);
 		const dataPath = getDataPath(file, type);
 
@@ -314,6 +322,7 @@ export async function saveData<T extends DataType>(
 	const config = getTypeConfig(type);
 
 	try {
+		await ensureFileMappingMigrated();
 		await ensureDirectories([type]);
 
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -361,6 +370,9 @@ export async function saveData<T extends DataType>(
 		const dataPath = getDataPath(file, type);
 		const jsonData = JSON.stringify(finalData, null, 2);
 		await safeWriteFile(dataPath, jsonData);
+		if (file !== DEFAULT_FILENAMES[type] && !(await resolveSharedFileMappingBundle(type, file))) {
+			await saveSharedFileMappingBundle(createDbDesignMappingBundle(type, file));
+		}
 	} catch (error) {
 		console.error(`${type} 데이터 저장 실패:`, error);
 		throw new Error(
@@ -437,6 +449,7 @@ export async function mergeData<T extends DataType>(
  * 파일 목록 조회 (제네릭)
  */
 export async function listFiles(type: DataType): Promise<string[]> {
+	await ensureFileMappingMigrated();
 	try {
 		await ensureDirectories([type]);
 		const dir = DATA_DIRS[type];
@@ -455,6 +468,7 @@ export async function listFiles(type: DataType): Promise<string[]> {
  */
 export async function createFile(type: DataType, filename: string): Promise<void> {
 	const config = getTypeConfig(type);
+	await ensureFileMappingMigrated();
 	await ensureDirectories([type]);
 	const { validateFilenameForOps } = await import('$lib/utils/file-operations');
 	validateFilenameForOps(filename);
@@ -479,31 +493,18 @@ export async function renameFile(
 	if (oldFilename === DEFAULT_FILENAMES[type]) {
 		throw new Error('시스템 파일은 이름을 변경할 수 없습니다.');
 	}
+	await ensureFileMappingMigrated();
 	await ensureDirectories([type]);
 
 	const { renameDataFile } = await import('$lib/utils/file-operations');
 	await renameDataFile(type, oldFilename, newFilename);
 
-	// 매핑 레지스트리 자동 동기화
-	try {
-		const { syncSharedFileMappingsOnRename } = await import('./shared-file-mapping-registry');
-		const updatedSharedCount = await syncSharedFileMappingsOnRename(type, oldFilename, newFilename);
-		if (updatedSharedCount > 0) {
-			console.log(
-				`[공통 파일 매핑] ${type} 파일 이름 변경 시 ${updatedSharedCount}개의 공통 매핑 번들이 업데이트되었습니다.`
-			);
-		}
-
-		const { syncMappingsOnRename } = await import('./mapping-registry');
-		const updatedCount = await syncMappingsOnRename(type, oldFilename, newFilename);
-		if (updatedCount > 0) {
-			console.log(
-				`[매핑 동기화] ${type} 파일 이름 변경 시 ${updatedCount}개의 매핑 관계가 업데이트되었습니다.`
-			);
-		}
-	} catch (syncError) {
-		// 매핑 동기화 실패는 파일 작업을 롤백하지 않음 (best-effort)
-		console.warn('[매핑 동기화 경고] 매핑 레지스트리 업데이트 실패:', syncError);
+	// v2 공통 파일 매핑이 유일한 파일-매핑 동기화 대상이다.
+	const updatedSharedCount = await syncSharedFileMappingsOnRename(type, oldFilename, newFilename);
+	if (updatedSharedCount > 0) {
+		console.log(
+			`[공통 파일 매핑] ${type} 파일 이름 변경 시 ${updatedSharedCount}개의 공통 매핑 번들이 업데이트되었습니다.`
+		);
 	}
 }
 
@@ -515,31 +516,18 @@ export async function deleteFile(type: DataType, filename: string): Promise<void
 	if (filename === DEFAULT_FILENAMES[type]) {
 		throw new Error('시스템 파일은 삭제할 수 없습니다.');
 	}
+	await ensureFileMappingMigrated();
 	await ensureDirectories([type]);
 
 	const { deleteDataFile } = await import('$lib/utils/file-operations');
 	await deleteDataFile(type, filename);
 
-	// 매핑 레지스트리 자동 정리 (삭제된 파일 → 기본 파일명으로 대체)
-	try {
-		const { syncSharedFileMappingsOnDelete } = await import('./shared-file-mapping-registry');
-		const updatedSharedCount = await syncSharedFileMappingsOnDelete(type, filename);
-		if (updatedSharedCount > 0) {
-			console.log(
-				`[공통 파일 매핑] ${type} 파일 삭제 시 ${updatedSharedCount}개의 공통 매핑 번들이 기본 파일로 대체되었습니다.`
-			);
-		}
-
-		const { cleanMappingsOnDelete } = await import('./mapping-registry');
-		const updatedCount = await cleanMappingsOnDelete(type, filename);
-		if (updatedCount > 0) {
-			console.log(
-				`[매핑 동기화] ${type} 파일 삭제 시 ${updatedCount}개의 매핑 관계가 기본 파일로 대체되었습니다.`
-			);
-		}
-	} catch (syncError) {
-		// 매핑 동기화 실패는 파일 작업을 롤백하지 않음 (best-effort)
-		console.warn('[매핑 동기화 경고] 매핑 레지스트리 정리 실패:', syncError);
+	// v2 공통 파일 매핑이 유일한 파일-매핑 동기화 대상이다.
+	const updatedSharedCount = await syncSharedFileMappingsOnDelete(type, filename);
+	if (updatedSharedCount > 0) {
+		console.log(
+			`[공통 파일 매핑] ${type} 파일 삭제 시 ${updatedSharedCount}개의 공통 매핑 번들이 기본 파일로 대체되었습니다.`
+		);
 	}
 }
 

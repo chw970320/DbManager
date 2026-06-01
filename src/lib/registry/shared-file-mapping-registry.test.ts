@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
 	loadSharedFileMappingRegistryData,
+	resetFileMappingMigrationForTest,
 	resolveSharedFileMappingBundle,
 	saveSharedFileMappingBundle,
 	syncSharedFileMappingsOnDelete,
@@ -18,9 +19,11 @@ vi.mock('fs', () => ({
 
 vi.mock('fs/promises', () => ({
 	default: {
-		mkdir: vi.fn()
+		mkdir: vi.fn(),
+		readdir: vi.fn(async () => [])
 	},
-	mkdir: vi.fn()
+	mkdir: vi.fn(),
+	readdir: vi.fn(async () => [])
 }));
 
 vi.mock('$lib/utils/file-lock', () => ({
@@ -33,6 +36,7 @@ vi.mock('$lib/utils/file-lock', () => ({
 describe('shared-file-mapping-registry', () => {
 	beforeEach(() => {
 		storedJson = '';
+		resetFileMappingMigrationForTest();
 		vi.clearAllMocks();
 	});
 
@@ -41,6 +45,7 @@ describe('shared-file-mapping-registry', () => {
 		const bundle = await resolveSharedFileMappingBundle('database', 'database.json');
 
 		expect(data.bundles).toHaveLength(1);
+		expect(data.version).toBe('2.0');
 		expect(data.bundles[0]?.name).toBe('기본 공통 번들');
 		expect(bundle).toEqual({
 			vocabulary: 'vocabulary.json',
@@ -77,6 +82,7 @@ describe('shared-file-mapping-registry', () => {
 			table: 'project-a.json',
 			column: 'project-a.json'
 		});
+		expect(data.version).toBe('2.0');
 		expect(data.bundles.at(-1)?.name).toBe('project-a 번들');
 		expect(await resolveSharedFileMappingBundle('column', 'project-a.json')).toEqual(bundle);
 	});

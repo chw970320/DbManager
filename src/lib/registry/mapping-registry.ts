@@ -18,6 +18,7 @@ import type {
 import { DEFAULT_MAPPING_RELATIONS } from '$lib/types/registry';
 import { safeWriteFile, safeReadFile } from '$lib/utils/file-lock';
 import { buildCompositeKey, normalizeKey, splitUnderscoreParts } from '$lib/utils/mapping-key';
+import { resolveSharedFileMappingBundle } from '$lib/registry/shared-file-mapping-registry';
 
 // ============================================================================
 // 레지스트리 파일 경로
@@ -440,39 +441,35 @@ export function getKnownRelatedTypes(type: DataType): DataType[] {
 }
 
 /**
- * 3단계 폴백 전략으로 관련 파일명 해석
- * Tier 1: 레지스트리 (registry.json)
- * Tier 2: 파일 내 mapping 필드 (fileMappingOverride)
- * Tier 3: DEFAULT_FILENAMES에서 알려진 관계 타입만 채움
+ * v2 공통 파일 매핑 번들을 기준으로 관련 파일명을 해석합니다.
+ * registry.json과 파일 내 mapping 필드는 마이그레이션 입력일 뿐 런타임 fallback으로 사용하지 않습니다.
  */
 export async function resolveRelatedFilenames(
 	type: DataType,
 	filename: string,
-	fileMappingOverride?: Partial<Record<DataType, string>>
+	_fileMappingOverride?: Partial<Record<DataType, string>>
 ): Promise<Map<DataType, string>> {
-	// Tier 1: 레지스트리에서 조회
-	const result = await getRelatedFilenames(type, filename);
-
-	// 알려진 관계 타입 목록
 	const knownTypes = getKnownRelatedTypes(type);
+	const result = new Map<DataType, string>();
+	const sharedBundle = await resolveSharedFileMappingBundle(type, filename);
 
-	// Tier 2: fileMappingOverride로 빈 슬롯 채우기
-	if (fileMappingOverride) {
+	if (sharedBundle) {
 		for (const relatedType of knownTypes) {
-			if (!result.has(relatedType) && fileMappingOverride[relatedType]) {
-				result.set(relatedType, fileMappingOverride[relatedType]!);
-			}
+			result.set(relatedType, sharedBundle[relatedType]);
 		}
+		return result;
 	}
 
-	// Tier 3: DEFAULT_FILENAMES로 나머지 빈 슬롯 채우기
-	for (const relatedType of knownTypes) {
-		if (!result.has(relatedType)) {
+	if (filename === DEFAULT_FILENAMES[type]) {
+		for (const relatedType of knownTypes) {
 			result.set(relatedType, DEFAULT_FILENAMES[relatedType]);
 		}
+		return result;
 	}
 
-	return result;
+	throw new Error(
+		`공통 파일 매핑을 찾을 수 없습니다: ${type}/${filename}. v2 매핑 마이그레이션 결과를 확인하세요.`
+	);
 }
 
 // ============================================================================

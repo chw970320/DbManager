@@ -25,15 +25,15 @@
 
 ## 매핑 해석 및 참조 무결성 (2026-02-13)
 
-### 매핑 해석 우선순위
+### 매핑 해석 기준
 
-데이터 타입 간 관련 파일명은 아래 우선순위로 해석됩니다.
+데이터 타입 간 관련 파일명은 `static/data/settings/shared-file-mappings.json`의 v2 공통 매핑 번들을 정본으로 해석됩니다.
 
-1. `static/data/settings/shared-file-mappings.json`의 8종 공통 매핑 번들
-2. 레거시 각 데이터 파일의 `mapping` 필드
-3. 타입별 기본 파일명(`DEFAULT_FILENAMES`)
-
-`static/data/registry.json`은 8종 공통 번들의 정본이 아니라, 직접 관계 해석과 레거시 복원을 돕는 파생 레지스트리입니다.
+- `static/data/registry.json`과 레거시 각 데이터 파일의 `mapping` 필드는 v2 마이그레이션 입력으로만 사용합니다.
+- 서버 시작 또는 첫 registry 접근 시 v2 매핑 파일이 없거나 v1이면 자동 마이그레이션합니다.
+- 마이그레이션 이후 런타임 해석은 `shared-file-mappings.json`만 읽습니다.
+- 공유 번들이 없는 비기본 파일은 레거시 fallback 대신 명시적으로 실패합니다.
+- 타입별 기본 파일명(`DEFAULT_FILENAMES`)은 기본 번들 또는 신규 파일 번들 seed에만 사용합니다.
 
 관련 구현:
 
@@ -57,6 +57,7 @@
 
 - 파일 내 `mapping` 필드는 더 이상 저장 정본이 아닙니다.
 - `loadData(...)`는 공통 매핑 파일을 기준으로 `mapping` 필드를 런타임 주입하며, 저장 시에는 해당 필드를 제거합니다.
+- 운영 데이터의 v1 공유 매핑, `registry.json`, 레거시 파일 내 `mapping`은 자동 마이그레이션 입력으로만 보존됩니다.
 - `VocabularyData.mappedDomainFile`은 제거되었으며, 현재는 공통 매핑 파일 기준의 런타임 `mapping`만 사용합니다.
 
 ---
@@ -96,11 +97,12 @@
 
 ### 공통 규칙
 
-- 8종 파일 매핑의 저장 정본은 `static/data/settings/shared-file-mappings.json`입니다.
+- 8종 파일 매핑의 저장 정본은 `static/data/settings/shared-file-mappings.json` v2입니다.
 - 각 `/files/mapping` API는 이 공통 매핑 파일을 기준으로 현재 파일을 포함한 8종 번들을 조회/저장합니다.
-- 저장 시 직접 관계(`vocabulary -> domain`, `term -> vocabulary/domain`, `database -> entity/table`, `entity -> attribute`, `table -> entity/column`, `attribute -> column`, `column -> term/domain`)도 `registry.json`에 파생 정보로 함께 반영됩니다.
-- 파일 이름 변경/삭제 시 공통 매핑 파일도 새 파일명 또는 타입별 기본 파일명으로 함께 동기화됩니다.
-- 공유 번들이 아직 없는 레거시 파일은 기존 `mapping` 필드, 직접 관계 레지스트리, 기본 파일명을 조합해 복원됩니다.
+- 저장 시 `registry.json`에 파일 매핑 파생 정보를 dual-write하지 않습니다.
+- 파일 이름 변경/삭제 시 공통 매핑 파일만 새 파일명 또는 타입별 기본 파일명으로 동기화하며, 동기화 실패는 삼키지 않습니다.
+- 공유 번들이 아직 없는 레거시 파일은 서버 시작 또는 첫 registry 접근의 자동 마이그레이션에서만 `registry.json`, 파일 내 `mapping`, 기본 파일명을 조합해 복원됩니다.
+- 마이그레이션 후 공유 번들이 없는 비기본 파일은 fail-fast 오류로 처리합니다.
 - DB 5개 browse 화면의 연관 상태 상세/정렬 동기화는 같은 8종 파일 번들을 그대로 전달받습니다.
 - 각 공통 번들은 사용자 화면용 `name` 표시명을 함께 저장합니다.
 - 표시명이 비어 있으면 파일 조합을 기준으로 자동 생성합니다.
@@ -111,6 +113,7 @@
 
 - 정본 저장 타입:
   - `SharedFileMappingBundle = Record<DataType, string>`
+  - `SharedFileMappingRegistryVersion = '1.0' | '2.0'`
   - `SharedFileMappingBundleEntry = { id, name, files, createdAt, updatedAt }`
   - `SharedFileMappingRegistryData`
 - 저장 위치:
@@ -148,7 +151,7 @@
 
 ```json
 {
-	"version": "1.0",
+	"version": "2.0",
 	"bundles": [
 		{
 			"id": "default-shared-file-mapping",
@@ -170,6 +173,26 @@
 	"lastUpdated": "2026-03-12T00:00:00.000Z"
 }
 ```
+
+### v2 마이그레이션 및 충돌 정책
+
+- 트리거:
+  - SvelteKit 서버 `init`
+  - `loadData`, `saveData`, `listFiles`, `createFile`, `renameFile`, `deleteFile`
+  - `resolveSharedFileMappingBundle`, `saveSharedFileMappingBundle`
+  - `/api/*/files/mapping`이 사용하는 DB 설계 매핑 helper
+- 입력:
+  - 기존 `shared-file-mappings.json` v1 번들
+  - `static/data/registry.json`의 직접 관계
+  - 레거시 데이터 파일의 `mapping` 필드
+- v2 불변식:
+  - 각 번들의 `files`는 8개 `DataType` 키를 모두 포함합니다.
+  - 기본 번들 id는 `default-shared-file-mapping`입니다.
+  - 같은 비기본 `(type, filename)`은 서로 다른 번들 조합에 중복될 수 없습니다.
+  - 기본 파일명은 여러 신규/부분 번들에서 공유될 수 있습니다.
+- 충돌:
+  - 동일 파일이 서로 다른 비기본 조합으로 연결되면 마이그레이션 또는 저장을 실패시킵니다.
+  - v2 파일의 malformed 번들, 중복 번들, 누락 필드는 fail-fast 오류입니다.
 
 컨테이너 예시의 `mapping` 필드는 `loadData(...)` 또는 `/files/mapping` 응답 기준의 런타임 shape이며, 원본 데이터 JSON 저장 시에는 포함되지 않습니다.
 

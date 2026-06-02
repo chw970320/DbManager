@@ -44,6 +44,14 @@ vi.mock('$lib/utils/validation.js', () => ({
 	validateTermNameUniqueness: vi.fn(() => null)
 }));
 
+vi.mock('$lib/utils/cascade-update-plan.js', () => ({
+	planCascadeUpdate: vi.fn()
+}));
+
+vi.mock('$lib/utils/cascade-update-transaction.js', () => ({
+	applyCascadePlan: vi.fn()
+}));
+
 vi.mock('uuid', () => ({
 	v4: vi.fn(() => 'test-uuid-1234')
 }));
@@ -59,6 +67,8 @@ import {
 import { getCachedVocabularyData, getCachedDomainData } from '$lib/registry/cache-registry';
 import { resolveRelatedFilenames, checkEntryReferences } from '$lib/registry/mapping-registry.js';
 import { validateTermNameSuffix, validateTermNameUniqueness } from '$lib/utils/validation.js';
+import { planCascadeUpdate } from '$lib/utils/cascade-update-plan.js';
+import { applyCascadePlan } from '$lib/utils/cascade-update-transaction.js';
 
 // 테스트용 Mock 데이터
 const createMockVocabularyData = (): VocabularyData => ({
@@ -134,6 +144,47 @@ const createMockTermData = (): TermData => ({
 	}
 });
 
+const createCascadePreview = () => ({
+	summary: {
+		relatedChangeCount: 1
+	},
+	changes: [
+		{
+			type: 'column',
+			filename: 'column.json',
+			entryId: 'column-1',
+			field: 'termName',
+			before: '사용자_이름',
+			after: '테스트_이름'
+		}
+	],
+	conflicts: [
+		{
+			type: 'column',
+			filename: 'column.json',
+			entryId: 'column-1',
+			reason: 'blocked by test conflict'
+		}
+	]
+});
+
+const createBlockedCascadePlan = () => ({
+	blocked: true,
+	preview: createCascadePreview()
+});
+
+const createUnblockedCascadePlan = (sourceEntry: unknown) => ({
+	blocked: false,
+	sourceEntry,
+	preview: {
+		summary: {
+			relatedChangeCount: 0
+		},
+		changes: [],
+		conflicts: []
+	}
+});
+
 // RequestEvent Mock 생성 헬퍼
 function createMockRequestEvent(options: {
 	method?: string;
@@ -194,6 +245,17 @@ describe('Term API: /api/term', () => {
 		vi.mocked(checkEntryReferences).mockResolvedValue({ canDelete: true, references: [] } as never);
 		vi.mocked(validateTermNameSuffix).mockReturnValue(null);
 		vi.mocked(validateTermNameUniqueness).mockReturnValue(null);
+		vi.mocked(planCascadeUpdate).mockImplementation(
+			async (input) =>
+				createUnblockedCascadePlan((input as { proposedEntry?: unknown }).proposedEntry) as never
+		);
+		vi.mocked(applyCascadePlan).mockImplementation(
+			async (plan) =>
+				({
+					sourceEntry: (plan as { sourceEntry?: unknown }).sourceEntry,
+					preview: (plan as { preview?: unknown }).preview
+				}) as never
+		);
 	});
 
 	describe('GET', () => {
@@ -436,6 +498,34 @@ describe('Term API: /api/term', () => {
 
 			expect(loadTermData).toHaveBeenCalledWith('custom-term.json');
 		});
+
+		it('should return 409 with preview when cascade update is blocked', async () => {
+			const blockedPlan = createBlockedCascadePlan();
+			vi.mocked(planCascadeUpdate).mockResolvedValue(blockedPlan as never);
+
+			const event = createMockRequestEvent({
+				method: 'POST',
+				body: {
+					entry: {
+						termName: '테스트_이름',
+						columnName: 'TEST_NAME',
+						domainName: '사용자분류_VARCHAR(50)'
+					},
+					filename: 'term.json'
+				}
+			});
+
+			const response = await POST(event);
+			const result = await response.json();
+
+			expect(response.status).toBe(409);
+			expect(result.success).toBe(false);
+			expect(result.message).toBe('Cascade update blocked');
+			expect(result.error).toBe(blockedPlan.preview.conflicts[0].reason);
+			expect(result.data.preview).toEqual(blockedPlan.preview);
+			expect(applyCascadePlan).not.toHaveBeenCalled();
+			expect(saveTermData).not.toHaveBeenCalled();
+		});
 	});
 
 	describe('PUT (via POST with id)', () => {
@@ -506,6 +596,35 @@ describe('Term API: /api/term', () => {
 			await POST(event);
 
 			expect(loadTermData).toHaveBeenCalledWith('custom-term.json');
+		});
+
+		it('should return 409 with preview when cascade update is blocked', async () => {
+			const blockedPlan = createBlockedCascadePlan();
+			vi.mocked(planCascadeUpdate).mockResolvedValue(blockedPlan as never);
+
+			const event = createMockRequestEvent({
+				method: 'POST',
+				body: {
+					entry: {
+						id: 'entry-1',
+						termName: '사용자_이름',
+						columnName: 'USER_NAME',
+						domainName: '사용자분류_VARCHAR(50)'
+					},
+					filename: 'term.json'
+				}
+			});
+
+			const response = await POST(event);
+			const result = await response.json();
+
+			expect(response.status).toBe(409);
+			expect(result.success).toBe(false);
+			expect(result.message).toBe('Cascade update blocked');
+			expect(result.error).toBe(blockedPlan.preview.conflicts[0].reason);
+			expect(result.data.preview).toEqual(blockedPlan.preview);
+			expect(applyCascadePlan).not.toHaveBeenCalled();
+			expect(saveTermData).not.toHaveBeenCalled();
 		});
 	});
 

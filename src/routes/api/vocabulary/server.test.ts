@@ -30,6 +30,14 @@ vi.mock('$lib/utils/validation.js', () => ({
 	validateForbiddenWordsAndSynonyms: vi.fn(() => null)
 }));
 
+vi.mock('$lib/utils/cascade-update-plan.js', () => ({
+	planCascadeUpdate: vi.fn()
+}));
+
+vi.mock('$lib/utils/cascade-update-transaction.js', () => ({
+	applyCascadePlan: vi.fn()
+}));
+
 vi.mock('uuid', () => ({
 	v4: vi.fn(() => 'test-uuid-1234')
 }));
@@ -43,6 +51,8 @@ import {
 import { checkEntryReferences } from '$lib/registry/mapping-registry';
 import { invalidateAllGeneratorCaches } from '$lib/registry/generator-cache';
 import { getDuplicateDetails } from '$lib/utils/duplicate-handler.js';
+import { planCascadeUpdate } from '$lib/utils/cascade-update-plan.js';
+import { applyCascadePlan } from '$lib/utils/cascade-update-transaction.js';
 
 // 테스트용 Mock 데이터
 const createMockVocabularyData = (): VocabularyData => ({
@@ -68,6 +78,47 @@ const createMockVocabularyData = (): VocabularyData => ({
 	],
 	lastUpdated: '2024-01-02T00:00:00.000Z',
 	totalCount: 2
+});
+
+const createCascadePreview = () => ({
+	summary: {
+		relatedChangeCount: 1
+	},
+	changes: [
+		{
+			type: 'term',
+			filename: 'term.json',
+			entryId: 'term-1',
+			field: 'termName',
+			before: '사용자_이름',
+			after: '테스트_이름'
+		}
+	],
+	conflicts: [
+		{
+			type: 'term',
+			filename: 'term.json',
+			entryId: 'term-1',
+			reason: 'blocked by test conflict'
+		}
+	]
+});
+
+const createBlockedCascadePlan = () => ({
+	blocked: true,
+	preview: createCascadePreview()
+});
+
+const createUnblockedCascadePlan = (sourceEntry: unknown) => ({
+	blocked: false,
+	sourceEntry,
+	preview: {
+		summary: {
+			relatedChangeCount: 0
+		},
+		changes: [],
+		conflicts: []
+	}
 });
 
 // RequestEvent Mock 생성 헬퍼
@@ -118,6 +169,17 @@ describe('Vocabulary API: /api/vocabulary', () => {
 		vi.mocked(saveVocabularyData).mockResolvedValue(undefined);
 		vi.mocked(listVocabularyFiles).mockResolvedValue(['vocabulary.json']);
 		vi.mocked(checkEntryReferences).mockResolvedValue({ canDelete: true, references: [] });
+		vi.mocked(planCascadeUpdate).mockImplementation(
+			async (input) =>
+				createUnblockedCascadePlan((input as { proposedEntry?: unknown }).proposedEntry) as never
+		);
+		vi.mocked(applyCascadePlan).mockImplementation(
+			async (plan) =>
+				({
+					sourceEntry: (plan as { sourceEntry?: unknown }).sourceEntry,
+					preview: (plan as { preview?: unknown }).preview
+				}) as never
+		);
 	});
 
 	describe('GET', () => {
@@ -429,6 +491,32 @@ describe('Vocabulary API: /api/vocabulary', () => {
 			expect(loadVocabularyData).toHaveBeenCalledWith('custom-vocabulary.json');
 			expect(saveVocabularyData).toHaveBeenCalledWith(expect.any(Object), 'custom-vocabulary.json');
 		});
+
+		it('should return 409 with preview when cascade update is blocked', async () => {
+			const blockedPlan = createBlockedCascadePlan();
+			vi.mocked(planCascadeUpdate).mockResolvedValue(blockedPlan as never);
+
+			const event = createMockRequestEvent({
+				method: 'POST',
+				body: {
+					standardName: '테스트',
+					abbreviation: 'TEST',
+					englishName: 'Test',
+					applyCascade: true
+				}
+			});
+
+			const response = await POST(event);
+			const result = await response.json();
+
+			expect(response.status).toBe(409);
+			expect(result.success).toBe(false);
+			expect(result.message).toBe('Cascade update blocked');
+			expect(result.error).toBe(blockedPlan.preview.conflicts[0].reason);
+			expect(result.data.preview).toEqual(blockedPlan.preview);
+			expect(applyCascadePlan).not.toHaveBeenCalled();
+			expect(saveVocabularyData).not.toHaveBeenCalled();
+		});
 	});
 
 	describe('PUT', () => {
@@ -516,6 +604,34 @@ describe('Vocabulary API: /api/vocabulary', () => {
 
 			expect(loadVocabularyData).toHaveBeenCalledWith('custom-vocabulary.json');
 			expect(saveVocabularyData).toHaveBeenCalledWith(expect.any(Object), 'custom-vocabulary.json');
+		});
+
+		it('should return 409 with preview when cascade update is blocked', async () => {
+			const blockedPlan = createBlockedCascadePlan();
+			vi.mocked(planCascadeUpdate).mockResolvedValue(blockedPlan as never);
+
+			const event = createMockRequestEvent({
+				method: 'PUT',
+				body: {
+					id: 'entry-1',
+					standardName: '사용자',
+					abbreviation: 'USER',
+					englishName: 'User',
+					description: '수정된 설명',
+					applyCascade: true
+				}
+			});
+
+			const response = await PUT(event);
+			const result = await response.json();
+
+			expect(response.status).toBe(409);
+			expect(result.success).toBe(false);
+			expect(result.message).toBe('Cascade update blocked');
+			expect(result.error).toBe(blockedPlan.preview.conflicts[0].reason);
+			expect(result.data.preview).toEqual(blockedPlan.preview);
+			expect(applyCascadePlan).not.toHaveBeenCalled();
+			expect(saveVocabularyData).not.toHaveBeenCalled();
 		});
 	});
 

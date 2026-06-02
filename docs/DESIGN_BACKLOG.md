@@ -31,12 +31,14 @@ Last updated: 2026-06-02
 
 ### Visual QA evidence gate
 
-상태: 완료됨. 비파괴적으로 접근 가능한 route screenshot은 수집했고, 저장/업로드/sync처럼 mutation fixture가 필요한 상태는 후속 blocker로 분리했습니다.
+상태: 완료됨. 비파괴적으로 접근 가능한 route screenshot을 수집했고, 후속 fixture blocker 4종도 screenshot evidence로 확인했습니다.
 
 근거:
 
 - Visual QA report: `.omx/plans/design-visual-qa-report-20260602T013737Z.md`
 - Screenshot evidence: `.omx/plans/visual-qa-screenshots/`
+- Fixture evidence report: `.omx/plans/design-fixture-evidence-20260602T043758Z.md`
+- Fixture screenshot evidence: `.omx/plans/design-fixture-screenshots/20260602T043758Z/`
 - UI source 변경: 없음
 
 목표:
@@ -62,12 +64,12 @@ Last updated: 2026-06-02
 - [x] UI source file 수정 없음
 - [x] 발견 결함 없음; fixture가 필요한 screenshot state만 후속 blocker로 분리
 
-남은 후속 blocker:
+Fixture blocker 처리 결과:
 
-- [ ] 저장 영향 modal screenshot fixture
-- [ ] validation panel expanded/error screenshot fixture
-- [ ] upload restore/file-manager mapping screenshot fixture
-- [ ] sync preview/apply screenshot fixture
+- [x] 저장 영향 modal screenshot fixture: `screenshot-pass`
+- [x] validation panel expanded/error screenshot fixture: `screenshot-pass`
+- [x] upload restore/file-manager mapping screenshot fixture: `screenshot-pass`
+- [x] sync preview/apply screenshot fixture: `screenshot-pass`
 
 ## P1 — 후속 디자인 계획 후보
 
@@ -76,7 +78,9 @@ Last updated: 2026-06-02
 상태: Visual QA 이후 계획화.
 
 - [ ] 파일 관리 모달에서 현재 번들/파일 식별이 충분히 드러나는지 확인
+- [ ] 파일 관리 모달 heading이 dialog accessible name으로 연결되는지 확인
 - [ ] 업로드/복원/스냅샷 흐름에서 영향 파일 집합과 복구 경로가 명확한지 확인
+- [ ] reset-backed upload history fixture 도입 여부 결정
 - [ ] 공통 매핑 번들 identity를 숨기지 않음
 - [ ] API/storage shape 변경 없이 기존 데이터로 표현 가능한지 우선 검토
 
@@ -94,6 +98,7 @@ Last updated: 2026-06-02
 상태: Visual QA 이후 계획화.
 
 - [ ] preview/apply 모드가 명확히 구분되는지 확인
+- [ ] direct apply screenshot fixture는 reversible/reset-backed apply 조건 확정 후 진행
 - [ ] `failedStep`, owner trace, 남은 validation issue가 숨겨지지 않는지 확인
 - [ ] 후보 변경 사유와 후속 조치가 한국어로 충분히 설명되는지 확인
 - [ ] backend owner name과 `failedStep` 의미 보존

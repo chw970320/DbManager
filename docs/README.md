@@ -4,13 +4,14 @@ This directory keeps only the current user-facing guides, technical specs, and r
 
 ## Current entry points
 
-| Document                                             | Purpose                                                                                                                  | Audience                |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ----------------------- |
-| [`QUICK_START.md`](./QUICK_START.md)                 | Install/run the app and try the first core flow.                                                                         | New users, contributors |
-| [`USER_GUIDE.md`](./USER_GUIDE.md)                   | Detailed feature usage for vocabulary, domain, term, DB design, ERD, profiling, snapshots, uploads, and troubleshooting. | Users, QA               |
-| [`CHANGELOG.md`](./CHANGELOG.md)                     | Chronological product/code/documentation history.                                                                        | Maintainers             |
-| [`specs/api-reference.md`](./specs/api-reference.md) | Current API endpoint reference.                                                                                          | Developers              |
-| [`specs/data-model.md`](./specs/data-model.md)       | Current data/storage model reference.                                                                                    | Developers              |
+| Document                                                 | Purpose                                                                                                                  | Audience                |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ----------------------- |
+| [`QUICK_START.md`](./QUICK_START.md)                     | Install/run the app and try the first core flow.                                                                         | New users, contributors |
+| [`USER_GUIDE.md`](./USER_GUIDE.md)                       | Detailed feature usage for vocabulary, domain, term, DB design, ERD, profiling, snapshots, uploads, and troubleshooting. | Users, QA               |
+| [`MAINTENANCE_CHECKLIST.md`](./MAINTENANCE_CHECKLIST.md) | Remaining backend maintenance/refactor checklist and guardrails.                                                         | Maintainers, agents     |
+| [`CHANGELOG.md`](./CHANGELOG.md)                         | Chronological product/code/documentation history.                                                                        | Maintainers             |
+| [`specs/api-reference.md`](./specs/api-reference.md)     | Current API endpoint reference.                                                                                          | Developers              |
+| [`specs/data-model.md`](./specs/data-model.md)           | Current data/storage model reference.                                                                                    | Developers              |
 
 Related root-level guidance:
 

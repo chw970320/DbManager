@@ -8,6 +8,7 @@ This directory keeps only the current user-facing guides, technical specs, and r
 | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ----------------------- |
 | [`QUICK_START.md`](./QUICK_START.md)                     | Install/run the app and try the first core flow.                                                                         | New users, contributors |
 | [`USER_GUIDE.md`](./USER_GUIDE.md)                       | Detailed feature usage for vocabulary, domain, term, DB design, ERD, profiling, snapshots, uploads, and troubleshooting. | Users, QA               |
+| [`DESIGN_BACKLOG.md`](./DESIGN_BACKLOG.md)               | Remaining design/UI backlog, visual QA gate, and design-only follow-up guardrails.                                       | Designers, maintainers  |
 | [`MAINTENANCE_CHECKLIST.md`](./MAINTENANCE_CHECKLIST.md) | Remaining backend maintenance/refactor checklist and guardrails.                                                         | Maintainers, agents     |
 | [`CHANGELOG.md`](./CHANGELOG.md)                         | Chronological product/code/documentation history.                                                                        | Maintainers             |
 | [`specs/api-reference.md`](./specs/api-reference.md)     | Current API endpoint reference.                                                                                          | Developers              |

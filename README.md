@@ -178,6 +178,7 @@ docs/
   README.md        # 문서 인덱스 및 정리 내역
   QUICK_START.md   # 빠른 시작
   USER_GUIDE.md    # 사용자 가이드
+  DESIGN_BACKLOG.md # 남은 디자인/UI 백로그
   MAINTENANCE_CHECKLIST.md # 남은 유지보수 체크리스트
   CHANGELOG.md     # 변경 이력
   specs/           # API/데이터 모델 명세
@@ -265,6 +266,7 @@ docker-compose up --build
 - 문서 인덱스: `docs/README.md`
 - 빠른 시작: `docs/QUICK_START.md`
 - 사용자 가이드: `docs/USER_GUIDE.md`
+- 남은 디자인/UI 백로그: `docs/DESIGN_BACKLOG.md`
 - 남은 유지보수 체크리스트: `docs/MAINTENANCE_CHECKLIST.md`
 - API 명세: `docs/specs/api-reference.md`
 - 데이터 모델: `docs/specs/data-model.md`

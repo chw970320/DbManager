@@ -2,8 +2,30 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
 import ERDViewer from './ERDViewer.svelte';
 import type { ERDData } from '../types/erd-mapping.js';
+import type { DesignRelationValidationResult } from '../types/design-relation.js';
 
-function createMockERDData(): ERDData {
+type ERDViewerTestData = ERDData & {
+	relationValidation?: DesignRelationValidationResult;
+};
+
+function createRelationValidation(): DesignRelationValidationResult {
+	return {
+		specs: [],
+		summaries: [],
+		totals: {
+			totalChecked: 8,
+			matched: 5,
+			unmatched: 3,
+			errorCount: 2,
+			warningCount: 1
+		}
+	};
+}
+
+function createMockERDData(
+	metadataOverrides: Partial<ERDData['metadata']> = {},
+	relationValidation?: DesignRelationValidationResult
+): ERDViewerTestData {
 	return {
 		nodes: [
 			{
@@ -34,8 +56,10 @@ function createMockERDData(): ERDData {
 			totalRelationships: 0,
 			logicalNodes: 0,
 			physicalNodes: 1,
-			domainNodes: 0
-		}
+			domainNodes: 0,
+			...metadataOverrides
+		},
+		relationValidation
 	};
 }
 
@@ -95,6 +119,41 @@ describe('ERDViewer', () => {
 		expect(screen.getByRole('button', { name: '다이어그램 확대' })).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: '다이어그램 초기화' })).toBeInTheDocument();
 		expect(screen.getByTestId('erd-zoom-percent')).toHaveTextContent(/%/);
+	});
+
+	it('희박한 ERD 그래프 상태와 안전 렌더링 안내를 표시한다', async () => {
+		render(ERDViewer, {
+			props: {
+				...defaultProps,
+				erdData: createMockERDData({}, createRelationValidation())
+			}
+		});
+
+		await screen.findByTestId('erd-svg-preview');
+
+		expect(screen.getByLabelText('ERD 그래프 상태 안내')).toBeInTheDocument();
+		expect(screen.getByText(/그래프 상태: 희박\/빈 관계/)).toBeInTheDocument();
+		expect(screen.getByText(/관계가 없거나 매우 적습니다/)).toBeInTheDocument();
+		expect(screen.getByText(/탐색: 맞춤\/100%\/확대\/축소\/드래그\/휠로 이동/)).toBeInTheDocument();
+		expect(screen.getByText(/안전 렌더링: 허용된 ERD 이미지 URL만 표시합니다/)).toBeInTheDocument();
+		expect(screen.getByText(/관계 검증: 미매칭 3건 · 오류\s*2건 · 경고\s*1건/)).toBeInTheDocument();
+	});
+
+	it('큰 ERD 그래프에는 확대/이동 탐색 힌트를 우선 표시한다', async () => {
+		render(ERDViewer, {
+			props: {
+				...defaultProps,
+				erdData: createMockERDData({
+					totalNodes: 60,
+					totalRelationships: 90
+				})
+			}
+		});
+
+		await screen.findByTestId('erd-svg-preview');
+
+		expect(screen.getByText(/그래프 상태: 큰 그래프/)).toBeInTheDocument();
+		expect(screen.getByText(/맞춤, 축소\/확대, 드래그 이동으로 탐색하세요/)).toBeInTheDocument();
 	});
 
 	it('렌더러 기술명을 화면에 노출하지 않는다', async () => {

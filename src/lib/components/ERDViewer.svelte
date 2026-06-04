@@ -1,13 +1,18 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import type { ERDData } from '../types/erd-mapping.js';
+	import type { DesignRelationValidationResult } from '../types/design-relation.js';
 	import { isAllowedErdSvgRenderUrl, sanitizeErdSvgText } from '../utils/erd-svg-preview.js';
+
+	type ERDViewerData = ERDData & {
+		relationValidation?: DesignRelationValidationResult;
+	};
 
 	let {
 		erdData,
 		renderUrl
 	}: {
-		erdData: ERDData;
+		erdData: ERDViewerData;
 		renderUrl: string;
 	} = $props();
 
@@ -42,8 +47,27 @@
 	let relationshipCount = $derived(
 		erdData.metadata.totalRelationships ?? erdData.metadata.totalEdges
 	);
+	let isSparseGraph = $derived(erdData.metadata.totalNodes <= 1 || relationshipCount === 0);
+	let isLargeGraph = $derived(erdData.metadata.totalNodes >= 50 || relationshipCount >= 80);
+	let relationValidationSummary = $derived(erdData.relationValidation?.totals ?? null);
 	let zoomPercent = $derived(Math.round(scale * 100));
 	let canvasTransform = $derived(`translate(${translateX}px, ${translateY}px) scale(${scale})`);
+
+	function graphDensityLabel(): string {
+		if (isLargeGraph) return '큰 그래프';
+		if (isSparseGraph) return '희박/빈 관계';
+		return '표준 규모';
+	}
+
+	function graphDensityDescription(): string {
+		if (isLargeGraph) {
+			return '노드와 관계가 많습니다. 맞춤, 축소/확대, 드래그 이동으로 탐색하세요.';
+		}
+		if (isSparseGraph) {
+			return '관계가 없거나 매우 적습니다. 조회 조건, 선택 테이블, 정의서 매핑을 먼저 확인하세요.';
+		}
+		return '현재 조건의 관계를 ERD 이미지와 요약 정보로 함께 확인합니다.';
+	}
 
 	function clamp(value: number, min: number, max: number): number {
 		return Math.min(Math.max(value, min), max);
@@ -282,6 +306,31 @@
 			{zoomPercent}%
 		</span>
 	</div>
+
+	<section
+		class="border-b border-sky-100 bg-sky-50/70 px-4 py-3 text-xs text-slate-700"
+		aria-label="ERD 그래프 상태 안내"
+	>
+		<div class="flex flex-wrap items-start justify-between gap-3">
+			<div class="space-y-1">
+				<p>
+					<span class="font-semibold text-slate-900">그래프 상태: {graphDensityLabel()}</span>
+					<span class="ml-2">{graphDensityDescription()}</span>
+				</p>
+				<p class="text-slate-600">
+					탐색: 맞춤/100%/확대/축소/드래그/휠로 이동 · 안전 렌더링: 허용된 ERD 이미지 URL만
+					표시합니다.
+				</p>
+			</div>
+			{#if relationValidationSummary}
+				<p class="rounded-md border border-amber-200 bg-white px-3 py-2 text-amber-800">
+					관계 검증: 미매칭 {relationValidationSummary.unmatched}건 · 오류
+					{relationValidationSummary.errorCount}건 · 경고
+					{relationValidationSummary.warningCount}건
+				</p>
+			{/if}
+		</div>
+	</section>
 
 	<div
 		bind:this={viewportElement}

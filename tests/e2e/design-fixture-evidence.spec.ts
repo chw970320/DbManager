@@ -176,4 +176,27 @@ test('captures design fixture evidence for remaining backlog blockers', async ({
 				'Direct apply screenshot is not a standalone safe UI action in this panel; keep API/component apply evidence as supplement.'
 		});
 	});
+
+	await test.step('erd relation visual qa screenshot fixture', async () => {
+		await page.goto('/erd');
+		await waitForApp(page);
+		await expect(page.getByText('ERD 다이어그램')).toBeVisible();
+		await expect(page.getByText(/그래프 상태: (큰 그래프|희박\/빈 관계|표준 규모)/)).toBeVisible({
+			timeout: 30_000
+		});
+		await expect(page.getByText(/안전 렌더링: 허용된 ERD 이미지 URL만\s*표시합니다/)).toBeVisible();
+		await expect(page.getByText(/관계 검증:/)).toBeVisible();
+		const screenshot = await capture(page, 'erd-relation-visual-qa.png');
+		results.push({
+			fixture: 'erd relation visual qa',
+			status: 'screenshot-pass',
+			route: '/erd',
+			action: 'ERD route load → graph status, safe rendering, relation validation summary 확인',
+			screenshot,
+			principle: 'Explain with data context; Do not rely on color alone; Safe preview boundary',
+			observation:
+				'ERD viewport가 그래프 규모/희박 상태, 탐색 방법, 허용된 이미지 렌더링 경계, relation severity 요약을 색상 외 텍스트로 노출한다.',
+			followUp: 'Graph layout algorithm remains separated from this visual QA lane.'
+		});
+	});
 });

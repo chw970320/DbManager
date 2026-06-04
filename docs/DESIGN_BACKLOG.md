@@ -119,12 +119,19 @@ Fixture blocker 처리 결과:
 
 ### ERD / relation visual QA lane
 
-상태: 별도 visual QA 후 계획화.
+상태: 완료됨. ERD viewport에 그래프 규모/희박 상태, 탐색 힌트, 안전 렌더링 경계, 관계 검증 요약을 텍스트로 보강했습니다.
 
-- [ ] 큰 그래프 탐색 UX 확인
-- [ ] 빈 관계/희박 관계 상태 확인
-- [ ] relation severity 설명과 관계 패널 연결성 확인
-- [ ] Graphviz layout 알고리즘 변경은 visual polish와 분리
+근거:
+
+- 변경 파일: `src/lib/components/ERDViewer.svelte`, `tests/e2e/design-fixture-evidence.spec.ts`
+- Targeted tests: `pnpm vitest run src/lib/components/ERDViewer.test.ts src/lib/components/DesignRelationPanel.test.ts src/routes/erd/page-source.test.ts`
+- Browser evidence: `.omx/plans/erd-relation-visual-qa-screenshots/20260604T094639Z/`
+- Evidence report: `.omx/plans/erd-relation-visual-qa-20260604T094800Z.md`
+
+- [x] 큰 그래프 탐색 UX 확인
+- [x] 빈 관계/희박 관계 상태 확인
+- [x] relation severity 설명과 관계 패널 연결성 확인
+- [x] Graphviz layout 알고리즘 변경은 visual polish와 분리
 
 ## P2 — 설계 결정이 먼저 필요한 후보
 

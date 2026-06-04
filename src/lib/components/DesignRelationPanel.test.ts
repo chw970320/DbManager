@@ -228,7 +228,7 @@ describe('DesignRelationPanel', () => {
 			expect(screen.getByText('실행 모드: 저장 없음')).toBeInTheDocument();
 			expect(screen.getByText('실제 반영: 0건')).toBeInTheDocument();
 			expect(screen.getByText('정합성 변화: 3 -> 1')).toBeInTheDocument();
-			expect(screen.getByText('남은 validation issue: 1건')).toBeInTheDocument();
+			expect(screen.getByText('남은 검증 이슈: 1건')).toBeInTheDocument();
 			expect(onApplied).not.toHaveBeenCalled();
 		});
 
@@ -239,7 +239,7 @@ describe('DesignRelationPanel', () => {
 			expect(screen.getByText('근거: 테이블명 기준 관계 보정')).toBeInTheDocument();
 			expect(screen.getByText('실행 소유자: erd/relations/sync')).toBeInTheDocument();
 			expect(
-				screen.getByText('후보 context: 스키마 public · 테이블 customers · 연관엔터티 고객')
+				screen.getByText('후보 맥락: 스키마 public · 테이블 customers · 연관엔터티 고객')
 			).toBeInTheDocument();
 		});
 	});

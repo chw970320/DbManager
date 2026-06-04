@@ -199,7 +199,7 @@
 			candidate.relatedEntityName ? `연관엔터티 ${candidate.relatedEntityName}` : null
 		].filter(Boolean);
 
-		return parts.length > 0 ? parts.join(' · ') : '후보 context 없음';
+		return parts.length > 0 ? parts.join(' · ') : '후보 맥락 없음';
 	}
 
 	function currentFileParamName(type: DefinitionType): `${DefinitionType}File` {
@@ -657,7 +657,7 @@
 						.totals.unmatched}
 				</div>
 				<div class="mt-1 text-gray-600">
-					남은 validation issue: {syncData.validationAfter.totals.unmatched}건
+					남은 검증 이슈: {syncData.validationAfter.totals.unmatched}건
 				</div>
 				{#if syncData.validationAfter.totals.unmatched > 0}
 					<div
@@ -727,7 +727,7 @@
 										</div>
 										{#if suggestion.candidates[0]}
 											<div class="mt-1 text-indigo-900">
-												후보 context: {formatCandidateContext(suggestion.candidates[0])}
+												후보 맥락: {formatCandidateContext(suggestion.candidates[0])}
 											</div>
 										{/if}
 									</div>

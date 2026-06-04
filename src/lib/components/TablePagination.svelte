@@ -57,7 +57,7 @@
 			<span class="font-medium">{currentPage}</span> 페이지
 		</div>
 
-		<nav class="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+		<nav class="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="페이지 이동">
 			<button
 				type="button"
 				onclick={() => handlePageChange(currentPage - 1)}

@@ -6,7 +6,7 @@ describe('TablePagination', () => {
 	it('한 페이지뿐이면 페이지네이션을 렌더링하지 않는다', () => {
 		render(TablePagination, { props: { currentPage: 1, totalPages: 1 } });
 
-		expect(screen.queryByLabelText('Pagination')).not.toBeInTheDocument();
+		expect(screen.queryByLabelText('페이지 이동')).not.toBeInTheDocument();
 	});
 
 	it('현재 페이지와 축약된 페이지 번호를 표시한다', () => {

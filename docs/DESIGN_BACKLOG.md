@@ -110,7 +110,7 @@ Fixture blocker 처리 결과:
 
 ### Alignment / sync result readability
 
-상태: 완료됨. 관계 보정 미리보기 패널의 저장 여부, 남은 issue, owner trace, 후보 context 문구를 보강했습니다.
+상태: 완료됨. 관계 보정 미리보기 패널의 저장 여부, 남은 검증 이슈, 실행 소유자 추적, 후보 맥락 문구를 보강했습니다.
 
 근거:
 
@@ -121,7 +121,7 @@ Fixture blocker 처리 결과:
 
 - [x] preview/apply 모드가 명확히 구분되는지 확인
 - [x] direct apply screenshot fixture는 reversible/reset-backed apply 조건 전까지 component/API evidence로 보존
-- [x] `failedStep`, owner trace, 남은 validation issue가 숨겨지지 않는지 확인
+- [x] `failedStep`, 실행 소유자 추적, 남은 검증 이슈가 숨겨지지 않는지 확인
 - [x] 후보 변경 사유와 후속 조치가 한국어로 충분히 설명되는지 확인
 - [x] backend owner name과 `failedStep` 의미 보존
 

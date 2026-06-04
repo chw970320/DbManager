@@ -1,6 +1,6 @@
 # DbManager 디자인 백로그
 
-Last updated: 2026-06-02
+Last updated: 2026-06-04
 
 이 문서는 남은 **디자인/UI 작업만** 추적하는 체크리스트입니다. 제품/UI 철학과 원칙의 정본은 루트 [`../DESIGN.md`](../DESIGN.md)이며, 이 문서는 `DESIGN.md`를 대체하지 않습니다.
 
@@ -75,14 +75,22 @@ Fixture blocker 처리 결과:
 
 ### Bundle confidence and recovery cues
 
-상태: Visual QA 이후 계획화.
+상태: 완료됨. 파일 관리 모달의 accessible name과 현재 선택/업로드·복원 대상 파일 context를 보강하고, 업로드 이력/스냅샷 복구 증거를 확인했습니다.
 
-- [ ] 파일 관리 모달에서 현재 번들/파일 식별이 충분히 드러나는지 확인
-- [ ] 파일 관리 모달 heading이 dialog accessible name으로 연결되는지 확인
-- [ ] 업로드/복원/스냅샷 흐름에서 영향 파일 집합과 복구 경로가 명확한지 확인
-- [ ] reset-backed upload history fixture 도입 여부 결정
-- [ ] 공통 매핑 번들 identity를 숨기지 않음
-- [ ] API/storage shape 변경 없이 기존 데이터로 표현 가능한지 우선 검토
+근거:
+
+- 변경 파일: `src/lib/components/*FileManager.svelte`, `src/lib/components/VocabularyFileManager.test.ts`, `src/lib/components/FileManagerAccessibility.test.ts`
+- Targeted tests: `pnpm vitest run src/lib/components/FileManagerAccessibility.test.ts src/lib/components/VocabularyFileManager.test.ts src/lib/components/UploadHistoryPanel.test.ts src/routes/snapshot/browse/page.test.ts`
+- Browser evidence: `.omx/plans/bundle-recovery-cues-screenshots/20260604T101740Z/`
+- Evidence report: `.omx/plans/bundle-recovery-cues-20260604T101800Z.md`
+
+- [x] 파일 관리 모달에서 현재 번들/파일 식별이 충분히 드러나는지 확인
+- [x] 파일 관리 모달 heading이 dialog accessible name으로 연결되는지 확인
+- [x] 업로드/복원/스냅샷 흐름에서 영향 파일 집합과 복구 경로가 명확한지 확인
+- [x] reset-backed upload history fixture 도입 여부 결정
+  - 결정: 기존 upload-history restore와 snapshot page tests/e2e 증거로 보존; 별도 reset fixture는 final gate 전까지 추가하지 않음
+- [x] 공통 매핑 번들 identity를 숨기지 않음
+- [x] API/storage shape 변경 없이 기존 데이터로 표현 가능한지 우선 검토
 
 ### Standardization health indicators
 

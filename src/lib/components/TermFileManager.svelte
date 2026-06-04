@@ -505,12 +505,24 @@
 		}}
 		role="dialog"
 		aria-modal="true"
+		aria-labelledby="term-file-manager-title"
 		tabindex="-1"
 	>
 		<div class="mx-4 flex max-h-[90vh] w-full max-w-3xl flex-col rounded-lg bg-white shadow-xl">
 			<div class="flex items-center justify-between border-b px-6 py-4">
-				<h2 class="text-xl font-bold text-gray-900">용어 파일 관리</h2>
-				<button onclick={handleClose} class="text-gray-600 hover:text-gray-600" aria-label="Close">
+				<div>
+					<h2 id="term-file-manager-title" class="text-xl font-bold text-gray-900">
+						용어 파일 관리
+					</h2>
+					<p class="mt-1 text-xs text-gray-500">
+						현재 선택 파일: <span class="font-medium text-gray-700"
+							>{currentFilename || SYSTEM_FILE}</span
+						>
+						· 업로드/복원 대상:
+						<span class="font-medium text-gray-700">{selectedUploadFile}</span>
+					</p>
+				</div>
+				<button onclick={handleClose} class="text-gray-600 hover:text-gray-600" aria-label="닫기">
 					<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path
 							stroke-linecap="round"

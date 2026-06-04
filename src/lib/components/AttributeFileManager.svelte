@@ -507,13 +507,25 @@
 		}}
 		role="dialog"
 		aria-modal="true"
+		aria-labelledby="attribute-file-manager-title"
 		tabindex="-1"
 	>
 		<div class="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
 			<!-- 헤더 -->
 			<div class="sticky top-0 z-10 border-b border-gray-200 bg-white px-6 py-4">
 				<div class="flex items-center justify-between">
-					<h2 class="text-xl font-bold text-gray-900">속성 정의서 파일 관리</h2>
+					<div>
+						<h2 id="attribute-file-manager-title" class="text-xl font-bold text-gray-900">
+							속성 정의서 파일 관리
+						</h2>
+						<p class="mt-1 text-xs text-gray-500">
+							현재 선택 파일: <span class="font-medium text-gray-700"
+								>{currentFilename || SYSTEM_FILE}</span
+							>
+							· 업로드/복원 대상:
+							<span class="font-medium text-gray-700">{selectedUploadFile}</span>
+						</p>
+					</div>
 					<button
 						onclick={handleClose}
 						class="rounded-lg p-2 text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-600"

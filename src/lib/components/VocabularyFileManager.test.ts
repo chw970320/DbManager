@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import VocabularyFileManager from './VocabularyFileManager.svelte';
 
 // Mock fetch API
@@ -138,6 +138,24 @@ describe('VocabularyFileManager', () => {
 			await waitFor(() => {
 				expect(screen.getByText(/파일 관리/)).toBeInTheDocument();
 			});
+		});
+
+		it('dialog 이름과 현재 파일/복원 대상 context를 노출한다', async () => {
+			render(VocabularyFileManager, {
+				props: {
+					isOpen: true,
+					currentFilename: 'custom-vocabulary.json'
+				}
+			});
+
+			const dialog = await screen.findByRole('dialog', { name: '단어집 파일 관리' });
+
+			expect(within(dialog).getByText(/현재 선택 파일:/)).toHaveTextContent(
+				'현재 선택 파일: custom-vocabulary.json'
+			);
+			expect(within(dialog).getByText(/업로드\/복원 대상:/)).toHaveTextContent(
+				'업로드/복원 대상: custom-vocabulary.json'
+			);
 		});
 
 		it('파일 목록 표시', async () => {

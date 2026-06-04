@@ -80,7 +80,7 @@ DbManager is a Korean-first data standardization and database-design workbench. 
 Prefer these existing component families before creating new UI primitives:
 
 - Layout/navigation: `BrowsePageLayout`, `ActionBar`, `Breadcrumb`, global navigation components.
-- Search/filter/table: `SearchBar`, `ColumnFilter`, domain/table-specific table components.
+- Search/filter/table: `SearchBar`, `ColumnFilter`, `TablePagination`, domain/table-specific table components.
 - Feedback/safety: `Toast`, `ConfirmDialog`, validation panels, impact preview panels.
 - State placeholders: `EmptyState`, `Skeleton`, loading/error blocks.
 - Cards/home: `BentoGrid`, `BentoCard`, dashboard/entry cards.

@@ -137,12 +137,23 @@ Fixture blocker 처리 결과:
 
 ### Component primitive convergence
 
-상태: 결정 필요.
+상태: 완료됨. 반복이 증명된 table pagination만 `TablePagination`으로 추출하고, 나머지는 기존 primitive 유지로 결정했습니다.
 
-- [ ] table pagination/sort/filter를 어느 수준까지 공통 primitive로 만들지 결정
-- [ ] validation panel shell parity 범위 결정
-- [ ] impact/confirmation severity 모델 표준화 범위 결정
-- [ ] browse shell 규칙을 어디까지 강제할지 결정
+근거:
+
+- 변경 파일: `src/lib/components/TablePagination.svelte`, `src/lib/components/*Table.svelte`, `DESIGN.md`
+- Targeted tests: `pnpm vitest run src/lib/components/TablePagination.test.ts src/lib/components/VocabularyTable.test.ts src/lib/components/DomainTable.test.ts src/lib/components/TermTable.test.ts src/lib/components/DatabaseTable.test.ts src/lib/components/TableDefTable.test.ts src/lib/components/ColumnDefTable.test.ts src/lib/components/EntityTable.test.ts src/lib/components/AttributeTable.test.ts`
+- Evidence report: `.omx/plans/component-primitive-convergence-20260604T095800Z.md`
+
+- [x] table pagination/sort/filter를 어느 수준까지 공통 primitive로 만들지 결정
+  - 추출: 8개 table component의 동일한 footer/page-number 로직을 `TablePagination`으로 공통화
+  - 비추출: sort/filter는 column schema, filter option, row click 계약이 모델별로 달라 `ColumnFilter` 유지
+- [x] validation panel shell parity 범위 결정
+  - 유지: `ValidationPanelShell`이 이미 vocabulary/domain/term shell parity를 담당
+- [x] impact/confirmation severity 모델 표준화 범위 결정
+  - 유지: `ImpactConfirmDialog`, `EditorSaveImpactSummary`, save-impact status helper를 그대로 사용
+- [x] browse shell 규칙을 어디까지 강제할지 결정
+  - 유지: `BrowsePageLayout`, `BrowseSidebarSummary`, `ActionBar`, `SearchBar` 조합을 우선 사용하고 추가 추출은 보류
 
 ### Home / global navigation / IA audit
 

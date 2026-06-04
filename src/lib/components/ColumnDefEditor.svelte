@@ -170,9 +170,9 @@
 	function getRecommendationStatusLabel(
 		status?: ColumnStandardRecommendationPreview['summary']['status']
 	) {
-		if (status === 'aligned') return '표준 일치';
-		if (status === 'recommended') return '추천값 있음';
-		return '매핑 없음';
+		if (status === 'aligned') return '상태: 표준 일치';
+		if (status === 'recommended') return '상태: 추천값 있음';
+		return '상태: 미매칭';
 	}
 
 	function getRecommendationStatusClass(
@@ -185,6 +185,32 @@
 			return 'border-amber-200 bg-amber-50 text-amber-800';
 		}
 		return 'border-rose-200 bg-rose-50 text-rose-700';
+	}
+
+	function getRecommendationStatusDescription(
+		status?: ColumnStandardRecommendationPreview['summary']['status']
+	) {
+		if (status === 'aligned') {
+			return '현재 컬럼 정의가 연결된 용어/도메인 표준과 일치합니다.';
+		}
+		if (status === 'recommended') {
+			return '저장 전에 적용 가능한 표준 보정 후보가 있습니다.';
+		}
+		return '컬럼영문명과 일치하는 표준 용어 또는 연결 도메인을 찾지 못했습니다.';
+	}
+
+	function getRecommendationIssueSeverityLabel(
+		issue: ColumnStandardRecommendationPreview['issues'][number]
+	) {
+		return issue.severity === 'error' ? '오류' : '경고';
+	}
+
+	function getRecommendationIssueClass(
+		issue: ColumnStandardRecommendationPreview['issues'][number]
+	) {
+		return issue.severity === 'error'
+			? 'border-rose-200 bg-rose-50 text-rose-700'
+			: 'border-amber-200 bg-amber-50 text-amber-800';
 	}
 
 	function formatRecommendationValue(value?: string) {
@@ -482,7 +508,11 @@
 									</span>
 								</div>
 								<p class="mt-1 text-xs text-slate-600">
-									컬럼영문명 기준으로 연결된 term/domain을 찾아 저장 전에 보정 후보를 보여줍니다.
+									현재 컬럼 파일 {filename}에서 컬럼영문명 기준으로 연결된 용어/도메인을 찾아 저장
+									전 보정 후보를 보여줍니다.
+								</p>
+								<p class="mt-1 text-xs text-slate-500">
+									{getRecommendationStatusDescription(standardRecommendation?.summary.status)}
 								</p>
 							</div>
 							<button
@@ -498,11 +528,17 @@
 						{#if recommendationLoading}
 							<p class="text-xs text-slate-600">연결된 표준 용어와 도메인을 조회하는 중입니다.</p>
 						{:else if standardRecommendation}
+							<p class="mb-3 text-xs text-slate-600">
+								파일 맥락: 컬럼 {standardRecommendation.files.column} · 용어
+								{standardRecommendation.files.term} · 도메인 {standardRecommendation.files.domain}
+							</p>
 							<div class="grid grid-cols-2 gap-2 text-xs sm:grid-cols-4">
 								<div class="rounded-lg border border-white/70 bg-white px-3 py-2">
 									<div class="text-slate-500">용어 매핑</div>
 									<div class="mt-1 text-base font-semibold text-slate-900">
-										{standardRecommendation.summary.exactTermMatch ? '연결됨' : '없음'}
+										{standardRecommendation.summary.exactTermMatch
+											? '상태: 연결됨'
+											: '상태: 미매칭'}
 									</div>
 								</div>
 								<div class="rounded-lg border border-white/70 bg-white px-3 py-2">
@@ -513,7 +549,9 @@
 											? 'text-emerald-700'
 											: 'text-amber-700'}"
 									>
-										{standardRecommendation.summary.domainResolved ? '정상' : '확인 필요'}
+										{standardRecommendation.summary.domainResolved
+											? '상태: 정상'
+											: '상태: 확인 필요'}
 									</div>
 								</div>
 								<div class="rounded-lg border border-white/70 bg-white px-3 py-2">
@@ -572,11 +610,14 @@
 								<div class="mt-3 space-y-2">
 									{#each standardRecommendation.issues as issue (issue.code)}
 										<div
-											class="rounded-lg border px-3 py-2 text-xs {issue.severity === 'error'
-												? 'border-rose-200 bg-rose-50 text-rose-700'
-												: 'border-amber-200 bg-amber-50 text-amber-800'}"
+											class="rounded-lg border px-3 py-2 text-xs {getRecommendationIssueClass(
+												issue
+											)}"
 										>
-											{issue.message}
+											<div class="font-medium">
+												심각도: {getRecommendationIssueSeverityLabel(issue)} · {issue.code}
+											</div>
+											<div class="mt-1">{issue.message}</div>
 										</div>
 									{/each}
 								</div>
@@ -628,6 +669,7 @@
 									<div
 										class="rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-xs text-slate-700"
 									>
+										<span class="font-medium">조치 가이드:</span>
 										{guide}
 									</div>
 								{/each}

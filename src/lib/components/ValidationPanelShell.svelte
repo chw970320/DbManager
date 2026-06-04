@@ -10,6 +10,7 @@
 		loading?: boolean;
 		open?: boolean;
 		errorTypes?: string[];
+		errorTypeLabels?: Record<string, string>;
 		selectedErrorType?: string;
 		searchPlaceholder?: string;
 		searchQuery?: string;
@@ -25,6 +26,7 @@
 		loading = false,
 		open = false,
 		errorTypes = [],
+		errorTypeLabels = {},
 		selectedErrorType = $bindable('ALL'),
 		searchPlaceholder = '검색...',
 		searchQuery = $bindable(''),
@@ -38,6 +40,13 @@
 
 	function handleClose() {
 		dispatch('close');
+	}
+
+	function handleDialogKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape') {
+			event.preventDefault();
+			handleClose();
+		}
 	}
 
 	const panelId = `validation-panel-${Math.random().toString(36).slice(2, 8)}`;
@@ -73,6 +82,8 @@
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby="{panelId}-title"
+		tabindex="-1"
+		onkeydown={handleDialogKeydown}
 	>
 		<!-- 헤더 -->
 		<div
@@ -85,7 +96,9 @@
 					{failedCount.toLocaleString()}개 실패
 				</p>
 				<div class="mt-2 flex flex-wrap items-center gap-2">
-					<span class="badge {validationStatus.badge}">상태: {validationStatus.label}</span>
+					<span class="badge {validationStatus.badge}" aria-live="polite"
+						>상태: {validationStatus.label}</span
+					>
 					<span class="text-xs text-content-secondary">{validationStatus.description}</span>
 				</div>
 			</div>
@@ -114,7 +127,7 @@
 					>
 						<option value="ALL">전체</option>
 						{#each errorTypes as type (type)}
-							<option value={type}>{type}</option>
+							<option value={type}>{errorTypeLabels[type] ?? type}</option>
 						{/each}
 					</select>
 				</div>

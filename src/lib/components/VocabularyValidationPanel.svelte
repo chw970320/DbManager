@@ -109,7 +109,7 @@
 							class="rounded-md border border-status-error-border bg-status-error-bg px-2 py-1.5 text-xs"
 						>
 							<div class="flex flex-wrap items-center gap-2">
-								<span class="badge badge-error">오류</span>
+								<span class="badge badge-error">심각도: 오류</span>
 								<span class="font-medium text-status-error">{getIssueLabel(error)}</span>
 							</div>
 							<div class="mt-1 text-status-error">{error.message}</div>

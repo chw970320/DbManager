@@ -111,6 +111,7 @@ test('captures design fixture evidence for remaining backlog blockers', async ({
 			page.getByRole('dialog', { name: /도메인 유효성 검사 결과|유효성 검사 결과/ })
 		).toBeVisible();
 		await expect(page.getByText('상태:', { exact: false })).toBeVisible();
+		await expect(page.getByText(/상태: (통과|검토 필요|검사 중)/).first()).toBeVisible();
 		const screenshot = await capture(page, 'validation-expanded-error.png');
 		results.push({
 			fixture: 'validation expanded/error',
@@ -120,7 +121,7 @@ test('captures design fixture evidence for remaining backlog blockers', async ({
 			screenshot,
 			principle: 'Do not rely on color alone; Explain with data context',
 			observation:
-				'검증 dialog가 상태 문구, 오류/검토 필요 label, 실패 항목 맥락을 색상 외 텍스트로 노출한다.',
+				'검증 dialog가 통과/검토 필요/검사 중 상태 문구와 항목 맥락을 색상 외 텍스트로 노출한다.',
 			followUp:
 				'No immediate source fix; add visual follow-up only if screenshot review finds mismatch.'
 		});

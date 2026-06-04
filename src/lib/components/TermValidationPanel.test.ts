@@ -68,15 +68,18 @@ describe('TermValidationPanel', () => {
 	it('renders validation statistics, progress, and result context when open', () => {
 		renderOpenPanel();
 
-		const dialog = screen.getByRole('dialog', { name: '유효성 검사 결과' });
+		const dialog = screen.getByRole('dialog', { name: '용어 유효성 검사 결과' });
 		expect(dialog).toHaveTextContent('전체 2개 중 1개 통과, 1개 실패');
+		expect(dialog).toHaveTextContent('상태: 검토 필요');
 		expect(dialog).toHaveTextContent('진행률');
 		expect(dialog).toHaveTextContent('50%');
 		expect(dialog).toHaveTextContent('표시 중: 2개 / 전체: 2개');
 		expect(dialog).toHaveTextContent('사용자_이름');
 		expect(dialog).toHaveTextContent('관리자_이름');
 		expect(dialog).toHaveTextContent('용어명 매핑');
-		expect(dialog).toHaveTextContent('수정 가이드');
+		expect(dialog).toHaveTextContent('심각도: 오류');
+		expect(dialog).toHaveTextContent('심각도: 통과');
+		expect(dialog).toHaveTextContent('조치 가이드');
 	});
 
 	it('filters results by validation error type', async () => {

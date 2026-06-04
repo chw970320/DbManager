@@ -276,10 +276,14 @@ describe('ColumnDefEditor', () => {
 			});
 
 			await waitFor(() => {
-				expect(screen.getByRole('region', { name: '컬럼 표준 추천' })).toBeInTheDocument();
+				const recommendationRegion = screen.getByRole('region', { name: '컬럼 표준 추천' });
+				expect(recommendationRegion).toBeInTheDocument();
 				expect(screen.getByText('표준 추천')).toBeInTheDocument();
+				expect(screen.getByText('상태: 추천값 있음')).toBeInTheDocument();
+				expect(screen.getByText(/파일 맥락: 컬럼 column\.json/)).toBeInTheDocument();
 				expect(screen.getByText('표준컬럼명')).toBeInTheDocument();
 				expect(screen.getByText('추천값 전체 적용')).toBeInTheDocument();
+				expect(recommendationRegion).toHaveTextContent('조치 가이드: 추천값 2건을 적용하면');
 			});
 		});
 

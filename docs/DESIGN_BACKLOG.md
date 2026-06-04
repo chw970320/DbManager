@@ -86,12 +86,19 @@ Fixture blocker 처리 결과:
 
 ### Standardization health indicators
 
-상태: Visual QA 이후 계획화.
+상태: 완료됨. 단어집/도메인/용어 검증 패널과 컬럼 표준 추천 패널의 상태·심각도·조치 가이드 문구를 정리했습니다.
 
-- [ ] `aligned` / `recommended` / `unmatched` 상태 표현 감사
-- [ ] validation severity와 guidance 문구의 일관성 감사
-- [ ] vocabulary/domain/term과 DB 설계 표면 간 표현 차이 정리
-- [ ] 기존 `summary`, `issues`, `changes`, `guidance`에서 파생 가능한 표현 우선
+근거:
+
+- 변경 파일: `src/lib/components/ValidationPanelShell.svelte`, `src/lib/components/TermValidationPanel.svelte`, `src/lib/components/VocabularyValidationPanel.svelte`, `src/lib/components/DomainValidationPanel.svelte`, `src/lib/components/ColumnDefEditor.svelte`
+- Targeted tests: `pnpm vitest run src/lib/components/ValidationPanelShell.test.ts src/lib/components/VocabularyValidationPanel.test.ts src/lib/components/DomainValidationPanel.test.ts src/lib/components/TermValidationPanel.test.ts src/lib/components/ColumnDefEditor.test.ts`
+- Browser evidence: `.omx/plans/standardization-health-screenshots/20260604T091847Z/`
+- Evidence report: `.omx/plans/standardization-health-indicators-20260604T092000Z.md`
+
+- [x] `aligned` / `recommended` / `unmatched` 상태 표현 감사
+- [x] validation severity와 guidance 문구의 일관성 감사
+- [x] vocabulary/domain/term과 DB 설계 표면 간 표현 차이 정리
+- [x] 기존 `summary`, `issues`, `changes`, `guidance`에서 파생 가능한 표현 우선
 
 ### Alignment / sync result readability
 

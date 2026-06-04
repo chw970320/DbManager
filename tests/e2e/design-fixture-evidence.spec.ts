@@ -199,33 +199,6 @@ test('captures design fixture evidence for remaining backlog blockers', async ({
 		});
 	});
 
-	await test.step('sync preview/apply screenshot fixture', async () => {
-		await page.goto('/database/browse');
-		await waitForApp(page);
-		await clickButton(page, '펼치기');
-		await expect(page.getByText('자동 반영 정책')).toBeVisible();
-		await clickButton(page, '보정 미리보기');
-		await expect(page.getByText('보정 미리보기 결과')).toBeVisible({ timeout: 30_000 });
-		await expect(page.getByText('요청: 미리보기(저장 없음)', { exact: false })).toBeVisible();
-		await expect(page.getByText('실행 모드: 저장 없음')).toBeVisible();
-		await expect(page.getByText('남은 검증 이슈:', { exact: false })).toBeVisible();
-		await clickButton(page, '상세 보기');
-		const screenshot = await capture(page, 'sync-preview-apply.png');
-		results.push({
-			fixture: 'sync preview/apply',
-			status: 'screenshot-pass',
-			route: '/database/browse',
-			action:
-				'연관 파일 panel 펼치기 → 보정 미리보기 → 상세 보기; apply는 자동 반영 정책 copy로 표시',
-			screenshot,
-			principle: 'Validate before mutate; Prefer reversible workflows; Preserve owner/issue trace',
-			observation:
-				'미리보기 결과가 저장 없음, 후보 수, 실제 반영, 정합성 변화, 남은 검증 이슈, 미해결 원인/변경 후보를 보여주며 apply는 쓰기 작업의 자동 반영 정책으로 설명된다.',
-			followUp:
-				'Direct apply screenshot is not a standalone safe UI action in this panel; keep API/component apply evidence as supplement.'
-		});
-	});
-
 	await test.step('erd relation visual qa screenshot fixture', async () => {
 		await page.goto('/erd');
 		await waitForApp(page);

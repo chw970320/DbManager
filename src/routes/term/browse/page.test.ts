@@ -20,7 +20,6 @@ vi.mock('$lib/stores/confirm-store', () => ({
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 let termDataResponses: Record<string, ReturnType<typeof createDeferredJsonResponse>>;
-let relationshipResponses: Record<string, ReturnType<typeof createDeferredJsonResponse>>;
 
 function createJsonResponse(data: unknown, ok = true) {
 	return {
@@ -57,32 +56,6 @@ function createTermData(totalCount: number, totalPages: number) {
 	};
 }
 
-function createRelationshipSummary(termFilename: string, mappedCount: number) {
-	return {
-		success: true,
-		data: {
-			files: {
-				term: termFilename,
-				vocabulary: termFilename === 'term.json' ? 'vocabulary.json' : 'user-vocabulary.json',
-				domain: termFilename === 'term.json' ? 'domain.json' : 'user-domain.json'
-			},
-			summary: {
-				termTotalCount: 10,
-				vocabularyTotalCount: 20,
-				domainTotalCount: 30,
-				termNameMappedCount: mappedCount,
-				columnNameMappedCount: mappedCount + 1,
-				termDomainMappedCount: mappedCount + 2,
-				vocabularyDomainMappedCount: mappedCount + 3,
-				missingTermPartCount: 1,
-				missingColumnPartCount: 2,
-				missingDomainCount: 3,
-				orphanDomainCount: 4
-			}
-		}
-	};
-}
-
 describe('Term browse page', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
@@ -102,11 +75,6 @@ describe('Term browse page', () => {
 			'term.json': createDeferredJsonResponse(),
 			'user-term.json': createDeferredJsonResponse()
 		};
-		relationshipResponses = {
-			'term.json': createDeferredJsonResponse(),
-			'user-term.json': createDeferredJsonResponse()
-		};
-
 		mockFetch.mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {
 			const url = String(input);
 
@@ -150,20 +118,6 @@ describe('Term browse page', () => {
 				);
 			}
 
-			if (
-				url.includes('/api/term/relationship-summary?') &&
-				url.includes('termFilename=term.json')
-			) {
-				return relationshipResponses['term.json'].promise;
-			}
-
-			if (
-				url.includes('/api/term/relationship-summary?') &&
-				url.includes('termFilename=user-term.json')
-			) {
-				return relationshipResponses['user-term.json'].promise;
-			}
-
 			if (url.includes('/api/term?') && url.includes('filename=term.json')) {
 				return termDataResponses['term.json'].promise;
 			}
@@ -184,7 +138,7 @@ describe('Term browse page', () => {
 		});
 	});
 
-	it('shows loading feedback while file changes refresh the sidebar summary and relationship diagnostics', async () => {
+	it('shows loading feedback while file changes refresh the sidebar summary', async () => {
 		render(Page);
 
 		const summaryRegion = screen.getByRole('region', { name: '용어 검색 결과 요약' });
@@ -199,7 +153,6 @@ describe('Term browse page', () => {
 		});
 
 		termDataResponses[initialFilename].resolve(createTermData(2, 1));
-		relationshipResponses[initialFilename].resolve(createRelationshipSummary(initialFilename, 2));
 
 		await waitFor(() => {
 			expect(within(summaryRegion).getByText('2')).toBeInTheDocument();
@@ -214,21 +167,15 @@ describe('Term browse page', () => {
 		termDataResponses[targetFilename].resolve(createTermData(5, 3));
 
 		await waitFor(() => {
-			expect(screen.getByText('용어계 관계 진단을 갱신하는 중입니다.')).toBeInTheDocument();
-		});
-
-		relationshipResponses[targetFilename].resolve(createRelationshipSummary(targetFilename, 9));
-
-		await waitFor(() => {
 			expect(summaryRegion).toHaveAttribute('aria-busy', 'false');
 			expect(within(summaryRegion).getByText('5')).toBeInTheDocument();
 			expect(within(summaryRegion).getByText('1 / 3')).toBeInTheDocument();
-			expect(screen.getByText('용어계 관계 진단 요약').closest('section')).toHaveTextContent(
-				`term: ${targetFilename}, vocabulary: ${
-					targetFilename === 'term.json' ? 'vocabulary.json' : 'user-vocabulary.json'
-				}, domain: ${targetFilename === 'term.json' ? 'domain.json' : 'user-domain.json'}`
-			);
-			expect(screen.getByText('용어계 관계 진단 요약').closest('section')).toHaveTextContent('9');
+			expect(screen.queryByText('용어계 관계 진단 요약')).not.toBeInTheDocument();
+			expect(
+				mockFetch.mock.calls.some(([input]) =>
+					String(input).includes('/api/term/relationship-summary')
+				)
+			).toBe(false);
 		});
 	});
 });

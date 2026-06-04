@@ -65,25 +65,7 @@
 	// Validation 패널 상태
 	let showValidationPanel = $state(false);
 	let validationLoading = $state(false);
-	let relationshipSummaryLoading = $state(false);
 	let validationResults = $state<ValidationCheckResult | null>(null);
-	let relationshipSummary = $state<{
-		files: { term: string; vocabulary: string; domain: string };
-		summary: {
-			termTotalCount: number;
-			vocabularyTotalCount: number;
-			domainTotalCount: number;
-			termNameMappedCount: number;
-			columnNameMappedCount: number;
-			termDomainMappedCount: number;
-			vocabularyDomainMappedCount: number;
-			missingTermPartCount: number;
-			missingColumnPartCount: number;
-			missingDomainCount: number;
-			orphanDomainCount: number;
-		};
-	} | null>(null);
-
 	// 자동 수정 관련 상태
 	let showDuplicateSelection = $state(false);
 	let duplicateEntries = $state<TermEntry[]>([]);
@@ -199,7 +181,6 @@
 				reconcileSelectedFilename(fileList);
 				await loadFilterOptions();
 				await loadTermData();
-				await loadRelationshipSummary();
 			}
 		})();
 
@@ -210,7 +191,6 @@
 				searchQuery = '';
 				void loadFilterOptions();
 				void loadTermData();
-				void loadRelationshipSummary();
 			}
 		});
 
@@ -425,7 +405,6 @@
 		} else {
 			await loadTermData();
 		}
-		await loadRelationshipSummary();
 	}
 
 	/**
@@ -490,29 +469,6 @@
 			errorMessage = '유효성 검사 중 오류가 발생했습니다.';
 		} finally {
 			validationLoading = false;
-		}
-	}
-
-	async function loadRelationshipSummary() {
-		relationshipSummaryLoading = true;
-		relationshipSummary = null;
-
-		try {
-			const params = new URLSearchParams({ termFilename: selectedFilename });
-			const response = await fetch(`/api/term/relationship-summary?${params.toString()}`);
-			const result: ApiResponse = await response.json();
-			if (result.success && result.data) {
-				relationshipSummary = result.data as NonNullable<typeof relationshipSummary>;
-			} else {
-				throw new Error(result.error || '용어계 관계 진단에 실패했습니다.');
-			}
-		} catch (error) {
-			console.error('용어계 관계 진단 오류:', error);
-			relationshipSummary = null;
-			errorMessage =
-				error instanceof Error ? error.message : '용어계 관계 진단 중 오류가 발생했습니다.';
-		} finally {
-			relationshipSummaryLoading = false;
 		}
 	}
 
@@ -852,7 +808,6 @@
 		searchQuery = '';
 		await loadFilterOptions();
 		await loadTermData();
-		await loadRelationshipSummary();
 	}
 
 	async function handleFileChange() {
@@ -1333,74 +1288,6 @@
 	{/if}
 
 	<BentoGrid>
-		{#if relationshipSummary || relationshipSummaryLoading}
-			<div class="col-span-12">
-				<BentoCard
-					title="용어계 관계 진단 요약"
-					subtitle="용어/단어/도메인 매핑 상태를 빠르게 확인합니다."
-				>
-					<div
-						class="relative min-h-[8rem]"
-						aria-busy={relationshipSummaryLoading ? 'true' : 'false'}
-					>
-						{#if relationshipSummary}
-							<div class:opacity-50={relationshipSummaryLoading} class="transition-opacity">
-								<div class="mb-3 text-xs text-content-secondary">
-									term: {relationshipSummary.files.term}, vocabulary: {relationshipSummary.files
-										.vocabulary}, domain: {relationshipSummary.files.domain}
-								</div>
-								<div class="grid grid-cols-2 gap-2 text-xs sm:grid-cols-5">
-									<div class="rounded border border-green-200 bg-white p-2 text-center">
-										<div class="font-semibold text-green-700">
-											{relationshipSummary.summary.termNameMappedCount}
-										</div>
-										<div class="text-green-600">용어명 매핑</div>
-									</div>
-									<div class="rounded border border-blue-200 bg-white p-2 text-center">
-										<div class="font-semibold text-blue-700">
-											{relationshipSummary.summary.columnNameMappedCount}
-										</div>
-										<div class="text-blue-600">컬럼명 매핑</div>
-									</div>
-									<div class="rounded border border-purple-200 bg-white p-2 text-center">
-										<div class="font-semibold text-purple-700">
-											{relationshipSummary.summary.termDomainMappedCount}
-										</div>
-										<div class="text-purple-600">도메인 매핑</div>
-									</div>
-									<div class="rounded border border-rose-200 bg-white p-2 text-center">
-										<div class="font-semibold text-rose-700">
-											{relationshipSummary.summary.missingDomainCount}
-										</div>
-										<div class="text-rose-600">미매핑 도메인</div>
-									</div>
-									<div class="rounded border border-amber-200 bg-white p-2 text-center">
-										<div class="font-semibold text-amber-700">
-											{relationshipSummary.summary.orphanDomainCount}
-										</div>
-										<div class="text-amber-600">미참조 도메인</div>
-									</div>
-								</div>
-							</div>
-						{:else if relationshipSummaryLoading}
-							<div
-								class="absolute inset-0 flex items-center justify-center rounded-xl bg-surface/85 px-4 text-center backdrop-blur-[2px]"
-							>
-								<div class="flex flex-col items-center gap-2 text-sm text-content-secondary">
-									<Icon name="spinner" size="md" />
-									<p>용어계 관계 진단을 갱신하는 중입니다.</p>
-								</div>
-							</div>
-						{:else}
-							<div class="py-6 text-sm text-content-muted">
-								진단 요약을 불러오지 못했습니다. 파일 상태를 확인한 뒤 다시 시도해 주세요.
-							</div>
-						{/if}
-					</div>
-				</BentoCard>
-			</div>
-		{/if}
-
 		<div class="col-span-12">
 			<BentoCard title="용어 변환기" subtitle="컬럼명/용어명 변환 후 바로 추가할 수 있어요.">
 				<TermGenerator filename={selectedFilename} on:addTerm={handleAddTermFromGenerator} />

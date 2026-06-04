@@ -2,7 +2,6 @@
 	import { onMount } from 'svelte';
 	import { browser } from '$app/environment';
 	import SearchBar from '$lib/components/SearchBar.svelte';
-	import DesignRelationPanel from '$lib/components/DesignRelationPanel.svelte';
 	import DatabaseTable from '$lib/components/DatabaseTable.svelte';
 	import DatabaseEditor from '$lib/components/DatabaseEditor.svelte';
 	import DatabaseFileManager from '$lib/components/DatabaseFileManager.svelte';
@@ -13,11 +12,9 @@
 	import BentoGrid from '$lib/components/BentoGrid.svelte';
 	import BentoCard from '$lib/components/BentoCard.svelte';
 	import type { DatabaseEntry, DbDesignApiResponse } from '$lib/types/database-design.js';
-	import type { DataType } from '$lib/types/base';
 	import { databaseDataStore as databaseStore } from '$lib/stores/unified-store';
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { filterDatabaseFiles } from '$lib/utils/file-filter';
-	import { extractDbDesignRelatedMapping } from '$lib/utils/db-design-file-mapping';
 	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
 
 	// 이벤트 상세 타입 정의
@@ -44,7 +41,6 @@
 	let databaseFiles = $state<string[]>([]);
 	let selectedFilename = $state('database.json');
 	let showSystemFiles = $state(false);
-	let relationFileMapping = $state<Partial<Record<DataType, string>>>({});
 
 	// UI 상태
 	let showEditor = $state(false);
@@ -141,32 +137,6 @@
 		}
 	}
 
-	function toDefinitionFileMapping(
-		mapping?: Record<string, unknown>
-	): Partial<Record<DataType, string>> {
-		return extractDbDesignRelatedMapping(mapping);
-	}
-
-	async function loadRelationFileMapping(filename: string, requestSeq?: number) {
-		try {
-			const response = await fetch(
-				`/api/database/files/mapping?filename=${encodeURIComponent(filename)}`
-			);
-			const result: DbDesignApiResponse<{ mapping?: Record<string, unknown> }> =
-				await response.json();
-			if (requestSeq !== undefined && requestSeq !== pageDataRequestSeq) {
-				return;
-			}
-			relationFileMapping = result.success ? toDefinitionFileMapping(result.data?.mapping) : {};
-		} catch (mappingError) {
-			console.error('관계 파일 매핑 로드 오류:', mappingError);
-			if (requestSeq !== undefined && requestSeq !== pageDataRequestSeq) {
-				return;
-			}
-			relationFileMapping = {};
-		}
-	}
-
 	/**
 	 * 필터 옵션 로드 (전체 데이터 기준)
 	 */
@@ -197,10 +167,7 @@
 		if (requestSeq !== pageDataRequestSeq) {
 			return;
 		}
-		void Promise.allSettled([
-			loadRelationFileMapping(filename, requestSeq),
-			loadFilterOptions(filename, requestSeq)
-		]);
+		void loadFilterOptions(filename, requestSeq);
 	}
 
 	/**
@@ -638,17 +605,6 @@
 	{/if}
 
 	<BentoGrid>
-		<div class="col-span-12">
-			<BentoCard title="연관 파일" subtitle="정의서 간 연결 관계를 확인/적용합니다.">
-				<DesignRelationPanel
-					currentType="database"
-					currentFilename={selectedFilename}
-					fileMapping={relationFileMapping}
-					onApplied={refreshData}
-				/>
-			</BentoCard>
-		</div>
-
 		<div class="col-span-12">
 			<BentoCard title="통합검색" subtitle="기관명, 논리DB명, 물리DB명 등으로 검색하세요">
 				<SearchBar

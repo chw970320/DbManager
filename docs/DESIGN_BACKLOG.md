@@ -22,7 +22,7 @@ Last updated: 2026-06-04
 - [x] 공통 `SearchBar`의 검색 landmark, 로딩, 고급 검색 상태 노출
 - [x] 프로파일링 browse 컨트롤을 공통 `ActionBar`/`SearchBar` 흐름에 맞춤
 - [x] 업로드 이력 복구 패널의 파일명/오류/복원 맥락 표시 보강
-- [x] 관계 패널의 severity/source/preview/reason trace cue 보강
+- [x] ERD/내부 관계 검증의 severity/source/reason trace cue 보존
 - [x] 품질 규칙 browse의 severity/scope/metric/threshold/target trace 표시
 - [x] 용어 검증 패널 디버그 출력 제거 및 DOM 이벤트 회귀 보강
 - [x] 저장소 전체 `pnpm run format:check` 통과 상태 회복
@@ -53,7 +53,7 @@ Last updated: 2026-06-04
 - [x] 표준화 dense table: `/domain/browse` screenshot 수집
 - [x] DB 설계 dense table: `/database/browse` screenshot 수집
 - [x] bundle/recovery: `/snapshot/browse` screenshot 수집, upload/file-manager mutation state는 fixture blocker로 기록
-- [x] relation/sync: `/erd`와 DB relation summary smoke 확인, apply/sync mutation state는 fixture blocker로 기록
+- [x] relation/sync: `/erd` 관계 요약 smoke 확인, browse relation panel은 후속 cleanup에서 제거
 - [x] operations/quality: `/profiling/browse`, `/quality-rule/browse` screenshot 수집
 - [x] ERD/relation: `/erd` route smoke screenshot 수집
 
@@ -69,7 +69,7 @@ Fixture blocker 처리 결과:
 - [x] 저장 영향 modal screenshot fixture: `screenshot-pass`
 - [x] validation panel expanded/error screenshot fixture: `screenshot-pass`
 - [x] upload restore/file-manager mapping screenshot fixture: `screenshot-pass`
-- [x] sync preview/apply screenshot fixture: `screenshot-pass`
+- [x] sync preview/apply screenshot fixture: browse relation panel 제거로 active fixture에서 제외
 
 ## P1 — 후속 디자인 계획 후보
 
@@ -110,19 +110,18 @@ Fixture blocker 처리 결과:
 
 ### Alignment / sync result readability
 
-상태: 완료됨. 관계 보정 미리보기 패널의 저장 여부, 남은 검증 이슈, 실행 소유자 추적, 후보 맥락 문구를 보강했습니다.
+상태: 완료 후 browse 표면에서 제거됨. 기존 browse `연관 파일` 패널은 제거되었고, 관계 검증/보정 capability는 ERD, validation report, 자동 반영 경로에서 쓰는 내부 기능으로 보존합니다.
 
 근거:
 
-- 변경 파일: `src/lib/components/DesignRelationPanel.svelte`, `tests/e2e/design-fixture-evidence.spec.ts`
-- Targeted tests: `pnpm vitest run src/lib/components/DesignRelationPanel.test.ts src/routes/api/alignment/sync/server.test.ts src/routes/api/erd/relations/sync/server.test.ts`
-- Browser evidence: `.omx/plans/alignment-sync-readability-screenshots/20260604T093238Z/`
-- Evidence report: `.omx/plans/alignment-sync-readability-20260604T093500Z.md`
+- Legacy evidence: `.omx/plans/alignment-sync-readability-20260604T093500Z.md`
+- Preserved API tests: `pnpm vitest run src/routes/api/alignment/sync/server.test.ts src/routes/api/erd/relations/sync/server.test.ts`
+- Preserved boundary: database/entity/attribute/table/column browse에는 새 validation UI를 추가하지 않고 내부 검증/보정 capability만 유지
 
-- [x] preview/apply 모드가 명확히 구분되는지 확인
-- [x] direct apply screenshot fixture는 reversible/reset-backed apply 조건 전까지 component/API evidence로 보존
-- [x] `failedStep`, 실행 소유자 추적, 남은 검증 이슈가 숨겨지지 않는지 확인
-- [x] 후보 변경 사유와 후속 조치가 한국어로 충분히 설명되는지 확인
+- [x] browse `연관 파일` 패널 제거
+- [x] direct apply screenshot fixture는 active visual fixture에서 제외
+- [x] 관계 검증/보정 API와 자동 반영 capability는 삭제하지 않고 보존
+- [x] 후보 변경 사유와 후속 조치 데이터는 내부 validation/report API에서 계속 보존
 - [x] backend owner name과 `failedStep` 의미 보존
 
 ### ERD / relation visual QA lane
@@ -132,13 +131,13 @@ Fixture blocker 처리 결과:
 근거:
 
 - 변경 파일: `src/lib/components/ERDViewer.svelte`, `tests/e2e/design-fixture-evidence.spec.ts`
-- Targeted tests: `pnpm vitest run src/lib/components/ERDViewer.test.ts src/lib/components/DesignRelationPanel.test.ts src/routes/erd/page-source.test.ts`
+- Targeted tests: `pnpm vitest run src/lib/components/ERDViewer.test.ts src/routes/erd/page-source.test.ts src/routes/api/erd/relations/server.test.ts`
 - Browser evidence: `.omx/plans/erd-relation-visual-qa-screenshots/20260604T094639Z/`
 - Evidence report: `.omx/plans/erd-relation-visual-qa-20260604T094800Z.md`
 
 - [x] 큰 그래프 탐색 UX 확인
 - [x] 빈 관계/희박 관계 상태 확인
-- [x] relation severity 설명과 관계 패널 연결성 확인
+- [x] relation severity 설명과 ERD 화면 내 관계 요약 확인
 - [x] Graphviz layout 알고리즘 변경은 visual polish와 분리
 
 ## P2 — 설계 결정이 먼저 필요한 후보

@@ -1,5 +1,19 @@
 # 변경 이력
 
+## 2026-06-04
+
+### 요약
+
+- 용어 browse의 `용어계 관계 진단 요약` 카드와 5개 정의서 browse의 `연관 파일` 패널을 제거했습니다.
+- 관계 검증·보정 API와 파일 매핑 기능은 ERD, validation report, 자동 반영, 파일 관리 mapping tab에서 계속 쓰는 내부 capability로 보존했습니다.
+
+### 상세 변경
+
+- `term/browse`는 더 이상 `/api/term/relationship-summary`를 호출하지 않으며 전용 route와 회귀 테스트도 제거했습니다.
+- database/entity/attribute/table/column browse 화면에서 `DesignRelationPanel` 기반 `연관 파일` 섹션을 삭제했습니다.
+- 삭제된 패널 전용 component/test와 E2E screenshot fixture를 정리하고, 회귀 스크립트와 디자인 백로그의 active 참조를 갱신했습니다.
+- ERD, validation report, upload postprocess, alignment sync, shared file mapping, 파일 관리 mapping tab은 보존했습니다.
+
 ## 2026-06-01
 
 ### 요약

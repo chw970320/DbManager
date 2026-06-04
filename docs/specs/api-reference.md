@@ -163,7 +163,7 @@ http://localhost:5173/api
   - 서버 시작 또는 첫 registry 접근 시 기존 v1 공유 매핑, `registry.json`, 레거시 파일 내 `mapping`을 v2 정본으로 자동 마이그레이션합니다.
   - 마이그레이션 후 비기본 파일에 해당하는 공유 번들이 없으면 `GET`/관련 파일 해석은 fail-fast 오류를 반환합니다.
   - 개별 데이터 JSON의 `mapping`은 저장 정본이 아니며, 로드/API 응답 시 공통 매핑 파일 기준으로 런타임 주입될 수 있습니다.
-  - DB 5개 browse 화면의 연관 상태 상세/정렬 동기화도 같은 8종 파일 번들을 사용합니다.
+  - 파일 관리 mapping tab, ERD 관계 검증/보정, validation report, 자동 반영 경로도 같은 8종 파일 번들을 사용합니다.
 
 예시: `GET /api/table/files/mapping`
 

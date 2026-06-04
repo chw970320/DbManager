@@ -9,18 +9,15 @@ import type {
 	EntityEntry,
 	AttributeEntry,
 	TableEntry,
-	ColumnEntry,
-	DATABASE_FIELDS,
-	ENTITY_FIELDS,
-	ATTRIBUTE_FIELDS,
-	TABLE_FIELDS,
-	COLUMN_FIELDS
+	ColumnEntry
 } from '$lib/types/database-design';
-import { parseWorkbookToArray, isEmptyRow } from './xlsx-parser';
+import { isEmptyRow } from './xlsx-parser';
 
 // ============================================================================
 // 공통 유틸리티
 // ============================================================================
+
+type SheetRow = Array<string | number | undefined>;
 
 /**
  * 셀 주소 생성
@@ -63,7 +60,7 @@ function normalizeHeaderText(value: string | number | undefined): string {
 		.toLowerCase();
 }
 
-function createHeaderIndexMap(headerRow: string[]): Map<string, number> {
+function createHeaderIndexMap(headerRow: SheetRow): Map<string, number> {
 	const headerIndexMap = new Map<string, number>();
 	headerRow.forEach((header, index) => {
 		const normalized = normalizeHeaderText(header);
@@ -75,7 +72,7 @@ function createHeaderIndexMap(headerRow: string[]): Map<string, number> {
 }
 
 function getHeaderMappedValue(
-	row: string[],
+	row: SheetRow,
 	headerIndexMap: Map<string, number>,
 	aliases: string[]
 ): string | number | undefined {
@@ -88,20 +85,93 @@ function getHeaderMappedValue(
 	return undefined;
 }
 
+type WorkbookHeaderSelectionOptions = {
+	preferredSheetNames?: string[];
+	preferredHeaders?: string[];
+};
+
+const DB_DESIGN_SHEET_POLICIES = {
+	database: {
+		preferredSheetNames: ['데이터베이스', '데이터베이스정의서']
+	},
+	entity: {
+		preferredSheetNames: ['엔터티', '엔터티정의서']
+	},
+	attribute: {
+		preferredSheetNames: ['속성', '속성정의서']
+	},
+	table: {
+		preferredSheetNames: ['테이블', '테이블정의서']
+	},
+	column: {
+		preferredSheetNames: ['컬럼', '컬럼정의서'],
+		preferredHeaders: ['도메인명', '자료타입', 'NOTNULL여부']
+	}
+} satisfies Record<string, WorkbookHeaderSelectionOptions>;
+
+function isBackupSheetName(sheetName: string): boolean {
+	const normalized = sheetName.trim().toLowerCase();
+	return (
+		/(?:^|[_\-\s])(?:old|backup)(?:$|[_\-\s\d])/.test(normalized) ||
+		/(?:^|[_\-\s])백업\d*$/.test(normalized)
+	);
+}
+
+function scoreHeaderCandidate(
+	sheetName: string,
+	headerIndexMap: Map<string, number>,
+	options: WorkbookHeaderSelectionOptions
+): number {
+	const normalizedSheetName = normalizeHeaderText(sheetName);
+	const preferredSheetNames =
+		options.preferredSheetNames?.map((name) => normalizeHeaderText(name)) ?? [];
+	const preferredHeaders =
+		options.preferredHeaders?.map((header) => normalizeHeaderText(header)) ?? [];
+
+	let score = 0;
+	if (preferredSheetNames.includes(normalizedSheetName)) {
+		score += 1_000;
+	}
+
+	if (!isBackupSheetName(sheetName)) {
+		score += 100;
+	}
+
+	for (const header of preferredHeaders) {
+		if (headerIndexMap.has(header)) {
+			score += 10;
+		}
+	}
+
+	return score;
+}
+
 /**
  * 여러 시트 중 필수 헤더를 포함한 시트를 선택해 2D 배열로 반환
  */
 function parseWorkbookToArrayByRequiredHeaders(
 	fileBuffer: Buffer,
-	requiredHeaders: string[]
-): string[][] {
+	requiredHeaders: string[],
+	options: WorkbookHeaderSelectionOptions = {}
+): SheetRow[] {
 	const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
 	const normalizedRequiredHeaders = requiredHeaders.map((header) => normalizeHeaderText(header));
+	const normalizedPreferredSheetNames =
+		options.preferredSheetNames?.map((name) => normalizeHeaderText(name)) ?? [];
+	const normalizedPreferredHeaders =
+		options.preferredHeaders?.map((header) => normalizeHeaderText(header)) ?? [];
+	let bestCandidate: {
+		data: SheetRow[];
+		score: number;
+		sheetIndex: number;
+		headerRowIndex: number;
+	} | null = null;
 
-	for (const sheetName of workbook.SheetNames) {
+	for (let sheetIndex = 0; sheetIndex < workbook.SheetNames.length; sheetIndex++) {
+		const sheetName = workbook.SheetNames[sheetIndex];
 		const worksheet = workbook.Sheets[sheetName];
 		if (!worksheet) continue;
-		const rawData: string[][] = XLSX.utils.sheet_to_json(worksheet, {
+		const rawData: SheetRow[] = XLSX.utils.sheet_to_json(worksheet, {
 			header: 1,
 			defval: '',
 			blankrows: false
@@ -112,18 +182,42 @@ function parseWorkbookToArrayByRequiredHeaders(
 			const candidateHeaderRow = rawData[rowIndex] || [];
 			if (candidateHeaderRow.length === 0) continue;
 
-			const normalizedHeaderSet = new Set(
-				candidateHeaderRow.map((cell) => normalizeHeaderText(cell)).filter(Boolean)
-			);
-			const matched = normalizedRequiredHeaders.every((header) => normalizedHeaderSet.has(header));
+			const headerIndexMap = createHeaderIndexMap(candidateHeaderRow);
+			const matched = normalizedRequiredHeaders.every((header) => headerIndexMap.has(header));
 
 			if (!matched) continue;
 
 			const dataFromHeader = rawData.slice(rowIndex);
 			if (dataFromHeader.length < 2) continue;
-			return dataFromHeader;
+			const isExactPreferredSheet = normalizedPreferredSheetNames.includes(
+				normalizeHeaderText(sheetName)
+			);
+			const hasAllPreferredHeaders = normalizedPreferredHeaders.every((header) =>
+				headerIndexMap.has(header)
+			);
+
+			if (isExactPreferredSheet && hasAllPreferredHeaders) {
+				return dataFromHeader;
+			}
+
+			const score = scoreHeaderCandidate(sheetName, headerIndexMap, options);
+
+			if (
+				!bestCandidate ||
+				score > bestCandidate.score ||
+				(score === bestCandidate.score &&
+					(sheetIndex < bestCandidate.sheetIndex ||
+						(sheetIndex === bestCandidate.sheetIndex && rowIndex < bestCandidate.headerRowIndex)))
+			) {
+				bestCandidate = { data: dataFromHeader, score, sheetIndex, headerRowIndex: rowIndex };
+			}
 		}
 	}
+
+	if (bestCandidate) {
+		return bestCandidate.data;
+	}
+
 	throw new Error(`필수 헤더(${requiredHeaders.join(', ')})를 포함한 시트를 찾을 수 없습니다.`);
 }
 
@@ -193,7 +287,12 @@ export function parseDatabaseXlsxToJson(
 	skipDuplicates: boolean = true
 ): DatabaseEntry[] {
 	try {
-		const rawData = parseWorkbookToArray(fileBuffer);
+		const rawData = parseWorkbookToArrayByRequiredHeaders(
+			fileBuffer,
+			['기관명', '부서명', '적용업무'],
+			DB_DESIGN_SHEET_POLICIES.database
+		);
+		const headerIndexMap = createHeaderIndexMap(rawData[0] || []);
 		const dataRows = rawData.slice(1);
 		const entries: DatabaseEntry[] = [];
 		const seenKeys = skipDuplicates ? new Set<string>() : null;
@@ -202,18 +301,31 @@ export function parseDatabaseXlsxToJson(
 			const row = dataRows[i];
 			if (isEmptyRow(row)) continue;
 
-			// 컬럼 매핑 (번호 열 없음): A=기관명, B=부서명, C=적용업무, D=관련법령, E=논리DB명, F=물리DB명, G=구축일자, H=DB설명, I=DBMS정보, J=운영체제정보, K=수집제외사유
-			const organizationName = parseRequiredText(row[0]);
-			const departmentName = parseRequiredText(row[1]);
-			const appliedTask = parseRequiredText(row[2]);
-			const relatedLaw = parseRequiredText(row[3]);
-			const logicalDbName = parseOptionalText(row[4]);
-			const physicalDbName = parseOptionalText(row[5]);
-			const buildDate = parseRequiredText(row[6]);
-			const dbDescription = parseOptionalText(row[7]);
-			const dbmsInfo = parseOptionalText(row[8]);
-			const osInfo = parseRequiredText(row[9]);
-			const exclusionReason = parseRequiredText(row[10]);
+			const organizationName = parseRequiredText(
+				getHeaderMappedValue(row, headerIndexMap, ['기관명'])
+			);
+			const departmentName = parseRequiredText(
+				getHeaderMappedValue(row, headerIndexMap, ['부서명'])
+			);
+			const appliedTask = parseRequiredText(
+				getHeaderMappedValue(row, headerIndexMap, ['적용업무'])
+			);
+			const relatedLaw = parseRequiredText(getHeaderMappedValue(row, headerIndexMap, ['관련법령']));
+			const logicalDbName = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['논리DB명'])
+			);
+			const physicalDbName = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['물리DB명'])
+			);
+			const buildDate = parseRequiredText(getHeaderMappedValue(row, headerIndexMap, ['구축일자']));
+			const dbDescription = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['DB설명'])
+			);
+			const dbmsInfo = parseOptionalText(getHeaderMappedValue(row, headerIndexMap, ['DBMS정보']));
+			const osInfo = parseRequiredText(getHeaderMappedValue(row, headerIndexMap, ['운영체제정보']));
+			const exclusionReason = parseRequiredText(
+				getHeaderMappedValue(row, headerIndexMap, ['수집제외사유'])
+			);
 
 			// 중복 체크
 			if (skipDuplicates && seenKeys) {
@@ -334,7 +446,12 @@ export function parseEntityXlsxToJson(
 	skipDuplicates: boolean = true
 ): EntityEntry[] {
 	try {
-		const rawData = parseWorkbookToArray(fileBuffer);
+		const rawData = parseWorkbookToArrayByRequiredHeaders(
+			fileBuffer,
+			['엔터티명', '주식별자', '수퍼타입엔터티명'],
+			DB_DESIGN_SHEET_POLICIES.entity
+		);
+		const headerIndexMap = createHeaderIndexMap(rawData[0] || []);
 		const dataRows = rawData.slice(1);
 		const entries: EntityEntry[] = [];
 		const seenKeys = skipDuplicates ? new Set<string>() : null;
@@ -343,14 +460,25 @@ export function parseEntityXlsxToJson(
 			const row = dataRows[i];
 			if (isEmptyRow(row)) continue;
 
-			// 컬럼 매핑 (번호 열 없음): A=논리DB명, B=스키마명, C=엔터티명, D=엔터티설명, E=주식별자, F=수퍼타입엔터티명, G=테이블한글명
-			const logicalDbName = parseOptionalText(row[0]);
-			const schemaName = parseOptionalText(row[1]);
-			const entityName = parseOptionalText(row[2]);
-			const entityDescription = parseOptionalText(row[3]);
-			const primaryIdentifier = parseOptionalText(row[4]);
-			const superTypeEntityName = parseRequiredText(row[5]);
-			const tableKoreanName = parseOptionalText(row[6]);
+			const logicalDbName = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['논리DB명'])
+			);
+			const schemaName = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['스키마명', 'schema'])
+			);
+			const entityName = parseOptionalText(getHeaderMappedValue(row, headerIndexMap, ['엔터티명']));
+			const entityDescription = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['엔터티설명', '엔터티 설명'])
+			);
+			const primaryIdentifier = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['주식별자'])
+			);
+			const superTypeEntityName = parseRequiredText(
+				getHeaderMappedValue(row, headerIndexMap, ['수퍼타입엔터티명', '수퍼타입 엔터티명'])
+			);
+			const tableKoreanName = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['테이블한글명', '테이블 한글명'])
+			);
 
 			// 중복 체크
 			if (skipDuplicates && seenKeys) {
@@ -459,7 +587,12 @@ export function parseAttributeXlsxToJson(
 	skipDuplicates: boolean = true
 ): AttributeEntry[] {
 	try {
-		const rawData = parseWorkbookToArray(fileBuffer);
+		const rawData = parseWorkbookToArrayByRequiredHeaders(
+			fileBuffer,
+			['엔터티명', '속성명', '필수입력여부'],
+			DB_DESIGN_SHEET_POLICIES.attribute
+		);
+		const headerIndexMap = createHeaderIndexMap(rawData[0] || []);
 		const dataRows = rawData.slice(1);
 		const entries: AttributeEntry[] = [];
 		const seenKeys = skipDuplicates ? new Set<string>() : null;
@@ -468,16 +601,31 @@ export function parseAttributeXlsxToJson(
 			const row = dataRows[i];
 			if (isEmptyRow(row)) continue;
 
-			// 컬럼 매핑 (번호 열 없음): A=스키마명, B=엔터티명, C=속성명, D=속성유형, E=필수입력여부, F=식별자여부, G=참조엔터티명, H=참조속성명, I=속성설명
-			const schemaName = parseOptionalText(row[0]);
-			const entityName = parseOptionalText(row[1]);
-			const attributeName = parseOptionalText(row[2]);
-			const attributeType = parseOptionalText(row[3]);
-			const requiredInput = parseRequiredText(row[4]);
-			const identifierFlag = parseOptionalText(row[5]);
-			const refEntityName = parseRequiredText(row[6]);
-			const refAttributeName = parseOptionalText(row[7]);
-			const attributeDescription = parseOptionalText(row[8]);
+			const schemaName = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['스키마명', 'schema'])
+			);
+			const entityName = parseOptionalText(getHeaderMappedValue(row, headerIndexMap, ['엔터티명']));
+			const attributeName = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['속성명'])
+			);
+			const attributeType = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['속성유형', '속성 유형'])
+			);
+			const requiredInput = parseRequiredText(
+				getHeaderMappedValue(row, headerIndexMap, ['필수입력여부', '필수입력 여부'])
+			);
+			const identifierFlag = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['식별자여부', '식별자 여부'])
+			);
+			const refEntityName = parseRequiredText(
+				getHeaderMappedValue(row, headerIndexMap, ['참조엔터티명', '참조 엔터티명'])
+			);
+			const refAttributeName = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['참조속성명', '참조 속성명'])
+			);
+			const attributeDescription = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['속성설명', '속성 설명'])
+			);
 
 			// 중복 체크
 			if (skipDuplicates && seenKeys) {
@@ -592,10 +740,11 @@ export function parseTableXlsxToJson(
 	skipDuplicates: boolean = true
 ): TableEntry[] {
 	try {
-		const rawData = parseWorkbookToArrayByRequiredHeaders(fileBuffer, [
-			'테이블영문명',
-			'테이블한글명'
-		]);
+		const rawData = parseWorkbookToArrayByRequiredHeaders(
+			fileBuffer,
+			['테이블영문명', '테이블한글명'],
+			DB_DESIGN_SHEET_POLICIES.table
+		);
 		const headerIndexMap = createHeaderIndexMap(rawData[0] || []);
 		const dataRows = rawData.slice(1);
 		const entries: TableEntry[] = [];
@@ -791,15 +940,12 @@ export function parseColumnXlsxToJson(
 	skipDuplicates: boolean = true
 ): ColumnEntry[] {
 	try {
-		const rawData = parseWorkbookToArrayByRequiredHeaders(fileBuffer, [
-			'컬럼영문명',
-			'자료길이',
-			'PK정보'
-		]);
-		const normalizedHeaderSet = new Set(
-			(rawData[0] || []).map((cell) => normalizeHeaderText(cell)).filter(Boolean)
+		const rawData = parseWorkbookToArrayByRequiredHeaders(
+			fileBuffer,
+			['컬럼영문명', '자료길이', 'PK정보'],
+			DB_DESIGN_SHEET_POLICIES.column
 		);
-		const hasDomainColumn = normalizedHeaderSet.has(normalizeHeaderText('도메인명'));
+		const headerIndexMap = createHeaderIndexMap(rawData[0] || []);
 		const dataRows = rawData.slice(1);
 		const entries: ColumnEntry[] = [];
 		const seenKeys = skipDuplicates ? new Set<string>() : null;
@@ -808,32 +954,81 @@ export function parseColumnXlsxToJson(
 			const row = dataRows[i];
 			if (isEmptyRow(row)) continue;
 
-			// 컬럼 매핑 (번호 열 없음)
-			// 최신 형식(23개): A=사업범위여부 ... H=연관엔터티명, I=도메인명, J=자료타입 ... W=공개/비공개여부
-			// 구형 형식(22개): A=사업범위여부 ... H=연관엔터티명, I=자료타입 ... V=공개/비공개여부
-			const scopeFlag = parseOptionalText(row[0]);
-			const subjectArea = parseOptionalText(row[1]);
-			const schemaName = parseOptionalText(row[2]);
-			const tableEnglishName = parseOptionalText(row[3]);
-			const columnEnglishName = parseOptionalText(row[4]);
-			const columnKoreanName = parseOptionalText(row[5]);
-			const columnDescription = parseOptionalText(row[6]);
-			const relatedEntityName = parseOptionalText(row[7]);
-			const domainName = hasDomainColumn ? parseOptionalText(row[8]) : undefined;
-			const dataType = parseOptionalText(row[hasDomainColumn ? 9 : 8]);
-			const dataLength = parseRequiredText(row[hasDomainColumn ? 10 : 9]);
-			const dataDecimalLength = parseRequiredText(row[hasDomainColumn ? 11 : 10]);
-			const dataFormat = parseRequiredText(row[hasDomainColumn ? 12 : 11]);
-			const notNullFlag = parseOptionalText(row[hasDomainColumn ? 13 : 12]);
-			const pkInfo = parseRequiredText(row[hasDomainColumn ? 14 : 13]);
-			const fkInfo = parseOptionalText(row[hasDomainColumn ? 15 : 14]);
-			const indexName = parseRequiredText(row[hasDomainColumn ? 16 : 15]);
-			const indexOrder = parseRequiredText(row[hasDomainColumn ? 17 : 16]);
-			const akInfo = parseRequiredText(row[hasDomainColumn ? 18 : 17]);
-			const constraint = parseRequiredText(row[hasDomainColumn ? 19 : 18]);
-			const personalInfoFlag = parseOptionalText(row[hasDomainColumn ? 20 : 19]);
-			const encryptionFlag = parseOptionalText(row[hasDomainColumn ? 21 : 20]);
-			const publicFlag = parseOptionalText(row[hasDomainColumn ? 22 : 21]);
+			const scopeFlag = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['사업범위여부', '사업범위 여부'])
+			);
+			const subjectArea = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['주제영역'])
+			);
+			const schemaName = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['스키마명', 'schema'])
+			);
+			const tableEnglishName = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['테이블영문명', '테이블 영문명'])
+			);
+			const columnEnglishName = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['컬럼영문명', '컬럼 영문명'])
+			);
+			const columnKoreanName = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['컬럼한글명', '컬럼 한글명'])
+			);
+			const columnDescription = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['컬럼설명', '컬럼 설명'])
+			);
+			const relatedEntityName = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['연관엔터티명', '연관 엔터티명'])
+			);
+			const domainName = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['도메인명', '도메인 명'])
+			);
+			const dataType = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, [
+					'자료타입',
+					'자료 타입',
+					'데이터타입',
+					'데이터 타입'
+				])
+			);
+			const dataLength = parseRequiredText(
+				getHeaderMappedValue(row, headerIndexMap, [
+					'자료길이',
+					'자료 길이',
+					'데이터길이',
+					'데이터 길이'
+				])
+			);
+			const dataDecimalLength = parseRequiredText(
+				getHeaderMappedValue(row, headerIndexMap, ['자료소수점길이', '자료 소수점 길이'])
+			);
+			const dataFormat = parseRequiredText(
+				getHeaderMappedValue(row, headerIndexMap, ['자료형식', '자료 형식'])
+			);
+			const notNullFlag = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['NOTNULL여부', 'NOTNULL 여부', 'NOT NULL 여부'])
+			);
+			const pkInfo = parseRequiredText(
+				getHeaderMappedValue(row, headerIndexMap, ['PK정보', 'PK 정보'])
+			);
+			const fkInfo = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['FK정보', 'FK 정보'])
+			);
+			const indexName = parseRequiredText(getHeaderMappedValue(row, headerIndexMap, ['인덱스명']));
+			const indexOrder = parseRequiredText(
+				getHeaderMappedValue(row, headerIndexMap, ['인덱스순번', '인덱스 순번'])
+			);
+			const akInfo = parseRequiredText(
+				getHeaderMappedValue(row, headerIndexMap, ['AK정보', 'AK 정보'])
+			);
+			const constraint = parseRequiredText(getHeaderMappedValue(row, headerIndexMap, ['제약조건']));
+			const personalInfoFlag = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['개인정보여부', '개인정보 여부'])
+			);
+			const encryptionFlag = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['암호화여부', '암호화 여부'])
+			);
+			const publicFlag = parseOptionalText(
+				getHeaderMappedValue(row, headerIndexMap, ['공개/비공개여부', '공개/비공개 여부'])
+			);
 
 			// 중복 체크
 			if (skipDuplicates && seenKeys) {

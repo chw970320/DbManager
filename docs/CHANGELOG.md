@@ -4,11 +4,19 @@
 
 ### 요약
 
+- DB/엔터티/속성/테이블/컬럼 정의서에 후보 선택형 관계 유효성 검사와 자동 수정 패널을 추가했습니다.
+- ERD 관계 검증 요약에서도 같은 미매칭·후보·조치 가이드 정보를 표시하도록 맞췄습니다.
 - 용어 browse의 `용어계 관계 진단 요약` 카드와 5개 정의서 browse의 `연관 파일` 패널을 제거했습니다.
 - 관계 검증·보정 API와 파일 매핑 기능은 ERD, validation report, 자동 반영, 파일 관리 mapping tab에서 계속 쓰는 내부 capability로 보존했습니다.
 
 ### 상세 변경
 
+- 6개 canonical 관계 규칙(DB↔엔터티, 엔터티↔속성, 엔터티↔테이블, 테이블↔컬럼, 속성↔컬럼 키, 표준 참조)을 기준으로 `validation.issues[].candidates/manualTargets/actionGuide`를 반환합니다.
+- `/api/validation/design-relations`, `/preview`, `/apply`를 추가하고, 신규 검증 API는 완전한 8종 파일 번들이 없으면 400으로 처리합니다.
+- 후보가 여러 개인 이슈는 사용자가 후보 정의서를 선택해야 미리보기/자동 수정이 가능하며, 후보가 없거나 `autoFixable=false`이면 수동 수정만 허용합니다.
+- 신규 검증 API는 8종 파일명뿐 아니라 단어집/도메인/용어 파일의 실제 로딩 가능 여부까지 확인하며, 통합 validation report에도 relation 후보/조치 가이드 메타데이터를 유지합니다.
+- `/api/erd/relations`는 canonical 검증 서비스를 사용하는 호환 API로 유지하고, `/api/erd/relations/sync`는 레거시 동기화 미리보기만 제공하며 `apply=true`는 410으로 차단합니다.
+- ERD 화면의 데이터 연관관계 요약과 ERDViewer 안내 영역은 관계 미매칭의 후보 수, 후보 요약, 조치 가이드를 표시합니다.
 - `term/browse`는 더 이상 `/api/term/relationship-summary`를 호출하지 않으며 전용 route와 회귀 테스트도 제거했습니다.
 - database/entity/attribute/table/column browse 화면에서 `DesignRelationPanel` 기반 `연관 파일` 섹션을 삭제했습니다.
 - 삭제된 패널 전용 component/test와 E2E screenshot fixture를 정리하고, 회귀 스크립트와 디자인 백로그의 active 참조를 갱신했습니다.

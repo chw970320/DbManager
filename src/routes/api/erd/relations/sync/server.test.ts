@@ -2,11 +2,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GET, POST } from './+server';
 import type { RequestEvent } from '@sveltejs/kit';
 
-vi.mock('$lib/registry/data-registry.js', () => ({
-	loadData: vi.fn(),
-	saveData: vi.fn()
-}));
-
 vi.mock('$lib/utils/design-relation-context.js', () => ({
 	loadDesignRelationContext: vi.fn(),
 	pickDefinitionFileFromUrl: vi.fn((url: URL, key: string) => {
@@ -43,7 +38,6 @@ vi.mock('$lib/utils/design-relation-validator.js', () => ({
 	validateDesignRelations: vi.fn()
 }));
 
-import { loadData, saveData } from '$lib/registry/data-registry.js';
 import { loadDesignRelationContext } from '$lib/utils/design-relation-context.js';
 import { buildDesignRelationSyncPlan } from '$lib/utils/design-relation-sync.js';
 import { validateDesignRelations } from '$lib/utils/design-relation-validator.js';
@@ -87,8 +81,10 @@ describe('API: /api/erd/relations/sync', () => {
 				table: 'table.json',
 				column: 'column.json',
 				domain: null,
-				vocabulary: null
-			}
+				vocabulary: null,
+				term: null
+			},
+			standardReferences: { vocabulary: false, domain: false, term: false, complete: false }
 		});
 
 		vi.mocked(buildDesignRelationSyncPlan).mockReturnValue({
@@ -109,7 +105,9 @@ describe('API: /api/erd/relations/sync', () => {
 
 		vi.mocked(validateDesignRelations).mockReturnValue({
 			specs: [],
+			rules: [],
 			summaries: [],
+			issues: [],
 			totals: {
 				totalChecked: 0,
 				matched: 0,
@@ -118,13 +116,6 @@ describe('API: /api/erd/relations/sync', () => {
 				warningCount: 0
 			}
 		});
-
-		vi.mocked(loadData).mockResolvedValue({
-			entries: [],
-			lastUpdated: '2026-02-14T00:00:00.000Z',
-			totalCount: 0
-		});
-		vi.mocked(saveData).mockResolvedValue();
 	});
 
 	it('should return preview result on GET', async () => {
@@ -134,7 +125,6 @@ describe('API: /api/erd/relations/sync', () => {
 		expect(response.status).toBe(200);
 		expect(result.success).toBe(true);
 		expect(result.data.mode).toBe('preview');
-		expect(saveData).not.toHaveBeenCalled();
 	});
 
 	it('should keep owner trace on preview changes', async () => {
@@ -173,10 +163,9 @@ describe('API: /api/erd/relations/sync', () => {
 			owner: 'erd/relations/sync',
 			reason: '테이블명 기준 관계 보정'
 		});
-		expect(saveData).not.toHaveBeenCalled();
 	});
 
-	it('should apply updates on POST when apply=true', async () => {
+	it('should reject legacy apply mode and point to selected-candidate API', async () => {
 		vi.mocked(buildDesignRelationSyncPlan).mockReturnValue({
 			tableUpdates: [
 				{
@@ -207,61 +196,22 @@ describe('API: /api/erd/relations/sync', () => {
 			}
 		});
 
-		vi.mocked(loadData).mockImplementation(async (type: string) => {
-			if (type === 'table') {
-				return {
-					entries: [
-						{
-							id: 'table-1',
-							tableEnglishName: 'TB_USER',
-							relatedEntityName: '사용자테이블',
-							businessClassification: '업무',
-							tableVolume: '10',
-							nonPublicReason: '-',
-							openDataList: '-',
-							createdAt: '2026-02-14T00:00:00.000Z',
-							updatedAt: '2026-02-14T00:00:00.000Z'
-						}
-					],
-					lastUpdated: '2026-02-14T00:00:00.000Z',
-					totalCount: 1
-				};
-			}
-			if (type === 'column') {
-				return {
-					entries: [
-						{
-							id: 'column-1',
-							columnEnglishName: 'USER_ID',
-							dataLength: '20',
-							dataDecimalLength: '0',
-							dataFormat: '-',
-							pkInfo: '-',
-							indexName: '-',
-							indexOrder: '-',
-							akInfo: '-',
-							constraint: '-',
-							createdAt: '2026-02-14T00:00:00.000Z',
-							updatedAt: '2026-02-14T00:00:00.000Z'
-						}
-					],
-					lastUpdated: '2026-02-14T00:00:00.000Z',
-					totalCount: 1
-				};
-			}
-			return { entries: [], lastUpdated: '2026-02-14T00:00:00.000Z', totalCount: 0 };
-		});
-
 		const response = await POST(createPostEvent({ apply: true }));
 		const result = await response.json();
 
-		expect(response.status).toBe(200);
-		expect(result.success).toBe(true);
-		expect(result.data.mode).toBe('apply');
-		expect(result.data.counts.appliedTotalUpdates).toBe(2);
-		expect(loadData).toHaveBeenCalledWith('table', 'table.json');
-		expect(loadData).toHaveBeenCalledWith('column', 'column.json');
-		expect(saveData).toHaveBeenCalledTimes(2);
+		expect(response.status).toBe(410);
+		expect(result.success).toBe(false);
+		expect(result.error).toContain('/api/validation/design-relations/apply');
+		expect(buildDesignRelationSyncPlan).not.toHaveBeenCalled();
+	});
+
+	it('should reject legacy GET apply mode', async () => {
+		const response = await GET(createGetEvent({ apply: 'true' }));
+		const result = await response.json();
+
+		expect(response.status).toBe(410);
+		expect(result.success).toBe(false);
+		expect(result.data.replacement).toBe('/api/validation/design-relations/apply');
 	});
 
 	it('should return 500 on sync failure', async () => {

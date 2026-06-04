@@ -1,0 +1,281 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
+import DesignRelationValidationPanel from './DesignRelationValidationPanel.svelte';
+import type { DesignRelationValidationResult, RelationIssue } from '$lib/types/design-relation';
+
+const mockFetch = vi.fn();
+global.fetch = mockFetch;
+
+function createResponse(data: unknown, ok = true) {
+	return {
+		ok,
+		json: () => Promise.resolve(data)
+	};
+}
+
+function createIssue(overrides: Partial<RelationIssue> = {}): RelationIssue {
+	return {
+		issueId: 'issue-1',
+		relationId: 'TABLE_COLUMN_MAPPING',
+		relationName: '테이블 -> 컬럼',
+		severity: 'error',
+		sourceType: 'table',
+		targetType: 'column',
+		sourceId: 'table-1',
+		sourceLabel: '사용자',
+		targetId: 'column-1',
+		targetLabel: 'USER_NM',
+		expectedKey: '회원|public|TB_USER|사용자',
+		actualKey: '회원|public|TB_USER|고객',
+		reason: '연관 엔터티명이 테이블 정의서와 다릅니다.',
+		message: '컬럼 관계가 테이블 정의서와 일치하지 않습니다.',
+		field: 'relatedEntityName',
+		affectedRows: [],
+		manualTargets: [
+			{
+				targetType: 'column',
+				targetId: 'column-1',
+				targetLabel: 'USER_NM',
+				field: 'relatedEntityName'
+			}
+		],
+		candidates: [
+			{
+				candidateId: 'candidate-a',
+				issueId: 'issue-1',
+				targetType: 'column',
+				targetId: 'column-1',
+				targetLabel: 'USER_NM',
+				patch: {
+					targetType: 'column',
+					targetId: 'column-1',
+					fields: { relatedEntityName: '사용자' }
+				},
+				reason: '테이블 정의서 기준',
+				confidence: 'high',
+				previewText: '컬럼 정의서를 사용자로 변경합니다.',
+				autoFixable: true
+			},
+			{
+				candidateId: 'candidate-b',
+				issueId: 'issue-1',
+				targetType: 'table',
+				targetId: 'table-1',
+				targetLabel: 'TB_USER',
+				patch: {
+					targetType: 'table',
+					targetId: 'table-1',
+					fields: { relatedEntityName: '고객' }
+				},
+				reason: '컬럼 정의서 기준',
+				confidence: 'medium',
+				previewText: '테이블 정의서를 고객으로 변경합니다.',
+				autoFixable: true
+			}
+		],
+		autoFixable: true,
+		actionGuide: '후보 정의서를 선택한 뒤 미리보기 또는 자동 수정을 실행하세요.',
+		...overrides
+	};
+}
+
+function createValidation(
+	issues: RelationIssue[] = [createIssue()]
+): DesignRelationValidationResult {
+	return {
+		specs: [],
+		rules: [],
+		summaries: [
+			{
+				relationId: 'TABLE_COLUMN_MAPPING',
+				relationName: '테이블 -> 컬럼',
+				totalChecked: 1,
+				matched: 0,
+				unmatched: issues.length,
+				severity: 'error',
+				mappingKey: '주제영역+schema+테이블영문명+관련엔터티명',
+				issues
+			}
+		],
+		issues,
+		totals: {
+			totalChecked: 1,
+			matched: 0,
+			unmatched: issues.length,
+			errorCount: issues.length,
+			warningCount: 0,
+			failedCount: issues.length,
+			passedCount: 0,
+			totalIssues: issues.length,
+			autoFixableCount: issues.filter((issue) => issue.autoFixable).length
+		}
+	};
+}
+
+function renderPanel(props = {}) {
+	return render(DesignRelationValidationPanel, {
+		props: {
+			open: true,
+			definitionType: 'column',
+			currentFile: 'column-a.json',
+			validation: createValidation(),
+			...props
+		}
+	});
+}
+
+describe('DesignRelationValidationPanel', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		mockFetch.mockImplementation(async (_input: RequestInfo | URL, init?: RequestInit) => {
+			const body = JSON.parse(String(init?.body || '{}'));
+			return createResponse({
+				success: true,
+				data: {
+					issueId: body.issueId,
+					candidateId: body.candidateId,
+					patch: {
+						targetType: 'column',
+						targetId: 'column-1',
+						fields: { relatedEntityName: '사용자' }
+					},
+					previewText: `서버 미리보기: ${body.candidateId}`,
+					actionGuide: '서버 조치 가이드',
+					apply: {
+						issueId: body.issueId,
+						candidateId: body.candidateId,
+						applied: true,
+						updatedEntryId: 'column-1',
+						patch: {
+							targetType: 'column',
+							targetId: 'column-1',
+							fields: { relatedEntityName: '사용자' }
+						}
+					}
+				}
+			});
+		});
+	});
+
+	it('renders relation statistics, candidates, and manual-only guidance', () => {
+		const manualIssue = createIssue({
+			issueId: 'issue-2',
+			targetId: 'column-2',
+			targetLabel: 'ORDER_ID',
+			candidates: [
+				{
+					candidateId: 'manual-candidate',
+					issueId: 'issue-2',
+					targetType: 'column',
+					targetId: 'column-2',
+					targetLabel: 'ORDER_ID',
+					patch: {
+						targetType: 'column',
+						targetId: 'column-2',
+						fields: {}
+					},
+					reason: '수동 확인 후보',
+					confidence: 'low',
+					previewText: 'PK/FK 값을 수동 확인하세요.',
+					autoFixable: false
+				}
+			],
+			autoFixable: false
+		});
+		renderPanel({
+			validation: createValidation([createIssue(), manualIssue])
+		});
+
+		const dialog = screen.getByRole('dialog', { name: '정의서 관계 유효성 검사 결과' });
+		expect(dialog).toHaveTextContent('전체 1개 중 0개 통과, 2개 실패');
+		expect(dialog).toHaveTextContent('컬럼 정의서 · column-a.json');
+		expect(dialog).toHaveTextContent('수정 정의서 선택');
+		expect(dialog).toHaveTextContent('PK/FK 값을 수동 확인하세요.');
+
+		const manualCard = screen.getByText('ORDER_ID').closest('.rounded-lg');
+		expect(manualCard).not.toBeNull();
+		expect(
+			within(manualCard as HTMLElement).getByRole('button', { name: /수정 미리보기/ })
+		).toBeDisabled();
+		expect(
+			within(manualCard as HTMLElement).getByRole('button', { name: /자동 수정/ })
+		).toBeDisabled();
+	});
+
+	it('updates preview guide by selected candidate and calls preview endpoint', async () => {
+		renderPanel();
+
+		await fireEvent.change(screen.getByLabelText('수정 정의서 선택'), {
+			target: { value: 'candidate-b' }
+		});
+
+		expect(screen.getByText('테이블 정의서를 고객으로 변경합니다.')).toBeInTheDocument();
+		await fireEvent.click(screen.getByRole('button', { name: /수정 미리보기/ }));
+
+		await waitFor(() => {
+			expect(screen.getByText('서버 미리보기: candidate-b')).toBeInTheDocument();
+		});
+
+		expect(mockFetch).toHaveBeenCalledWith(
+			'/api/validation/design-relations/preview',
+			expect.objectContaining({
+				method: 'POST',
+				body: expect.stringContaining('"candidateId":"candidate-b"')
+			})
+		);
+		expect(mockFetch).toHaveBeenCalledWith(
+			'/api/validation/design-relations/preview',
+			expect.objectContaining({
+				body: expect.stringContaining('"scopeType":"column"')
+			})
+		);
+	});
+
+	it('emits autofix after selected candidate apply succeeds', async () => {
+		const onautofix = vi.fn();
+		renderPanel({ onautofix });
+
+		await fireEvent.change(screen.getByLabelText('수정 정의서 선택'), {
+			target: { value: 'candidate-a' }
+		});
+		await fireEvent.click(screen.getByRole('button', { name: /자동 수정/ }));
+
+		await waitFor(() => {
+			expect(onautofix).toHaveBeenCalledWith(
+				expect.objectContaining({
+					issueId: 'issue-1',
+					candidateId: 'candidate-a',
+					result: expect.objectContaining({ applied: true })
+				})
+			);
+		});
+	});
+
+	it('emits manual edit target details', async () => {
+		const onedit = vi.fn();
+		renderPanel({ onedit });
+
+		const issueCard = screen.getByText('USER_NM').closest('.rounded-lg');
+		expect(issueCard).not.toBeNull();
+		await fireEvent.click(
+			within(issueCard as HTMLElement).getByRole('button', { name: '수동 수정' })
+		);
+
+		expect(onedit).toHaveBeenCalledWith(
+			expect.objectContaining({
+				issueId: 'issue-1',
+				targetType: 'column',
+				targetId: 'column-1'
+			})
+		);
+	});
+
+	it('emits close when the dismiss control is clicked', async () => {
+		const onclose = vi.fn();
+		renderPanel({ onclose });
+
+		await fireEvent.click(screen.getByRole('button', { name: '닫기' }));
+
+		expect(onclose).toHaveBeenCalledTimes(1);
+	});
+});

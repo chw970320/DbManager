@@ -56,7 +56,7 @@ describe('API: /api/validation/report', () => {
 					}
 				});
 			}
-			if (path.includes('/api/erd/relations')) {
+			if (path.includes('/api/validation/design-relations')) {
 				return makeJsonResponse({
 					success: true,
 					data: {
@@ -87,7 +87,47 @@ describe('API: /api/validation/report', () => {
 											targetId: 'col-1',
 											targetLabel: 'USER_NAME',
 											expectedKey: 'A|B',
-											reason: '테이블 참조 누락'
+											actualKey: 'A|WRONG',
+											reason: '테이블 참조 누락',
+											field: 'tableEnglishName',
+											autoFixable: true,
+											actionGuide: '단일 후보가 있어 미리보기 후 자동 수정할 수 있습니다.',
+											manualTargets: [
+												{
+													targetType: 'column',
+													targetId: 'col-1',
+													targetLabel: 'USER_NAME',
+													field: 'tableEnglishName',
+													route: '/column/browse'
+												}
+											],
+											affectedRows: [
+												{
+													targetType: 'column',
+													targetId: 'col-1',
+													targetLabel: 'USER_NAME',
+													field: 'tableEnglishName',
+													route: '/column/browse'
+												}
+											],
+											candidates: [
+												{
+													candidateId: 'candidate-1',
+													issueId: 'issue-1',
+													targetType: 'column',
+													targetId: 'col-1',
+													targetLabel: 'USER_NAME',
+													patch: {
+														targetType: 'column',
+														targetId: 'col-1',
+														fields: { tableEnglishName: 'USER' }
+													},
+													reason: '테이블 USER 기준 후보',
+													confidence: 'high',
+													previewText: 'USER로 수정',
+													autoFixable: true
+												}
+											]
 										}
 									]
 								}
@@ -108,7 +148,12 @@ describe('API: /api/validation/report', () => {
 
 		const response = await GET(
 			createEvent({
-				searchParams: { termFile: 'term-a.json', databaseFile: 'db-a.json' },
+				searchParams: {
+					termFilename: 'term-a.json',
+					vocabularyFilename: 'vocab-a.json',
+					domainFilename: 'domain-a.json',
+					databaseFile: 'db-a.json'
+				},
 				fetchImpl: fetchMock
 			})
 		);
@@ -118,10 +163,44 @@ describe('API: /api/validation/report', () => {
 		expect(result.success).toBe(true);
 		expect(result.data.files.term).toBe('term-a.json');
 		expect(result.data.summary.totalIssues).toBe(2);
-		expect(result.data.summary.errorCount).toBe(1);
-		expect(result.data.summary.autoFixableCount).toBe(1);
-		expect(result.data.issues[0].source).toBe('relation');
-		expect(result.data.issues[1].source).toBe('term');
+		expect(result.data.summary.errorCount).toBe(0);
+		expect(result.data.summary.autoFixableCount).toBe(2);
+		const relationIssue = result.data.issues.find(
+			(issue: { source: string }) => issue.source === 'relation'
+		);
+		expect(relationIssue).toBeTruthy();
+		expect(relationIssue.level).toBe('auto-fixable');
+		expect(relationIssue.field).toBe('tableEnglishName');
+		expect(relationIssue.metadata).toMatchObject({
+			relationId: 'TABLE_COLUMN',
+			relationName: '테이블 -> 컬럼',
+			actualKey: 'A|WRONG',
+			autoFixable: true,
+			actionGuide: '단일 후보가 있어 미리보기 후 자동 수정할 수 있습니다.',
+			candidateCount: 1,
+			candidates: [
+				{
+					candidateId: 'candidate-1',
+					patch: { fields: { tableEnglishName: 'USER' } },
+					autoFixable: true
+				}
+			],
+			manualTargets: [
+				{
+					targetType: 'column',
+					targetId: 'col-1',
+					field: 'tableEnglishName'
+				}
+			]
+		});
+		expect(result.data.issues.some((issue: { source: string }) => issue.source === 'term')).toBe(
+			true
+		);
+		expect(fetchMock).toHaveBeenCalledWith(
+			expect.stringContaining(
+				'/api/validation/design-relations?vocabularyFile=vocab-a.json&domainFile=domain-a.json&termFile=term-a.json&databaseFile=db-a.json'
+			)
+		);
 	});
 
 	it('should return failure when term validation fails', async () => {
@@ -150,7 +229,7 @@ describe('API: /api/validation/report', () => {
 					data: { totalCount: 0, passedCount: 0, failedCount: 0, failedEntries: [] }
 				});
 			}
-			if (path.includes('/api/erd/relations')) {
+			if (path.includes('/api/validation/design-relations')) {
 				return makeJsonResponse({ success: false, error: 'relation failed' }, 500);
 			}
 			return makeJsonResponse({ success: false, error: 'unknown' }, 404);

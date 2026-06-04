@@ -9,6 +9,7 @@
 	import { filterColumnFiles } from '$lib/utils/file-filter';
 	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
 	import type {
+		DesignRelationCandidate,
 		DesignRelationSyncPreview,
 		DesignRelationValidationResult
 	} from '$lib/types/design-relation.js';
@@ -164,6 +165,11 @@
 			.map((table) => table.id)
 			.filter((id) => selectedTableIds.has(id))
 	);
+	let erdRelationIssues = $derived(
+		erdData?.relationValidation?.issues?.length
+			? erdData.relationValidation.issues
+			: (erdData?.relationValidation?.summaries.flatMap((summary) => summary.issues) ?? [])
+	);
 
 	function uniqueSorted(values: Array<string | undefined>): string[] {
 		return Array.from(
@@ -177,6 +183,10 @@
 				.filter((table) => !subjectArea || table.subjectArea === subjectArea)
 				.map((table) => table.schemaName)
 		);
+	}
+
+	function candidateSummary(candidate: DesignRelationCandidate): string {
+		return `${candidate.targetLabel}(${candidate.autoFixable ? '자동 수정 가능' : '수동'})`;
 	}
 
 	function pickFirstOption(options: string[], current: string): string {
@@ -208,6 +218,17 @@
 		params.set('includeExternalReferences', includeExternalReferences.toString());
 		if (options.download) params.set('download', 'true');
 		if (selectedColumnFile.trim()) params.set('columnFile', selectedColumnFile.trim());
+		for (const type of [
+			'vocabulary',
+			'domain',
+			'term',
+			'database',
+			'entity',
+			'attribute'
+		] as const) {
+			const filename = definitionMapping[type];
+			if (filename?.trim()) params.set(`${type}File`, filename.trim());
+		}
 		if (mappedTableFile?.trim()) params.set('tableFile', mappedTableFile.trim());
 		const selectedTableIdsParam = getSelectedTableIdsParam();
 		if (selectedTableIdsParam) params.set('tableIds', selectedTableIdsParam);
@@ -415,7 +436,26 @@
 		unifiedValidationLoading = true;
 		unifiedValidationError = null;
 		try {
-			const params = new URLSearchParams({ termFilename });
+			const params = new URLSearchParams({
+				termFilename,
+				termFile: termFilename,
+				scopeType: 'column',
+				scopeFile: selectedColumnFile,
+				columnFile: selectedColumnFile
+			});
+			for (const type of [
+				'vocabulary',
+				'domain',
+				'database',
+				'entity',
+				'attribute',
+				'table'
+			] as const) {
+				const filename = definitionMapping[type];
+				if (filename) {
+					params.set(`${type}File`, filename);
+				}
+			}
 			const response = await fetch(`/api/validation/report?${params.toString()}`);
 			const result: DbDesignApiResponse<{
 				summary: Omit<UnifiedValidationSummary, 'termPassedCount' | 'termTotalCount'>;
@@ -463,15 +503,18 @@
 			const result: DbDesignApiResponse<RelationSyncResult> = await response.json();
 
 			if (!result.success || !result.data) {
-				relationSyncError = result.error || '관계 보정 미리보기 실행 중 오류가 발생했습니다.';
+				relationSyncError =
+					result.error || '레거시 관계 동기화 미리보기 실행 중 오류가 발생했습니다.';
 				return;
 			}
 
 			relationSyncResult = result.data;
 		} catch (err) {
-			console.error('관계 보정 미리보기 오류:', err);
+			console.error('레거시 관계 동기화 미리보기 오류:', err);
 			relationSyncError =
-				err instanceof Error ? err.message : '관계 보정 미리보기 실행 중 오류가 발생했습니다.';
+				err instanceof Error
+					? err.message
+					: '레거시 관계 동기화 미리보기 실행 중 오류가 발생했습니다.';
 		} finally {
 			relationSyncLoading = false;
 		}
@@ -853,9 +896,13 @@
 						disabled={relationSyncLoading}
 						class="rounded border border-amber-300 bg-white px-2 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
 					>
-						{relationSyncLoading ? '확인 중...' : '보정 미리보기'}
+						{relationSyncLoading ? '확인 중...' : '레거시 동기화 미리보기'}
 					</button>
 				</div>
+				<p class="mb-3 text-xs text-gray-500">
+					자동 수정은 DB/엔터티/속성/테이블/컬럼 정의서의 유효성 검사 패널에서 후보를 선택해
+					실행합니다. ERD에서는 같은 미매칭·후보·조치 정보를 조회용으로 표시합니다.
+				</p>
 				<div class="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3 lg:grid-cols-6">
 					<div class="rounded-lg border border-blue-200 bg-blue-50 p-2 text-center">
 						<div class="font-bold text-blue-700">{stats.databases}</div>
@@ -885,12 +932,46 @@
 
 				{#if erdData.relationValidation}
 					<div
-						class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800"
+						class="mt-3 space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800"
 					>
-						5개 정의서 정합성: 검사 {erdData.relationValidation.totals.totalChecked}건 · 매칭
-						{erdData.relationValidation.totals.matched}건 · 오류
-						{erdData.relationValidation.totals.errorCount}건 · 경고
-						{erdData.relationValidation.totals.warningCount}건
+						<div>
+							<p class="font-semibold text-amber-900">정의서 관계 유효성 검사</p>
+							<p class="mt-1">
+								검사 {erdData.relationValidation.totals.totalChecked}건 · 매칭
+								{erdData.relationValidation.totals.matched}건 · 미매칭
+								{erdData.relationValidation.totals.unmatched}건 · 오류
+								{erdData.relationValidation.totals.errorCount}건 · 경고
+								{erdData.relationValidation.totals.warningCount}건
+							</p>
+						</div>
+
+						{#if erdRelationIssues.length > 0}
+							<div class="space-y-2" aria-label="ERD 정의서 관계 미매칭 상세">
+								{#each erdRelationIssues.slice(0, 5) as issue (issue.issueId)}
+									<div class="rounded border border-amber-200 bg-white/80 px-3 py-2">
+										<div class="flex flex-wrap items-center gap-2">
+											<span class="font-medium text-amber-950">{issue.relationName}</span>
+											<span class="rounded-full bg-amber-100 px-2 py-0.5 text-amber-800">
+												{issue.targetLabel}
+											</span>
+											<span class="text-amber-700">
+												후보 {issue.candidates.length}건
+											</span>
+										</div>
+										<p class="mt-1 text-amber-800">{issue.reason}</p>
+										<p class="mt-1 text-amber-700">
+											미리보기:
+											{#if issue.candidates.length > 0}
+												{issue.candidates.slice(0, 2).map(candidateSummary).join(' / ')}
+											{:else}
+												자동 수정 후보 없음 · 수동 수정만 가능
+											{/if}
+										</p>
+										<p class="mt-1 text-amber-700">조치 가이드: {issue.actionGuide}</p>
+									</div>
+								{/each}
+							</div>
+						{/if}
 					</div>
 				{/if}
 
@@ -903,7 +984,8 @@
 					<div
 						class="mt-3 rounded border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800"
 					>
-						최근 동기화 결과: 후보 테이블 {relationSyncResult.counts.tableCandidates}건 · 후보 컬럼
+						최근 레거시 동기화 미리보기: 후보 테이블 {relationSyncResult.counts.tableCandidates}건 ·
+						후보 컬럼
 						{relationSyncResult.counts.columnCandidates}건 · 추천
 						{relationSyncResult.counts.attributeColumnSuggestions}건
 					</div>

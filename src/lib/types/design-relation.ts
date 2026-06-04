@@ -1,39 +1,93 @@
 import type { DataType } from './base.js';
 
-export type DesignRelationId =
-	| 'DB_ENTITY'
-	| 'DB_TABLE'
-	| 'ENTITY_ATTRIBUTE'
-	| 'ENTITY_TABLE'
-	| 'TABLE_COLUMN'
-	| 'ATTRIBUTE_COLUMN';
+export type DesignRelationRuleId =
+	| 'DATABASE_ENTITY_LOGICAL_DB'
+	| 'ENTITY_ATTRIBUTE_PRIMARY'
+	| 'ENTITY_TABLE_MAPPING'
+	| 'TABLE_COLUMN_MAPPING'
+	| 'ATTRIBUTE_COLUMN_KEY'
+	| 'STANDARD_REFERENCES';
+
+/**
+ * Backward-compatible exported name for callers that previously imported
+ * DesignRelationId. The canonical ids now follow the deep-interview contract.
+ */
+export type DesignRelationId = DesignRelationRuleId;
 
 export type RelationSeverity = 'error' | 'warning';
+export type RelationCardinality = '1:1' | '1:N' | 'N:1' | 'N:N';
+export type RelationAutoFixPolicy = 'single_or_selected' | 'manual_only';
+export type RelationConfidence = 'high' | 'medium' | 'low';
 
 export interface RelationSpec {
-	id: DesignRelationId;
+	id: DesignRelationRuleId;
 	name: string;
 	sourceType: DataType;
 	targetType: DataType;
 	mappingKey: string;
-	cardinality: '1:1' | '1:N' | 'N:1' | 'N:N';
+	cardinality: RelationCardinality;
 	severity: RelationSeverity;
 	description: string;
+	autoFixPolicy: RelationAutoFixPolicy;
 }
 
-export interface RelationIssue {
-	relationId: DesignRelationId;
-	severity: RelationSeverity;
-	sourceType: DataType;
+export type DesignRelationRule = RelationSpec;
+
+export interface DesignRelationPatch {
+	targetType: DataType;
+	targetId: string;
+	fields: Record<string, string | null>;
+}
+
+export interface DesignRelationManualTarget {
 	targetType: DataType;
 	targetId: string;
 	targetLabel: string;
-	expectedKey: string;
-	reason: string;
+	field?: string;
+	file?: string | null;
+	route?: string;
 }
 
+export interface DesignRelationCandidate {
+	candidateId: string;
+	issueId: string;
+	targetType: DataType;
+	targetId: string;
+	targetLabel: string;
+	patch: DesignRelationPatch;
+	reason: string;
+	confidence: RelationConfidence;
+	previewText: string;
+	autoFixable: boolean;
+}
+
+export interface RelationIssue {
+	issueId: string;
+	relationId: DesignRelationRuleId;
+	relationName: string;
+	severity: RelationSeverity;
+	sourceType: DataType;
+	targetType: DataType;
+	sourceId?: string;
+	sourceLabel?: string;
+	targetId: string;
+	targetLabel: string;
+	expectedKey: string;
+	actualKey?: string;
+	reason: string;
+	message: string;
+	field?: string;
+	affectedRows: DesignRelationManualTarget[];
+	manualTargets: DesignRelationManualTarget[];
+	candidates: DesignRelationCandidate[];
+	autoFixable: boolean;
+	actionGuide: string;
+}
+
+export type DesignRelationIssue = RelationIssue;
+
 export interface RelationValidationSummary {
-	relationId: DesignRelationId;
+	relationId: DesignRelationRuleId;
 	relationName: string;
 	totalChecked: number;
 	matched: number;
@@ -45,14 +99,37 @@ export interface RelationValidationSummary {
 
 export interface DesignRelationValidationResult {
 	specs: RelationSpec[];
+	rules: DesignRelationRule[];
 	summaries: RelationValidationSummary[];
+	issues: RelationIssue[];
 	totals: {
 		totalChecked: number;
 		matched: number;
 		unmatched: number;
 		errorCount: number;
 		warningCount: number;
+		failedCount?: number;
+		passedCount?: number;
+		totalIssues?: number;
+		autoFixableCount?: number;
 	};
+}
+
+export interface DesignRelationCorrectionPreview {
+	issueId: string;
+	candidateId: string;
+	patch: DesignRelationPatch;
+	previewText: string;
+	actionGuide: string;
+}
+
+export interface DesignRelationApplyResult {
+	issueId: string;
+	candidateId: string;
+	applied: boolean;
+	patch: DesignRelationPatch;
+	updatedEntryId: string;
+	validation?: DesignRelationValidationResult;
 }
 
 export interface RelationSyncChange {

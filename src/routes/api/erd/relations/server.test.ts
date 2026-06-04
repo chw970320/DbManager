@@ -1,18 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GET } from './+server';
 import type { RequestEvent } from '@sveltejs/kit';
+import { runDesignRelationValidation } from '$lib/utils/design-relation-service.js';
 
-vi.mock('$lib/registry/data-registry', () => ({
-	listFiles: vi.fn(),
-	loadData: vi.fn()
+vi.mock('$lib/utils/design-relation-service.js', () => ({
+	runDesignRelationValidation: vi.fn(),
+	relationApiErrorStatus: vi.fn((error: unknown) =>
+		error && typeof error === 'object' && 'status' in error ? Number(error.status) : 500
+	)
 }));
-
-vi.mock('$lib/utils/design-relation-validator.js', () => ({
-	validateDesignRelations: vi.fn()
-}));
-
-import { listFiles, loadData } from '$lib/registry/data-registry';
-import { validateDesignRelations } from '$lib/utils/design-relation-validator.js';
 
 function createMockRequestEvent(options: { searchParams?: Record<string, string> }): RequestEvent {
 	const url = new URL('http://localhost/api/erd/relations');
@@ -28,72 +24,90 @@ describe('API: /api/erd/relations', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 
-		vi.mocked(listFiles).mockImplementation(async (type: string) => {
-			if (type === 'database') return ['database.json'];
-			if (type === 'entity') return ['entity.json'];
-			if (type === 'attribute') return ['attribute.json'];
-			if (type === 'table') return ['table.json'];
-			if (type === 'column') return ['column.json'];
-			return [];
-		});
-
-		vi.mocked(loadData).mockResolvedValue({
-			entries: [],
-			lastUpdated: '2026-02-14T00:00:00.000Z',
-			totalCount: 0
-		});
-
-		vi.mocked(validateDesignRelations).mockReturnValue({
-			specs: [],
-			summaries: [],
-			totals: {
-				totalChecked: 0,
-				matched: 0,
-				unmatched: 0,
-				errorCount: 0,
-				warningCount: 0
+		vi.mocked(runDesignRelationValidation).mockResolvedValue({
+			files: { database: 'database.json' },
+			sources: {
+				vocabulary: 'missing',
+				domain: 'missing',
+				term: 'missing',
+				database: 'default',
+				entity: 'default',
+				attribute: 'default',
+				table: 'default',
+				column: 'default'
+			},
+			validation: {
+				specs: [],
+				rules: [],
+				summaries: [],
+				issues: [],
+				totals: {
+					totalChecked: 0,
+					matched: 0,
+					unmatched: 0,
+					errorCount: 0,
+					warningCount: 0
+				}
 			}
 		});
 	});
 
-	it('should return relation validation result', async () => {
+	it('should return relation validation result through canonical service', async () => {
 		const response = await GET(createMockRequestEvent({}));
 		const result = await response.json();
 
 		expect(response.status).toBe(200);
 		expect(result.success).toBe(true);
 		expect(result.data.files.database).toBe('database.json');
-		expect(validateDesignRelations).toHaveBeenCalledTimes(1);
+		expect(runDesignRelationValidation).toHaveBeenCalledWith(
+			expect.any(Object),
+			expect.objectContaining({ requireStandardReferences: false })
+		);
 	});
 
-	it('should use explicit file parameters when provided', async () => {
+	it('should pass explicit 8-type file parameters to canonical service', async () => {
 		await GET(
 			createMockRequestEvent({
 				searchParams: {
+					vocabularyFile: 'vocab-x.json',
+					domainFile: 'domain-x.json',
+					termFile: 'term-x.json',
 					databaseFile: 'db-x.json',
 					entityFile: 'entity-x.json',
 					attributeFile: 'attribute-x.json',
 					tableFile: 'table-x.json',
-					columnFile: 'column-x.json'
+					columnFile: 'column-x.json',
+					scopeType: 'column',
+					scopeFile: 'column-x.json'
 				}
 			})
 		);
 
-		expect(loadData).toHaveBeenCalledWith('database', 'db-x.json');
-		expect(loadData).toHaveBeenCalledWith('entity', 'entity-x.json');
-		expect(loadData).toHaveBeenCalledWith('attribute', 'attribute-x.json');
-		expect(loadData).toHaveBeenCalledWith('table', 'table-x.json');
-		expect(loadData).toHaveBeenCalledWith('column', 'column-x.json');
+		expect(runDesignRelationValidation).toHaveBeenCalledWith(
+			expect.objectContaining({
+				vocabularyFile: 'vocab-x.json',
+				domainFile: 'domain-x.json',
+				termFile: 'term-x.json',
+				databaseFile: 'db-x.json',
+				entityFile: 'entity-x.json',
+				attributeFile: 'attribute-x.json',
+				tableFile: 'table-x.json',
+				columnFile: 'column-x.json',
+				scopeType: 'column',
+				scopeFile: 'column-x.json'
+			}),
+			expect.objectContaining({ requireStandardReferences: false })
+		);
 	});
 
-	it('should return 500 on load error', async () => {
-		vi.mocked(loadData).mockRejectedValue(new Error('failed'));
+	it('should return 500 on canonical service error', async () => {
+		vi.mocked(runDesignRelationValidation).mockRejectedValue(new Error('failed'));
 
 		const response = await GET(createMockRequestEvent({}));
 		const result = await response.json();
 
 		expect(response.status).toBe(500);
 		expect(result.success).toBe(false);
-		expect(result.error).toBeDefined();
+		expect(result.error).toContain('failed');
 	});
 });

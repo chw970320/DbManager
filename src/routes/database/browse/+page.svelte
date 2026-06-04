@@ -11,11 +11,17 @@
 	import Icon from '$lib/components/Icon.svelte';
 	import BentoGrid from '$lib/components/BentoGrid.svelte';
 	import BentoCard from '$lib/components/BentoCard.svelte';
+	import DesignRelationValidationPanel from '$lib/components/DesignRelationValidationPanel.svelte';
 	import type { DatabaseEntry, DbDesignApiResponse } from '$lib/types/database-design.js';
 	import { databaseDataStore as databaseStore } from '$lib/stores/unified-store';
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { filterDatabaseFiles } from '$lib/utils/file-filter';
 	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
+	import type { DataType } from '$lib/types/base.js';
+	import type {
+		DesignRelationManualTarget,
+		DesignRelationValidationResult
+	} from '$lib/types/design-relation.js';
 
 	// 이벤트 상세 타입 정의
 	type SearchDetail = { query: string; field: string; exact: boolean };
@@ -47,6 +53,12 @@
 	let editorServerError = $state('');
 	let isFileManagerOpen = $state(false);
 	let currentEditingEntry = $state<DatabaseEntry | null>(null);
+
+	const RELATION_SCOPE_TYPE = 'database' as const satisfies DataType;
+	let showRelationValidationPanel = $state(false);
+	let relationValidationLoading = $state(false);
+	let relationValidationError = $state('');
+	let relationValidation = $state<DesignRelationValidationResult | null>(null);
 
 	let unsubscribe: () => void;
 	let settingsUnsubscribe: () => void;
@@ -465,6 +477,60 @@
 			loading = false;
 		}
 	}
+	async function handleValidateDesignRelations() {
+		relationValidationLoading = true;
+		showRelationValidationPanel = true;
+		relationValidationError = '';
+		relationValidation = null;
+		try {
+			const params = new URLSearchParams({
+				scopeType: RELATION_SCOPE_TYPE,
+				scopeFile: selectedFilename,
+				[`${RELATION_SCOPE_TYPE}File`]: selectedFilename
+			});
+			const response = await fetch(`/api/validation/design-relations?${params.toString()}`);
+			const result: DbDesignApiResponse = await response.json();
+			if (!response.ok || !result.success || !result.data) {
+				throw new Error(result.error || '정의서 관계 유효성 검사에 실패했습니다.');
+			}
+			relationValidation = (
+				result.data as {
+					validation: DesignRelationValidationResult;
+				}
+			).validation;
+		} catch (error) {
+			console.error('정의서 관계 유효성 검사 오류:', error);
+			relationValidationError =
+				error instanceof Error ? error.message : '정의서 관계 유효성 검사 중 오류가 발생했습니다.';
+		} finally {
+			relationValidationLoading = false;
+		}
+	}
+
+	function handleRelationValidationEdit(
+		event: CustomEvent<DesignRelationManualTarget & { issueId: string }>
+	) {
+		const target = event.detail;
+		if (target.targetType !== RELATION_SCOPE_TYPE) {
+			relationValidationError = `${target.targetLabel}은(는) ${target.targetType} 정의서에서 수정하세요.`;
+			return;
+		}
+
+		const targetEntry = entries.find((entry) => entry.id === target.targetId);
+		if (!targetEntry) {
+			relationValidationError = '현재 페이지에서 수정 대상 항목을 찾을 수 없습니다.';
+			return;
+		}
+
+		currentEditingEntry = targetEntry;
+		editorServerError = '';
+		showEditor = true;
+	}
+
+	async function handleRelationValidationAutoFix() {
+		await loadPageData(selectedFilename);
+		await handleValidateDesignRelations();
+	}
 </script>
 
 <svelte:head>
@@ -551,6 +617,15 @@
 		</button>
 		<button
 			type="button"
+			onclick={handleValidateDesignRelations}
+			disabled={loading || relationValidationLoading}
+			class="btn btn-outline rounded-xl px-6 py-3"
+		>
+			<Icon name={relationValidationLoading ? 'spinner' : 'check-circle'} size="sm" />
+			<span>{relationValidationLoading ? '검사 중' : '유효성 검사'}</span>
+		</button>
+		<button
+			type="button"
 			onclick={handleDownload}
 			disabled={loading}
 			class="btn btn-outline rounded-xl px-6 py-3"
@@ -578,6 +653,20 @@
 	{sidebar}
 	{actions}
 >
+	{#if showRelationValidationPanel}
+		<DesignRelationValidationPanel
+			validation={relationValidation}
+			definitionType={RELATION_SCOPE_TYPE}
+			currentFile={selectedFilename}
+			loading={relationValidationLoading}
+			open={showRelationValidationPanel}
+			error={relationValidationError}
+			on:close={() => (showRelationValidationPanel = false)}
+			on:edit={handleRelationValidationEdit}
+			on:autofix={handleRelationValidationAutoFix}
+		/>
+	{/if}
+
 	<DatabaseFileManager
 		isOpen={isFileManagerOpen}
 		currentFilename={selectedFilename}

@@ -11,7 +11,60 @@ type ERDViewerTestData = ERDData & {
 function createRelationValidation(): DesignRelationValidationResult {
 	return {
 		specs: [],
-		summaries: [],
+		rules: [],
+		summaries: [
+			{
+				relationId: 'TABLE_COLUMN_MAPPING',
+				relationName: '테이블 -> 컬럼',
+				totalChecked: 1,
+				matched: 0,
+				unmatched: 1,
+				severity: 'error',
+				mappingKey: '주제영역+schema+테이블영문명+관련엔터티명',
+				issues: [
+					{
+						issueId: 'issue-1',
+						relationId: 'TABLE_COLUMN_MAPPING',
+						relationName: '테이블 -> 컬럼',
+						severity: 'error',
+						sourceType: 'table',
+						targetType: 'column',
+						sourceId: 'table-1',
+						sourceLabel: '사용자',
+						targetId: 'column-1',
+						targetLabel: 'USER_NM',
+						expectedKey: '회원|public|TB_USER|사용자',
+						actualKey: '회원|public|TB_USER|고객',
+						reason: '연관 엔터티명이 테이블 정의서와 다릅니다.',
+						message: '컬럼 관계가 테이블 정의서와 일치하지 않습니다.',
+						field: 'relatedEntityName',
+						affectedRows: [],
+						manualTargets: [],
+						candidates: [
+							{
+								candidateId: 'candidate-1',
+								issueId: 'issue-1',
+								targetType: 'column',
+								targetId: 'column-1',
+								targetLabel: 'USER_NM',
+								patch: {
+									targetType: 'column',
+									targetId: 'column-1',
+									fields: { relatedEntityName: '사용자' }
+								},
+								reason: '테이블 정의서 기준',
+								confidence: 'high',
+								previewText: '컬럼 정의서를 사용자로 변경합니다.',
+								autoFixable: true
+							}
+						],
+						autoFixable: true,
+						actionGuide: '후보를 선택해 컬럼 정의서를 자동 수정하거나 수동 수정하세요.'
+					}
+				]
+			}
+		],
+		issues: [],
 		totals: {
 			totalChecked: 8,
 			matched: 5,
@@ -137,6 +190,10 @@ describe('ERDViewer', () => {
 		expect(screen.getByText(/탐색: 맞춤\/100%\/확대\/축소\/드래그\/휠로 이동/)).toBeInTheDocument();
 		expect(screen.getByText(/안전 렌더링: 허용된 ERD 이미지 URL만 표시합니다/)).toBeInTheDocument();
 		expect(screen.getByText(/관계 검증: 미매칭 3건 · 오류\s*2건 · 경고\s*1건/)).toBeInTheDocument();
+		expect(screen.getByLabelText('ERD 관계 검증 이슈')).toBeInTheDocument();
+		expect(screen.getByText(/테이블 -> 컬럼 · USER_NM/)).toBeInTheDocument();
+		expect(screen.getByText(/후보 1건.*USER_NM · 자동 수정 가능/)).toBeInTheDocument();
+		expect(screen.getByText(/조치: 후보를 선택해 컬럼 정의서를 자동 수정/)).toBeInTheDocument();
 	});
 
 	it('큰 ERD 그래프에는 확대/이동 탐색 힌트를 우선 표시한다', async () => {

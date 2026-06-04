@@ -49,7 +49,7 @@ describe('Integration: validation/report (8-model reference flow)', () => {
 					}
 				});
 			}
-			if (path.includes('/api/erd/relations')) {
+			if (path.includes('/api/validation/design-relations')) {
 				return jsonResponse({
 					success: true,
 					data: {
@@ -64,7 +64,7 @@ describe('Integration: validation/report (8-model reference flow)', () => {
 							specs: [],
 							summaries: [
 								{
-									relationId: 'TABLE_COLUMN',
+									relationId: 'TABLE_COLUMN_MAPPING',
 									relationName: '테이블 -> 컬럼',
 									totalChecked: 3,
 									matched: 2,
@@ -73,14 +73,22 @@ describe('Integration: validation/report (8-model reference flow)', () => {
 									mappingKey: 'schema+table',
 									issues: [
 										{
-											relationId: 'TABLE_COLUMN',
+											issueId: 'issue-1',
+											relationId: 'TABLE_COLUMN_MAPPING',
+											relationName: '테이블 -> 컬럼',
 											severity: 'error',
 											sourceType: 'table',
 											targetType: 'column',
 											targetId: 'col-1',
 											targetLabel: 'NO_TERM',
 											expectedKey: 'A|B',
-											reason: '참조 누락'
+											reason: '참조 누락',
+											message: '참조 누락',
+											affectedRows: [],
+											manualTargets: [],
+											candidates: [],
+											autoFixable: false,
+											actionGuide: '수동 수정하세요.'
 										}
 									]
 								}

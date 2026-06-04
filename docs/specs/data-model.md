@@ -62,31 +62,48 @@
 
 ---
 
-## 5개 정의서 관계 정합성/동기화 (2026-02-14)
+## 5개 정의서 관계 정합성/후보 수정 (2026-06-04)
 
 ### 관계 정합성 진단
 
-- API: `GET /api/erd/relations`
-- 대상: `database/entity/attribute/table/column`
+- 정본 API: `GET /api/validation/design-relations`
+- 호환 API: `GET /api/erd/relations` (STANDARD_REFERENCES 파일 누락 시 fail-fast하지 않는 ERD 호환용)
+- 대상 파일: `vocabulary/domain/term/database/entity/attribute/table/column` 8종 공통 파일 매핑 번들
+- canonical 관계:
+  - `DATABASE_ENTITY_LOGICAL_DB`: `DatabaseEntry.logicalDbName` ↔ `EntityEntry.logicalDbName`
+  - `ENTITY_ATTRIBUTE_PRIMARY`: `EntityEntry(schemaName, entityName, primaryIdentifier)` ↔ `AttributeEntry(schemaName, entityName, attributeName)`
+  - `ENTITY_TABLE_MAPPING`: `EntityEntry(schemaName, tableKoreanName, entityName)` ↔ `TableEntry(schemaName, tableKoreanName, relatedEntityName)`
+  - `TABLE_COLUMN_MAPPING`: `TableEntry(subjectArea, schemaName, tableEnglishName, relatedEntityName)` ↔ `ColumnEntry(subjectArea, schemaName, tableEnglishName, relatedEntityName)`
+  - `ATTRIBUTE_COLUMN_KEY`: `AttributeEntry(attributeName, required, reference entity+attribute)` ↔ `ColumnEntry(columnKoreanName, pkInfo, fkInfo)`
+  - `STANDARD_REFERENCES`: 테이블 한글/영문명 ↔ 단어집, 컬럼 한글/영문명 ↔ 용어집, 컬럼 도메인명 ↔ 용어 도메인명
 - 결과:
   - 관계별 `matched/unmatched`
-  - `error/warning` 집계
-  - 이슈 샘플(`targetId`, `expectedKey`, `reason`)
+  - `error/warning/autoFixable` 집계
+  - `issues[]`: `issueId`, `targetType`, `targetId`, `expectedKey`, `actualKey`, `reason`, `manualTargets`, `candidates`, `actionGuide`
+- 표준 참조 파일 로딩 정책:
+  - 정본 관계 검증은 8종 파일명이 모두 해석되어야 하며, `vocabulary/domain/term` 파일이 없거나 손상되었거나 `entries` 배열을 읽을 수 없으면 400으로 fail-fast합니다.
+  - 통합 validation report의 relation 이슈도 `autoFixable`, `candidates`, `manualTargets`, `actionGuide` 메타데이터를 유지해 정의서 패널/ERD와 같은 후보 수정 정보를 노출합니다.
 
-### 관계 자동보정
+### 후보 선택 수정
 
-- API: `GET/POST /api/erd/relations/sync`
-- 보정 범위:
-  - `Entity -> Table`: `relatedEntityName`
-  - `Table -> Column`: `schemaName`, `tableEnglishName`, `relatedEntityName`
-  - `Attribute -> Column`: 자동 수정 없이 추천 후보 제공
+- 미리보기 API: `POST /api/validation/design-relations/preview`
+- 적용 API: `POST /api/validation/design-relations/apply`
+- 후보 정책:
+  - 후보 없음: `manualTargets` 기준 수동 수정만 허용
+  - 단일 후보: `candidateId` 생략 가능
+  - 복수 후보: 사용자가 선택한 `candidateId`가 필수
+  - `autoFixable=false`: 자동 적용 금지, 수동 수정만 허용
+- 적용 범위:
+  - 선택한 후보의 `patch.targetType`, `patch.targetId`, `patch.fields`만 대상 파일에 저장합니다.
+  - 저장 시 대상 엔트리 `updatedAt`, 데이터 컨테이너 `lastUpdated`, `totalCount`를 갱신합니다.
+- `GET/POST /api/erd/relations/sync`는 레거시 동기화 미리보기 API로만 남아 있으며, `apply=true`는 후보 선택 없이 대량 수정하던 legacy 동작이므로 410으로 거부됩니다.
 
 ### 충돌 정책
 
-- 관계 동기화와 컬럼 동기화(`POST /api/column/sync-term`)의 필드 소유권은 다음 순서를 따른다.
-  - 관계 동기화: `Entity -> Table`의 `relatedEntityName`, `Table -> Column`의 `schemaName`, `tableEnglishName`, `relatedEntityName`을 소유한다.
+- 관계 후보 수정과 컬럼 동기화(`POST /api/column/sync-term`)의 필드 소유권은 다음 순서를 따른다.
+  - 관계 후보 수정: 선택 후보의 `patch.fields`만 소유한다.
   - 컬럼-용어 동기화: 컬럼의 표준 용어/도메인 추천과 적용 흐름을 소유한다.
-  - 동일 필드를 두 동기화가 동시에 수정해야 할 때는 관계 동기화 결과를 먼저 확정한 뒤 컬럼-용어 동기화를 실행한다.
+  - 동일 필드를 두 흐름이 동시에 수정해야 할 때는 관계 후보 수정 결과를 먼저 확정한 뒤 컬럼-용어 동기화를 실행한다.
 
 ---
 

@@ -9,6 +9,7 @@ export type ErdFileContextInput = {
 	tableFile?: string | null;
 	columnFile?: string | null;
 	domainFile?: string | null;
+	termFile?: string | null;
 	vocabularyFile?: string | null;
 };
 
@@ -20,6 +21,7 @@ export type ResolvedErdFileContext = {
 		tableFile?: string;
 		columnFile?: string;
 		domainFile?: string;
+		termFile?: string;
 		vocabularyFile?: string;
 	};
 	mappingBundle?: DbDesignMappingBundle;
@@ -52,6 +54,7 @@ export function getErdFileContextInputFromUrl(
 			(options.legacyFilenameAsTableFile ? url.searchParams.get('filename') : null),
 		columnFile: url.searchParams.get('columnFile'),
 		domainFile: url.searchParams.get('domainFile'),
+		termFile: url.searchParams.get('termFile'),
 		vocabularyFile: url.searchParams.get('vocabularyFile')
 	};
 }
@@ -67,6 +70,7 @@ export async function resolveErdFileContext(
 		tableFile: normalizeFilename(input.tableFile),
 		columnFile,
 		domainFile: normalizeFilename(input.domainFile),
+		termFile: normalizeFilename(input.termFile),
 		vocabularyFile: normalizeFilename(input.vocabularyFile)
 	};
 
@@ -85,6 +89,7 @@ export async function resolveErdFileContext(
 		tableFile: pickExplicitOrMapped(input.tableFile, mappingBundle.table),
 		columnFile,
 		domainFile: pickExplicitOrMapped(input.domainFile, mappingBundle.domain),
+		termFile: pickExplicitOrMapped(input.termFile, mappingBundle.term),
 		vocabularyFile: pickExplicitOrMapped(input.vocabularyFile, mappingBundle.vocabulary)
 	};
 

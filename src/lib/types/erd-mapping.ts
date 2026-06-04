@@ -10,6 +10,8 @@ import type {
 	ColumnEntry
 } from './database-design.js';
 import type { DomainEntry } from './domain.js';
+import type { TermEntry } from './term.js';
+import type { VocabularyEntry } from './vocabulary.js';
 
 // ============================================================================
 // 계층 구분
@@ -347,9 +349,11 @@ export interface MappingContext {
 	tables: TableEntry[];
 	columns: ColumnEntry[];
 	domains: DomainEntry[];
+	terms?: TermEntry[];
+	vocabularies?: VocabularyEntry[];
 	vocabularyMap?: Map<
 		string,
-		{ standardName: string; abbreviation: string; domainCategory?: string }
+		{ standardName: string; abbreviation: string; englishName?: string; domainCategory?: string }
 	>;
 	domainMap?: Map<string, DomainEntry>;
 }

@@ -81,8 +81,8 @@ import {
  */
 
 import { generateERDData } from '$lib/utils/erd-generator.js';
-import { validateDesignRelations } from '$lib/utils/design-relation-validator.js';
 import { loadDesignRelationContext } from '$lib/utils/design-relation-context.js';
+import { validateLoadedDesignRelationContext } from '$lib/utils/design-relation-service.js';
 import {
 	getErdFileContextInputFromUrl,
 	resolveErdFileContext
@@ -153,17 +153,20 @@ export async function GET({ url }: RequestEvent) {
 			tableFile,
 			columnFile,
 			domainFile,
+			termFile,
 			vocabularyFile
 		} = fileContext.files;
-		const { context } = await loadDesignRelationContext({
+		const { context, standardReferences } = await loadDesignRelationContext({
 			databaseFile,
 			entityFile,
 			attributeFile,
 			tableFile,
 			columnFile,
 			domainFile,
+			termFile,
 			vocabularyFile,
 			includeDomain: true,
+			includeTerm: Boolean(termFile),
 			includeVocabularyMap: true,
 			fallbackToFirstWhenMissing: !fileContext.hasExplicitFile
 		});
@@ -172,7 +175,7 @@ export async function GET({ url }: RequestEvent) {
 
 		// ERD 데이터 생성
 		const erdData = generateERDData(context, filterOptions);
-		const relationValidation = validateDesignRelations(context);
+		const relationValidation = validateLoadedDesignRelationContext(context, standardReferences);
 
 		return json(
 			{

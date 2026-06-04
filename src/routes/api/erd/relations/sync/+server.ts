@@ -1,6 +1,4 @@
 import { json, type RequestEvent } from '@sveltejs/kit';
-import { loadData, saveData } from '$lib/registry/data-registry.js';
-import type { ColumnData, TableData } from '$lib/types/database-design.js';
 import {
 	loadDesignRelationContext,
 	pickDefinitionFileFromUrl,
@@ -28,67 +26,6 @@ type RelationSyncParams = {
 	columnFile?: string;
 };
 
-function applyTablePatches(
-	tableData: TableData,
-	updates: Map<string, { relatedEntityName?: string }>,
-	now: string
-): { data: TableData; updatedCount: number } {
-	let updatedCount = 0;
-	const nextEntries = tableData.entries.map((entry) => {
-		const patch = updates.get(entry.id);
-		if (!patch) return entry;
-
-		updatedCount += 1;
-		return {
-			...entry,
-			...patch,
-			updatedAt: now
-		};
-	});
-
-	return {
-		data: {
-			...tableData,
-			entries: nextEntries,
-			lastUpdated: now,
-			totalCount: nextEntries.length
-		},
-		updatedCount
-	};
-}
-
-function applyColumnPatches(
-	columnData: ColumnData,
-	updates: Map<
-		string,
-		{ schemaName?: string; tableEnglishName?: string; relatedEntityName?: string }
-	>,
-	now: string
-): { data: ColumnData; updatedCount: number } {
-	let updatedCount = 0;
-	const nextEntries = columnData.entries.map((entry) => {
-		const patch = updates.get(entry.id);
-		if (!patch) return entry;
-
-		updatedCount += 1;
-		return {
-			...entry,
-			...patch,
-			updatedAt: now
-		};
-	});
-
-	return {
-		data: {
-			...columnData,
-			entries: nextEntries,
-			lastUpdated: now,
-			totalCount: nextEntries.length
-		},
-		updatedCount
-	};
-}
-
 async function runRelationSync(params: RelationSyncParams) {
 	const fileContext = await resolveErdFileContext(params);
 	const { context, files } = await loadDesignRelationContext({
@@ -102,58 +39,24 @@ async function runRelationSync(params: RelationSyncParams) {
 		fallbackToFirstWhenMissing: !fileContext.hasExplicitFile
 	});
 
-	const validationBefore = validateDesignRelations(context);
+	const validationBefore = validateDesignRelations(context, { includeStandardReferences: false });
 	const syncPlan = buildDesignRelationSyncPlan(context);
 
-	let updatedTableEntries = context.tables;
-	let updatedColumnEntries = context.columns;
-	let appliedTableUpdates = 0;
-	let appliedColumnUpdates = 0;
-
-	if (params.apply) {
-		const now = new Date().toISOString();
-
-		if (files.table && syncPlan.tableUpdates.length > 0) {
-			const tableData = (await loadData('table', files.table)) as TableData;
-			const updateMap = new Map(syncPlan.tableUpdates.map((update) => [update.id, update.patch]));
-			const { data: updatedTableData, updatedCount } = applyTablePatches(tableData, updateMap, now);
-			if (updatedCount > 0) {
-				await saveData('table', updatedTableData, files.table);
-				appliedTableUpdates = updatedCount;
-			}
-			updatedTableEntries = updatedTableData.entries;
-		}
-
-		if (files.column && syncPlan.columnUpdates.length > 0) {
-			const columnData = (await loadData('column', files.column)) as ColumnData;
-			const updateMap = new Map(syncPlan.columnUpdates.map((update) => [update.id, update.patch]));
-			const { data: updatedColumnData, updatedCount } = applyColumnPatches(
-				columnData,
-				updateMap,
-				now
-			);
-			if (updatedCount > 0) {
-				await saveData('column', updatedColumnData, files.column);
-				appliedColumnUpdates = updatedCount;
-			}
-			updatedColumnEntries = updatedColumnData.entries;
-		}
-	}
-
-	const validationAfter = validateDesignRelations({
-		...context,
-		tables: updatedTableEntries,
-		columns: updatedColumnEntries
-	});
+	const validationAfter = validateDesignRelations(context, { includeStandardReferences: false });
 
 	return {
-		mode: params.apply ? 'apply' : 'preview',
+		mode: 'preview',
+		deprecated: true,
+		replacement:
+			'/api/validation/design-relations/preview 및 /api/validation/design-relations/apply',
+		compatibilityNote:
+			'레거시 ERD 관계 동기화입니다. 신규 자동 수정은 후보 선택 기반 정의서 관계 검증 API를 사용하세요.',
 		files: toDefinitionFileSelection(files),
 		counts: {
 			...syncPlan.preview.counts,
-			appliedTableUpdates,
-			appliedColumnUpdates,
-			appliedTotalUpdates: appliedTableUpdates + appliedColumnUpdates
+			appliedTableUpdates: 0,
+			appliedColumnUpdates: 0,
+			appliedTotalUpdates: 0
 		},
 		changes: syncPlan.preview.changes.slice(0, 200).map((change) => ({
 			...change,
@@ -163,6 +66,21 @@ async function runRelationSync(params: RelationSyncParams) {
 		validationBefore,
 		validationAfter
 	};
+}
+
+function legacyApplyDisabledResponse() {
+	return json(
+		{
+			success: false,
+			error:
+				'레거시 ERD 관계 동기화 apply=true는 더 이상 지원하지 않습니다. /api/validation/design-relations/apply에서 issueId와 candidateId를 선택해 자동 수정하세요.',
+			data: {
+				deprecated: true,
+				replacement: '/api/validation/design-relations/apply'
+			}
+		} as DbDesignApiResponse,
+		{ status: 410 }
+	);
 }
 
 function paramsFromUrl(url: URL): RelationSyncParams {
@@ -178,15 +96,14 @@ function paramsFromUrl(url: URL): RelationSyncParams {
 
 export async function GET({ url }: RequestEvent) {
 	try {
-		const result = await runRelationSync(paramsFromUrl(url));
+		const params = paramsFromUrl(url);
+		if (params.apply) return legacyApplyDisabledResponse();
+		const result = await runRelationSync(params);
 		return json(
 			{
 				success: true,
 				data: result,
-				message:
-					result.mode === 'apply'
-						? '5개 정의서 관계 동기화가 완료되었습니다.'
-						: '5개 정의서 관계 동기화 미리보기를 생성했습니다.'
+				message: '5개 정의서 관계 동기화 미리보기를 생성했습니다.'
 			} as DbDesignApiResponse,
 			{ status: 200 }
 		);
@@ -215,15 +132,13 @@ export async function POST({ request }: RequestEvent) {
 			columnFile: body.columnFile
 		};
 
+		if (params.apply) return legacyApplyDisabledResponse();
 		const result = await runRelationSync(params);
 		return json(
 			{
 				success: true,
 				data: result,
-				message:
-					result.mode === 'apply'
-						? '5개 정의서 관계 동기화가 완료되었습니다.'
-						: '5개 정의서 관계 동기화 미리보기를 생성했습니다.'
+				message: '5개 정의서 관계 동기화 미리보기를 생성했습니다.'
 			} as DbDesignApiResponse,
 			{ status: 200 }
 		);

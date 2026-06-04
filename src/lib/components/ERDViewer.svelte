@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import type { ERDData } from '../types/erd-mapping.js';
-	import type { DesignRelationValidationResult } from '../types/design-relation.js';
+	import type {
+		DesignRelationCandidate,
+		DesignRelationValidationResult
+	} from '../types/design-relation.js';
 	import { isAllowedErdSvgRenderUrl, sanitizeErdSvgText } from '../utils/erd-svg-preview.js';
 
 	type ERDViewerData = ERDData & {
@@ -50,6 +53,11 @@
 	let isSparseGraph = $derived(erdData.metadata.totalNodes <= 1 || relationshipCount === 0);
 	let isLargeGraph = $derived(erdData.metadata.totalNodes >= 50 || relationshipCount >= 80);
 	let relationValidationSummary = $derived(erdData.relationValidation?.totals ?? null);
+	let relationValidationIssues = $derived(
+		erdData.relationValidation?.issues?.length
+			? erdData.relationValidation.issues
+			: (erdData.relationValidation?.summaries.flatMap((summary) => summary.issues) ?? [])
+	);
 	let zoomPercent = $derived(Math.round(scale * 100));
 	let canvasTransform = $derived(`translate(${translateX}px, ${translateY}px) scale(${scale})`);
 
@@ -67,6 +75,10 @@
 			return '관계가 없거나 매우 적습니다. 조회 조건, 선택 테이블, 정의서 매핑을 먼저 확인하세요.';
 		}
 		return '현재 조건의 관계를 ERD 이미지와 요약 정보로 함께 확인합니다.';
+	}
+
+	function candidateLabel(candidate: DesignRelationCandidate): string {
+		return `${candidate.targetLabel} · ${candidate.autoFixable ? '자동 수정 가능' : '수동 수정'}`;
 	}
 
 	function clamp(value: number, min: number, max: number): number {
@@ -323,11 +335,34 @@
 				</p>
 			</div>
 			{#if relationValidationSummary}
-				<p class="rounded-md border border-amber-200 bg-white px-3 py-2 text-amber-800">
-					관계 검증: 미매칭 {relationValidationSummary.unmatched}건 · 오류
-					{relationValidationSummary.errorCount}건 · 경고
-					{relationValidationSummary.warningCount}건
-				</p>
+				<div class="rounded-md border border-amber-200 bg-white px-3 py-2 text-amber-800">
+					<p>
+						관계 검증: 미매칭 {relationValidationSummary.unmatched}건 · 오류
+						{relationValidationSummary.errorCount}건 · 경고
+						{relationValidationSummary.warningCount}건
+					</p>
+					{#if relationValidationIssues.length > 0}
+						<ul class="mt-2 space-y-1" aria-label="ERD 관계 검증 이슈">
+							{#each relationValidationIssues.slice(0, 3) as issue (issue.issueId)}
+								<li class="rounded border border-amber-100 bg-amber-50/60 px-2 py-1">
+									<p class="font-medium text-amber-900">
+										{issue.relationName} · {issue.targetLabel}
+									</p>
+									<p class="mt-0.5 text-amber-800">{issue.reason}</p>
+									<p class="mt-0.5 text-amber-700">
+										후보 {issue.candidates.length}건
+										{#if issue.candidates.length > 0}
+											· {issue.candidates.slice(0, 2).map(candidateLabel).join(' / ')}
+										{:else}
+											· 수동 수정만 가능
+										{/if}
+									</p>
+									<p class="mt-0.5 text-amber-700">조치: {issue.actionGuide}</p>
+								</li>
+							{/each}
+						</ul>
+					{/if}
+				</div>
 			{/if}
 		</div>
 	</section>

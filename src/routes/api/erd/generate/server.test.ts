@@ -19,15 +19,15 @@ vi.mock('$lib/utils/erd-generator.js', () => ({
 	generateERDData: vi.fn()
 }));
 
-vi.mock('$lib/utils/design-relation-validator.js', () => ({
-	validateDesignRelations: vi.fn()
+vi.mock('$lib/utils/design-relation-service.js', () => ({
+	validateLoadedDesignRelationContext: vi.fn()
 }));
 
 import { loadData, listFiles } from '$lib/registry/data-registry';
 import { getCachedData } from '$lib/registry/cache-registry';
 import { resolveDbDesignFileMappingBundle } from '$lib/registry/db-design-file-mapping';
 import { generateERDData } from '$lib/utils/erd-generator.js';
-import { validateDesignRelations } from '$lib/utils/design-relation-validator.js';
+import { validateLoadedDesignRelationContext } from '$lib/utils/design-relation-service.js';
 
 function createMockRequestEvent(options: { searchParams?: Record<string, string> }): RequestEvent {
 	const url = new URL('http://localhost/api/erd/generate');
@@ -90,9 +90,11 @@ describe('API: /api/erd/generate', () => {
 				domainNodes: 0
 			}
 		});
-		vi.mocked(validateDesignRelations).mockReturnValue({
+		vi.mocked(validateLoadedDesignRelationContext).mockReturnValue({
 			specs: [],
+			rules: [],
 			summaries: [],
+			issues: [],
 			totals: {
 				totalChecked: 0,
 				matched: 0,
@@ -113,7 +115,10 @@ describe('API: /api/erd/generate', () => {
 			expect(result.success).toBe(true);
 			expect(result.data).toBeDefined();
 			expect(result.data.relationValidation).toBeDefined();
-			expect(validateDesignRelations).toHaveBeenCalledWith(expect.any(Object));
+			expect(validateLoadedDesignRelationContext).toHaveBeenCalledWith(
+				expect.any(Object),
+				expect.objectContaining({ complete: false })
+			);
 		});
 
 		it('should filter by tableIds when provided', async () => {
@@ -178,6 +183,10 @@ describe('API: /api/erd/generate', () => {
 			expect(loadData).toHaveBeenCalledWith('table', 'mapped-table.json');
 			expect(loadData).toHaveBeenCalledWith('column', 'custom-column.json');
 			expect(getCachedData).toHaveBeenCalledWith('vocabulary', 'mapped-vocabulary.json');
+			expect(validateLoadedDesignRelationContext).toHaveBeenCalledWith(
+				expect.any(Object),
+				expect.objectContaining({ complete: true })
+			);
 		});
 
 		it('should use first files when no parameters provided', async () => {

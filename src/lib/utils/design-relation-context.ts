@@ -3,6 +3,7 @@ import { listFiles, loadData } from '$lib/registry/data-registry.js';
 import type { MappingContext } from '$lib/types/erd-mapping.js';
 
 type DefinitionType = 'database' | 'entity' | 'attribute' | 'table' | 'column';
+type RelationContextFileType = DefinitionType | 'domain' | 'term' | 'vocabulary';
 
 export type DefinitionFileSelection = {
 	database: string | null;
@@ -12,6 +13,14 @@ export type DefinitionFileSelection = {
 	column: string | null;
 	domain: string | null;
 	vocabulary: string | null;
+	term: string | null;
+};
+
+export type StandardReferenceLoadStatus = {
+	vocabulary: boolean;
+	domain: boolean;
+	term: boolean;
+	complete: boolean;
 };
 
 export type LoadDesignRelationContextOptions = {
@@ -22,58 +31,142 @@ export type LoadDesignRelationContextOptions = {
 	columnFile?: string | null;
 	domainFile?: string | null;
 	vocabularyFile?: string | null;
+	termFile?: string | null;
 	includeDomain?: boolean;
+	includeTerm?: boolean;
 	includeVocabularyMap?: boolean;
 	fallbackToFirstWhenMissing?: boolean;
+	strictStandardReferences?: boolean;
 };
 
+export class DesignRelationContextError extends Error {
+	status = 400;
+
+	constructor(message: string) {
+		super(message);
+		this.name = 'DesignRelationContextError';
+	}
+}
+
+async function assertExistingFile(type: RelationContextFileType, filename: string): Promise<void> {
+	const files = await listFiles(type);
+	if (!files.includes(filename)) {
+		throw new DesignRelationContextError(
+			`정의서 관계 검증에 필요한 ${type} 파일을 찾을 수 없습니다: ${filename}. 완전한 8종 shared mapping bundle 또는 실제 파일명을 지정하세요.`
+		);
+	}
+}
+
+function extractEntries(type: RelationContextFileType, filename: string, data: unknown): unknown[] {
+	const entries = (data as { entries?: unknown }).entries;
+	if (!Array.isArray(entries)) {
+		throw new DesignRelationContextError(
+			`정의서 관계 검증에 필요한 ${type} 파일 형식이 올바르지 않습니다: ${filename}. entries 배열을 확인하세요.`
+		);
+	}
+	return entries;
+}
+
+function standardLoadError(
+	type: RelationContextFileType,
+	filename: string,
+	error: unknown
+): DesignRelationContextError {
+	return new DesignRelationContextError(
+		`정의서 관계 검증에 필요한 ${type} 파일을 로드하지 못했습니다: ${filename}. ${
+			error instanceof Error ? error.message : '알 수 없는 오류'
+		}`
+	);
+}
+
 async function loadEntriesWithSelection(
-	type: DefinitionType | 'domain',
+	type: RelationContextFileType,
 	explicitFilename: string | null | undefined,
-	fallbackToFirstWhenMissing: boolean
-): Promise<{ entries: unknown[]; selectedFilename: string | null }> {
+	fallbackToFirstWhenMissing: boolean,
+	requireExistingFile = false,
+	allowLoadFailure = false
+): Promise<{ entries: unknown[]; selectedFilename: string | null; loaded: boolean }> {
 	if (explicitFilename) {
-		const data = await loadData(type, explicitFilename);
-		return { entries: data.entries as unknown[], selectedFilename: explicitFilename };
+		try {
+			if (requireExistingFile) await assertExistingFile(type, explicitFilename);
+			const data = await loadData(type, explicitFilename);
+			return {
+				entries: extractEntries(type, explicitFilename, data),
+				selectedFilename: explicitFilename,
+				loaded: true
+			};
+		} catch (error) {
+			if (requireExistingFile) throw standardLoadError(type, explicitFilename, error);
+			if (allowLoadFailure) {
+				console.warn(`${type} 데이터 로드 실패 (관계 컨텍스트):`, error);
+				return { entries: [], selectedFilename: explicitFilename, loaded: false };
+			}
+			throw error;
+		}
 	}
 
 	if (!fallbackToFirstWhenMissing) {
-		return { entries: [], selectedFilename: null };
+		return { entries: [], selectedFilename: null, loaded: false };
 	}
 
 	const files = await listFiles(type);
 	if (files.length === 0) {
-		return { entries: [], selectedFilename: null };
+		return { entries: [], selectedFilename: null, loaded: false };
 	}
 
 	const selectedFilename = files[0];
-	const data = await loadData(type, selectedFilename);
-	return { entries: data.entries as unknown[], selectedFilename };
+	try {
+		const data = await loadData(type, selectedFilename);
+		return {
+			entries: extractEntries(type, selectedFilename, data),
+			selectedFilename,
+			loaded: true
+		};
+	} catch (error) {
+		if (allowLoadFailure) {
+			console.warn(`${type} 데이터 로드 실패 (관계 컨텍스트):`, error);
+			return { entries: [], selectedFilename, loaded: false };
+		}
+		throw error;
+	}
 }
 
-async function loadVocabularyMap(explicitFilename?: string | null): Promise<{
+async function loadVocabularyMap(
+	explicitFilename?: string | null,
+	requireExistingFile = false
+): Promise<{
 	vocabularyMap:
 		| Map<string, { standardName: string; abbreviation: string; domainCategory?: string }>
 		| undefined;
+	entries: MappingContext['vocabularies'];
 	selectedFilename: string | null;
+	loaded: boolean;
 }> {
-	const selectedFilename = explicitFilename || (await listFiles('vocabulary'))[0] || null;
+	const selectedFilename =
+		explicitFilename || (requireExistingFile ? null : (await listFiles('vocabulary'))[0] || null);
 	if (!selectedFilename) {
-		return { vocabularyMap: undefined, selectedFilename: null };
+		return { vocabularyMap: undefined, entries: [], selectedFilename: null, loaded: false };
 	}
 
 	try {
+		if (requireExistingFile) await assertExistingFile('vocabulary', selectedFilename);
 		const vocabData = await getCachedData('vocabulary', selectedFilename);
 		if (!vocabData) {
-			return { vocabularyMap: undefined, selectedFilename };
+			if (requireExistingFile) {
+				throw new DesignRelationContextError(
+					`정의서 관계 검증에 필요한 vocabulary 파일을 로드하지 못했습니다: ${selectedFilename}.`
+				);
+			}
+			return { vocabularyMap: undefined, entries: [], selectedFilename, loaded: false };
 		}
+		const entries = extractEntries('vocabulary', selectedFilename, vocabData);
 
 		const vocabularyMap = new Map<
 			string,
 			{ standardName: string; abbreviation: string; domainCategory?: string }
 		>();
 
-		for (const entry of vocabData.entries) {
+		for (const entry of entries as NonNullable<MappingContext['vocabularies']>) {
 			const standardName = entry.standardName?.trim();
 			const abbreviation = entry.abbreviation?.trim();
 			if (!standardName || !abbreviation) continue;
@@ -91,10 +184,16 @@ async function loadVocabularyMap(explicitFilename?: string | null): Promise<{
 			vocabularyMap.set(abbreviationKey, value);
 		}
 
-		return { vocabularyMap, selectedFilename };
+		return {
+			vocabularyMap,
+			entries: entries as MappingContext['vocabularies'],
+			selectedFilename,
+			loaded: true
+		};
 	} catch (error) {
+		if (requireExistingFile) throw standardLoadError('vocabulary', selectedFilename, error);
 		console.warn('단어집 데이터 로드 실패 (관계 컨텍스트):', error);
-		return { vocabularyMap: undefined, selectedFilename };
+		return { vocabularyMap: undefined, entries: [], selectedFilename, loaded: false };
 	}
 }
 
@@ -103,24 +202,48 @@ export async function loadDesignRelationContext(
 ): Promise<{
 	context: MappingContext;
 	files: DefinitionFileSelection;
+	standardReferences: StandardReferenceLoadStatus;
 }> {
 	const fallbackToFirstWhenMissing = options.fallbackToFirstWhenMissing ?? true;
+	const strictStandardReferences = options.strictStandardReferences ?? false;
 
-	const [databaseResult, entityResult, attributeResult, tableResult, columnResult, domainResult] =
-		await Promise.all([
-			loadEntriesWithSelection('database', options.databaseFile, fallbackToFirstWhenMissing),
-			loadEntriesWithSelection('entity', options.entityFile, fallbackToFirstWhenMissing),
-			loadEntriesWithSelection('attribute', options.attributeFile, fallbackToFirstWhenMissing),
-			loadEntriesWithSelection('table', options.tableFile, fallbackToFirstWhenMissing),
-			loadEntriesWithSelection('column', options.columnFile, fallbackToFirstWhenMissing),
-			options.includeDomain
-				? loadEntriesWithSelection('domain', options.domainFile, fallbackToFirstWhenMissing)
-				: Promise.resolve({ entries: [], selectedFilename: null })
-		]);
+	const [
+		databaseResult,
+		entityResult,
+		attributeResult,
+		tableResult,
+		columnResult,
+		domainResult,
+		termResult
+	] = await Promise.all([
+		loadEntriesWithSelection('database', options.databaseFile, fallbackToFirstWhenMissing),
+		loadEntriesWithSelection('entity', options.entityFile, fallbackToFirstWhenMissing),
+		loadEntriesWithSelection('attribute', options.attributeFile, fallbackToFirstWhenMissing),
+		loadEntriesWithSelection('table', options.tableFile, fallbackToFirstWhenMissing),
+		loadEntriesWithSelection('column', options.columnFile, fallbackToFirstWhenMissing),
+		options.includeDomain
+			? loadEntriesWithSelection(
+					'domain',
+					options.domainFile,
+					fallbackToFirstWhenMissing,
+					strictStandardReferences,
+					!strictStandardReferences
+				)
+			: Promise.resolve({ entries: [], selectedFilename: null, loaded: false }),
+		options.includeTerm
+			? loadEntriesWithSelection(
+					'term',
+					options.termFile,
+					fallbackToFirstWhenMissing,
+					strictStandardReferences,
+					!strictStandardReferences
+				)
+			: Promise.resolve({ entries: [], selectedFilename: null, loaded: false })
+	]);
 
 	const vocabularyLoad = options.includeVocabularyMap
-		? await loadVocabularyMap(options.vocabularyFile)
-		: { vocabularyMap: undefined, selectedFilename: null };
+		? await loadVocabularyMap(options.vocabularyFile, strictStandardReferences)
+		: { vocabularyMap: undefined, entries: [], selectedFilename: null, loaded: false };
 
 	const context: MappingContext = {
 		databases: databaseResult.entries as MappingContext['databases'],
@@ -129,7 +252,16 @@ export async function loadDesignRelationContext(
 		tables: tableResult.entries as MappingContext['tables'],
 		columns: columnResult.entries as MappingContext['columns'],
 		domains: domainResult.entries as MappingContext['domains'],
+		terms: termResult.entries as MappingContext['terms'],
+		vocabularies: vocabularyLoad.entries,
 		vocabularyMap: vocabularyLoad.vocabularyMap
+	};
+
+	const standardReferences = {
+		vocabulary: vocabularyLoad.loaded,
+		domain: domainResult.loaded,
+		term: termResult.loaded,
+		complete: Boolean(vocabularyLoad.loaded && domainResult.loaded && termResult.loaded)
 	};
 
 	return {
@@ -141,8 +273,10 @@ export async function loadDesignRelationContext(
 			table: tableResult.selectedFilename,
 			column: columnResult.selectedFilename,
 			domain: domainResult.selectedFilename,
-			vocabulary: vocabularyLoad.selectedFilename
-		}
+			vocabulary: vocabularyLoad.selectedFilename,
+			term: termResult.selectedFilename
+		},
+		standardReferences
 	};
 }
 
@@ -153,6 +287,8 @@ export function getAnyExplicitDefinitionFile(options: {
 	tableFile?: string | null;
 	columnFile?: string | null;
 	domainFile?: string | null;
+	termFile?: string | null;
+	vocabularyFile?: string | null;
 }): boolean {
 	const keys: Array<keyof typeof options> = [
 		'databaseFile',
@@ -160,7 +296,9 @@ export function getAnyExplicitDefinitionFile(options: {
 		'attributeFile',
 		'tableFile',
 		'columnFile',
-		'domainFile'
+		'domainFile',
+		'termFile',
+		'vocabularyFile'
 	];
 	return keys.some((key) => {
 		const value = options[key];
@@ -170,7 +308,7 @@ export function getAnyExplicitDefinitionFile(options: {
 
 export function pickDefinitionFileFromUrl(
 	url: URL,
-	key: `${DefinitionType}File` | 'domainFile' | 'vocabularyFile'
+	key: `${DefinitionType}File` | 'domainFile' | 'vocabularyFile' | 'termFile'
 ): string | undefined {
 	const value = url.searchParams.get(key);
 	return value && value.trim() !== '' ? value : undefined;

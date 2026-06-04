@@ -115,7 +115,7 @@ export async function POST({ request, url, fetch }: RequestEvent) {
 		}
 
 		const relationPayload = {
-			apply,
+			apply: false,
 			databaseFile:
 				readString(rawBody.databaseFile) || readString(url.searchParams.get('databaseFile')),
 			entityFile: readString(rawBody.entityFile) || readString(url.searchParams.get('entityFile')),
@@ -166,6 +166,9 @@ export async function POST({ request, url, fetch }: RequestEvent) {
 
 		const reportParams = new URLSearchParams();
 		reportParams.set('termFilename', termFilename);
+		reportParams.set('vocabularyFile', vocabularyFilename);
+		reportParams.set('domainFile', domainFilename);
+		reportParams.set('termFile', termFilename);
 
 		const relationFileParams: Record<string, string | undefined> = {
 			databaseFile: relationPayload.databaseFile,

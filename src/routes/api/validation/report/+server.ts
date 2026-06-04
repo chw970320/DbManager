@@ -91,17 +91,37 @@ function toRelationIssues(validation: DesignRelationValidationResult): UnifiedVa
 		for (const issue of summary.issues) {
 			issues.push({
 				source: 'relation',
-				level: issue.severity,
+				level: issue.autoFixable ? 'auto-fixable' : issue.severity,
 				code: `RELATION_${issue.relationId}`,
 				message: issue.reason,
 				entryId: issue.targetId,
 				label: issue.targetLabel,
+				field: issue.field,
 				priority: relationPriority(issue.severity),
 				metadata: {
+					issueId: issue.issueId,
 					relationId: issue.relationId,
+					relationName: issue.relationName ?? summary.relationName,
 					expectedKey: issue.expectedKey,
+					actualKey: issue.actualKey,
 					sourceType: issue.sourceType,
-					targetType: issue.targetType
+					targetType: issue.targetType,
+					autoFixable: issue.autoFixable,
+					actionGuide: issue.actionGuide,
+					manualTargets: issue.manualTargets,
+					affectedRows: issue.affectedRows,
+					candidateCount: issue.candidates.length,
+					candidates: issue.candidates.map((candidate) => ({
+						candidateId: candidate.candidateId,
+						targetType: candidate.targetType,
+						targetId: candidate.targetId,
+						targetLabel: candidate.targetLabel,
+						patch: candidate.patch,
+						reason: candidate.reason,
+						confidence: candidate.confidence,
+						previewText: candidate.previewText,
+						autoFixable: candidate.autoFixable
+					}))
 				}
 			});
 		}
@@ -126,12 +146,29 @@ function mapTermFilename(url: URL): string {
 
 function buildRelationQuery(url: URL): string {
 	const params = new URLSearchParams();
-	const keys = ['databaseFile', 'entityFile', 'attributeFile', 'tableFile', 'columnFile'];
-	for (const key of keys) {
-		const value = url.searchParams.get(key);
-		if (value && value.trim() !== '') {
-			params.set(key, value);
+	const fileAliases: Record<string, string[]> = {
+		vocabularyFile: ['vocabularyFile', 'vocabularyFilename'],
+		domainFile: ['domainFile', 'domainFilename'],
+		termFile: ['termFile', 'termFilename'],
+		databaseFile: ['databaseFile'],
+		entityFile: ['entityFile'],
+		attributeFile: ['attributeFile'],
+		tableFile: ['tableFile'],
+		columnFile: ['columnFile', 'columnFilename']
+	};
+
+	for (const [canonicalKey, aliases] of Object.entries(fileAliases)) {
+		for (const alias of aliases) {
+			const value = url.searchParams.get(alias);
+			if (value && value.trim() !== '') {
+				params.set(canonicalKey, value);
+				break;
+			}
 		}
+	}
+	for (const key of ['scopeType', 'scopeFile']) {
+		const value = url.searchParams.get(key);
+		if (value && value.trim() !== '') params.set(key, value);
 	}
 	return params.toString();
 }
@@ -141,8 +178,8 @@ export async function GET({ url, fetch }: RequestEvent) {
 		const termFilename = mapTermFilename(url);
 		const relationQuery = buildRelationQuery(url);
 		const relationUrl = relationQuery
-			? `/api/erd/relations?${relationQuery}`
-			: '/api/erd/relations';
+			? `/api/validation/design-relations?${relationQuery}`
+			: '/api/validation/design-relations';
 
 		const [termResponse, relationResponse] = await Promise.all([
 			fetch(`/api/term/validate-all?filename=${encodeURIComponent(termFilename)}`),

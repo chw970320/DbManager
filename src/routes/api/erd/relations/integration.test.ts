@@ -168,7 +168,7 @@ describe('API: /api/erd/relations integration (fixture-based)', () => {
 		}
 	});
 
-	it('should reduce relation unmatched count after sync apply with fixture data', async () => {
+	it('should reject legacy sync apply and keep fixture data unchanged', async () => {
 		const relationsModule = await import('./+server');
 		const syncModule = await import('./sync/+server');
 
@@ -183,18 +183,25 @@ describe('API: /api/erd/relations integration (fixture-based)', () => {
 		expect(beforePayload.data.files.column).toBe('column.json');
 		expect(beforePayload.data.validation.totals.unmatched).toBeGreaterThan(0);
 
+		const previewResponse = await syncModule.POST(
+			createPostEvent('http://localhost/api/erd/relations/sync', { apply: false })
+		);
+		const previewPayload = await previewResponse.json();
+
+		expect(previewResponse.status).toBe(200);
+		expect(previewPayload.success).toBe(true);
+		expect(previewPayload.data.mode).toBe('preview');
+		expect(previewPayload.data.counts.totalCandidates).toBeGreaterThan(0);
+		expect(previewPayload.data.counts.appliedTotalUpdates).toBe(0);
+
 		const syncResponse = await syncModule.POST(
 			createPostEvent('http://localhost/api/erd/relations/sync', { apply: true })
 		);
 		const syncPayload = await syncResponse.json();
 
-		expect(syncResponse.status).toBe(200);
-		expect(syncPayload.success).toBe(true);
-		expect(syncPayload.data.mode).toBe('apply');
-		expect(syncPayload.data.counts.appliedTotalUpdates).toBeGreaterThan(0);
-		expect(syncPayload.data.validationAfter.totals.unmatched).toBeLessThan(
-			syncPayload.data.validationBefore.totals.unmatched
-		);
+		expect(syncResponse.status).toBe(410);
+		expect(syncPayload.success).toBe(false);
+		expect(syncPayload.error).toContain('/api/validation/design-relations/apply');
 
 		const afterResponse = await relationsModule.GET(
 			createGetEvent('http://localhost/api/erd/relations')
@@ -203,7 +210,7 @@ describe('API: /api/erd/relations integration (fixture-based)', () => {
 
 		expect(afterResponse.status).toBe(200);
 		expect(afterPayload.success).toBe(true);
-		expect(afterPayload.data.validation.totals.unmatched).toBeLessThan(
+		expect(afterPayload.data.validation.totals.unmatched).toBe(
 			beforePayload.data.validation.totals.unmatched
 		);
 
@@ -214,9 +221,9 @@ describe('API: /api/erd/relations integration (fixture-based)', () => {
 			entries: Array<{ tableEnglishName?: string; relatedEntityName?: string }>;
 		};
 
-		expect(tableData.entries[0].relatedEntityName).toBe('사용자');
-		expect(columnData.entries[0].tableEnglishName).toBe('TB_USER');
-		expect(columnData.entries[0].relatedEntityName).toBe('사용자');
-		expect(columnData.entries[1].tableEnglishName).toBe('TB_USER');
+		expect(tableData.entries[0].relatedEntityName).toBe('사용자테이블');
+		expect(columnData.entries[0].tableEnglishName).toBe('사용자테이블');
+		expect(columnData.entries[0].relatedEntityName).toBe('');
+		expect(columnData.entries[1].tableEnglishName).toBe('TB_UNKNOWN');
 	});
 });

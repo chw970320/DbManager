@@ -1,8 +1,10 @@
-import { describe, it, expect } from 'vitest';
-import { validateDesignRelations } from './design-relation-validator.js';
+import { describe, expect, it } from 'vitest';
+import { DESIGN_RELATION_SPECS, validateDesignRelations } from './design-relation-validator.js';
 import type { MappingContext } from '$lib/types/erd-mapping.js';
 
-function createContext(): MappingContext {
+const ts = '2026-01-01T00:00:00.000Z';
+
+function context(): MappingContext {
 	return {
 		databases: [
 			{
@@ -16,83 +18,83 @@ function createContext(): MappingContext {
 				exclusionReason: '-',
 				logicalDbName: 'LDB_MAIN',
 				physicalDbName: 'PDB_MAIN',
-				createdAt: '2026-01-01T00:00:00.000Z',
-				updatedAt: '2026-01-01T00:00:00.000Z'
+				createdAt: ts,
+				updatedAt: ts
 			}
 		],
 		entities: [
 			{
-				id: 'entity-1',
+				id: 'entity-user',
 				logicalDbName: 'LDB_MAIN',
 				schemaName: 'BKSP',
 				entityName: '사용자',
+				primaryIdentifier: '사용자ID',
 				tableKoreanName: '사용자',
-				createdAt: '2026-01-01T00:00:00.000Z',
-				updatedAt: '2026-01-01T00:00:00.000Z'
-			},
-			{
-				id: 'entity-2',
-				logicalDbName: 'LDB_MISSING',
-				schemaName: 'BKSP',
-				entityName: '미존재엔터티',
-				tableKoreanName: '미존재엔터티',
-				createdAt: '2026-01-01T00:00:00.000Z',
-				updatedAt: '2026-01-01T00:00:00.000Z'
+				createdAt: ts,
+				updatedAt: ts
 			}
 		],
 		attributes: [
 			{
-				id: 'attr-1',
+				id: 'attr-user-id',
 				requiredInput: 'Y',
 				refEntityName: '-',
 				schemaName: 'BKSP',
 				entityName: '사용자',
-				attributeName: '이름',
-				createdAt: '2026-01-01T00:00:00.000Z',
-				updatedAt: '2026-01-01T00:00:00.000Z'
+				attributeName: '사용자ID',
+				createdAt: ts,
+				updatedAt: ts
 			},
 			{
-				id: 'attr-2',
-				requiredInput: 'Y',
+				id: 'attr-user-name',
+				requiredInput: 'N',
 				refEntityName: '-',
 				schemaName: 'BKSP',
-				entityName: '없는엔터티',
-				attributeName: '없는속성',
-				createdAt: '2026-01-01T00:00:00.000Z',
-				updatedAt: '2026-01-01T00:00:00.000Z'
+				entityName: '사용자',
+				attributeName: '이름',
+				createdAt: ts,
+				updatedAt: ts
 			}
 		],
 		tables: [
 			{
-				id: 'table-1',
+				id: 'table-user',
 				businessClassification: '업무',
 				tableVolume: '1',
 				nonPublicReason: '-',
 				openDataList: '-',
-				physicalDbName: 'PDB_MAIN',
+				subjectArea: '공통',
 				schemaName: 'BKSP',
-				tableEnglishName: 'TB_USER',
+				tableEnglishName: 'USER',
+				tableKoreanName: '사용자',
 				relatedEntityName: '사용자',
-				createdAt: '2026-01-01T00:00:00.000Z',
-				updatedAt: '2026-01-01T00:00:00.000Z'
-			},
-			{
-				id: 'table-2',
-				businessClassification: '업무',
-				tableVolume: '1',
-				nonPublicReason: '-',
-				openDataList: '-',
-				physicalDbName: 'PDB_MISSING',
-				schemaName: 'BKSP',
-				tableEnglishName: 'TB_UNKNOWN',
-				relatedEntityName: '없는엔터티',
-				createdAt: '2026-01-01T00:00:00.000Z',
-				updatedAt: '2026-01-01T00:00:00.000Z'
+				createdAt: ts,
+				updatedAt: ts
 			}
 		],
 		columns: [
 			{
-				id: 'col-1',
+				id: 'col-user-id',
+				dataLength: '20',
+				dataDecimalLength: '0',
+				dataFormat: '-',
+				pkInfo: 'Y',
+				indexName: '',
+				indexOrder: '',
+				akInfo: '',
+				constraint: '',
+				subjectArea: '공통',
+				schemaName: 'BKSP',
+				tableEnglishName: 'USER',
+				columnEnglishName: 'USER_ID',
+				columnKoreanName: '사용자ID',
+				relatedEntityName: '사용자',
+				domainName: 'ID',
+				createdAt: ts,
+				updatedAt: ts
+			},
+			{
+				id: 'col-user-name',
 				dataLength: '100',
 				dataDecimalLength: '0',
 				dataFormat: '-',
@@ -101,54 +103,246 @@ function createContext(): MappingContext {
 				indexOrder: '',
 				akInfo: '',
 				constraint: '',
+				subjectArea: '공통',
 				schemaName: 'BKSP',
-				tableEnglishName: 'TB_USER',
+				tableEnglishName: 'USER',
 				columnEnglishName: 'USER_NM',
 				columnKoreanName: '이름',
 				relatedEntityName: '사용자',
-				createdAt: '2026-01-01T00:00:00.000Z',
-				updatedAt: '2026-01-01T00:00:00.000Z'
-			},
-			{
-				id: 'col-2',
-				dataLength: '100',
-				dataDecimalLength: '0',
-				dataFormat: '-',
-				pkInfo: '',
-				indexName: '',
-				indexOrder: '',
-				akInfo: '',
-				constraint: '',
-				schemaName: 'BKSP',
-				tableEnglishName: 'TB_MISSING',
-				columnEnglishName: 'MISSING_NM',
-				columnKoreanName: '없는컬럼',
-				relatedEntityName: '사용자',
-				createdAt: '2026-01-01T00:00:00.000Z',
-				updatedAt: '2026-01-01T00:00:00.000Z'
+				domainName: 'NAME',
+				createdAt: ts,
+				updatedAt: ts
 			}
 		],
-		domains: []
+		domains: [
+			{
+				id: 'domain-id',
+				domainGroup: '공통',
+				domainCategory: 'ID',
+				standardDomainName: 'ID',
+				physicalDataType: 'varchar',
+				createdAt: ts,
+				updatedAt: ts
+			},
+			{
+				id: 'domain-name',
+				domainGroup: '공통',
+				domainCategory: 'NAME',
+				standardDomainName: 'NAME',
+				physicalDataType: 'varchar',
+				createdAt: ts,
+				updatedAt: ts
+			}
+		],
+		vocabularies: [
+			{
+				id: 'v-user',
+				standardName: '사용자',
+				abbreviation: 'USR',
+				englishName: 'USER',
+				createdAt: ts,
+				updatedAt: ts
+			}
+		],
+		terms: [
+			{
+				id: 'term-user-id',
+				termName: '사용자ID',
+				columnName: 'USER_ID',
+				domainName: 'ID',
+				isMappedTerm: true,
+				isMappedColumn: true,
+				isMappedDomain: true,
+				createdAt: ts,
+				updatedAt: ts
+			},
+			{
+				id: 'term-user-name',
+				termName: '이름',
+				columnName: 'USER_NM',
+				domainName: 'NAME',
+				isMappedTerm: true,
+				isMappedColumn: true,
+				isMappedDomain: true,
+				createdAt: ts,
+				updatedAt: ts
+			}
+		]
 	};
 }
 
-describe('design-relation-validator', () => {
-	it('should validate all 5-definition relations with summary counts', () => {
-		const result = validateDesignRelations(createContext());
+function summaryById(result = validateDesignRelations(context())) {
+	return new Map(result.summaries.map((s) => [s.relationId, s]));
+}
 
+describe('design-relation-validator canonical relation contract', () => {
+	it('uses the six canonical rule ids and drops legacy physical DB_TABLE success', () => {
+		expect(DESIGN_RELATION_SPECS.map((s) => s.id)).toEqual([
+			'DATABASE_ENTITY_LOGICAL_DB',
+			'ENTITY_ATTRIBUTE_PRIMARY',
+			'ENTITY_TABLE_MAPPING',
+			'TABLE_COLUMN_MAPPING',
+			'ATTRIBUTE_COLUMN_KEY',
+			'STANDARD_REFERENCES'
+		]);
+		const ids: string[] = DESIGN_RELATION_SPECS.map((s) => s.id);
+		expect(ids.includes('DB_TABLE')).toBe(false);
+	});
+
+	it('passes coherent database/entity/attribute/table/column and standard-reference data', () => {
+		const result = validateDesignRelations(context());
 		expect(result.specs).toHaveLength(6);
-		expect(result.summaries).toHaveLength(6);
+		expect(result.rules).toHaveLength(6);
+		expect(result.issues).toHaveLength(0);
+		expect(result.totals.unmatched).toBe(0);
+		expect(result.totals.matched).toBeGreaterThan(0);
 
-		const byId = new Map(result.summaries.map((s) => [s.relationId, s]));
-		expect(byId.get('DB_ENTITY')).toMatchObject({ matched: 1, unmatched: 1 });
-		expect(byId.get('DB_TABLE')).toMatchObject({ matched: 1, unmatched: 1 });
-		expect(byId.get('ENTITY_ATTRIBUTE')).toMatchObject({ matched: 1, unmatched: 1 });
-		expect(byId.get('ENTITY_TABLE')).toMatchObject({ matched: 1, unmatched: 1 });
-		expect(byId.get('TABLE_COLUMN')).toMatchObject({ matched: 1, unmatched: 1 });
-		expect(byId.get('ATTRIBUTE_COLUMN')).toMatchObject({ matched: 1, unmatched: 1 });
+		const byId = summaryById(result);
+		expect(byId.get('DATABASE_ENTITY_LOGICAL_DB')).toMatchObject({ matched: 1, unmatched: 0 });
+		expect(byId.get('ENTITY_ATTRIBUTE_PRIMARY')).toMatchObject({ matched: 1, unmatched: 0 });
+		expect(byId.get('ENTITY_TABLE_MAPPING')).toMatchObject({ matched: 1, unmatched: 0 });
+		expect(byId.get('TABLE_COLUMN_MAPPING')).toMatchObject({ matched: 2, unmatched: 0 });
+	});
 
-		expect(result.totals.unmatched).toBe(6);
-		expect(result.totals.errorCount).toBe(5);
-		expect(result.totals.warningCount).toBe(1);
+	it('emits deterministic no/single/multiple candidate states', () => {
+		const noCandidate = context();
+		noCandidate.databases = [];
+		noCandidate.entities[0] = { ...noCandidate.entities[0], logicalDbName: 'LDB_MISSING' };
+		const noCandidateIssue = validateDesignRelations(noCandidate).issues.find(
+			(i) => i.relationId === 'DATABASE_ENTITY_LOGICAL_DB'
+		);
+		expect(noCandidateIssue?.candidates).toEqual([]);
+		expect(noCandidateIssue?.autoFixable).toBe(false);
+
+		const singleCandidate = context();
+		singleCandidate.entities[0] = { ...singleCandidate.entities[0], logicalDbName: 'LDB_MISSING' };
+		const singleIssue = validateDesignRelations(singleCandidate).issues.find(
+			(i) => i.relationId === 'DATABASE_ENTITY_LOGICAL_DB'
+		);
+		expect(singleIssue?.candidates).toHaveLength(1);
+		expect(singleIssue?.candidates[0]?.patch).toMatchObject({
+			targetType: 'entity',
+			fields: { logicalDbName: 'LDB_MAIN' }
+		});
+		expect(singleIssue?.autoFixable).toBe(true);
+
+		const multipleCandidate = context();
+		multipleCandidate.entities[0] = {
+			...multipleCandidate.entities[0],
+			primaryIdentifier: '없는ID'
+		};
+		const multiIssue = validateDesignRelations(multipleCandidate).issues.find(
+			(i) => i.relationId === 'ENTITY_ATTRIBUTE_PRIMARY'
+		);
+		expect(multiIssue?.candidates).toHaveLength(2);
+		expect(multiIssue?.actionGuide).toContain('후보가 여러 개');
+		expect(
+			validateDesignRelations(multipleCandidate)
+				.issues.find((i) => i.issueId === multiIssue?.issueId)
+				?.candidates.map((c) => c.candidateId)
+		).toEqual(multiIssue?.candidates.map((c) => c.candidateId));
+	});
+
+	it('keeps ATTRIBUTE_COLUMN_KEY candidates manual-only for PK/FK ambiguity', () => {
+		const ctx = context();
+		ctx.columns[0] = { ...ctx.columns[0], pkInfo: '' };
+		const keyIssue = validateDesignRelations(ctx).issues.find(
+			(i) => i.relationId === 'ATTRIBUTE_COLUMN_KEY' && i.field === 'pkInfo'
+		);
+		expect(keyIssue?.severity).toBe('warning');
+		expect(keyIssue?.autoFixable).toBe(false);
+		expect(keyIssue?.candidates[0]).toMatchObject({ autoFixable: false, patch: { fields: {} } });
+	});
+
+	it('validates STANDARD_REFERENCES field comparisons and suggests deterministic domain correction', () => {
+		const ctx = context();
+		ctx.columns[0] = { ...ctx.columns[0], domainName: 'WRONG_DOMAIN' };
+		const result = validateDesignRelations(ctx);
+		const standard = summaryById(result).get('STANDARD_REFERENCES');
+		expect(standard?.issues).toHaveLength(1);
+		expect(standard?.issues[0]).toMatchObject({
+			field: 'domainName',
+			expectedKey: 'ID',
+			actualKey: 'WRONG_DOMAIN',
+			autoFixable: true
+		});
+		expect(standard?.issues[0]?.candidates[0]?.patch.fields).toEqual({ domainName: 'ID' });
+	});
+
+	it('surfaces term-domain mismatches even when the matched term domain is not in domain refs', () => {
+		const ctx = context();
+		ctx.terms![0] = { ...ctx.terms![0], domainName: 'MISSING_STANDARD_DOMAIN' };
+		ctx.columns[0] = { ...ctx.columns[0], domainName: 'WRONG_DOMAIN' };
+
+		const issue = validateDesignRelations(ctx).issues.find(
+			(i) =>
+				i.relationId === 'STANDARD_REFERENCES' &&
+				i.targetId === 'col-user-id' &&
+				i.field === 'domainName'
+		);
+
+		expect(issue).toMatchObject({
+			expectedKey: 'MISSING_STANDARD_DOMAIN',
+			actualKey: 'WRONG_DOMAIN',
+			autoFixable: false
+		});
+		expect(issue?.reason).toContain('도메인 정의서에 없습니다');
+		expect(issue?.candidates[0]).toMatchObject({
+			autoFixable: false,
+			patch: { fields: {} }
+		});
+		expect(issue?.actionGuide).toContain('수동 수정');
+	});
+
+	it('treats an empty loaded domain reference set as no valid term domains', () => {
+		const ctx = context();
+		ctx.domains = [];
+		ctx.terms![0] = { ...ctx.terms![0], domainName: 'MISSING_STANDARD_DOMAIN' };
+		ctx.columns[0] = { ...ctx.columns[0], domainName: 'MISSING_STANDARD_DOMAIN' };
+
+		const issue = validateDesignRelations(ctx).issues.find(
+			(i) =>
+				i.relationId === 'STANDARD_REFERENCES' &&
+				i.targetId === 'col-user-id' &&
+				i.field === 'domainName'
+		);
+
+		expect(issue).toMatchObject({
+			expectedKey: 'MISSING_STANDARD_DOMAIN',
+			actualKey: 'MISSING_STANDARD_DOMAIN',
+			autoFixable: false
+		});
+	});
+
+	it('does not auto-patch domainName from name candidates when the term domain is absent from domain refs', () => {
+		const ctx = context();
+		ctx.terms![0] = { ...ctx.terms![0], domainName: 'MISSING_STANDARD_DOMAIN' };
+		ctx.columns[0] = { ...ctx.columns[0], columnKoreanName: '틀린ID', domainName: 'WRONG_DOMAIN' };
+
+		const issue = validateDesignRelations(ctx).issues.find(
+			(i) =>
+				i.relationId === 'STANDARD_REFERENCES' &&
+				i.targetId === 'col-user-id' &&
+				i.field === 'columnKoreanName'
+		);
+
+		expect(issue?.candidates[0]).toMatchObject({
+			autoFixable: true,
+			patch: { fields: { columnKoreanName: '사용자ID' } }
+		});
+		expect(issue?.candidates[0]?.patch.fields).not.toHaveProperty('domainName');
+	});
+
+	it('can skip STANDARD_REFERENCES for legacy 5-definition compatibility callers', () => {
+		const ctx = context();
+		ctx.vocabularies = [];
+		ctx.terms = [];
+		ctx.domains = [];
+
+		const result = validateDesignRelations(ctx, { includeStandardReferences: false });
+
+		expect(result.specs.map((spec) => spec.id)).not.toContain('STANDARD_REFERENCES');
+		expect(result.issues.some((issue) => issue.relationId === 'STANDARD_REFERENCES')).toBe(false);
+		expect(result.totals.unmatched).toBe(0);
 	});
 });

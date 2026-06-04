@@ -22,37 +22,35 @@ function requestFromUrl(url: URL): DesignRelationValidationRequest {
 		tableFile: fileParam(url, 'table'),
 		columnFile: fileParam(url, 'column'),
 		scopeType: (url.searchParams.get('scopeType') || undefined) as DataType | undefined,
-		scopeFile: url.searchParams.get('scopeFile') || undefined
+		scopeFile: url.searchParams.get('scopeFile') || undefined,
+		requireStandardReferences: true
 	};
 }
 
 export async function GET({ url }: RequestEvent) {
 	try {
 		const result = await runDesignRelationValidation(requestFromUrl(url), {
-			requireStandardReferences: false
+			requireStandardReferences: true
 		});
 		return json(
 			{
 				success: true,
-				data: {
-					files: result.files,
-					sources: result.sources,
-					validation: result.validation
-				},
-				message: '5개 정의서 연관관계 정합성 검증 완료'
+				data: result,
+				message: '정의서 관계 유효성 검사 완료'
 			} as DbDesignApiResponse,
 			{ status: 200 }
 		);
 	} catch (error) {
 		const status = relationApiErrorStatus(error);
-		console.error('5개 정의서 연관관계 검증 오류:', error);
 		return json(
 			{
 				success: false,
 				error:
 					error instanceof Error
 						? error.message
-						: '5개 정의서 연관관계 검증 중 오류가 발생했습니다.'
+						: '정의서 관계 유효성 검사 중 오류가 발생했습니다.',
+				message:
+					status === 400 ? 'Missing or invalid relation validation input' : 'Internal server error'
 			} as DbDesignApiResponse,
 			{ status }
 		);

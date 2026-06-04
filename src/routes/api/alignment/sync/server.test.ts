@@ -33,7 +33,7 @@ function createPostEvent(options?: {
 
 describe('API: /api/alignment/sync', () => {
 	it('should execute vocabulary -> term -> relation -> column -> validation sequence and return summary', async () => {
-		const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+		const fetchMock = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
 			const path = input.toString();
 			if (path.includes('/api/vocabulary/sync-domain')) {
 				return makeJsonResponse({
@@ -57,8 +57,8 @@ describe('API: /api/alignment/sync', () => {
 				return makeJsonResponse({
 					success: true,
 					data: {
-						mode: 'apply',
-						counts: { appliedTotalUpdates: 3 }
+						mode: 'preview',
+						counts: { appliedTotalUpdates: 0 }
 					}
 				});
 			}
@@ -98,7 +98,7 @@ describe('API: /api/alignment/sync', () => {
 		expect(result.success).toBe(true);
 		expect(result.data.summary.appliedVocabularyUpdates).toBe(2);
 		expect(result.data.summary.appliedTermUpdates).toBe(5);
-		expect(result.data.summary.appliedRelationUpdates).toBe(3);
+		expect(result.data.summary.appliedRelationUpdates).toBe(0);
 		expect(result.data.summary.appliedColumnUpdates).toBe(7);
 		expect(result.data.summary.remainingTermFailed).toBe(2);
 		expect(result.data.summary.totalIssues).toBe(4);
@@ -108,6 +108,10 @@ describe('API: /api/alignment/sync', () => {
 		expect(fetchMock.mock.calls[2][0].toString()).toContain('/api/erd/relations/sync');
 		expect(fetchMock.mock.calls[3][0].toString()).toContain('/api/column/sync-term');
 		expect(fetchMock.mock.calls[4][0].toString()).toContain('/api/validation/report');
+		expect(fetchMock.mock.calls[2][1]?.body?.toString()).toContain('"apply":false');
+		expect(fetchMock.mock.calls[4][0].toString()).toContain('vocabularyFile=vocabulary.json');
+		expect(fetchMock.mock.calls[4][0].toString()).toContain('domainFile=domain.json');
+		expect(fetchMock.mock.calls[4][0].toString()).toContain('termFile=term-custom.json');
 	});
 
 	it('should fail when relation sync fails', async () => {

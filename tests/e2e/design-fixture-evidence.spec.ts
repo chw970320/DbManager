@@ -69,6 +69,55 @@ test.afterAll(() => {
 });
 
 test('captures design fixture evidence for remaining backlog blockers', async ({ page }) => {
+	await test.step('home navigation IA screenshot fixture', async () => {
+		await page.goto('/');
+		await waitForApp(page);
+		await expect(page.getByRole('region', { name: '제품 영역 빠른 이동' })).toBeVisible();
+		await expect(page.getByRole('heading', { name: '운영 · 품질' })).toBeVisible();
+		await expect(page.getByRole('link', { name: '데이터 소스' })).toHaveAttribute(
+			'href',
+			'/data-source/browse'
+		);
+		const screenshot = await capture(page, 'home-navigation-ia.png');
+		results.push({
+			fixture: 'home navigation IA',
+			status: 'screenshot-pass',
+			route: '/',
+			action: 'home load → 제품 영역 빠른 이동 section 확인',
+			screenshot,
+			principle: 'Preserve route/menu naming consistency; Explain with data context',
+			observation:
+				'홈 quick navigation이 전역 메뉴와 같은 표준 용어, DB 설계, 운영 · 품질 그룹을 표시한다.',
+			followUp: 'No separate card copy drift; home quick links are sourced from menuGroups.'
+		});
+	});
+
+	await test.step('mobile global navigation screenshot fixture', async () => {
+		await page.setViewportSize({ width: 390, height: 844 });
+		await page.goto('/');
+		await waitForApp(page);
+		await page.getByRole('button', { name: '메인 메뉴 열기' }).click();
+		await expect(page.getByRole('button', { name: '메인 메뉴 닫기' })).toBeVisible();
+		await page.getByRole('button', { name: '운영 · 품질' }).click();
+		const mobileToolsMenu = page.locator('#mobile-menu-tools');
+		await expect(mobileToolsMenu.getByRole('link', { name: '품질 규칙' })).toBeVisible();
+		await expect(mobileToolsMenu.getByRole('link', { name: '프로파일링' })).toBeVisible();
+		const screenshot = await capture(page, 'mobile-navigation-ia.png');
+		results.push({
+			fixture: 'mobile global navigation',
+			status: 'screenshot-pass',
+			route: '/',
+			action: '390px viewport → mobile menu open → 운영 · 품질 group expand',
+			screenshot,
+			principle:
+				'Navigation may collapse, but route groups and labels should remain understandable',
+			observation:
+				'모바일 메뉴가 열기/닫기 상태와 그룹 확장 상태를 한국어 label과 aria-expanded로 노출한다.',
+			followUp: 'Desktop hover dropdown also exposes focus-within fallback for keyboard discovery.'
+		});
+		await page.setViewportSize({ width: 1280, height: 900 });
+	});
+
 	await page.goto('/domain/browse');
 	await waitForApp(page);
 

@@ -43,7 +43,11 @@
 			<div class="flex h-16 items-center justify-between">
 				<!-- 로고 -->
 				<div class="flex items-center space-x-8">
-					<a href="/" class="flex items-center space-x-3 transition-transform hover:scale-105">
+					<a
+						href="/"
+						class="flex items-center space-x-3 transition-transform hover:scale-105"
+						aria-label="DbManager 홈"
+					>
 						<div class="relative">
 							<div
 								class="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 opacity-75 blur"
@@ -61,12 +65,14 @@
 					</a>
 
 					<!-- 데스크탑 네비게이션 (그룹 버튼 + 드롭다운) -->
-					<nav class="hidden items-center space-x-3 md:flex">
+					<nav class="hidden items-center space-x-3 md:flex" aria-label="주요 메뉴">
 						{#each menuGroups as group (group.id)}
 							<div class="group relative">
 								<!-- 그룹 버튼: 하위 메뉴 수를 시각적으로 접어서 표시 -->
 								<button
 									type="button"
+									aria-haspopup="true"
+									aria-label={`${group.label} 메뉴`}
 									class="inline-flex items-center space-x-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition-all duration-200 {isGroupActive(
 										group
 									)
@@ -82,7 +88,7 @@
 
 								<!-- 드롭다운: 그룹 호버 시에만 전체 메뉴 노출 -->
 								<div
-									class="invisible absolute left-0 top-full z-40 mt-2 min-w-[220px] rounded-xl border border-slate-100 bg-white/95 p-1 text-sm opacity-0 shadow-lg backdrop-blur-sm transition-all duration-150 group-hover:visible group-hover:opacity-100"
+									class="invisible absolute left-0 top-full z-40 mt-2 min-w-[220px] rounded-xl border border-slate-100 bg-white/95 p-1 text-sm opacity-0 shadow-lg backdrop-blur-sm transition-all duration-150 group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100"
 								>
 									{#each group.items as item (item.href)}
 										<a
@@ -106,12 +112,13 @@
 				<!-- 모바일 메뉴 버튼 -->
 				<div class="flex items-center md:hidden">
 					<button
+						type="button"
 						onclick={toggleMobileMenu}
 						class="inline-flex items-center justify-center rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-600"
 						aria-controls="mobile-menu"
 						aria-expanded={mobileMenuOpen}
 					>
-						<span class="sr-only">메인 메뉴 열기</span>
+						<span class="sr-only">{mobileMenuOpen ? '메인 메뉴 닫기' : '메인 메뉴 열기'}</span>
 						{#if mobileMenuOpen}
 							<Icon name="x" size="lg" />
 						{:else}
@@ -132,6 +139,8 @@
 								type="button"
 								class="flex w-full items-center justify-between rounded-lg px-2 py-2 text-xs font-semibold tracking-wide text-slate-500"
 								onclick={() => toggleMobileGroup(group.id)}
+								aria-expanded={openMobileGroupId === group.id}
+								aria-controls={`mobile-menu-${group.id}`}
 							>
 								<span>{group.label}</span>
 								<Icon
@@ -142,7 +151,7 @@
 							</button>
 
 							{#if openMobileGroupId === group.id}
-								<div class="mt-1 space-y-1">
+								<div class="mt-1 space-y-1" id={`mobile-menu-${group.id}`}>
 									{#each group.items as item (item.href)}
 										<a
 											href={item.href}

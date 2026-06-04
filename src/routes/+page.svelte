@@ -1,6 +1,8 @@
 <script lang="ts">
 	import BentoGrid from '$lib/components/BentoGrid.svelte';
 	import BentoCard from '$lib/components/BentoCard.svelte';
+	import Icon from '$lib/components/Icon.svelte';
+	import { menuGroups } from '$lib/utils/navigation';
 </script>
 
 <!-- 페이지 헤드 설정 -->
@@ -30,6 +32,46 @@
 					데이터 표준화, 용어 일관성, 그리고 체계적인 데이터베이스 설계 관리를 통해<br />
 					조직의 데이터 품질과 생산성을 향상시킵니다.
 				</p>
+			</div>
+		</div>
+	</section>
+
+	<!-- 제품 영역 빠른 이동 -->
+	<section aria-label="제품 영역 빠른 이동" class="bg-white py-14 sm:py-20">
+		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+			<div class="mx-auto max-w-2xl text-center">
+				<h2 class="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl">
+					제품 영역 빠른 이동
+				</h2>
+				<p class="mt-3 text-sm leading-6 text-gray-600 sm:text-base">
+					전역 메뉴와 같은 그룹으로 표준화, DB 설계, 운영 · 품질 흐름을 한눈에 확인합니다.
+				</p>
+			</div>
+
+			<div class="mt-10 grid gap-4 md:grid-cols-3">
+				{#each menuGroups as group (group.id)}
+					<article class="rounded-2xl border border-gray-200 bg-slate-50/60 p-5 shadow-sm">
+						<div class="flex items-center justify-between gap-3">
+							<h3 id={`home-nav-group-${group.id}`} class="text-base font-semibold text-gray-900">
+								{group.label}
+							</h3>
+							<span class="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-gray-500">
+								{group.items.length}개 메뉴
+							</span>
+						</div>
+						<nav class="mt-4 grid gap-2" aria-labelledby={`home-nav-group-${group.id}`}>
+							{#each group.items as item (item.href)}
+								<a
+									href={item.href}
+									class="flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700"
+								>
+									<Icon name={item.icon} size="sm" class="text-gray-400" />
+									<span>{item.label}</span>
+								</a>
+							{/each}
+						</nav>
+					</article>
+				{/each}
 			</div>
 		</div>
 	</section>

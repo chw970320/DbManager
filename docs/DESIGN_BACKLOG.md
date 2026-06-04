@@ -157,12 +157,19 @@ Fixture blocker 처리 결과:
 
 ### Home / global navigation / IA audit
 
-상태: 감사 필요.
+상태: 완료됨. 홈 quick navigation을 전역 `menuGroups`와 동기화하고, desktop/mobile navigation 접근성 단서를 보강했습니다.
 
-- [ ] 홈 카드와 전역 navigation의 route grouping 확인
-- [ ] breadcrumb와 메뉴 label의 사용자 문서 정합성 확인
-- [ ] 작은 화면에서 navigation 이해 가능성 확인
-- [ ] Korean label과 docs/test alignment 보존
+근거:
+
+- 변경 파일: `src/routes/+page.svelte`, `src/routes/+layout.svelte`, `tests/e2e/design-fixture-evidence.spec.ts`
+- Targeted tests: `pnpm vitest run src/routes/home-page.test.ts src/routes/layout-source.test.ts src/lib/utils/navigation.test.ts src/routes/data-source/browse/page.test.ts`
+- Browser evidence: `.omx/plans/home-navigation-ia-screenshots/20260604T100735Z/`
+- Evidence report: `.omx/plans/home-navigation-ia-audit-20260604T100800Z.md`
+
+- [x] 홈 카드와 전역 navigation의 route grouping 확인
+- [x] breadcrumb와 메뉴 label의 사용자 문서 정합성 확인
+- [x] 작은 화면에서 navigation 이해 가능성 확인
+- [x] Korean label과 docs/test alignment 보존
 
 ## 명시적 제외
 

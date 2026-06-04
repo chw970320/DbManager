@@ -102,13 +102,20 @@ Fixture blocker 처리 결과:
 
 ### Alignment / sync result readability
 
-상태: Visual QA 이후 계획화.
+상태: 완료됨. 관계 보정 미리보기 패널의 저장 여부, 남은 issue, owner trace, 후보 context 문구를 보강했습니다.
 
-- [ ] preview/apply 모드가 명확히 구분되는지 확인
-- [ ] direct apply screenshot fixture는 reversible/reset-backed apply 조건 확정 후 진행
-- [ ] `failedStep`, owner trace, 남은 validation issue가 숨겨지지 않는지 확인
-- [ ] 후보 변경 사유와 후속 조치가 한국어로 충분히 설명되는지 확인
-- [ ] backend owner name과 `failedStep` 의미 보존
+근거:
+
+- 변경 파일: `src/lib/components/DesignRelationPanel.svelte`, `tests/e2e/design-fixture-evidence.spec.ts`
+- Targeted tests: `pnpm vitest run src/lib/components/DesignRelationPanel.test.ts src/routes/api/alignment/sync/server.test.ts src/routes/api/erd/relations/sync/server.test.ts`
+- Browser evidence: `.omx/plans/alignment-sync-readability-screenshots/20260604T093238Z/`
+- Evidence report: `.omx/plans/alignment-sync-readability-20260604T093500Z.md`
+
+- [x] preview/apply 모드가 명확히 구분되는지 확인
+- [x] direct apply screenshot fixture는 reversible/reset-backed apply 조건 전까지 component/API evidence로 보존
+- [x] `failedStep`, owner trace, 남은 validation issue가 숨겨지지 않는지 확인
+- [x] 후보 변경 사유와 후속 조치가 한국어로 충분히 설명되는지 확인
+- [x] backend owner name과 `failedStep` 의미 보존
 
 ### ERD / relation visual QA lane
 

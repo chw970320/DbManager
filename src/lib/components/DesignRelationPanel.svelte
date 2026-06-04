@@ -34,6 +34,7 @@
 			before: string;
 			after: string;
 			reason: string;
+			owner?: string;
 		}>;
 		suggestions: Array<{
 			attributeId: string;
@@ -173,6 +174,32 @@
 
 	function syncModeLabel(mode: RelationSyncPayload['mode']): string {
 		return mode === 'preview' ? '응답 모드: 미리보기' : '응답 모드: 반영 결과';
+	}
+
+	function syncModeBadge(mode: RelationSyncPayload['mode']): string {
+		return mode === 'preview' ? '실행 모드: 저장 없음' : '실행 모드: 저장됨';
+	}
+
+	function syncModeDescription(mode: RelationSyncPayload['mode']): string {
+		return mode === 'preview'
+			? '이 결과는 후보 계산만 수행했으며 파일을 변경하지 않았습니다.'
+			: '이 결과는 쓰기 작업에서 실제 반영된 결과입니다.';
+	}
+
+	function formatOwner(owner?: string): string {
+		return owner?.trim() ? owner : 'erd/relations/sync';
+	}
+
+	function formatCandidateContext(
+		candidate: RelationSyncPayload['suggestions'][number]['candidates'][number]
+	): string {
+		const parts = [
+			candidate.schemaName ? `스키마 ${candidate.schemaName}` : null,
+			candidate.tableEnglishName ? `테이블 ${candidate.tableEnglishName}` : null,
+			candidate.relatedEntityName ? `연관엔터티 ${candidate.relatedEntityName}` : null
+		].filter(Boolean);
+
+		return parts.length > 0 ? parts.join(' · ') : '후보 context 없음';
 	}
 
 	function currentFileParamName(type: DefinitionType): `${DefinitionType}File` {
@@ -609,17 +636,28 @@
 					</button>
 				</div>
 				<div class="mb-2 text-[11px] font-medium text-blue-800">
-					요청: 미리보기(저장 없음) · {syncModeLabel(syncData.mode)}
+					요청: {syncData.mode === 'preview' ? '미리보기(저장 없음)' : '실제 반영'} · {syncModeLabel(
+						syncData.mode
+					)}
+				</div>
+				<div
+					class="mb-2 rounded border border-blue-100 bg-blue-50/60 px-2 py-1 text-[11px] text-blue-900"
+				>
+					<div class="font-semibold">{syncModeBadge(syncData.mode)}</div>
+					<div>{syncModeDescription(syncData.mode)}</div>
 				</div>
 				<div class="grid grid-cols-2 gap-1 text-gray-700 sm:grid-cols-4">
 					<div>테이블 후보: {syncData.counts.tableCandidates}</div>
 					<div>컬럼 후보: {syncData.counts.columnCandidates}</div>
 					<div>추천 후보: {syncData.counts.attributeColumnSuggestions}</div>
-					<div>실제 반영: {syncData.counts.appliedTotalUpdates}</div>
+					<div>실제 반영: {syncData.counts.appliedTotalUpdates}건</div>
 				</div>
 				<div class="mt-1 text-gray-600">
 					정합성 변화: {syncData.validationBefore.totals.unmatched} -> {syncData.validationAfter
 						.totals.unmatched}
+				</div>
+				<div class="mt-1 text-gray-600">
+					남은 validation issue: {syncData.validationAfter.totals.unmatched}건
 				</div>
 				{#if syncData.validationAfter.totals.unmatched > 0}
 					<div
@@ -662,6 +700,7 @@
 										</div>
 										<div>{change.field}: "{change.before || '-'}" -> "{change.after || '-'}"</div>
 										<div>근거: {change.reason}</div>
+										<div>실행 소유자: {formatOwner(change.owner)}</div>
 									</div>
 								{/each}
 								{#if syncData.changes.length === 0}
@@ -686,6 +725,11 @@
 										<div class="truncate">
 											후보: {suggestion.candidates.map((c) => c.columnLabel).join(', ')}
 										</div>
+										{#if suggestion.candidates[0]}
+											<div class="mt-1 text-indigo-900">
+												후보 context: {formatCandidateContext(suggestion.candidates[0])}
+											</div>
+										{/if}
 									</div>
 								{/each}
 								{#if syncData.suggestions.length === 0}

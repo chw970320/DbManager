@@ -158,6 +158,8 @@ test('captures design fixture evidence for remaining backlog blockers', async ({
 		await clickButton(page, '보정 미리보기');
 		await expect(page.getByText('보정 미리보기 결과')).toBeVisible({ timeout: 30_000 });
 		await expect(page.getByText('요청: 미리보기(저장 없음)', { exact: false })).toBeVisible();
+		await expect(page.getByText('실행 모드: 저장 없음')).toBeVisible();
+		await expect(page.getByText('남은 validation issue:', { exact: false })).toBeVisible();
 		await clickButton(page, '상세 보기');
 		const screenshot = await capture(page, 'sync-preview-apply.png');
 		results.push({
@@ -169,7 +171,7 @@ test('captures design fixture evidence for remaining backlog blockers', async ({
 			screenshot,
 			principle: 'Validate before mutate; Prefer reversible workflows; Preserve owner/issue trace',
 			observation:
-				'미리보기 결과가 저장 없음, 후보 수, 실제 반영 0, 정합성 변화, 미해결 원인/변경 후보를 보여주며 apply는 쓰기 작업의 자동 반영 정책으로 설명된다.',
+				'미리보기 결과가 저장 없음, 후보 수, 실제 반영, 정합성 변화, 남은 validation issue, 미해결 원인/변경 후보를 보여주며 apply는 쓰기 작업의 자동 반영 정책으로 설명된다.',
 			followUp:
 				'Direct apply screenshot is not a standalone safe UI action in this panel; keep API/component apply evidence as supplement.'
 		});

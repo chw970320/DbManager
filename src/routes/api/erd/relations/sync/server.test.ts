@@ -137,6 +137,45 @@ describe('API: /api/erd/relations/sync', () => {
 		expect(saveData).not.toHaveBeenCalled();
 	});
 
+	it('should keep owner trace on preview changes', async () => {
+		vi.mocked(buildDesignRelationSyncPlan).mockReturnValue({
+			tableUpdates: [],
+			columnUpdates: [],
+			preview: {
+				counts: {
+					tableCandidates: 1,
+					columnCandidates: 0,
+					totalCandidates: 1,
+					fieldChanges: 1,
+					attributeColumnSuggestions: 0
+				},
+				changes: [
+					{
+						targetType: 'table',
+						targetId: 'table-1',
+						targetLabel: 'TB_USER',
+						field: 'relatedEntityName',
+						before: '',
+						after: '사용자',
+						reason: '테이블명 기준 관계 보정'
+					}
+				],
+				suggestions: []
+			}
+		});
+
+		const response = await GET(createGetEvent());
+		const result = await response.json();
+
+		expect(response.status).toBe(200);
+		expect(result.success).toBe(true);
+		expect(result.data.changes[0]).toMatchObject({
+			owner: 'erd/relations/sync',
+			reason: '테이블명 기준 관계 보정'
+		});
+		expect(saveData).not.toHaveBeenCalled();
+	});
+
 	it('should apply updates on POST when apply=true', async () => {
 		vi.mocked(buildDesignRelationSyncPlan).mockReturnValue({
 			tableUpdates: [

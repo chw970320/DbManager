@@ -57,9 +57,9 @@ function createSyncResponse() {
 				totalCandidates: 3,
 				fieldChanges: 4,
 				attributeColumnSuggestions: 1,
-				appliedTableUpdates: 1,
-				appliedColumnUpdates: 2,
-				appliedTotalUpdates: 3
+				appliedTableUpdates: 0,
+				appliedColumnUpdates: 0,
+				appliedTotalUpdates: 0
 			},
 			changes: [
 				{
@@ -69,10 +69,27 @@ function createSyncResponse() {
 					field: 'relatedEntityName',
 					before: '',
 					after: '고객',
-					reason: '테이블명 기준 관계 보정'
+					reason: '테이블명 기준 관계 보정',
+					owner: 'erd/relations/sync'
 				}
 			],
-			suggestions: [],
+			suggestions: [
+				{
+					attributeId: 'attribute-1',
+					attributeName: '고객번호',
+					schemaName: 'public',
+					entityName: '고객',
+					candidates: [
+						{
+							columnId: 'column-1',
+							columnLabel: 'public.customers.CUSTOMER_ID',
+							schemaName: 'public',
+							tableEnglishName: 'customers',
+							relatedEntityName: '고객'
+						}
+					]
+				}
+			],
 			validationBefore: {
 				specs: [],
 				summaries: [],
@@ -208,8 +225,10 @@ describe('DesignRelationPanel', () => {
 			expect(
 				screen.getByText('요청: 미리보기(저장 없음) · 응답 모드: 미리보기')
 			).toBeInTheDocument();
-			expect(screen.getByText('실제 반영: 3')).toBeInTheDocument();
+			expect(screen.getByText('실행 모드: 저장 없음')).toBeInTheDocument();
+			expect(screen.getByText('실제 반영: 0건')).toBeInTheDocument();
 			expect(screen.getByText('정합성 변화: 3 -> 1')).toBeInTheDocument();
+			expect(screen.getByText('남은 validation issue: 1건')).toBeInTheDocument();
 			expect(onApplied).not.toHaveBeenCalled();
 		});
 
@@ -218,6 +237,10 @@ describe('DesignRelationPanel', () => {
 		await waitFor(() => {
 			expect(screen.getByText('TABLE · public.customers')).toBeInTheDocument();
 			expect(screen.getByText('근거: 테이블명 기준 관계 보정')).toBeInTheDocument();
+			expect(screen.getByText('실행 소유자: erd/relations/sync')).toBeInTheDocument();
+			expect(
+				screen.getByText('후보 context: 스키마 public · 테이블 customers · 연관엔터티 고객')
+			).toBeInTheDocument();
 		});
 	});
 

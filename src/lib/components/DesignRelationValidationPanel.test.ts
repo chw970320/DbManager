@@ -3,6 +3,14 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/sve
 import DesignRelationValidationPanel from './DesignRelationValidationPanel.svelte';
 import type { DesignRelationValidationResult, RelationIssue } from '$lib/types/design-relation';
 
+const { mockShowConfirm } = vi.hoisted(() => ({
+	mockShowConfirm: vi.fn()
+}));
+
+vi.mock('$lib/stores/confirm-store.js', () => ({
+	showConfirm: mockShowConfirm
+}));
+
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
@@ -127,6 +135,7 @@ function renderPanel(props = {}) {
 describe('DesignRelationValidationPanel', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mockShowConfirm.mockResolvedValue(true);
 		mockFetch.mockImplementation(async (_input: RequestInfo | URL, init?: RequestInit) => {
 			const body = JSON.parse(String(init?.body || '{}'));
 			return createResponse({
@@ -188,7 +197,12 @@ describe('DesignRelationValidationPanel', () => {
 
 		const dialog = screen.getByRole('dialog', { name: '정의서 관계 유효성 검사 결과' });
 		expect(dialog).toHaveTextContent('전체 1개 중 0개 통과, 2개 실패');
-		expect(dialog).toHaveTextContent('컬럼 정의서 · column-a.json');
+		expect(dialog).toHaveTextContent('검증 진행률');
+		expect(dialog).toHaveTextContent('0%');
+		expect(dialog).toHaveTextContent('표시 중: 2개 / 전체: 2개');
+		expect(dialog).not.toHaveTextContent('현재 검증 기준');
+		expect(dialog).not.toHaveTextContent('column-a.json');
+		expect(dialog).not.toHaveTextContent('자동 수정 가능');
 		expect(dialog).toHaveTextContent('조치 대상 선택');
 		expect(dialog).toHaveTextContent('회원.public.TB_USER.사용자');
 		expect(dialog).toHaveTextContent('회원.public.TB_USER.고객');
@@ -272,6 +286,18 @@ describe('DesignRelationValidationPanel', () => {
 		await fireEvent.click(screen.getByRole('button', { name: /자동 수정/ }));
 
 		await waitFor(() => {
+			expect(mockShowConfirm).toHaveBeenCalledWith({
+				title: '정의서 관계 자동 수정',
+				message: '선택한 조치 대상에 자동 수정 내용을 적용하시겠습니까?',
+				confirmText: '자동 수정'
+			});
+			expect(mockFetch).toHaveBeenCalledWith(
+				'/api/validation/design-relations/apply',
+				expect.objectContaining({
+					method: 'POST',
+					body: expect.stringContaining('"resolutionTargetId":"candidate-a"')
+				})
+			);
 			expect(onautofix).toHaveBeenCalledWith(
 				expect.objectContaining({
 					issueId: 'issue-1',
@@ -281,6 +307,24 @@ describe('DesignRelationValidationPanel', () => {
 				})
 			);
 		});
+	});
+
+	it('does not apply autofix when confirmation is cancelled', async () => {
+		mockShowConfirm.mockResolvedValueOnce(false);
+		const onautofix = vi.fn();
+		renderPanel({ onautofix });
+
+		await fireEvent.click(screen.getByRole('button', { name: /자동 수정/ }));
+
+		await waitFor(() => {
+			expect(mockShowConfirm).toHaveBeenCalledWith({
+				title: '정의서 관계 자동 수정',
+				message: '선택한 조치 대상에 자동 수정 내용을 적용하시겠습니까?',
+				confirmText: '자동 수정'
+			});
+		});
+		expect(mockFetch).not.toHaveBeenCalled();
+		expect(onautofix).not.toHaveBeenCalled();
 	});
 
 	it('filters issues by involved definition type instead of targetType only', () => {

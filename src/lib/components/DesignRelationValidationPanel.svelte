@@ -10,6 +10,7 @@
 		RelationIssue,
 		RelationResolutionTarget
 	} from '$lib/types/design-relation.js';
+	import { showConfirm } from '$lib/stores/confirm-store.js';
 	import { relationResolutionTargets } from '$lib/utils/design-relation-display.js';
 	import { relationIssueInvolvedTypes } from '$lib/utils/design-relation-scope.js';
 
@@ -137,11 +138,11 @@
 	let totalCount = $derived(validation?.totals.totalChecked ?? 0);
 	let failedCount = $derived(error ? 1 : (validation?.totals.failedCount ?? issues.length));
 	let passedCount = $derived(validation?.totals.passedCount ?? validation?.totals.matched ?? 0);
-	let autoFixableCount = $derived(
-		issues.filter((issue) => targetsForIssue(issue).some((target) => targetIsAutoFixable(target)))
-			.length
-	);
 	let displayedCount = $derived(error ? 1 : filteredIssues.length);
+	let progressPercentage = $derived(
+		totalCount > 0 ? Math.round((passedCount / totalCount) * 100) : 0
+	);
+	let issueCount = $derived(error ? 1 : issues.length);
 
 	function requestPayload(issue: RelationIssue, target: RelationResolutionTarget) {
 		return {
@@ -167,6 +168,14 @@
 		const target = targetForIssue(issue);
 		if (!target || !targetIsAutoFixable(target)) {
 			setIssueError(issue.issueId, '자동 수정할 수정 대상을 먼저 선택하세요.');
+			return;
+		}
+		const confirmed = await showConfirm({
+			title: '정의서 관계 자동 수정',
+			message: '선택한 조치 대상에 자동 수정 내용을 적용하시겠습니까?',
+			confirmText: '자동 수정'
+		});
+		if (!confirmed) {
 			return;
 		}
 		pendingIssueId = issue.issueId;
@@ -281,20 +290,19 @@
 		{/if}
 
 		<div class="rounded-lg border border-border bg-surface-muted px-4 py-3 text-sm">
-			<div class="flex flex-wrap items-center justify-between gap-3">
-				<div>
-					<p class="font-medium text-content">현재 검증 기준</p>
-					<p class="mt-1 text-xs text-content-muted">
-						{typeLabel(definitionType)} · {currentFile}
-					</p>
-				</div>
-				<span class="badge {autoFixableCount > 0 ? 'badge-info' : 'badge-ghost'}">
-					자동 수정 가능 {autoFixableCount.toLocaleString()}건
-				</span>
+			<div class="flex items-center justify-between gap-3">
+				<span class="font-medium text-content">검증 진행률</span>
+				<span class="text-content-secondary">{progressPercentage}%</span>
+			</div>
+			<div class="mt-2 h-2 w-full overflow-hidden rounded-full bg-surface-raised">
+				<div
+					class="h-full bg-status-success transition-all duration-300"
+					style="width: {progressPercentage}%"
+				></div>
 			</div>
 			<p class="mt-2 text-xs text-content-muted">
-				후보가 여러 개인 경우 수정 정의서를 선택하면 조치 가이드와 실행 버튼이 해당 대상
-				기준으로 바뀝니다. 후보가 없는 항목은 수동 수정 또는 신규 추가만 가능합니다.
+				표시 중: {displayedCount.toLocaleString()}개 / 전체:
+				{issueCount.toLocaleString()}개
 			</p>
 		</div>
 

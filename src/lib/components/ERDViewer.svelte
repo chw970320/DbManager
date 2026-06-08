@@ -3,12 +3,6 @@
 	import type { ERDData } from '../types/erd-mapping.js';
 	import type { DesignRelationValidationResult } from '../types/design-relation.js';
 	import { isAllowedErdSvgRenderUrl, sanitizeErdSvgText } from '../utils/erd-svg-preview.js';
-	import {
-		relationActionStateSummary,
-		relationParticipantSummary,
-		relationResolutionTargetSummary,
-		relationResolutionTargets
-	} from '../utils/design-relation-display.js';
 
 	type ERDViewerData = ERDData & {
 		relationValidation?: DesignRelationValidationResult;
@@ -56,11 +50,6 @@
 	let isSparseGraph = $derived(erdData.metadata.totalNodes <= 1 || relationshipCount === 0);
 	let isLargeGraph = $derived(erdData.metadata.totalNodes >= 50 || relationshipCount >= 80);
 	let relationValidationSummary = $derived(erdData.relationValidation?.totals ?? null);
-	let relationValidationIssues = $derived(
-		erdData.relationValidation?.issues?.length
-			? erdData.relationValidation.issues
-			: (erdData.relationValidation?.summaries.flatMap((summary) => summary.issues) ?? [])
-	);
 	let zoomPercent = $derived(Math.round(scale * 100));
 	let canvasTransform = $derived(`translate(${translateX}px, ${translateY}px) scale(${scale})`);
 
@@ -340,36 +329,6 @@
 						{relationValidationSummary.errorCount}건 · 경고
 						{relationValidationSummary.warningCount}건
 					</p>
-					{#if relationValidationIssues.length > 0}
-						<ul class="mt-2 space-y-1" aria-label="ERD 관계 검증 이슈">
-							{#each relationValidationIssues.slice(0, 3) as issue (issue.issueId)}
-								<li class="rounded border border-amber-100 bg-amber-50/60 px-2 py-1">
-									<p class="font-medium text-amber-900">
-										{issue.relationName} · {issue.targetLabel}
-									</p>
-									<p class="mt-0.5 text-amber-800">{issue.reason}</p>
-									<p class="mt-0.5 text-amber-700">
-										참여: {relationParticipantSummary(issue)}
-									</p>
-									<p class="mt-0.5 text-amber-700">
-										조치 상태: {relationActionStateSummary(issue)}
-									</p>
-									<p class="mt-0.5 text-amber-700">
-										수정 대상:
-										{#if relationResolutionTargets(issue).length > 0}
-											{relationResolutionTargets(issue)
-												.slice(0, 2)
-												.map(relationResolutionTargetSummary)
-												.join(' / ')}
-										{:else}
-											수동 확인 필요
-										{/if}
-									</p>
-									<p class="mt-0.5 text-amber-700">조치: {issue.actionGuide}</p>
-								</li>
-							{/each}
-						</ul>
-					{/if}
 				</div>
 			{/if}
 		</div>

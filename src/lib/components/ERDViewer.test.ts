@@ -233,14 +233,12 @@ describe('ERDViewer', () => {
 		expect(screen.getByText(/탐색: 맞춤\/100%\/확대\/축소\/드래그\/휠로 이동/)).toBeInTheDocument();
 		expect(screen.getByText(/안전 렌더링: 허용된 ERD 이미지 URL만 표시합니다/)).toBeInTheDocument();
 		expect(screen.getByText(/관계 검증: 미매칭 3건 · 오류\s*2건 · 경고\s*1건/)).toBeInTheDocument();
-		expect(screen.getByLabelText('ERD 관계 검증 이슈')).toBeInTheDocument();
-		expect(screen.getByText(/테이블 -> 컬럼 · USER_NM/)).toBeInTheDocument();
-		expect(screen.getByText(/참여: table:사용자 \/ column:USER_NM/)).toBeInTheDocument();
-		expect(screen.getByText(/조치 상태: 자동 1건 · 수동 0건 · 신규 1건/)).toBeInTheDocument();
-		expect(
-			screen.getByText(/수정 대상:\s*table:TB_USER\(신규 추가\) \/ column:USER_NM\(자동 수정\)/)
-		).toBeInTheDocument();
-		expect(screen.getByText(/조치: 후보를 선택해 컬럼 정의서를 자동 수정/)).toBeInTheDocument();
+		expect(screen.queryByLabelText('ERD 관계 검증 이슈')).not.toBeInTheDocument();
+		expect(screen.queryByText(/테이블 -> 컬럼 · USER_NM/)).not.toBeInTheDocument();
+		expect(screen.queryByText(/참여: table:사용자 \/ column:USER_NM/)).not.toBeInTheDocument();
+		expect(screen.queryByText(/조치 상태: 자동 1건 · 수동 0건 · 신규 1건/)).not.toBeInTheDocument();
+		expect(screen.queryByText(/수정 대상:/)).not.toBeInTheDocument();
+		expect(screen.queryByText(/조치: 후보를 선택해 컬럼 정의서를 자동 수정/)).not.toBeInTheDocument();
 	});
 
 	it('큰 ERD 그래프에는 확대/이동 탐색 힌트를 우선 표시한다', async () => {

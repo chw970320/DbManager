@@ -2374,8 +2374,9 @@ ERD 노드/엣지/매핑 데이터를 생성합니다.
   - `subjectArea`, `schema`, `q`/`tableSearch`, `scopeFlag`, `includeExternalReferences`: 이미지 렌더 API와 같은 필터 계약으로 ERDData를 생성합니다.
 - 응답 추가 정보:
   - `data.relationValidation`: canonical 정의서 관계 검증 결과. `issues[].participants`,
-    `involvedTypes`, `resolutionTargets`, `actionGuide`는 정의서 유효성 검사 패널과 ERD
-    상세 표시가 동일하게 사용합니다.
+    `involvedTypes`, `resolutionTargets`, `actionGuide`는 응답 데이터에 보존되며 정의서 유효성
+    검사 패널과 validation report의 상세 표시에서 사용합니다. ERD 화면은 이 상세 대신
+    미매칭·오류·경고 건수만 표시합니다.
   - `data.metadata.totalEdges`: 기존 ERDData 구조적 edge 수
   - `data.metadata.totalRelationships`: Graphviz 이미지 기준 명시 FK 관계 수. 같은 source/target 테이블 사이 복수 FK는 하나로 축약됩니다.
   - `data.metadata.externalRelationships`, `data.metadata.unresolvedForeignKeys`: 이미지 관계 기준 외부참조/미해결 FK 보조 통계

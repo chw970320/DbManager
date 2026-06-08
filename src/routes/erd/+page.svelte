@@ -12,12 +12,6 @@
 		DesignRelationSyncPreview,
 		DesignRelationValidationResult
 	} from '$lib/types/design-relation.js';
-	import {
-		relationActionStateSummary,
-		relationParticipantSummary,
-		relationResolutionTargetSummary,
-		relationResolutionTargets
-	} from '$lib/utils/design-relation-display.js';
 
 	interface ERDTableInfo {
 		id: string;
@@ -169,11 +163,6 @@
 		filteredTables()
 			.map((table) => table.id)
 			.filter((id) => selectedTableIds.has(id))
-	);
-	let erdRelationIssues = $derived(
-		erdData?.relationValidation?.issues?.length
-			? erdData.relationValidation.issues
-			: (erdData?.relationValidation?.summaries.flatMap((summary) => summary.issues) ?? [])
 	);
 
 	function uniqueSorted(values: Array<string | undefined>): string[] {
@@ -902,8 +891,7 @@
 				</div>
 				<p class="mb-3 text-xs text-gray-500">
 					자동 수정은 DB/엔터티/속성/테이블/컬럼 정의서의 유효성 검사 패널에서 후보를 선택해
-					실행합니다. ERD에서는 같은 미매칭·참여 정의서·수정 대상·조치 정보를 조회용으로
-					표시합니다.
+					실행합니다. ERD에서는 관계 검증의 미매칭·오류·경고 건수만 조회용으로 표시합니다.
 				</p>
 				<div class="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3 lg:grid-cols-6">
 					<div class="rounded-lg border border-blue-200 bg-blue-50 p-2 text-center">
@@ -939,47 +927,11 @@
 						<div>
 							<p class="font-semibold text-amber-900">정의서 관계 유효성 검사</p>
 							<p class="mt-1">
-								검사 {erdData.relationValidation.totals.totalChecked}건 · 매칭
-								{erdData.relationValidation.totals.matched}건 · 미매칭
-								{erdData.relationValidation.totals.unmatched}건 · 오류
+								미매칭 {erdData.relationValidation.totals.unmatched}건 · 오류
 								{erdData.relationValidation.totals.errorCount}건 · 경고
 								{erdData.relationValidation.totals.warningCount}건
 							</p>
 						</div>
-
-						{#if erdRelationIssues.length > 0}
-							<div class="space-y-2" aria-label="ERD 정의서 관계 미매칭 상세">
-								{#each erdRelationIssues.slice(0, 5) as issue (issue.issueId)}
-									<div class="rounded border border-amber-200 bg-white/80 px-3 py-2">
-										<div class="flex flex-wrap items-center gap-2">
-											<span class="font-medium text-amber-950">{issue.relationName}</span>
-											<span class="rounded-full bg-amber-100 px-2 py-0.5 text-amber-800">
-												{issue.targetLabel}
-											</span>
-											<span class="text-amber-700">
-												{relationActionStateSummary(issue)}
-											</span>
-										</div>
-										<p class="mt-1 text-amber-800">{issue.reason}</p>
-										<p class="mt-1 text-amber-700">
-											참여 정의서: {relationParticipantSummary(issue)}
-										</p>
-										<p class="mt-1 text-amber-700">
-											수정 대상:
-											{#if relationResolutionTargets(issue).length > 0}
-												{relationResolutionTargets(issue)
-													.slice(0, 3)
-													.map(relationResolutionTargetSummary)
-													.join(' / ')}
-											{:else}
-												수동 확인 필요
-											{/if}
-										</p>
-										<p class="mt-1 text-amber-700">조치 가이드: {issue.actionGuide}</p>
-									</div>
-								{/each}
-							</div>
-						{/if}
 					</div>
 				{/if}
 

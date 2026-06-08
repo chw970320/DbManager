@@ -39,6 +39,35 @@ export interface DesignRelationPatch {
 	fields: Record<string, string | null>;
 }
 
+export type RelationParticipantRole = 'source' | 'target' | 'reference';
+
+export interface RelationParticipant {
+	type: DataType;
+	id?: string;
+	label: string;
+	file?: string | null;
+	role: RelationParticipantRole;
+}
+
+export type RelationResolutionMode = 'edit' | 'create' | 'auto_patch';
+
+export interface RelationResolutionTarget {
+	resolutionTargetId: string;
+	targetType: DataType;
+	targetId?: string;
+	targetLabel: string;
+	mode: RelationResolutionMode;
+	file?: string | null;
+	field?: string;
+	candidateId?: string;
+	patch?: DesignRelationPatch;
+	autoFixable: boolean;
+	reason: string;
+	previewText: string;
+	prefill?: Record<string, string | number | boolean | null>;
+	route?: string;
+}
+
 export interface DesignRelationManualTarget {
 	targetType: DataType;
 	targetId: string;
@@ -82,6 +111,9 @@ export interface RelationIssue {
 	candidates: DesignRelationCandidate[];
 	autoFixable: boolean;
 	actionGuide: string;
+	participants?: RelationParticipant[];
+	involvedTypes?: DataType[];
+	resolutionTargets?: RelationResolutionTarget[];
 }
 
 export type DesignRelationIssue = RelationIssue;
@@ -102,6 +134,11 @@ export interface DesignRelationValidationResult {
 	rules: DesignRelationRule[];
 	summaries: RelationValidationSummary[];
 	issues: RelationIssue[];
+	scope?: {
+		scoped: boolean;
+		type?: DataType;
+		file?: string | null;
+	};
 	totals: {
 		totalChecked: number;
 		matched: number;
@@ -118,6 +155,7 @@ export interface DesignRelationValidationResult {
 export interface DesignRelationCorrectionPreview {
 	issueId: string;
 	candidateId: string;
+	resolutionTargetId?: string;
 	patch: DesignRelationPatch;
 	previewText: string;
 	actionGuide: string;

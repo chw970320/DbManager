@@ -51,14 +51,23 @@ describe('API: /api/validation/design-relations/preview', () => {
 
 	it('returns selected candidate preview', async () => {
 		const response = await POST(
-			event({ issueId: 'issue-1', candidateId: 'candidate-1', columnFile: 'column-a.json' })
+			event({
+				issueId: 'issue-1',
+				candidateId: 'candidate-1',
+				resolutionTargetId: 'rt-1',
+				columnFile: 'column-a.json'
+			})
 		);
 		const result = await response.json();
 
 		expect(response.status).toBe(200);
 		expect(result.data.patch.fields.tableEnglishName).toBe('USER');
 		expect(runDesignRelationPreview).toHaveBeenCalledWith(
-			expect.objectContaining({ issueId: 'issue-1', candidateId: 'candidate-1' })
+			expect.objectContaining({
+				issueId: 'issue-1',
+				candidateId: 'candidate-1',
+				resolutionTargetId: 'rt-1'
+			})
 		);
 	});
 

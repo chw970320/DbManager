@@ -2373,7 +2373,9 @@ ERD 노드/엣지/매핑 데이터를 생성합니다.
   - `tableIds`, `includeRelated`
   - `subjectArea`, `schema`, `q`/`tableSearch`, `scopeFlag`, `includeExternalReferences`: 이미지 렌더 API와 같은 필터 계약으로 ERDData를 생성합니다.
 - 응답 추가 정보:
-  - `data.relationValidation`: canonical 정의서 관계 검증 결과. `issues[].candidates`, `manualTargets`, `actionGuide`는 정의서 유효성 검사 패널과 ERD 상세 표시가 동일하게 사용합니다.
+  - `data.relationValidation`: canonical 정의서 관계 검증 결과. `issues[].participants`,
+    `involvedTypes`, `resolutionTargets`, `actionGuide`는 정의서 유효성 검사 패널과 ERD
+    상세 표시가 동일하게 사용합니다.
   - `data.metadata.totalEdges`: 기존 ERDData 구조적 edge 수
   - `data.metadata.totalRelationships`: Graphviz 이미지 기준 명시 FK 관계 수. 같은 source/target 테이블 사이 복수 FK는 하나로 축약됩니다.
   - `data.metadata.externalRelationships`, `data.metadata.unresolvedForeignKeys`: 이미지 관계 기준 외부참조/미해결 FK 보조 통계
@@ -2438,8 +2440,12 @@ ERD 대상 테이블 목록을 조회합니다.
   - `files`: 실제 검증에 사용한 파일명
   - `sources`: 파일 해석 출처(`explicit`, `shared-bundle`, `default`, `missing`)
   - `validation.rules`/`validation.specs`: 관계 규칙 정의
-  - `validation.issues`: 미매칭 상세. 각 이슈는 `manualTargets`, `candidates`, `autoFixable`, `actionGuide`를 포함합니다.
-  - `validation.summaries`: 관계별 `matched/unmatched` 및 이슈 샘플
+  - `validation.scope`: `scopeType`/`scopeFile` 기준 필터 적용 정보. 현재 정의서가 참여한 이슈만
+    `validation.issues`와 `validation.summaries[].issues`에 남깁니다.
+  - `validation.issues`: 미매칭 상세. 각 이슈는 참여 항목 `participants`, 화면 노출 기준
+    `involvedTypes`, 수정 대상 선택지 `resolutionTargets`, 호환 필드 `manualTargets`/`candidates`,
+    `autoFixable`, `actionGuide`를 포함합니다.
+  - `validation.summaries`: 관계별 `matched/unmatched` 및 현재 스코프 이슈 샘플
   - `validation.totals`: 전체 집계(`errorCount`, `warningCount`, `autoFixableCount` 포함)
 
 ### POST /api/validation/design-relations/preview
@@ -2449,9 +2455,11 @@ ERD 대상 테이블 목록을 조회합니다.
 - 요청 바디:
   - 검증 파일 파라미터와 동일한 파일/스코프 필드
   - `issueId`
-  - `candidateId` (복수 후보 이슈에서는 필수)
+  - `resolutionTargetId` (권장. `mode=auto_patch` 대상만 자동 수정 미리보기가 가능합니다.)
+  - `candidateId` (호환 필드. `resolutionTargetId`가 없고 복수 후보 이슈에서는 필수)
 - 응답 핵심:
   - `patch.targetType`, `patch.targetId`, `patch.fields`
+  - `resolutionTargetId`, `candidateId`
   - `previewText`
   - `actionGuide`
 
@@ -2462,13 +2470,17 @@ ERD 대상 테이블 목록을 조회합니다.
 - 요청 바디:
   - 검증 파일 파라미터와 동일한 파일/스코프 필드
   - `issueId`
-  - `candidateId` (복수 후보 이슈에서는 필수)
+  - `resolutionTargetId` (권장. `mode=auto_patch` 대상만 적용 가능합니다.)
+  - `candidateId` (호환 필드. `resolutionTargetId`가 없고 복수 후보 이슈에서는 필수)
 - 응답 핵심:
   - `apply.applied`, `apply.targetType`, `apply.targetFile`, `apply.patch`, `apply.updatedEntryId`
   - `validation`: 적용 후 재검증 결과
 - 제한:
-  - 후보가 없거나 `autoFixable=false`인 후보는 400을 반환하며 수동 수정만 가능합니다.
-  - 복수 후보에서 `candidateId`가 없으면 400을 반환합니다.
+  - `resolutionTargets[].mode=create|edit` 또는 `autoFixable=false` 대상은 400을 반환하며,
+    정의서 수정 팝업을 통한 수동 수정만 가능합니다.
+  - 자동 적용은 기존 행의 `patch.targetType`, `patch.targetId`, `patch.fields`만 저장합니다.
+    신규 행 생성/삭제/병합/대량 동기화는 자동 적용 범위가 아닙니다.
+  - 복수 후보에서 `resolutionTargetId`와 `candidateId`가 모두 없으면 400을 반환합니다.
 
 ### GET /api/erd/relations
 
@@ -2482,7 +2494,7 @@ ERD 호환용 관계 검증 엔드포인트입니다. 내부적으로 canonical 
 
 ### GET /api/erd/relations/sync
 
-레거시 5개 정의서 관계 동기화 미리보기를 조회합니다. 신규 자동 수정은 후보 선택 기반 `/api/validation/design-relations/preview`와 `/api/validation/design-relations/apply`를 사용합니다.
+레거시 5개 정의서 관계 동기화 미리보기를 조회합니다. 신규 자동 수정은 수정 대상 선택 기반 `/api/validation/design-relations/preview`와 `/api/validation/design-relations/apply`를 사용합니다.
 
 - 주요 파라미터:
   - `apply`: `false` 또는 생략만 지원합니다. `true`는 410으로 거부됩니다.
@@ -2507,7 +2519,8 @@ ERD 호환용 관계 검증 엔드포인트입니다. 내부적으로 canonical 
   - `databaseFile`, `entityFile`, `attributeFile`, `tableFile`: 명시 지정 시 매핑값보다 우선합니다.
 - 자동 수정:
   - 이 엔드포인트는 자동 수정하지 않습니다.
-  - 후보 선택형 자동 수정은 `/api/validation/design-relations/apply`에 `issueId`와 `candidateId`를 지정해 실행합니다.
+  - 수정 대상 선택형 자동 수정은 `/api/validation/design-relations/apply`에 `issueId`와
+    `resolutionTargetId`(또는 호환 `candidateId`)를 지정해 실행합니다.
 - 충돌 정책:
   - 관계 후보 수정과 컬럼 동기화(`POST /api/column/sync-term`)의 필드 소유권/실행 순서는 `docs/specs/data-model.md`의 관계 정합성/동기화 충돌 정책을 따릅니다.
 
@@ -2661,6 +2674,9 @@ Query string 또는 JSON body에서 다음 값을 받을 수 있습니다.
 				candidateCount?: number;
 				candidates?: unknown[];
 				manualTargets?: unknown[];
+				participants?: unknown[];
+				involvedTypes?: string[];
+				resolutionTargets?: unknown[];
 				affectedRows?: unknown[];
 				// term source일 때 포함
 				actionType?: string;

@@ -243,6 +243,124 @@ describe('design-relation-validator canonical relation contract', () => {
 		).toEqual(multiIssue?.candidates.map((c) => c.candidateId));
 	});
 
+	it('adds participant metadata and create target for a missing logical DB', () => {
+		const ctx = context();
+		ctx.databases = [];
+		ctx.entities[0] = { ...ctx.entities[0], logicalDbName: 'LDB_MISSING' };
+
+		const dbIssue = validateDesignRelations(ctx).issues.find(
+			(i) => i.relationId === 'DATABASE_ENTITY_LOGICAL_DB'
+		);
+
+		expect(dbIssue?.involvedTypes).toEqual(expect.arrayContaining(['database', 'entity']));
+		expect(dbIssue?.participants).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ type: 'database', role: 'source', label: 'LDB_MISSING' }),
+				expect.objectContaining({ type: 'entity', role: 'target', id: 'entity-user' })
+			])
+		);
+		expect(dbIssue?.resolutionTargets).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					targetType: 'database',
+					mode: 'create',
+					autoFixable: false,
+					prefill: expect.objectContaining({ logicalDbName: 'LDB_MISSING' })
+				})
+			])
+		);
+	});
+
+	it('attaches resolved file names to participants and resolution targets when provided', () => {
+		const ctx = context();
+		ctx.databases = [];
+		ctx.entities[0] = { ...ctx.entities[0], logicalDbName: 'LDB_MISSING' };
+
+		const dbIssue = validateDesignRelations(ctx, {
+			files: {
+				database: 'database-a.json',
+				entity: 'entity-a.json'
+			}
+		}).issues.find((i) => i.relationId === 'DATABASE_ENTITY_LOGICAL_DB');
+
+		expect(dbIssue?.participants).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ type: 'database', file: 'database-a.json' }),
+				expect.objectContaining({ type: 'entity', file: 'entity-a.json' })
+			])
+		);
+		expect(dbIssue?.manualTargets).toEqual(
+			expect.arrayContaining([expect.objectContaining({ targetType: 'entity', file: 'entity-a.json' })])
+		);
+		expect(dbIssue?.resolutionTargets).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ targetType: 'entity', file: 'entity-a.json' }),
+				expect.objectContaining({ targetType: 'database', file: 'database-a.json' })
+			])
+		);
+	});
+
+	it('adds create targets for missing attributes and standard reference rows', () => {
+		const missingAttribute = context();
+		missingAttribute.entities[0] = {
+			...missingAttribute.entities[0],
+			primaryIdentifier: '없는ID'
+		};
+		const attributeIssue = validateDesignRelations(missingAttribute).issues.find(
+			(i) => i.relationId === 'ENTITY_ATTRIBUTE_PRIMARY'
+		);
+		expect(attributeIssue?.resolutionTargets).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					targetType: 'attribute',
+					mode: 'create',
+					prefill: expect.objectContaining({
+						schemaName: 'BKSP',
+						entityName: '사용자',
+						attributeName: '없는ID',
+						requiredInput: 'Y'
+					})
+				})
+			])
+		);
+
+		const missingRefs = context();
+		missingRefs.vocabularies = [];
+		missingRefs.terms = [];
+		const result = validateDesignRelations(missingRefs);
+		const vocabularyIssue = result.issues.find(
+			(i) => i.relationId === 'STANDARD_REFERENCES' && i.field === 'tableKoreanName'
+		);
+		const termIssue = result.issues.find(
+			(i) => i.relationId === 'STANDARD_REFERENCES' && i.field === 'columnKoreanName'
+		);
+
+		expect(vocabularyIssue?.participants).toEqual(
+			expect.arrayContaining([expect.objectContaining({ type: 'vocabulary', role: 'reference' })])
+		);
+		expect(vocabularyIssue?.resolutionTargets).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					targetType: 'vocabulary',
+					mode: 'create',
+					prefill: expect.objectContaining({ standardName: '사용자', abbreviation: 'USER' })
+				})
+			])
+		);
+		expect(termIssue?.participants).toEqual(
+			expect.arrayContaining([expect.objectContaining({ type: 'term', role: 'reference' })])
+		);
+		expect(termIssue?.resolutionTargets).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					targetType: 'term',
+					mode: 'create',
+					prefill: expect.objectContaining({ termName: '사용자ID', columnName: 'USER_ID' })
+				})
+			])
+		);
+	});
+
 	it('keeps ATTRIBUTE_COLUMN_KEY candidates manual-only for PK/FK ambiguity', () => {
 		const ctx = context();
 		ctx.columns[0] = { ...ctx.columns[0], pkInfo: '' };
@@ -292,6 +410,19 @@ describe('design-relation-validator canonical relation contract', () => {
 			patch: { fields: {} }
 		});
 		expect(issue?.actionGuide).toContain('수동 수정');
+		expect(issue?.involvedTypes).toEqual(expect.arrayContaining(['column', 'term', 'domain']));
+		expect(issue?.resolutionTargets).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ targetType: 'term', mode: 'edit', autoFixable: false }),
+				expect.objectContaining({
+					targetType: 'domain',
+					mode: 'create',
+					prefill: expect.objectContaining({
+						standardDomainName: 'MISSING_STANDARD_DOMAIN'
+					})
+				})
+			])
+		);
 	});
 
 	it('treats an empty loaded domain reference set as no valid term domains', () => {

@@ -62,7 +62,7 @@
 
 ---
 
-## 5개 정의서 관계 정합성/후보 수정 (2026-06-04)
+## 설계 정의서 관계 정합성/수정 대상 선택 (2026-06-04)
 
 ### 관계 정합성 진단
 
@@ -79,22 +79,31 @@
 - 결과:
   - 관계별 `matched/unmatched`
   - `error/warning/autoFixable` 집계
-  - `issues[]`: `issueId`, `targetType`, `targetId`, `expectedKey`, `actualKey`, `reason`, `manualTargets`, `candidates`, `actionGuide`
+  - `issues[]`: `issueId`, `sourceType`, `targetType`, `targetId`, `expectedKey`, `actualKey`,
+    `reason`, `participants`, `involvedTypes`, `resolutionTargets`, `manualTargets`, `candidates`,
+    `actionGuide`
+  - `participants`: 이슈에 연관된 정의서 항목 목록과 역할(`source`/`target`/`reference`)입니다.
+  - `involvedTypes`: 현재 정의서 화면에서 이슈를 노출할지 판단하는 정의서 타입 목록입니다.
+  - `resolutionTargets`: 사용자가 선택할 수정 대상 목록입니다. `auto_patch`는 기존 행 patch
+    자동 적용, `edit`는 기존 행 수동 수정, `create`는 신규 행 작성 팝업을 의미합니다.
 - 표준 참조 파일 로딩 정책:
   - 정본 관계 검증은 8종 파일명이 모두 해석되어야 하며, `vocabulary/domain/term` 파일이 없거나 손상되었거나 `entries` 배열을 읽을 수 없으면 400으로 fail-fast합니다.
-  - 통합 validation report의 relation 이슈도 `autoFixable`, `candidates`, `manualTargets`, `actionGuide` 메타데이터를 유지해 정의서 패널/ERD와 같은 후보 수정 정보를 노출합니다.
+  - 통합 validation report의 relation 이슈도 `participants`, `involvedTypes`,
+    `resolutionTargets`, `autoFixable`, `candidates`, `manualTargets`, `actionGuide`
+    메타데이터를 유지해 정의서 패널/ERD와 같은 수정 대상 정보를 노출합니다.
 
 ### 후보 선택 수정
 
 - 미리보기 API: `POST /api/validation/design-relations/preview`
 - 적용 API: `POST /api/validation/design-relations/apply`
 - 후보 정책:
-  - 후보 없음: `manualTargets` 기준 수동 수정만 허용
-  - 단일 후보: `candidateId` 생략 가능
-  - 복수 후보: 사용자가 선택한 `candidateId`가 필수
-  - `autoFixable=false`: 자동 적용 금지, 수동 수정만 허용
+  - 후보 없음: `resolutionTargets`의 `create`/`edit` 대상 또는 `manualTargets` 기준 수동 수정만 허용
+  - 단일 자동 수정 대상: `resolutionTargetId` 생략 시 호환 `candidateId` 단일 후보를 사용할 수 있음
+  - 복수 자동 수정 대상: 사용자가 선택한 `resolutionTargetId` 또는 호환 `candidateId`가 필수
+  - `mode=create|edit` 또는 `autoFixable=false`: 자동 적용 금지, 수동 수정만 허용
 - 적용 범위:
-  - 선택한 후보의 `patch.targetType`, `patch.targetId`, `patch.fields`만 대상 파일에 저장합니다.
+  - 선택한 `auto_patch` 대상의 `patch.targetType`, `patch.targetId`, `patch.fields`만 대상 파일에 저장합니다.
+  - 신규 행 생성/삭제/병합/대량 수정은 자동 적용 범위가 아니며 정의서 편집 팝업에서 수동 처리합니다.
   - 저장 시 대상 엔트리 `updatedAt`, 데이터 컨테이너 `lastUpdated`, `totalCount`를 갱신합니다.
 - `GET/POST /api/erd/relations/sync`는 레거시 동기화 미리보기 API로만 남아 있으며, `apply=true`는 후보 선택 없이 대량 수정하던 legacy 동작이므로 410으로 거부됩니다.
 

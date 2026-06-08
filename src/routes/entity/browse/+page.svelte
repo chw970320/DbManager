@@ -12,6 +12,7 @@
 	import BentoGrid from '$lib/components/BentoGrid.svelte';
 	import BentoCard from '$lib/components/BentoCard.svelte';
 	import DesignRelationValidationPanel from '$lib/components/DesignRelationValidationPanel.svelte';
+	import DesignRelationEditorHost from '$lib/components/DesignRelationEditorHost.svelte';
 	import type { EntityEntry, DbDesignApiResponse } from '$lib/types/database-design.js';
 	import { entityDataStore as entityStore } from '$lib/stores/unified-store';
 	import { settingsStore } from '$lib/stores/settings-store';
@@ -19,7 +20,7 @@
 	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
 	import type { DataType } from '$lib/types/base.js';
 	import type {
-		DesignRelationManualTarget,
+		RelationResolutionTarget,
 		DesignRelationValidationResult
 	} from '$lib/types/design-relation.js';
 
@@ -55,6 +56,8 @@
 	let relationValidationLoading = $state(false);
 	let relationValidationError = $state('');
 	let relationValidation = $state<DesignRelationValidationResult | null>(null);
+	let relationValidationFiles = $state<Partial<Record<DataType, string>>>({});
+	let relationEditTarget = $state<(RelationResolutionTarget & { issueId?: string }) | null>(null);
 
 	let unsubscribe: () => void;
 	let settingsUnsubscribe: () => void;
@@ -373,11 +376,12 @@
 			if (!response.ok || !result.success || !result.data) {
 				throw new Error(result.error || '정의서 관계 유효성 검사에 실패했습니다.');
 			}
-			relationValidation = (
-				result.data as {
-					validation: DesignRelationValidationResult;
-				}
-			).validation;
+			const relationData = result.data as {
+				validation: DesignRelationValidationResult;
+				files?: Partial<Record<DataType, string>>;
+			};
+			relationValidation = relationData.validation;
+			relationValidationFiles = relationData.files ?? {};
 		} catch (error) {
 			console.error('정의서 관계 유효성 검사 오류:', error);
 			relationValidationError =
@@ -388,25 +392,19 @@
 	}
 
 	function handleRelationValidationEdit(
-		event: CustomEvent<DesignRelationManualTarget & { issueId: string }>
+		event: CustomEvent<RelationResolutionTarget & { issueId: string }>
 	) {
-		const target = event.detail;
-		if (target.targetType !== RELATION_SCOPE_TYPE) {
-			relationValidationError = `${target.targetLabel}은(는) ${target.targetType} 정의서에서 수정하세요.`;
-			return;
-		}
-
-		const targetEntry = entries.find((entry) => entry.id === target.targetId);
-		if (!targetEntry) {
-			relationValidationError = '현재 페이지에서 수정 대상 항목을 찾을 수 없습니다.';
-			return;
-		}
-
-		currentEditingEntry = targetEntry;
-		editorServerError = '';
-		showEditor = true;
+		relationValidationError = '';
+		relationEditTarget = event.detail;
 	}
 
+	async function handleRelationEditorSaved() {
+		relationEditTarget = null;
+		await loadPageData(selectedFilename);
+		if (showRelationValidationPanel) {
+			await handleValidateDesignRelations();
+		}
+	}
 	async function handleRelationValidationAutoFix() {
 		await loadPageData(selectedFilename);
 		await handleValidateDesignRelations();
@@ -623,4 +621,11 @@
 			</BentoCard>
 		</div>
 	</BentoGrid>
+
+<DesignRelationEditorHost
+	 target={relationEditTarget}
+	 files={relationValidationFiles}
+	 on:close={() => (relationEditTarget = null)}
+	 on:saved={handleRelationEditorSaved}
+/>
 </BrowsePageLayout>

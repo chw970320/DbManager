@@ -8,6 +8,7 @@ import {
 type ApplyBody = DesignRelationValidationRequest & {
 	issueId?: string;
 	candidateId?: string | null;
+	resolutionTargetId?: string | null;
 };
 
 export async function POST({ request }: RequestEvent) {

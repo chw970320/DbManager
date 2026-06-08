@@ -40,6 +40,39 @@ function createRelationValidation(): DesignRelationValidationResult {
 						field: 'relatedEntityName',
 						affectedRows: [],
 						manualTargets: [],
+						participants: [
+							{
+								type: 'table',
+								id: 'table-1',
+								label: '사용자',
+								role: 'source'
+							},
+							{
+								type: 'column',
+								id: 'column-1',
+								label: 'USER_NM',
+								role: 'target'
+							}
+						],
+						involvedTypes: ['table', 'column'],
+						resolutionTargets: [
+							{
+								resolutionTargetId: 'target-column-1',
+								targetType: 'column',
+								targetId: 'column-1',
+								targetLabel: 'USER_NM',
+								mode: 'auto_patch',
+								candidateId: 'candidate-1',
+								patch: {
+									targetType: 'column',
+									targetId: 'column-1',
+									fields: { relatedEntityName: '사용자' }
+								},
+								autoFixable: true,
+								reason: '테이블 정의서 기준',
+								previewText: '컬럼 정의서를 사용자로 변경합니다.'
+							}
+						],
 						candidates: [
 							{
 								candidateId: 'candidate-1',
@@ -192,7 +225,9 @@ describe('ERDViewer', () => {
 		expect(screen.getByText(/관계 검증: 미매칭 3건 · 오류\s*2건 · 경고\s*1건/)).toBeInTheDocument();
 		expect(screen.getByLabelText('ERD 관계 검증 이슈')).toBeInTheDocument();
 		expect(screen.getByText(/테이블 -> 컬럼 · USER_NM/)).toBeInTheDocument();
-		expect(screen.getByText(/후보 1건.*USER_NM · 자동 수정 가능/)).toBeInTheDocument();
+		expect(screen.getByText(/참여: table:사용자 \/ column:USER_NM/)).toBeInTheDocument();
+		expect(screen.getByText(/조치 상태: 자동 1건 · 수동 0건 · 신규 0건/)).toBeInTheDocument();
+		expect(screen.getByText(/수정 대상:\s*column:USER_NM\(자동 수정\)/)).toBeInTheDocument();
 		expect(screen.getByText(/조치: 후보를 선택해 컬럼 정의서를 자동 수정/)).toBeInTheDocument();
 	});
 

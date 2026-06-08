@@ -64,11 +64,15 @@ describe('ERD page sidebar and main controls contract', () => {
 		expect(source).not.toContain('includeRelated');
 	});
 
-	it('surfaces canonical relation issue candidates and marks legacy sync preview', () => {
+	it('surfaces canonical relation issue targets and marks legacy sync preview', () => {
 		expect(source).toContain('ERD 정의서 관계 미매칭 상세');
-		expect(source).toContain('issue.candidates.slice(0, 2).map(candidateSummary)');
+		expect(source).toContain('relationParticipantSummary(issue)');
+		expect(source).toContain('relationActionStateSummary(issue)');
+		expect(source).toContain('relationResolutionTargets(issue)');
+		expect(source).toContain('relationResolutionTargetSummary');
 		expect(source).toContain('조치 가이드: {issue.actionGuide}');
 		expect(source).toContain('레거시 동기화 미리보기');
 		expect(source).toContain('자동 수정은 DB/엔터티/속성/테이블/컬럼 정의서의 유효성 검사 패널');
+		expect(source).not.toContain('candidateSummary');
 	});
 });

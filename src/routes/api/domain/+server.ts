@@ -424,8 +424,8 @@ export async function POST({ request, url }: RequestEvent) {
 	try {
 		const filename = url.searchParams.get('filename') || 'domain.json';
 		const body = await request.json();
-		const applyCascade = body.applyCascade !== false;
-		const entryData = body;
+		const { applyCascade: bodyApplyCascade, ...entryData } = body;
+		const applyCascade = bodyApplyCascade !== false;
 
 		// 필수 필드 검증 (standardDomainName은 자동 생성되므로 제외)
 		const missingFields = getMissingRequiredFields(entryData, [
@@ -585,8 +585,8 @@ export async function PUT({ request, url }: RequestEvent) {
 	try {
 		const filename = url.searchParams.get('filename') || 'domain.json';
 		const body = await request.json();
-		const applyCascade = body.applyCascade !== false;
-		const { id, ...updateFields } = body;
+		const { id, applyCascade: bodyApplyCascade, ...updateFields } = body;
+		const applyCascade = bodyApplyCascade !== false;
 
 		// ID가 없거나 빈 문자열인 경우 에러
 		if (!id || typeof id !== 'string' || id.trim() === '') {

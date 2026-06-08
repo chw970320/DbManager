@@ -9,10 +9,15 @@
 	import { filterColumnFiles } from '$lib/utils/file-filter';
 	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
 	import type {
-		DesignRelationCandidate,
 		DesignRelationSyncPreview,
 		DesignRelationValidationResult
 	} from '$lib/types/design-relation.js';
+	import {
+		relationActionStateSummary,
+		relationParticipantSummary,
+		relationResolutionTargetSummary,
+		relationResolutionTargets
+	} from '$lib/utils/design-relation-display.js';
 
 	interface ERDTableInfo {
 		id: string;
@@ -183,10 +188,6 @@
 				.filter((table) => !subjectArea || table.subjectArea === subjectArea)
 				.map((table) => table.schemaName)
 		);
-	}
-
-	function candidateSummary(candidate: DesignRelationCandidate): string {
-		return `${candidate.targetLabel}(${candidate.autoFixable ? '자동 수정 가능' : '수동'})`;
 	}
 
 	function pickFirstOption(options: string[], current: string): string {
@@ -901,7 +902,8 @@
 				</div>
 				<p class="mb-3 text-xs text-gray-500">
 					자동 수정은 DB/엔터티/속성/테이블/컬럼 정의서의 유효성 검사 패널에서 후보를 선택해
-					실행합니다. ERD에서는 같은 미매칭·후보·조치 정보를 조회용으로 표시합니다.
+					실행합니다. ERD에서는 같은 미매칭·참여 정의서·수정 대상·조치 정보를 조회용으로
+					표시합니다.
 				</p>
 				<div class="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3 lg:grid-cols-6">
 					<div class="rounded-lg border border-blue-200 bg-blue-50 p-2 text-center">
@@ -955,16 +957,22 @@
 												{issue.targetLabel}
 											</span>
 											<span class="text-amber-700">
-												후보 {issue.candidates.length}건
+												{relationActionStateSummary(issue)}
 											</span>
 										</div>
 										<p class="mt-1 text-amber-800">{issue.reason}</p>
 										<p class="mt-1 text-amber-700">
-											미리보기:
-											{#if issue.candidates.length > 0}
-												{issue.candidates.slice(0, 2).map(candidateSummary).join(' / ')}
+											참여 정의서: {relationParticipantSummary(issue)}
+										</p>
+										<p class="mt-1 text-amber-700">
+											수정 대상:
+											{#if relationResolutionTargets(issue).length > 0}
+												{relationResolutionTargets(issue)
+													.slice(0, 3)
+													.map(relationResolutionTargetSummary)
+													.join(' / ')}
 											{:else}
-												자동 수정 후보 없음 · 수동 수정만 가능
+												수동 확인 필요
 											{/if}
 										</p>
 										<p class="mt-1 text-amber-700">조치 가이드: {issue.actionGuide}</p>

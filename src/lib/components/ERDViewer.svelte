@@ -1,11 +1,14 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import type { ERDData } from '../types/erd-mapping.js';
-	import type {
-		DesignRelationCandidate,
-		DesignRelationValidationResult
-	} from '../types/design-relation.js';
+	import type { DesignRelationValidationResult } from '../types/design-relation.js';
 	import { isAllowedErdSvgRenderUrl, sanitizeErdSvgText } from '../utils/erd-svg-preview.js';
+	import {
+		relationActionStateSummary,
+		relationParticipantSummary,
+		relationResolutionTargetSummary,
+		relationResolutionTargets
+	} from '../utils/design-relation-display.js';
 
 	type ERDViewerData = ERDData & {
 		relationValidation?: DesignRelationValidationResult;
@@ -75,10 +78,6 @@
 			return '관계가 없거나 매우 적습니다. 조회 조건, 선택 테이블, 정의서 매핑을 먼저 확인하세요.';
 		}
 		return '현재 조건의 관계를 ERD 이미지와 요약 정보로 함께 확인합니다.';
-	}
-
-	function candidateLabel(candidate: DesignRelationCandidate): string {
-		return `${candidate.targetLabel} · ${candidate.autoFixable ? '자동 수정 가능' : '수동 수정'}`;
 	}
 
 	function clamp(value: number, min: number, max: number): number {
@@ -350,11 +349,20 @@
 									</p>
 									<p class="mt-0.5 text-amber-800">{issue.reason}</p>
 									<p class="mt-0.5 text-amber-700">
-										후보 {issue.candidates.length}건
-										{#if issue.candidates.length > 0}
-											· {issue.candidates.slice(0, 2).map(candidateLabel).join(' / ')}
+										참여: {relationParticipantSummary(issue)}
+									</p>
+									<p class="mt-0.5 text-amber-700">
+										조치 상태: {relationActionStateSummary(issue)}
+									</p>
+									<p class="mt-0.5 text-amber-700">
+										수정 대상:
+										{#if relationResolutionTargets(issue).length > 0}
+											{relationResolutionTargets(issue)
+												.slice(0, 2)
+												.map(relationResolutionTargetSummary)
+												.join(' / ')}
 										{:else}
-											· 수동 수정만 가능
+											수동 확인 필요
 										{/if}
 									</p>
 									<p class="mt-0.5 text-amber-700">조치: {issue.actionGuide}</p>

@@ -3,7 +3,9 @@ import type {
 	DesignRelationCandidate,
 	DesignRelationPatch,
 	DesignRelationValidationResult,
+	RelationParticipant,
 	RelationIssue,
+	RelationResolutionTarget,
 	RelationSpec,
 	RelationValidationSummary
 } from '$lib/types/design-relation.js';
@@ -37,6 +39,7 @@ type Entry = { id: string };
 type PatchFields = Record<string, string | null>;
 type ValidateDesignRelationsOptions = {
 	includeStandardReferences?: boolean;
+	files?: Partial<Record<DataType, string>>;
 };
 
 function label(entry: Entry, fields: string[]): string {
@@ -98,6 +101,67 @@ function manual(
 	};
 }
 
+function participant(
+	type: DataType,
+	entry: Entry | undefined,
+	fields: string[],
+	role: RelationParticipant['role'],
+	fallbackLabel?: string
+): RelationParticipant {
+	return {
+		type,
+		id: entry?.id,
+		label: entry ? label(entry, fields) : (fallbackLabel ?? type),
+		role
+	};
+}
+
+function createTarget(
+	issueId: string,
+	index: number,
+	targetType: DataType,
+	targetLabel: string,
+	prefill: RelationResolutionTarget['prefill'],
+	reason: string,
+	field?: string
+): RelationResolutionTarget {
+	return {
+		resolutionTargetId: `${issueId}:create:${targetType}:${index}`,
+		targetType,
+		targetLabel,
+		mode: 'create',
+		field,
+		autoFixable: false,
+		reason,
+		previewText: `${targetLabel} 항목을 ${targetType} 정의서에 신규 추가합니다.`,
+		prefill,
+		route: route(targetType)
+	};
+}
+
+function editTarget(
+	issueId: string,
+	index: number,
+	targetType: DataType,
+	target: Entry,
+	fields: string[],
+	reason: string,
+	field?: string
+): RelationResolutionTarget {
+	return {
+		resolutionTargetId: `${issueId}:edit:${targetType}:${target.id}:${index}`,
+		targetType,
+		targetId: target.id,
+		targetLabel: label(target, fields),
+		mode: 'edit',
+		field,
+		autoFixable: false,
+		reason,
+		previewText: `${label(target, fields)} 항목을 ${targetType} 정의서에서 수동 수정합니다.`,
+		route: route(targetType)
+	};
+}
+
 function candidate(
 	issueId: string,
 	index: number,
@@ -148,8 +212,13 @@ function issue(options: {
 	suffix?: string;
 	manualTargets?: RelationIssue['manualTargets'];
 	candidates?: (issueId: string) => DesignRelationCandidate[];
+	participants?: (issueId: string) => RelationParticipant[];
+	resolutionTargets?: (issueId: string) => RelationResolutionTarget[];
+	files?: Partial<Record<DataType, string>>;
 }): RelationIssue {
 	const targetType = options.targetType ?? options.rule.targetType;
+	const fileOf = (type: DataType) => options.files?.[type] ?? null;
+	const targetLabel = label(options.target, options.labelFields);
 	const issueId = relationIssueId(
 		options.rule.id,
 		targetType,
@@ -157,9 +226,75 @@ function issue(options: {
 		options.suffix ?? options.field
 	);
 	const candidates = options.candidates?.(issueId) ?? [];
-	const manualTargets = options.manualTargets?.length
-		? options.manualTargets
-		: [manual(targetType, options.target, options.labelFields, options.field)];
+	const manualTargets = (
+		options.manualTargets?.length
+			? options.manualTargets
+			: [manual(targetType, options.target, options.labelFields, options.field)]
+	).map((target) => ({
+		...target,
+		file: target.file ?? fileOf(target.targetType)
+	}));
+	const resolutionTargets = [
+		...manualTargets.map((target) => ({
+			resolutionTargetId: `${issueId}:manual:${target.targetType}:${target.targetId}:${target.field ?? 'row'}`,
+			targetType: target.targetType,
+			targetId: target.targetId,
+			targetLabel: target.targetLabel,
+			mode: 'edit' as const,
+			file: target.file,
+			field: target.field,
+			autoFixable: false,
+			reason: options.reason,
+			previewText: '수동 수정으로 대상 정의서 항목을 확인합니다.',
+			route: target.route
+		})),
+		...candidates.map((candidate) => ({
+			resolutionTargetId: `${issueId}:candidate:${candidate.candidateId}`,
+			targetType: candidate.targetType,
+			targetId: candidate.targetId,
+			targetLabel: candidate.targetLabel,
+			mode: candidate.autoFixable ? ('auto_patch' as const) : ('edit' as const),
+			candidateId: candidate.candidateId,
+			patch: candidate.patch,
+			autoFixable: candidate.autoFixable,
+			file: fileOf(candidate.targetType),
+			reason: candidate.reason,
+			previewText: candidate.previewText,
+			route: route(candidate.targetType)
+		})),
+		...(options.resolutionTargets?.(issueId) ?? [])
+	].map((target) => ({
+		...target,
+		file: target.file ?? fileOf(target.targetType)
+	}));
+	const involvedTypes = Array.from(
+		new Set([
+			options.rule.sourceType,
+			targetType,
+			...manualTargets.map((target) => target.targetType),
+			...candidates.map((candidate) => candidate.targetType),
+			...resolutionTargets.map((target) => target.targetType),
+			...(options.participants?.(issueId) ?? []).map((p) => p.type)
+		])
+	);
+	const participants = (
+		options.participants?.(issueId) ?? [
+			{
+				type: options.rule.sourceType,
+				label: options.rule.sourceType,
+				role: 'source' as const
+			},
+			{
+				type: targetType,
+				id: options.target.id,
+				label: targetLabel,
+				role: 'target' as const
+			}
+		]
+	).map((participant) => ({
+		...participant,
+		file: participant.file ?? fileOf(participant.type)
+	}));
 	return {
 		issueId,
 		relationId: options.rule.id,
@@ -168,7 +303,7 @@ function issue(options: {
 		sourceType: options.rule.sourceType,
 		targetType,
 		targetId: options.target.id,
-		targetLabel: label(options.target, options.labelFields),
+		targetLabel,
 		expectedKey: options.expectedKey,
 		actualKey: options.actualKey,
 		reason: options.reason,
@@ -179,7 +314,10 @@ function issue(options: {
 		candidates,
 		autoFixable:
 			options.rule.autoFixPolicy !== 'manual_only' && candidates.some((c) => c.autoFixable),
-		actionGuide: guide(options.rule, candidates)
+		actionGuide: guide(options.rule, candidates),
+		participants,
+		involvedTypes,
+		resolutionTargets
 	};
 }
 
@@ -383,6 +521,8 @@ export function validateDesignRelations(
 	const validDomains = new Set(
 		(context.domains ?? []).map((d) => normalizeRelationValue(d.standardDomainName)).filter(Boolean)
 	);
+	const scopedIssue = (issueOptions: Parameters<typeof issue>[0]) =>
+		issue({ ...issueOptions, files: options.files });
 
 	{
 		const r = rule.get('DATABASE_ENTITY_LOGICAL_DB')!;
@@ -394,7 +534,7 @@ export function validateDesignRelations(
 			else
 				fail(
 					s,
-					issue({
+					scopedIssue({
 						rule: r,
 						target: e as Entry,
 						labelFields: ['entityName', 'tableKoreanName'],
@@ -402,6 +542,21 @@ export function validateDesignRelations(
 						actualKey: '미매칭',
 						field: 'logicalDbName',
 						reason: '엔터티의 논리DB명이 데이터베이스 정의서에 없습니다.',
+						participants: () => [
+							participant('database', undefined, [], 'source', e.logicalDbName || '누락 DB'),
+							participant('entity', e as Entry, ['entityName', 'tableKoreanName'], 'target')
+						],
+						resolutionTargets: (id) => [
+							createTarget(
+								id,
+								0,
+								'database',
+								e.logicalDbName || '누락 DB',
+								{ logicalDbName: e.logicalDbName ?? null },
+								'엔터티가 참조하는 논리DB명을 데이터베이스 정의서에 추가합니다.',
+								'logicalDbName'
+							)
+						],
 						candidates: (id) =>
 							sorted(databases)
 								.filter((d) => normalizeRelationValue(d.logicalDbName))
@@ -434,7 +589,7 @@ export function validateDesignRelations(
 				else
 					fail(
 						s,
-						issue({
+						scopedIssue({
 							rule: r,
 							targetType: 'entity',
 							target: e as Entry,
@@ -444,6 +599,26 @@ export function validateDesignRelations(
 							field: 'primaryIdentifier',
 							suffix: token,
 							reason: `엔터티 주식별자 '${token}'에 대응하는 속성이 없습니다.`,
+							participants: () => [
+								participant('entity', e as Entry, ['entityName', 'tableKoreanName'], 'source'),
+								participant('attribute', undefined, [], 'target', token)
+							],
+							resolutionTargets: (id) => [
+								createTarget(
+									id,
+									0,
+									'attribute',
+									token,
+									{
+										schemaName: e.schemaName ?? null,
+										entityName: e.entityName ?? null,
+										attributeName: token,
+										requiredInput: 'Y'
+									},
+									'엔터티 주식별자에 대응하는 속성을 신규 추가합니다.',
+									'attributeName'
+								)
+							],
 							candidates: (id) =>
 								sorted(sameEntityAttrs)
 									.filter((a) => normalizeRelationValue(a.attributeName))
@@ -485,7 +660,7 @@ export function validateDesignRelations(
 				if (!cs.length) cs = get(entityBySchema, buildRelationKey([t.schemaName]));
 				fail(
 					s,
-					issue({
+					scopedIssue({
 						rule: r,
 						target: t as Entry,
 						labelFields: ['tableEnglishName', 'tableKoreanName'],
@@ -494,6 +669,25 @@ export function validateDesignRelations(
 						field: 'relatedEntityName',
 						reason:
 							'테이블의 스키마/테이블한글명/관련엔터티명이 엔터티 정의서와 일치하지 않습니다.',
+						participants: () => [
+							participant('entity', undefined, [], 'source', t.relatedEntityName || '누락 엔터티'),
+							participant('table', t as Entry, ['tableEnglishName', 'tableKoreanName'], 'target')
+						],
+						resolutionTargets: (id) => [
+							createTarget(
+								id,
+								0,
+								'entity',
+								t.relatedEntityName || t.tableKoreanName || '누락 엔터티',
+								{
+									schemaName: t.schemaName ?? null,
+									entityName: t.relatedEntityName ?? null,
+									tableKoreanName: t.tableKoreanName ?? null
+								},
+								'테이블이 참조하는 관련 엔터티를 엔터티 정의서에 신규 추가합니다.',
+								'entityName'
+							)
+						],
 						candidates: (id) =>
 							sorted(cs)
 								.filter((e) => normalizeRelationValue(e.entityName))
@@ -541,7 +735,7 @@ export function validateDesignRelations(
 				if (!cs.length) cs = get(tableByEntity, buildRelationKey([c.relatedEntityName]));
 				fail(
 					s,
-					issue({
+					scopedIssue({
 						rule: r,
 						target: c as Entry,
 						labelFields: ['columnEnglishName', 'columnKoreanName'],
@@ -555,6 +749,26 @@ export function validateDesignRelations(
 						field: 'tableEnglishName',
 						reason:
 							'컬럼의 주제영역/스키마/테이블영문명/연관엔터티명이 테이블 정의서와 일치하지 않습니다.',
+						participants: () => [
+							participant('table', undefined, [], 'source', c.tableEnglishName || '누락 테이블'),
+							participant('column', c as Entry, ['columnEnglishName', 'columnKoreanName'], 'target')
+						],
+						resolutionTargets: (id) => [
+							createTarget(
+								id,
+								0,
+								'table',
+								c.tableEnglishName || '누락 테이블',
+								{
+									subjectArea: c.subjectArea ?? null,
+									schemaName: c.schemaName ?? null,
+									tableEnglishName: c.tableEnglishName ?? null,
+									relatedEntityName: c.relatedEntityName ?? null
+								},
+								'컬럼이 참조하는 테이블을 테이블 정의서에 신규 추가합니다.',
+								'tableEnglishName'
+							)
+						],
 						candidates: (id) =>
 							sorted(cs).map((t, i) =>
 								candidate(
@@ -592,6 +806,22 @@ export function validateDesignRelations(
 			if (!key) continue;
 			const cols = get(columnByAttr, key);
 			const loose = get(columnByKorean, normalizeRelationValue(a.attributeName));
+			const attrColumnParticipants = (rows: ColumnEntry[]) => [
+				participant('attribute', a as Entry, ['attributeName'], 'source'),
+				...(rows.length
+					? rows.map((c) =>
+							participant('column', c as Entry, ['columnEnglishName', 'columnKoreanName'], 'target')
+						)
+					: [
+							participant(
+								'column',
+								undefined,
+								[],
+								'target',
+								a.attributeName || '누락 컬럼'
+							)
+						])
+			];
 			const manualCandidates = (id: string, rows: ColumnEntry[], field: string) =>
 				sorted(rows).map((c, i) =>
 					candidate(
@@ -610,7 +840,7 @@ export function validateDesignRelations(
 			if (!cols.length) {
 				fail(
 					s,
-					issue({
+					scopedIssue({
 						rule: r,
 						targetType: 'attribute',
 						target: a as Entry,
@@ -619,6 +849,26 @@ export function validateDesignRelations(
 						actualKey: '컬럼 미매칭',
 						field: 'attributeName',
 						reason: '속성명과 엔터티 기준으로 연결되는 컬럼을 찾지 못했습니다.',
+						participants: () => attrColumnParticipants(loose),
+						resolutionTargets: (id) => [
+							createTarget(
+								id,
+								0,
+								'column',
+								a.attributeName || '누락 컬럼',
+								{
+									schemaName: a.schemaName ?? null,
+									relatedEntityName: a.entityName ?? null,
+									columnKoreanName: a.attributeName ?? null,
+									pkInfo: isAffirmativeFlag(a.requiredInput) ? 'Y' : null,
+									fkInfo: referenceRequiresFk(a.refEntityName, a.refAttributeName)
+										? buildDisplayKey([a.refEntityName, a.refAttributeName])
+										: null
+								},
+								'속성과 연결되는 컬럼을 컬럼 정의서에 신규 추가합니다.',
+								'columnKoreanName'
+							)
+						],
 						candidates: (id) => manualCandidates(id, loose, 'columnKoreanName')
 					})
 				);
@@ -629,7 +879,7 @@ export function validateDesignRelations(
 			else
 				fail(
 					s,
-					issue({
+					scopedIssue({
 						rule: r,
 						targetType: 'attribute',
 						target: a as Entry,
@@ -638,6 +888,7 @@ export function validateDesignRelations(
 						actualKey: cols.map((c) => c.pkInfo || '').join(', '),
 						field: 'pkInfo',
 						reason: '필수입력 속성에 대응하는 컬럼 PK정보를 확인해야 합니다.',
+						participants: () => attrColumnParticipants(cols),
 						candidates: (id) => manualCandidates(id, cols, 'pkInfo')
 					})
 				);
@@ -647,7 +898,7 @@ export function validateDesignRelations(
 			else
 				fail(
 					s,
-					issue({
+					scopedIssue({
 						rule: r,
 						targetType: 'attribute',
 						target: a as Entry,
@@ -656,6 +907,7 @@ export function validateDesignRelations(
 						actualKey: cols.map((c) => c.fkInfo || '').join(', '),
 						field: 'fkInfo',
 						reason: '참조 엔터티/속성 정보에 대응하는 컬럼 FK정보를 확인해야 합니다.',
+						participants: () => attrColumnParticipants(cols),
 						candidates: (id) => manualCandidates(id, cols, 'fkInfo')
 					})
 				);
@@ -672,7 +924,7 @@ export function validateDesignRelations(
 				else
 					fail(
 						s,
-						issue({
+						scopedIssue({
 							rule: r,
 							targetType: 'table',
 							target: t as Entry,
@@ -682,6 +934,31 @@ export function validateDesignRelations(
 							field: 'tableKoreanName',
 							suffix: 'tableKoreanName',
 							reason: '테이블한글명이 단어집 표준단어명에 없습니다.',
+							participants: () => [
+								participant('table', t as Entry, ['tableEnglishName', 'tableKoreanName'], 'target'),
+								participant(
+									'vocabulary',
+									undefined,
+									[],
+									'reference',
+									t.tableKoreanName || '누락 단어'
+								)
+							],
+							resolutionTargets: (id) => [
+								createTarget(
+									id,
+									0,
+									'vocabulary',
+									t.tableKoreanName || '누락 단어',
+									{
+										standardName: t.tableKoreanName ?? null,
+										abbreviation: t.tableEnglishName ?? null,
+										englishName: t.tableEnglishName ?? null
+									},
+									'테이블한글명에 대응하는 표준 단어를 단어집에 신규 추가합니다.',
+									'standardName'
+								)
+							],
 							candidates: (id) => tableKoreanCandidates(id, t, vocabs)
 						})
 					);
@@ -692,7 +969,7 @@ export function validateDesignRelations(
 				else
 					fail(
 						s,
-						issue({
+						scopedIssue({
 							rule: r,
 							targetType: 'table',
 							target: t as Entry,
@@ -702,6 +979,31 @@ export function validateDesignRelations(
 							field: 'tableEnglishName',
 							suffix: 'tableEnglishName',
 							reason: '테이블영문명이 단어집 영문약어 또는 영문명에 없습니다.',
+							participants: () => [
+								participant('table', t as Entry, ['tableEnglishName', 'tableKoreanName'], 'target'),
+								participant(
+									'vocabulary',
+									undefined,
+									[],
+									'reference',
+									t.tableEnglishName || '누락 단어'
+								)
+							],
+							resolutionTargets: (id) => [
+								createTarget(
+									id,
+									0,
+									'vocabulary',
+									t.tableEnglishName || '누락 단어',
+									{
+										standardName: t.tableKoreanName ?? null,
+										abbreviation: t.tableEnglishName ?? null,
+										englishName: t.tableEnglishName ?? null
+									},
+									'테이블영문명에 대응하는 표준 단어를 단어집에 신규 추가합니다.',
+									'abbreviation'
+								)
+							],
 							candidates: (id) => tableEnglishCandidates(id, t, vocabs)
 						})
 					);
@@ -717,7 +1019,7 @@ export function validateDesignRelations(
 				else
 					fail(
 						s,
-						issue({
+						scopedIssue({
 							rule: r,
 							targetType: 'column',
 							target: c as Entry,
@@ -727,6 +1029,25 @@ export function validateDesignRelations(
 							field: 'columnKoreanName',
 							suffix: 'columnKoreanName',
 							reason: '컬럼한글명이 용어집 용어명에 없습니다.',
+							participants: () => [
+								participant('column', c as Entry, ['columnEnglishName', 'columnKoreanName'], 'target'),
+								participant('term', undefined, [], 'reference', c.columnKoreanName || '누락 용어')
+							],
+							resolutionTargets: (id) => [
+								createTarget(
+									id,
+									0,
+									'term',
+									c.columnKoreanName || '누락 용어',
+									{
+										termName: c.columnKoreanName ?? null,
+										columnName: c.columnEnglishName ?? null,
+										domainName: c.domainName ?? null
+									},
+									'컬럼한글명에 대응하는 용어를 용어집에 신규 추가합니다.',
+									'termName'
+								)
+							],
 							candidates: (id) => columnKoreanCandidates(id, c, terms, validDomains)
 						})
 					);
@@ -736,7 +1057,7 @@ export function validateDesignRelations(
 				else
 					fail(
 						s,
-						issue({
+						scopedIssue({
 							rule: r,
 							targetType: 'column',
 							target: c as Entry,
@@ -746,6 +1067,25 @@ export function validateDesignRelations(
 							field: 'columnEnglishName',
 							suffix: 'columnEnglishName',
 							reason: '컬럼영문명이 용어집 컬럼명에 없습니다.',
+							participants: () => [
+								participant('column', c as Entry, ['columnEnglishName', 'columnKoreanName'], 'target'),
+								participant('term', undefined, [], 'reference', c.columnEnglishName || '누락 용어')
+							],
+							resolutionTargets: (id) => [
+								createTarget(
+									id,
+									0,
+									'term',
+									c.columnEnglishName || '누락 용어',
+									{
+										termName: c.columnKoreanName ?? null,
+										columnName: c.columnEnglishName ?? null,
+										domainName: c.domainName ?? null
+									},
+									'컬럼영문명에 대응하는 용어를 용어집에 신규 추가합니다.',
+									'columnName'
+								)
+							],
 							candidates: (id) => columnEnglishCandidates(id, c, terms, validDomains)
 						})
 					);
@@ -763,7 +1103,7 @@ export function validateDesignRelations(
 			else
 				fail(
 					s,
-					issue({
+					scopedIssue({
 						rule: r,
 						targetType: 'column',
 						target: c as Entry,
@@ -775,6 +1115,37 @@ export function validateDesignRelations(
 						reason: termDomainIsValid
 							? '매칭된 용어의 도메인명이 컬럼 정의서의 도메인명과 다릅니다.'
 							: '매칭된 용어의 도메인명이 도메인 정의서에 없습니다. 용어/도메인/컬럼 정의서를 함께 확인해야 합니다.',
+						participants: () => [
+							participant('column', c as Entry, ['columnEnglishName', 'columnKoreanName'], 'target'),
+							participant('term', term as Entry, ['termName', 'columnName'], 'reference'),
+							participant('domain', undefined, [], 'reference', term.domainName || '누락 도메인')
+						],
+						resolutionTargets: (id) =>
+							termDomainIsValid
+								? []
+								: [
+										editTarget(
+											id,
+											0,
+											'term',
+											term as Entry,
+											['termName', 'columnName'],
+											'용어의 도메인명을 도메인 정의서 기준으로 수동 확인합니다.',
+											'domainName'
+										),
+										createTarget(
+											id,
+											1,
+											'domain',
+											term.domainName || '누락 도메인',
+											{
+												standardDomainName: term.domainName ?? null,
+												domainCategory: term.domainName ?? null
+											},
+											'용어가 참조하는 도메인을 도메인 정의서에 신규 추가합니다.',
+											'standardDomainName'
+										)
+									],
 						candidates: (id) => [
 							candidate(
 								id,

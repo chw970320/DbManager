@@ -545,6 +545,30 @@ describe('Domain API: /api/domain', () => {
 			expect(applyCascadePlan).not.toHaveBeenCalled();
 			expect(saveDomainData).not.toHaveBeenCalled();
 		});
+
+		it('should treat applyCascade as a control field and not persist it on direct create', async () => {
+			const event = createMockRequestEvent({
+				method: 'POST',
+				body: {
+					domainGroup: '공통표준도메인그룹',
+					domainCategory: '테스트분류',
+					physicalDataType: 'VARCHAR',
+					dataLength: '100',
+					applyCascade: false
+				}
+			});
+
+			const response = await POST(event);
+			const result = await response.json();
+
+			expect(response.status).toBe(201);
+			expect(result.success).toBe(true);
+			expect(result.data).not.toHaveProperty('applyCascade');
+			expect(planCascadeUpdate).not.toHaveBeenCalled();
+			expect(applyCascadePlan).not.toHaveBeenCalled();
+			const savedData = vi.mocked(saveDomainData).mock.calls[0][0] as DomainData;
+			expect(savedData.entries.at(-1)).not.toHaveProperty('applyCascade');
+		});
 	});
 
 	describe('PUT', () => {
@@ -656,6 +680,31 @@ describe('Domain API: /api/domain', () => {
 			expect(result.data.preview).toEqual(blockedPlan.preview);
 			expect(applyCascadePlan).not.toHaveBeenCalled();
 			expect(saveDomainData).not.toHaveBeenCalled();
+		});
+
+		it('should treat applyCascade as a control field and not persist it on direct update', async () => {
+			const event = createMockRequestEvent({
+				method: 'PUT',
+				body: {
+					id: 'entry-1',
+					domainGroup: '공통표준도메인그룹',
+					domainCategory: '사용자분류',
+					physicalDataType: 'VARCHAR',
+					description: '수정된 설명',
+					applyCascade: false
+				}
+			});
+
+			const response = await PUT(event);
+			const result = await response.json();
+
+			expect(response.status).toBe(200);
+			expect(result.success).toBe(true);
+			expect(result.data).not.toHaveProperty('applyCascade');
+			expect(planCascadeUpdate).not.toHaveBeenCalled();
+			expect(applyCascadePlan).not.toHaveBeenCalled();
+			const savedData = vi.mocked(saveDomainData).mock.calls[0][0] as DomainData;
+			expect(savedData.entries[0]).not.toHaveProperty('applyCascade');
 		});
 	});
 

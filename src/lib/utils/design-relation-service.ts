@@ -14,6 +14,7 @@ import {
 	applyDesignRelationCorrection,
 	previewDesignRelationCorrection
 } from './design-relation-correction.js';
+import { scopeDesignRelationValidation } from './design-relation-scope.js';
 import { validateDesignRelations } from './design-relation-validator.js';
 
 export type DesignRelationValidationRequest = ResolveDesignRelationFileBundleInput;
@@ -27,11 +28,11 @@ export type DesignRelationValidationServiceResult = {
 export function validateLoadedDesignRelationContext(
 	context: Parameters<typeof validateDesignRelations>[0],
 	standardReferences: StandardReferenceLoadStatus,
-	options: { requireStandardReferences?: boolean } = {}
+	options: { requireStandardReferences?: boolean; files?: Partial<Record<DataType, string>> } = {}
 ): DesignRelationValidationResult {
 	const includeStandardReferences =
 		options.requireStandardReferences === true || standardReferences.complete;
-	return validateDesignRelations(context, { includeStandardReferences });
+	return validateDesignRelations(context, { includeStandardReferences, files: options.files });
 }
 
 export async function runDesignRelationValidation(
@@ -60,11 +61,16 @@ export async function runDesignRelationValidation(
 		fallbackToFirstWhenMissing: false,
 		strictStandardReferences: requireStandardReferences
 	});
+	const validation = validateLoadedDesignRelationContext(context, standardReferences, {
+		requireStandardReferences,
+		files: bundle
+	});
 	return {
 		files: bundle,
 		sources: resolved.sources,
-		validation: validateLoadedDesignRelationContext(context, standardReferences, {
-			requireStandardReferences
+		validation: scopeDesignRelationValidation(validation, {
+			scopeType: input.scopeType ?? undefined,
+			scopeFile: input.scopeFile ?? (input.scopeType ? bundle[input.scopeType] : undefined)
 		})
 	};
 }
@@ -73,6 +79,7 @@ export async function runDesignRelationPreview(
 	input: DesignRelationValidationRequest & {
 		issueId: string;
 		candidateId?: string | null;
+		resolutionTargetId?: string | null;
 	}
 ): Promise<
 	ReturnType<typeof previewDesignRelationCorrection> & DesignRelationValidationServiceResult
@@ -82,7 +89,8 @@ export async function runDesignRelationPreview(
 	});
 	const preview = previewDesignRelationCorrection(validationResult.validation, {
 		issueId: input.issueId,
-		candidateId: input.candidateId
+		candidateId: input.candidateId,
+		resolutionTargetId: input.resolutionTargetId
 	});
 	return { ...validationResult, ...preview };
 }
@@ -91,6 +99,7 @@ export async function runDesignRelationApply(
 	input: DesignRelationValidationRequest & {
 		issueId: string;
 		candidateId?: string | null;
+		resolutionTargetId?: string | null;
 	}
 ): Promise<
 	DesignRelationValidationServiceResult & {
@@ -104,6 +113,7 @@ export async function runDesignRelationApply(
 		validation: validationResult.validation,
 		issueId: input.issueId,
 		candidateId: input.candidateId,
+		resolutionTargetId: input.resolutionTargetId,
 		files: validationResult.files as DesignRelationFileBundle
 	});
 	const refreshed = await runDesignRelationValidation(input, { requireStandardReferences: true });

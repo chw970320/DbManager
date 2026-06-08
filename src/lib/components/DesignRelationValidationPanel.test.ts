@@ -157,7 +157,7 @@ describe('DesignRelationValidationPanel', () => {
 		});
 	});
 
-	it('renders relation statistics, candidates, and manual-only guidance', () => {
+	it('renders relation statistics, targets, and manual-only guidance', async () => {
 		const manualIssue = createIssue({
 			issueId: 'issue-2',
 			targetId: 'column-2',
@@ -190,10 +190,13 @@ describe('DesignRelationValidationPanel', () => {
 		expect(dialog).toHaveTextContent('전체 1개 중 0개 통과, 2개 실패');
 		expect(dialog).toHaveTextContent('컬럼 정의서 · column-a.json');
 		expect(dialog).toHaveTextContent('수정 정의서 선택');
-		expect(dialog).toHaveTextContent('PK/FK 값을 수동 확인하세요.');
 
 		const manualCard = screen.getByText('ORDER_ID').closest('.rounded-lg');
 		expect(manualCard).not.toBeNull();
+		await fireEvent.change(within(manualCard as HTMLElement).getByLabelText('수정 정의서 선택'), {
+			target: { value: 'manual-candidate' }
+		});
+		expect(manualCard as HTMLElement).toHaveTextContent('PK/FK 값을 수동 확인하세요.');
 		expect(
 			within(manualCard as HTMLElement).getByRole('button', { name: /수정 미리보기/ })
 		).toBeDisabled();
@@ -226,6 +229,12 @@ describe('DesignRelationValidationPanel', () => {
 		expect(mockFetch).toHaveBeenCalledWith(
 			'/api/validation/design-relations/preview',
 			expect.objectContaining({
+				body: expect.stringContaining('"resolutionTargetId":"candidate-b"')
+			})
+		);
+		expect(mockFetch).toHaveBeenCalledWith(
+			'/api/validation/design-relations/preview',
+			expect.objectContaining({
 				body: expect.stringContaining('"scopeType":"column"')
 			})
 		);
@@ -245,10 +254,52 @@ describe('DesignRelationValidationPanel', () => {
 				expect.objectContaining({
 					issueId: 'issue-1',
 					candidateId: 'candidate-a',
+					resolutionTargetId: 'candidate-a',
 					result: expect.objectContaining({ applied: true })
 				})
 			);
 		});
+	});
+
+	it('filters issues by involved definition type instead of targetType only', () => {
+		const relatedIssue = createIssue({
+			issueId: 'issue-related',
+			targetType: 'entity',
+			targetId: 'entity-1',
+			targetLabel: '회원',
+			involvedTypes: ['database', 'entity'],
+			participants: [
+				{ type: 'database', label: 'LDB_MAIN', role: 'source' },
+				{ type: 'entity', id: 'entity-1', label: '회원', role: 'target' }
+			],
+			resolutionTargets: [
+				{
+					resolutionTargetId: 'rt-database-create',
+					targetType: 'database',
+					targetLabel: 'LDB_MAIN',
+					mode: 'create',
+					autoFixable: false,
+					reason: 'DB 생성',
+					previewText: '데이터베이스 정의서를 신규 추가합니다.',
+					prefill: { logicalDbName: 'LDB_MAIN' }
+				}
+			]
+		});
+		const unrelatedIssue = createIssue({
+			issueId: 'issue-unrelated',
+			targetType: 'column',
+			targetLabel: 'USER_NM',
+			involvedTypes: ['table', 'column']
+		});
+
+		renderPanel({
+			definitionType: 'database',
+			validation: createValidation([relatedIssue, unrelatedIssue])
+		});
+
+		expect(screen.getByText('회원')).toBeInTheDocument();
+		expect(screen.queryByText('USER_NM')).not.toBeInTheDocument();
+		expect(screen.getByText(/데이터베이스 정의서를 신규 추가합니다/)).toBeInTheDocument();
 	});
 
 	it('emits manual edit target details', async () => {

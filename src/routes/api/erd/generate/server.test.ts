@@ -117,7 +117,18 @@ describe('API: /api/erd/generate', () => {
 			expect(result.data.relationValidation).toBeDefined();
 			expect(validateLoadedDesignRelationContext).toHaveBeenCalledWith(
 				expect.any(Object),
-				expect.objectContaining({ complete: false })
+				expect.objectContaining({ complete: false }),
+				expect.objectContaining({
+					files: expect.objectContaining({
+						database: 'database.json',
+						entity: 'entity.json',
+						attribute: 'attribute.json',
+						table: 'table.json',
+						column: 'column.json',
+						domain: 'domain.json',
+						vocabulary: 'vocabulary.json'
+					})
+				})
 			);
 		});
 
@@ -185,7 +196,19 @@ describe('API: /api/erd/generate', () => {
 			expect(getCachedData).toHaveBeenCalledWith('vocabulary', 'mapped-vocabulary.json');
 			expect(validateLoadedDesignRelationContext).toHaveBeenCalledWith(
 				expect.any(Object),
-				expect.objectContaining({ complete: true })
+				expect.objectContaining({ complete: true }),
+				expect.objectContaining({
+					files: expect.objectContaining({
+						database: 'mapped-database.json',
+						entity: 'mapped-entity.json',
+						attribute: 'mapped-attribute.json',
+						table: 'mapped-table.json',
+						column: 'custom-column.json',
+						domain: 'mapped-domain.json',
+						term: 'mapped-term.json',
+						vocabulary: 'mapped-vocabulary.json'
+					})
+				})
 			);
 		});
 

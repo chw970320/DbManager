@@ -56,14 +56,23 @@ describe('API: /api/validation/design-relations/apply', () => {
 
 	it('applies selected candidate and returns refreshed validation', async () => {
 		const response = await POST(
-			event({ issueId: 'issue-1', candidateId: 'candidate-1', columnFile: 'column-a.json' })
+			event({
+				issueId: 'issue-1',
+				candidateId: 'candidate-1',
+				resolutionTargetId: 'rt-1',
+				columnFile: 'column-a.json'
+			})
 		);
 		const result = await response.json();
 
 		expect(response.status).toBe(200);
 		expect(result.data.apply).toMatchObject({ applied: true, targetFile: 'column-a.json' });
 		expect(runDesignRelationApply).toHaveBeenCalledWith(
-			expect.objectContaining({ issueId: 'issue-1', candidateId: 'candidate-1' })
+			expect.objectContaining({
+				issueId: 'issue-1',
+				candidateId: 'candidate-1',
+				resolutionTargetId: 'rt-1'
+			})
 		);
 	});
 

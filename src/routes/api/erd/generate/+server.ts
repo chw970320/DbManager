@@ -87,6 +87,7 @@ import {
 	getErdFileContextInputFromUrl,
 	resolveErdFileContext
 } from '$lib/utils/erd-file-context.js';
+import type { DataType } from '$lib/types/base.js';
 import type { ERDFilterOptions } from '$lib/utils/erd-filter.js';
 
 function parseListParam(url: URL, ...names: string[]): string[] {
@@ -156,7 +157,11 @@ export async function GET({ url }: RequestEvent) {
 			termFile,
 			vocabularyFile
 		} = fileContext.files;
-		const { context, standardReferences } = await loadDesignRelationContext({
+		const {
+			context,
+			files: loadedFiles,
+			standardReferences
+		} = await loadDesignRelationContext({
 			databaseFile,
 			entityFile,
 			attributeFile,
@@ -172,10 +177,15 @@ export async function GET({ url }: RequestEvent) {
 		});
 
 		const filterOptions = createFilterOptions(url);
+		const relationFiles = Object.fromEntries(
+			Object.entries(loadedFiles).filter((entry): entry is [DataType, string] => Boolean(entry[1]))
+		) as Partial<Record<DataType, string>>;
 
 		// ERD 데이터 생성
 		const erdData = generateERDData(context, filterOptions);
-		const relationValidation = validateLoadedDesignRelationContext(context, standardReferences);
+		const relationValidation = validateLoadedDesignRelationContext(context, standardReferences, {
+			files: relationFiles
+		});
 
 		return json(
 			{

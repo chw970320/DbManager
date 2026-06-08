@@ -5,13 +5,14 @@
 	import { DATA_TYPE_LABELS, type DataType } from '$lib/types/base.js';
 	import type {
 		DesignRelationApplyResult,
-		DesignRelationCandidate,
 		DesignRelationCorrectionPreview,
-		DesignRelationManualTarget,
 		DesignRelationRuleId,
 		DesignRelationValidationResult,
-		RelationIssue
+		RelationIssue,
+		RelationResolutionTarget
 	} from '$lib/types/design-relation.js';
+	import { relationResolutionTargets } from '$lib/utils/design-relation-display.js';
+	import { relationIssueInvolvedTypes } from '$lib/utils/design-relation-scope.js';
 
 	type CorrectionResponse<T> = {
 		success: boolean;
@@ -22,10 +23,13 @@
 	type PreviewResponse = {
 		issueId: string;
 		candidateId: string;
+		resolutionTargetId?: string;
 		patch: DesignRelationCorrectionPreview['patch'];
 		previewText: string;
 		actionGuide: string;
 	};
+
+	type RelationEditTarget = RelationResolutionTarget & { issueId: string };
 
 	interface Props {
 		validation?: DesignRelationValidationResult | null;
@@ -35,10 +39,11 @@
 		open?: boolean;
 		error?: string;
 		onclose?: () => void;
-		onedit?: (detail: DesignRelationManualTarget & { issueId: string }) => void;
+		onedit?: (detail: RelationEditTarget) => void;
 		onautofix?: (detail: {
 			issueId: string;
 			candidateId: string;
+			resolutionTargetId?: string;
 			result: DesignRelationApplyResult;
 		}) => void;
 	}
@@ -57,13 +62,18 @@
 
 	const dispatch = createEventDispatcher<{
 		close: void;
-		edit: DesignRelationManualTarget & { issueId: string };
-		autofix: { issueId: string; candidateId: string; result: DesignRelationApplyResult };
+		edit: RelationEditTarget;
+		autofix: {
+			issueId: string;
+			candidateId: string;
+			resolutionTargetId?: string;
+			result: DesignRelationApplyResult;
+		};
 	}>();
 
 	let selectedRelationId = $state<DesignRelationRuleId | 'ALL'>('ALL');
 	let searchQuery = $state('');
-	let selectedCandidateIds = $state<Record<string, string>>({});
+	let selectedTargetIds = $state<Record<string, string>>({});
 	let previewByIssue = $state<Record<string, PreviewResponse>>({});
 	let pendingIssueId = $state<string | null>(null);
 	let actionErrorByIssue = $state<Record<string, string>>({});
@@ -77,17 +87,35 @@
 		STANDARD_REFERENCES: '표준 단어/용어/도메인'
 	};
 
-	let issues = $derived(validation?.issues ?? validation?.summaries.flatMap((s) => s.issues) ?? []);
+	let allIssues = $derived(validation?.issues ?? validation?.summaries.flatMap((s) => s.issues) ?? []);
+	let issues = $derived(
+		allIssues.filter((issue) => relationIssueInvolvedTypes(issue).includes(definitionType))
+	);
 	let relationTypes = $derived(
 		Array.from(new Set(issues.map((issue) => issue.relationId))) as DesignRelationRuleId[]
 	);
 
-	function candidateForIssue(issue: RelationIssue): DesignRelationCandidate | undefined {
-		if (issue.candidates.length === 0) return undefined;
-		const selectedId = selectedCandidateIds[issue.issueId];
+	function targetsForIssue(issue: RelationIssue): RelationResolutionTarget[] {
+		return relationResolutionTargets(issue);
+	}
+
+	function targetForIssue(issue: RelationIssue): RelationResolutionTarget | undefined {
+		const targets = targetsForIssue(issue);
+		if (targets.length === 0) return undefined;
+		const selectedId = selectedTargetIds[issue.issueId];
 		return (
-			issue.candidates.find((candidate) => candidate.candidateId === selectedId) ??
-			(issue.candidates.length === 1 ? issue.candidates[0] : undefined)
+			targets.find((target) => target.resolutionTargetId === selectedId) ??
+			(targets.length === 1 ? targets[0] : undefined)
+		);
+	}
+
+	function targetIsAutoFixable(target?: RelationResolutionTarget): boolean {
+		return Boolean(
+			target?.mode === 'auto_patch' &&
+				target.autoFixable &&
+				target.candidateId &&
+				target.patch &&
+				target.targetId
 		);
 	}
 
@@ -99,7 +127,8 @@
 			issue.expectedKey,
 			issue.actualKey,
 			issue.reason,
-			...issue.candidates.map((candidate) => candidate.targetLabel)
+			...(issue.participants ?? []).map((participant) => participant.label),
+			...targetsForIssue(issue).map((target) => `${target.targetLabel} ${target.reason}`)
 		]
 			.filter(Boolean)
 			.join(' ')
@@ -120,17 +149,19 @@
 	let failedCount = $derived(error ? 1 : (validation?.totals.failedCount ?? issues.length));
 	let passedCount = $derived(validation?.totals.passedCount ?? validation?.totals.matched ?? 0);
 	let autoFixableCount = $derived(
-		validation?.totals.autoFixableCount ?? issues.filter((issue) => issue.autoFixable).length
+		issues.filter((issue) => targetsForIssue(issue).some((target) => targetIsAutoFixable(target)))
+			.length
 	);
 	let displayedCount = $derived(error ? 1 : filteredIssues.length);
 
-	function requestPayload(issue: RelationIssue, candidateId?: string) {
+	function requestPayload(issue: RelationIssue, target: RelationResolutionTarget) {
 		return {
 			scopeType: definitionType,
 			scopeFile: currentFile,
 			[`${definitionType}File`]: currentFile,
 			issueId: issue.issueId,
-			candidateId
+			candidateId: target.candidateId,
+			resolutionTargetId: target.resolutionTargetId
 		};
 	}
 
@@ -144,9 +175,9 @@
 	}
 
 	async function handlePreview(issue: RelationIssue) {
-		const candidate = candidateForIssue(issue);
-		if (!candidate) {
-			setIssueError(issue.issueId, '수정 후보를 먼저 선택하세요.');
+		const target = targetForIssue(issue);
+		if (!target || !targetIsAutoFixable(target)) {
+			setIssueError(issue.issueId, '자동 수정 가능한 수정 대상을 먼저 선택하세요.');
 			return;
 		}
 		pendingIssueId = issue.issueId;
@@ -155,7 +186,7 @@
 			const response = await fetch('/api/validation/design-relations/preview', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(requestPayload(issue, candidate.candidateId))
+				body: JSON.stringify(requestPayload(issue, target))
 			});
 			const result = (await response.json()) as CorrectionResponse<PreviewResponse>;
 			if (!response.ok || !result.success || !result.data) {
@@ -173,9 +204,9 @@
 	}
 
 	async function handleAutoFix(issue: RelationIssue) {
-		const candidate = candidateForIssue(issue);
-		if (!candidate) {
-			setIssueError(issue.issueId, '자동 수정할 후보를 먼저 선택하세요.');
+		const target = targetForIssue(issue);
+		if (!target || !targetIsAutoFixable(target)) {
+			setIssueError(issue.issueId, '자동 수정할 수정 대상을 먼저 선택하세요.');
 			return;
 		}
 		pendingIssueId = issue.issueId;
@@ -184,7 +215,7 @@
 			const response = await fetch('/api/validation/design-relations/apply', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(requestPayload(issue, candidate.candidateId))
+				body: JSON.stringify(requestPayload(issue, target))
 			});
 			const result = (await response.json()) as CorrectionResponse<{
 				apply: DesignRelationApplyResult;
@@ -194,7 +225,8 @@
 			}
 			const detail = {
 				issueId: issue.issueId,
-				candidateId: candidate.candidateId,
+				candidateId: target.candidateId ?? result.data.apply.candidateId,
+				resolutionTargetId: target.resolutionTargetId,
 				result: result.data.apply
 			};
 			dispatch('autofix', detail);
@@ -210,21 +242,25 @@
 	}
 
 	function handleManualEdit(issue: RelationIssue) {
-		const target =
-			issue.manualTargets[0] ??
-			issue.affectedRows[0] ??
+		const selectedTarget =
+			targetForIssue(issue) ??
 			({
+				resolutionTargetId: `manual:${issue.targetType}:${issue.targetId}:${issue.issueId}`,
 				targetType: issue.targetType,
 				targetId: issue.targetId,
-				targetLabel: issue.targetLabel
-			} satisfies DesignRelationManualTarget);
-		const detail = { ...target, issueId: issue.issueId };
+				targetLabel: issue.targetLabel,
+				mode: 'edit',
+				autoFixable: false,
+				reason: issue.reason,
+				previewText: '수동 수정으로 대상 정의서 항목을 확인합니다.'
+			} satisfies RelationResolutionTarget);
+		const detail = { ...selectedTarget, issueId: issue.issueId };
 		dispatch('edit', detail);
 		onedit?.(detail);
 	}
 
-	function handleCandidateChange(issueId: string, candidateId: string) {
-		selectedCandidateIds = { ...selectedCandidateIds, [issueId]: candidateId };
+	function handleTargetChange(issueId: string, resolutionTargetId: string) {
+		selectedTargetIds = { ...selectedTargetIds, [issueId]: resolutionTargetId };
 		const { [issueId]: _removed, ...rest } = previewByIssue;
 		previewByIssue = rest;
 		clearIssueError(issueId);
@@ -247,6 +283,12 @@
 
 	function severityBadge(issue: RelationIssue): string {
 		return issue.severity === 'warning' ? 'badge-warning' : 'badge-error';
+	}
+
+	function modeLabel(mode: RelationResolutionTarget['mode']): string {
+		if (mode === 'auto_patch') return '자동 수정';
+		if (mode === 'create') return '신규 추가';
+		return '수동 수정';
 	}
 </script>
 
@@ -288,13 +330,14 @@
 				</span>
 			</div>
 			<p class="mt-2 text-xs text-content-muted">
-				후보가 여러 개인 경우 수정 정의서를 선택하면 미리보기와 조치 가이드가 해당 후보 기준으로
-				바뀝니다. 후보가 없는 항목은 수동 수정만 가능합니다.
+			후보가 여러 개인 경우 수정 정의서를 선택하면 미리보기와 조치 가이드가 해당 대상 기준으로
+			바뀝니다. 후보가 없는 항목은 수동 수정 또는 신규 추가만 가능합니다.
 			</p>
 		</div>
 
 		{#each filteredIssues as issue (issue.issueId)}
-			{@const selectedCandidate = candidateForIssue(issue)}
+			{@const issueTargets = targetsForIssue(issue)}
+			{@const selectedTarget = targetForIssue(issue)}
 			{@const preview = previewByIssue[issue.issueId]}
 			<div class="rounded-lg border border-border bg-surface p-4">
 				<div class="flex flex-wrap items-start justify-between gap-3">
@@ -339,44 +382,49 @@
 							>
 								수정 정의서 선택
 							</label>
-							{#if issue.candidates.length > 1}
+							{#if issueTargets.length > 1}
 								<select
 									id="candidate-{issue.issueId}"
 									class="input mt-1 text-sm"
-									value={selectedCandidate?.candidateId ?? ''}
+									value={selectedTarget?.resolutionTargetId ?? ''}
 									onchange={(event) =>
-										handleCandidateChange(
+										handleTargetChange(
 											issue.issueId,
 											(event.currentTarget as HTMLSelectElement).value
 										)}
 								>
-									<option value="" disabled>후보 선택</option>
-									{#each issue.candidates as candidate (candidate.candidateId)}
-										<option value={candidate.candidateId}>
-											{typeLabel(candidate.targetType)} · {candidate.targetLabel} ·
-											{candidate.confidence}
+									<option value="" disabled>수정 대상 선택</option>
+									{#each issueTargets as target (target.resolutionTargetId)}
+										<option value={target.resolutionTargetId}>
+											{typeLabel(target.targetType)} · {target.targetLabel} ·
+											{modeLabel(target.mode)}
 										</option>
 									{/each}
 								</select>
-							{:else if issue.candidates.length === 1}
+							{:else if issueTargets.length === 1}
 								<p class="mt-1 text-sm text-content">
-									{typeLabel(issue.candidates[0].targetType)} · {issue.candidates[0].targetLabel}
+									{typeLabel(issueTargets[0].targetType)} · {issueTargets[0].targetLabel} ·
+									{modeLabel(issueTargets[0].mode)}
 								</p>
 							{:else}
 								<p class="mt-1 text-sm text-content-muted">
-									자동 수정 후보 없음 · 수동 수정만 가능
+									수정 대상 없음 · 수동 확인 필요
 								</p>
 							{/if}
 						</div>
 
-						{#if selectedCandidate}
+						{#if selectedTarget}
 							<div class="rounded-md border border-status-info-border bg-status-info-bg p-3">
 								<p class="text-xs font-medium text-status-info">미리보기</p>
 								<p class="mt-1 text-sm text-content">
-									{preview?.previewText ?? selectedCandidate.previewText}
+									{preview?.previewText ?? selectedTarget.previewText}
 								</p>
 								<p class="mt-2 text-xs text-content-secondary">
 									조치 가이드: {preview?.actionGuide ?? issue.actionGuide}
+								</p>
+								<p class="mt-1 text-xs text-content-muted">
+									선택 대상: {typeLabel(selectedTarget.targetType)} ·
+									{modeLabel(selectedTarget.mode)}
 								</p>
 							</div>
 						{:else if issue.actionGuide}
@@ -394,7 +442,7 @@
 							<button
 								type="button"
 								class="btn btn-outline btn-sm"
-								disabled={!selectedCandidate?.autoFixable || pendingIssueId === issue.issueId}
+								disabled={!targetIsAutoFixable(selectedTarget) || pendingIssueId === issue.issueId}
 								onclick={() => handlePreview(issue)}
 							>
 								<Icon name={pendingIssueId === issue.issueId ? 'spinner' : 'search'} size="sm" />
@@ -403,7 +451,7 @@
 							<button
 								type="button"
 								class="btn btn-primary btn-sm"
-								disabled={!selectedCandidate?.autoFixable || pendingIssueId === issue.issueId}
+								disabled={!targetIsAutoFixable(selectedTarget) || pendingIssueId === issue.issueId}
 								onclick={() => handleAutoFix(issue)}
 							>
 								<Icon

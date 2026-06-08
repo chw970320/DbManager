@@ -18,12 +18,17 @@ describe('DB design browse validation entry points', () => {
 		);
 
 		expect(source).toContain('DesignRelationValidationPanel');
+		expect(source).toContain('DesignRelationEditorHost');
 		expect(source).toContain(`RELATION_SCOPE_TYPE = '${type}'`);
 		expect(source).toContain('/api/validation/design-relations?');
 		expect(source).toContain('scopeType: RELATION_SCOPE_TYPE');
 		expect(source).toContain('[`${RELATION_SCOPE_TYPE}File`]: selectedFilename');
+		expect(source).toContain('relationValidationFiles = relationData.files ?? {}');
+		expect(source).toContain('relationEditTarget = event.detail');
+		expect(source).toContain('on:saved={handleRelationEditorSaved}');
 		expect(source).toContain('on:edit={handleRelationValidationEdit}');
 		expect(source).toContain('on:autofix={handleRelationValidationAutoFix}');
+		expect(source).not.toContain('정의서에서 수정하세요');
 		expect(source).toContain('유효성 검사');
 	});
 });

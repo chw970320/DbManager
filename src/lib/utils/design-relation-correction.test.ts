@@ -59,6 +59,20 @@ function validation(): DesignRelationValidationResult {
 		],
 		autoFixable: true
 	});
+	single.resolutionTargets = [
+		{
+			resolutionTargetId: 'rt-auto-single',
+			targetType: 'column',
+			targetId: 'col-1',
+			targetLabel: 'USER_ID',
+			mode: 'auto_patch',
+			candidateId: 'candidate-single',
+			patch: single.candidates[0].patch,
+			autoFixable: true,
+			reason: '단일 후보',
+			previewText: 'resolution target 기준 USER로 수정'
+		}
+	];
 	const multi = issue({
 		issueId: 'issue-multi',
 		candidates: [
@@ -88,9 +102,37 @@ function validation(): DesignRelationValidationResult {
 				autoFixable: false
 			}
 		],
+		resolutionTargets: [
+			{
+				resolutionTargetId: 'rt-manual-edit',
+				targetType: 'column',
+				targetId: 'col-1',
+				targetLabel: 'USER_ID',
+				mode: 'edit',
+				autoFixable: false,
+				reason: '수동 수정',
+				previewText: '컬럼을 수동 수정합니다.'
+			}
+		],
 		autoFixable: false
 	});
-	const noCandidate = issue({ issueId: 'issue-none', candidates: [], autoFixable: false });
+	const noCandidate = issue({
+		issueId: 'issue-none',
+		candidates: [],
+		resolutionTargets: [
+			{
+				resolutionTargetId: 'rt-create',
+				targetType: 'database',
+				targetLabel: 'LDB_MISSING',
+				mode: 'create',
+				autoFixable: false,
+				reason: '누락 DB 생성',
+				previewText: 'DB를 추가합니다.',
+				prefill: { logicalDbName: 'LDB_MISSING' }
+			}
+		],
+		autoFixable: false
+	});
 	return {
 		specs: [],
 		rules: [],
@@ -127,11 +169,38 @@ describe('design-relation-correction', () => {
 		});
 	});
 
+	it('previews an auto_patch resolution target and returns its preview text', () => {
+		const preview = previewDesignRelationCorrection(validation(), {
+			issueId: 'issue-single',
+			resolutionTargetId: 'rt-auto-single'
+		});
+
+		expect(preview).toMatchObject({
+			issueId: 'issue-single',
+			candidateId: 'candidate-single',
+			resolutionTargetId: 'rt-auto-single',
+			previewText: 'resolution target 기준 USER로 수정',
+			patch: { targetType: 'column', targetId: 'col-1' }
+		});
+	});
+
 	it('requires explicit candidateId for multiple candidates and rejects manual-only/no-candidate issues', () => {
 		expect(() => selectDesignRelationCandidate(validation(), 'issue-multi')).toThrow('candidateId');
 		expect(() => selectDesignRelationCandidate(validation(), 'issue-none')).toThrow('수동 수정만');
 		expect(() =>
 			selectDesignRelationCandidate(validation(), 'issue-manual', 'candidate-manual')
+		).toThrow('자동 수정 대상이 아닙니다');
+		expect(() =>
+			previewDesignRelationCorrection(validation(), {
+				issueId: 'issue-manual',
+				resolutionTargetId: 'rt-manual-edit'
+			})
+		).toThrow('자동 수정 대상이 아닙니다');
+		expect(() =>
+			previewDesignRelationCorrection(validation(), {
+				issueId: 'issue-none',
+				resolutionTargetId: 'rt-create'
+			})
 		).toThrow('자동 수정 대상이 아닙니다');
 	});
 
@@ -194,7 +263,7 @@ describe('design-relation-correction', () => {
 		const result = await applyDesignRelationCorrection({
 			validation: validation(),
 			issueId: 'issue-single',
-			candidateId: 'candidate-single',
+			resolutionTargetId: 'rt-auto-single',
 			files: { column: 'column-a.json' },
 			now: '2026-06-04T00:00:00.000Z'
 		});

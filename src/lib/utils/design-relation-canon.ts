@@ -104,7 +104,7 @@ export function buildRelationKey(parts: Array<string | number | undefined | null
 }
 
 export function buildDisplayKey(parts: Array<string | number | undefined | null>): string {
-	return parts.map((part) => String(part ?? '').trim()).join('|');
+	return parts.map((part) => String(part ?? '').trim()).join('.');
 }
 
 export function splitIdentifierList(value: string | undefined | null): string[] {

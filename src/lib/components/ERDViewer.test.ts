@@ -33,8 +33,8 @@ function createRelationValidation(): DesignRelationValidationResult {
 						sourceLabel: '사용자',
 						targetId: 'column-1',
 						targetLabel: 'USER_NM',
-						expectedKey: '회원|public|TB_USER|사용자',
-						actualKey: '회원|public|TB_USER|고객',
+						expectedKey: '회원.public.TB_USER.사용자',
+						actualKey: '회원.public.TB_USER.고객',
 						reason: '연관 엔터티명이 테이블 정의서와 다릅니다.',
 						message: '컬럼 관계가 테이블 정의서와 일치하지 않습니다.',
 						field: 'relatedEntityName',
@@ -71,6 +71,16 @@ function createRelationValidation(): DesignRelationValidationResult {
 								autoFixable: true,
 								reason: '테이블 정의서 기준',
 								previewText: '컬럼 정의서를 사용자로 변경합니다.'
+							},
+							{
+								resolutionTargetId: 'target-table-create',
+								targetType: 'table',
+								targetLabel: 'TB_USER',
+								mode: 'create',
+								autoFixable: false,
+								reason: '컬럼이 참조하는 테이블을 먼저 추가합니다.',
+								previewText: 'TB_USER 항목을 테이블 정의서에 신규 추가합니다.',
+								prefill: { tableEnglishName: 'TB_USER' }
 							}
 						],
 						candidates: [
@@ -226,8 +236,10 @@ describe('ERDViewer', () => {
 		expect(screen.getByLabelText('ERD 관계 검증 이슈')).toBeInTheDocument();
 		expect(screen.getByText(/테이블 -> 컬럼 · USER_NM/)).toBeInTheDocument();
 		expect(screen.getByText(/참여: table:사용자 \/ column:USER_NM/)).toBeInTheDocument();
-		expect(screen.getByText(/조치 상태: 자동 1건 · 수동 0건 · 신규 0건/)).toBeInTheDocument();
-		expect(screen.getByText(/수정 대상:\s*column:USER_NM\(자동 수정\)/)).toBeInTheDocument();
+		expect(screen.getByText(/조치 상태: 자동 1건 · 수동 0건 · 신규 1건/)).toBeInTheDocument();
+		expect(
+			screen.getByText(/수정 대상:\s*table:TB_USER\(신규 추가\) \/ column:USER_NM\(자동 수정\)/)
+		).toBeInTheDocument();
 		expect(screen.getByText(/조치: 후보를 선택해 컬럼 정의서를 자동 수정/)).toBeInTheDocument();
 	});
 

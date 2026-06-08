@@ -86,12 +86,12 @@ describe('API: /api/validation/report', () => {
 											targetType: 'column',
 											targetId: 'col-1',
 											targetLabel: 'USER_NAME',
-											expectedKey: 'A|B',
-											actualKey: 'A|WRONG',
+											expectedKey: 'A.B',
+											actualKey: 'A.WRONG',
 											reason: '테이블 참조 누락',
 											field: 'tableEnglishName',
 											autoFixable: true,
-											actionGuide: '단일 후보가 있어 미리보기 후 자동 수정할 수 있습니다.',
+											actionGuide: '단일 후보가 있어 조치 가이드 확인 후 자동 수정할 수 있습니다.',
 											manualTargets: [
 												{
 													targetType: 'column',
@@ -174,9 +174,9 @@ describe('API: /api/validation/report', () => {
 		expect(relationIssue.metadata).toMatchObject({
 			relationId: 'TABLE_COLUMN',
 			relationName: '테이블 -> 컬럼',
-			actualKey: 'A|WRONG',
+			actualKey: 'A.WRONG',
 			autoFixable: true,
-			actionGuide: '단일 후보가 있어 미리보기 후 자동 수정할 수 있습니다.',
+			actionGuide: '단일 후보가 있어 조치 가이드 확인 후 자동 수정할 수 있습니다.',
 			candidateCount: 1,
 			candidates: [
 				{

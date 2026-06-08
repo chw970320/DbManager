@@ -82,25 +82,37 @@
   - `issues[]`: `issueId`, `sourceType`, `targetType`, `targetId`, `expectedKey`, `actualKey`,
     `reason`, `participants`, `involvedTypes`, `resolutionTargets`, `manualTargets`, `candidates`,
     `actionGuide`
+  - `expectedKey`/`actualKey`: 사용자 표시용 관계 키입니다. 내부 매칭 키는 `|`를 유지하지만
+    화면/API 표시 값은 DB 참조 관례에 맞춰 `schema.entity.attribute`처럼 `.` 구분자를 사용합니다.
   - `participants`: 이슈에 연관된 정의서 항목 목록과 역할(`source`/`target`/`reference`)입니다.
   - `involvedTypes`: 현재 정의서 화면에서 이슈를 노출할지 판단하는 정의서 타입 목록입니다.
   - `resolutionTargets`: 사용자가 선택할 수정 대상 목록입니다. `auto_patch`는 기존 행 patch
     자동 적용, `edit`는 기존 행 수동 수정, `create`는 신규 행 작성 팝업을 의미합니다.
+  - 관계 검증 패널의 기본 선택은 action이 아니라 `resolutionTargets` 중 가장 직접적인 조치
+    대상입니다. 우선순위는 누락 항목 `create`, 안전한 `auto_patch`, 후보 기반 `edit`, 기본
+    manual `edit` 순입니다.
 - 표준 참조 파일 로딩 정책:
   - 정본 관계 검증은 8종 파일명이 모두 해석되어야 하며, `vocabulary/domain/term` 파일이 없거나 손상되었거나 `entries` 배열을 읽을 수 없으면 400으로 fail-fast합니다.
   - 통합 validation report의 relation 이슈도 `participants`, `involvedTypes`,
     `resolutionTargets`, `autoFixable`, `candidates`, `manualTargets`, `actionGuide`
     메타데이터를 유지해 정의서 패널/ERD와 같은 수정 대상 정보를 노출합니다.
 
-### 후보 선택 수정
+### 수정 대상 선택과 자동 적용
 
-- 미리보기 API: `POST /api/validation/design-relations/preview`
+- 호환 미리보기 API: `POST /api/validation/design-relations/preview`
 - 적용 API: `POST /api/validation/design-relations/apply`
-- 후보 정책:
+- UI 정책:
+  - 정의서 관계 검증 패널은 별도 미리보기 호출 없이 선택된 `resolutionTarget`의
+    `previewText`/`reason`/`actionGuide`를 조치 가이드로 표시합니다.
+  - 사용자는 `조치 대상 선택`에서 수정할 정의서/항목을 고른 뒤 `자동 수정` 또는
+    `수동 수정`/`신규 추가` 버튼을 실행합니다.
+- 후보/대상 정책:
   - 후보 없음: `resolutionTargets`의 `create`/`edit` 대상 또는 `manualTargets` 기준 수동 수정만 허용
   - 단일 자동 수정 대상: `resolutionTargetId` 생략 시 호환 `candidateId` 단일 후보를 사용할 수 있음
   - 복수 자동 수정 대상: 사용자가 선택한 `resolutionTargetId` 또는 호환 `candidateId`가 필수
   - `mode=create|edit` 또는 `autoFixable=false`: 자동 적용 금지, 수동 수정만 허용
+- 미리보기 API는 기존 호출자 호환용입니다. 현재 패널 UI는 호출하지 않으며, 적용 API 내부에서
+  같은 선택/patch 검증을 수행합니다.
 - 적용 범위:
   - 선택한 `auto_patch` 대상의 `patch.targetType`, `patch.targetId`, `patch.fields`만 대상 파일에 저장합니다.
   - 신규 행 생성/삭제/병합/대량 수정은 자동 적용 범위가 아니며 정의서 편집 팝업에서 수동 처리합니다.

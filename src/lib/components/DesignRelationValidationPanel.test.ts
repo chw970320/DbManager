@@ -25,8 +25,8 @@ function createIssue(overrides: Partial<RelationIssue> = {}): RelationIssue {
 		sourceLabel: '사용자',
 		targetId: 'column-1',
 		targetLabel: 'USER_NM',
-		expectedKey: '회원|public|TB_USER|사용자',
-		actualKey: '회원|public|TB_USER|고객',
+		expectedKey: '회원.public.TB_USER.사용자',
+		actualKey: '회원.public.TB_USER.고객',
 		reason: '연관 엔터티명이 테이블 정의서와 다릅니다.',
 		message: '컬럼 관계가 테이블 정의서와 일치하지 않습니다.',
 		field: 'relatedEntityName',
@@ -189,62 +189,84 @@ describe('DesignRelationValidationPanel', () => {
 		const dialog = screen.getByRole('dialog', { name: '정의서 관계 유효성 검사 결과' });
 		expect(dialog).toHaveTextContent('전체 1개 중 0개 통과, 2개 실패');
 		expect(dialog).toHaveTextContent('컬럼 정의서 · column-a.json');
-		expect(dialog).toHaveTextContent('수정 정의서 선택');
+		expect(dialog).toHaveTextContent('조치 대상 선택');
+		expect(dialog).toHaveTextContent('회원.public.TB_USER.사용자');
+		expect(dialog).toHaveTextContent('회원.public.TB_USER.고객');
 
 		const manualCard = screen.getByText('ORDER_ID').closest('.rounded-lg');
 		expect(manualCard).not.toBeNull();
-		await fireEvent.change(within(manualCard as HTMLElement).getByLabelText('수정 정의서 선택'), {
+		await fireEvent.change(within(manualCard as HTMLElement).getByLabelText('조치 대상 선택'), {
 			target: { value: 'manual-candidate' }
 		});
 		expect(manualCard as HTMLElement).toHaveTextContent('PK/FK 값을 수동 확인하세요.');
 		expect(
-			within(manualCard as HTMLElement).getByRole('button', { name: /수정 미리보기/ })
-		).toBeDisabled();
+			within(manualCard as HTMLElement).queryByRole('button', { name: /수정 미리보기/ })
+		).not.toBeInTheDocument();
 		expect(
-			within(manualCard as HTMLElement).getByRole('button', { name: /자동 수정/ })
-		).toBeDisabled();
+			within(manualCard as HTMLElement).queryByRole('button', { name: /자동 수정/ })
+		).not.toBeInTheDocument();
+		expect(
+			within(manualCard as HTMLElement).getByRole('button', { name: '수동 수정' })
+		).toBeInTheDocument();
 	});
 
-	it('updates preview guide by selected candidate and calls preview endpoint', async () => {
+	it('updates action guide by selected target without calling preview endpoint', async () => {
 		renderPanel();
 
-		await fireEvent.change(screen.getByLabelText('수정 정의서 선택'), {
+		expect(screen.queryByRole('button', { name: /수정 미리보기/ })).not.toBeInTheDocument();
+		expect(screen.getByText('컬럼 정의서를 사용자로 변경합니다.')).toBeInTheDocument();
+
+		await fireEvent.change(screen.getByLabelText('조치 대상 선택'), {
 			target: { value: 'candidate-b' }
 		});
 
 		expect(screen.getByText('테이블 정의서를 고객으로 변경합니다.')).toBeInTheDocument();
-		await fireEvent.click(screen.getByRole('button', { name: /수정 미리보기/ }));
+		expect(screen.getByText('선택 근거: 컬럼 정의서 기준')).toBeInTheDocument();
+		expect(mockFetch).not.toHaveBeenCalled();
+	});
 
-		await waitFor(() => {
-			expect(screen.getByText('서버 미리보기: candidate-b')).toBeInTheDocument();
+	it('defaults to the most direct create target before auto patch targets', () => {
+		const baseIssue = createIssue();
+		const createFirstIssue = createIssue({
+			resolutionTargets: [
+				{
+					resolutionTargetId: 'create-table-target',
+					targetType: 'table',
+					targetLabel: 'TB_USER',
+					mode: 'create',
+					autoFixable: false,
+					reason: '컬럼이 참조하는 테이블을 먼저 추가해야 합니다.',
+					previewText: 'TB_USER 항목을 테이블 정의서에 신규 추가합니다.',
+					prefill: { tableEnglishName: 'TB_USER' }
+				},
+				{
+					resolutionTargetId: 'auto-column-target',
+					targetType: 'column',
+					targetId: 'column-1',
+					targetLabel: 'USER_NM',
+					mode: 'auto_patch',
+					candidateId: 'candidate-a',
+					patch: baseIssue.candidates[0].patch,
+					autoFixable: true,
+					reason: '테이블 정의서 기준',
+					previewText: '컬럼 정의서를 사용자로 변경합니다.'
+				}
+			]
 		});
+		renderPanel({ validation: createValidation([createFirstIssue]) });
 
-		expect(mockFetch).toHaveBeenCalledWith(
-			'/api/validation/design-relations/preview',
-			expect.objectContaining({
-				method: 'POST',
-				body: expect.stringContaining('"candidateId":"candidate-b"')
-			})
-		);
-		expect(mockFetch).toHaveBeenCalledWith(
-			'/api/validation/design-relations/preview',
-			expect.objectContaining({
-				body: expect.stringContaining('"resolutionTargetId":"candidate-b"')
-			})
-		);
-		expect(mockFetch).toHaveBeenCalledWith(
-			'/api/validation/design-relations/preview',
-			expect.objectContaining({
-				body: expect.stringContaining('"scopeType":"column"')
-			})
-		);
+		const select = screen.getByLabelText('조치 대상 선택') as HTMLSelectElement;
+		expect(select.value).toBe('create-table-target');
+		expect(screen.getByText('TB_USER 항목을 테이블 정의서에 신규 추가합니다.')).toBeInTheDocument();
+		expect(screen.queryByRole('button', { name: /자동 수정/ })).not.toBeInTheDocument();
+		expect(screen.getByRole('button', { name: '신규 추가' })).toBeInTheDocument();
 	});
 
 	it('emits autofix after selected candidate apply succeeds', async () => {
 		const onautofix = vi.fn();
 		renderPanel({ onautofix });
 
-		await fireEvent.change(screen.getByLabelText('수정 정의서 선택'), {
+		await fireEvent.change(screen.getByLabelText('조치 대상 선택'), {
 			target: { value: 'candidate-a' }
 		});
 		await fireEvent.click(screen.getByRole('button', { name: /자동 수정/ }));

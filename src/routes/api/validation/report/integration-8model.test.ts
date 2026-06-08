@@ -81,7 +81,7 @@ describe('Integration: validation/report (8-model reference flow)', () => {
 											targetType: 'column',
 											targetId: 'col-1',
 											targetLabel: 'NO_TERM',
-											expectedKey: 'A|B',
+											expectedKey: 'A.B',
 											reason: '참조 누락',
 											message: '참조 누락',
 											affectedRows: [],

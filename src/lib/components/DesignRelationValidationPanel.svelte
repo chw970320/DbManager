@@ -5,7 +5,6 @@
 	import { DATA_TYPE_LABELS, type DataType } from '$lib/types/base.js';
 	import type {
 		DesignRelationApplyResult,
-		DesignRelationCorrectionPreview,
 		DesignRelationRuleId,
 		DesignRelationValidationResult,
 		RelationIssue,
@@ -18,15 +17,6 @@
 		success: boolean;
 		data?: T;
 		error?: string;
-	};
-
-	type PreviewResponse = {
-		issueId: string;
-		candidateId: string;
-		resolutionTargetId?: string;
-		patch: DesignRelationCorrectionPreview['patch'];
-		previewText: string;
-		actionGuide: string;
 	};
 
 	type RelationEditTarget = RelationResolutionTarget & { issueId: string };
@@ -74,7 +64,6 @@
 	let selectedRelationId = $state<DesignRelationRuleId | 'ALL'>('ALL');
 	let searchQuery = $state('');
 	let selectedTargetIds = $state<Record<string, string>>({});
-	let previewByIssue = $state<Record<string, PreviewResponse>>({});
 	let pendingIssueId = $state<string | null>(null);
 	let actionErrorByIssue = $state<Record<string, string>>({});
 
@@ -105,7 +94,7 @@
 		const selectedId = selectedTargetIds[issue.issueId];
 		return (
 			targets.find((target) => target.resolutionTargetId === selectedId) ??
-			(targets.length === 1 ? targets[0] : undefined)
+			targets[0]
 		);
 	}
 
@@ -174,35 +163,6 @@
 		actionErrorByIssue = rest;
 	}
 
-	async function handlePreview(issue: RelationIssue) {
-		const target = targetForIssue(issue);
-		if (!target || !targetIsAutoFixable(target)) {
-			setIssueError(issue.issueId, '자동 수정 가능한 수정 대상을 먼저 선택하세요.');
-			return;
-		}
-		pendingIssueId = issue.issueId;
-		clearIssueError(issue.issueId);
-		try {
-			const response = await fetch('/api/validation/design-relations/preview', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(requestPayload(issue, target))
-			});
-			const result = (await response.json()) as CorrectionResponse<PreviewResponse>;
-			if (!response.ok || !result.success || !result.data) {
-				throw new Error(result.error || '수정 미리보기를 생성하지 못했습니다.');
-			}
-			previewByIssue = { ...previewByIssue, [issue.issueId]: result.data };
-		} catch (error) {
-			setIssueError(
-				issue.issueId,
-				error instanceof Error ? error.message : '수정 미리보기 중 오류가 발생했습니다.'
-			);
-		} finally {
-			pendingIssueId = null;
-		}
-	}
-
 	async function handleAutoFix(issue: RelationIssue) {
 		const target = targetForIssue(issue);
 		if (!target || !targetIsAutoFixable(target)) {
@@ -261,8 +221,6 @@
 
 	function handleTargetChange(issueId: string, resolutionTargetId: string) {
 		selectedTargetIds = { ...selectedTargetIds, [issueId]: resolutionTargetId };
-		const { [issueId]: _removed, ...rest } = previewByIssue;
-		previewByIssue = rest;
 		clearIssueError(issueId);
 	}
 
@@ -288,6 +246,11 @@
 	function modeLabel(mode: RelationResolutionTarget['mode']): string {
 		if (mode === 'auto_patch') return '자동 수정';
 		if (mode === 'create') return '신규 추가';
+		return '수동 수정';
+	}
+
+	function manualActionLabel(target?: RelationResolutionTarget): string {
+		if (target?.mode === 'create') return '신규 추가';
 		return '수동 수정';
 	}
 </script>
@@ -330,15 +293,14 @@
 				</span>
 			</div>
 			<p class="mt-2 text-xs text-content-muted">
-			후보가 여러 개인 경우 수정 정의서를 선택하면 미리보기와 조치 가이드가 해당 대상 기준으로
-			바뀝니다. 후보가 없는 항목은 수동 수정 또는 신규 추가만 가능합니다.
+				후보가 여러 개인 경우 수정 정의서를 선택하면 조치 가이드와 실행 버튼이 해당 대상
+				기준으로 바뀝니다. 후보가 없는 항목은 수동 수정 또는 신규 추가만 가능합니다.
 			</p>
 		</div>
 
 		{#each filteredIssues as issue (issue.issueId)}
 			{@const issueTargets = targetsForIssue(issue)}
 			{@const selectedTarget = targetForIssue(issue)}
-			{@const preview = previewByIssue[issue.issueId]}
 			<div class="rounded-lg border border-border bg-surface p-4">
 				<div class="flex flex-wrap items-start justify-between gap-3">
 					<div>
@@ -351,13 +313,6 @@
 						<h3 class="mt-2 font-medium text-content">{issue.targetLabel}</h3>
 						<p class="mt-1 text-sm text-content-secondary">{issue.message || issue.reason}</p>
 					</div>
-					<button
-						type="button"
-						class="btn btn-secondary btn-sm"
-						onclick={() => handleManualEdit(issue)}
-					>
-						수동 수정
-					</button>
 				</div>
 
 				<div class="mt-3 rounded-md border px-3 py-2 text-xs {severityClass(issue)}">
@@ -380,7 +335,7 @@
 								for="candidate-{issue.issueId}"
 								class="block text-xs font-medium text-content-secondary"
 							>
-								수정 정의서 선택
+								조치 대상 선택
 							</label>
 							{#if issueTargets.length > 1}
 								<select
@@ -393,7 +348,6 @@
 											(event.currentTarget as HTMLSelectElement).value
 										)}
 								>
-									<option value="" disabled>수정 대상 선택</option>
 									{#each issueTargets as target (target.resolutionTargetId)}
 										<option value={target.resolutionTargetId}>
 											{typeLabel(target.targetType)} · {target.targetLabel} ·
@@ -415,12 +369,10 @@
 
 						{#if selectedTarget}
 							<div class="rounded-md border border-status-info-border bg-status-info-bg p-3">
-								<p class="text-xs font-medium text-status-info">미리보기</p>
-								<p class="mt-1 text-sm text-content">
-									{preview?.previewText ?? selectedTarget.previewText}
-								</p>
+								<p class="text-xs font-medium text-status-info">조치 가이드</p>
+								<p class="mt-1 text-sm text-content">{selectedTarget.previewText}</p>
 								<p class="mt-2 text-xs text-content-secondary">
-									조치 가이드: {preview?.actionGuide ?? issue.actionGuide}
+									선택 근거: {selectedTarget.reason || issue.actionGuide}
 								</p>
 								<p class="mt-1 text-xs text-content-muted">
 									선택 대상: {typeLabel(selectedTarget.targetType)} ·
@@ -439,26 +391,27 @@
 						{/if}
 
 						<div class="flex flex-wrap justify-end gap-2">
+							{#if targetIsAutoFixable(selectedTarget)}
+								<button
+									type="button"
+									class="btn btn-outline btn-sm"
+									disabled={pendingIssueId === issue.issueId}
+									onclick={() => handleAutoFix(issue)}
+								>
+									<Icon
+										name={pendingIssueId === issue.issueId ? 'spinner' : 'check-circle'}
+										size="sm"
+									/>
+									자동 수정
+								</button>
+							{/if}
 							<button
 								type="button"
 								class="btn btn-outline btn-sm"
-								disabled={!targetIsAutoFixable(selectedTarget) || pendingIssueId === issue.issueId}
-								onclick={() => handlePreview(issue)}
+								disabled={pendingIssueId === issue.issueId}
+								onclick={() => handleManualEdit(issue)}
 							>
-								<Icon name={pendingIssueId === issue.issueId ? 'spinner' : 'search'} size="sm" />
-								수정 미리보기
-							</button>
-							<button
-								type="button"
-								class="btn btn-primary btn-sm"
-								disabled={!targetIsAutoFixable(selectedTarget) || pendingIssueId === issue.issueId}
-								onclick={() => handleAutoFix(issue)}
-							>
-								<Icon
-									name={pendingIssueId === issue.issueId ? 'spinner' : 'check-circle'}
-									size="sm"
-								/>
-								자동 수정
+								{manualActionLabel(selectedTarget)}
 							</button>
 						</div>
 					</div>

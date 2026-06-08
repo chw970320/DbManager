@@ -196,8 +196,8 @@ function guide(rule: RelationSpec, candidates: DesignRelationCandidate[]): strin
 		return '후보를 참고해 수동 수정하세요. 이 관계는 PK/FK 형식 안정성 때문에 자동 수정하지 않습니다.';
 	if (!candidates.some((c) => c.autoFixable))
 		return '후보는 참고용입니다. 표준/정의서 값을 함께 확인한 뒤 수동 수정하세요.';
-	if (candidates.length === 1) return '단일 후보가 있어 미리보기 후 자동 수정할 수 있습니다.';
-	return '후보가 여러 개입니다. 정의서/후보를 선택하면 미리보기와 조치 가이드가 해당 후보 기준으로 변경됩니다.';
+	if (candidates.length === 1) return '단일 후보가 있어 조치 가이드 확인 후 자동 수정할 수 있습니다.';
+	return '후보가 여러 개입니다. 조치 대상을 선택하면 조치 가이드와 실행 버튼이 해당 대상 기준으로 변경됩니다.';
 }
 
 function issue(options: {
@@ -861,9 +861,7 @@ export function validateDesignRelations(
 									relatedEntityName: a.entityName ?? null,
 									columnKoreanName: a.attributeName ?? null,
 									pkInfo: isAffirmativeFlag(a.requiredInput) ? 'Y' : null,
-									fkInfo: referenceRequiresFk(a.refEntityName, a.refAttributeName)
-										? buildDisplayKey([a.refEntityName, a.refAttributeName])
-										: null
+									fkInfo: null
 								},
 								'속성과 연결되는 컬럼을 컬럼 정의서에 신규 추가합니다.',
 								'columnKoreanName'

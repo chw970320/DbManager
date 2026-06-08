@@ -2445,12 +2445,17 @@ ERD 대상 테이블 목록을 조회합니다.
   - `validation.issues`: 미매칭 상세. 각 이슈는 참여 항목 `participants`, 화면 노출 기준
     `involvedTypes`, 수정 대상 선택지 `resolutionTargets`, 호환 필드 `manualTargets`/`candidates`,
     `autoFixable`, `actionGuide`를 포함합니다.
+    `expectedKey`/`actualKey`는 사용자 표시용 값이며 내부 매칭 키와 달리 `.` 구분자를 사용합니다.
+    정의서 패널은 `resolutionTargets` 중 권장 조치 대상을 기본 선택하고, 선택 대상의
+    `previewText`/`reason`/`actionGuide`를 별도 API 호출 없이 조치 가이드로 표시합니다.
   - `validation.summaries`: 관계별 `matched/unmatched` 및 현재 스코프 이슈 샘플
   - `validation.totals`: 전체 집계(`errorCount`, `warningCount`, `autoFixableCount` 포함)
 
 ### POST /api/validation/design-relations/preview
 
-선택한 미매칭 이슈와 후보에 대한 수정 미리보기를 생성합니다.
+선택한 미매칭 이슈와 후보에 대한 수정 미리보기를 생성하는 호환 API입니다.
+현재 정의서 관계 검증 패널은 이 API를 호출하지 않고 `GET /api/validation/design-relations`
+응답의 선택 대상별 조치 가이드를 사용합니다.
 
 - 요청 바디:
   - 검증 파일 파라미터와 동일한 파일/스코프 필드
@@ -2465,7 +2470,7 @@ ERD 대상 테이블 목록을 조회합니다.
 
 ### POST /api/validation/design-relations/apply
 
-선택한 후보의 patch만 실제 대상 정의서 파일에 적용한 뒤 관계 검증을 다시 실행합니다.
+선택한 `auto_patch` 수정 대상의 patch만 실제 대상 정의서 파일에 적용한 뒤 관계 검증을 다시 실행합니다.
 
 - 요청 바디:
   - 검증 파일 파라미터와 동일한 파일/스코프 필드
@@ -2494,7 +2499,8 @@ ERD 호환용 관계 검증 엔드포인트입니다. 내부적으로 canonical 
 
 ### GET /api/erd/relations/sync
 
-레거시 5개 정의서 관계 동기화 미리보기를 조회합니다. 신규 자동 수정은 수정 대상 선택 기반 `/api/validation/design-relations/preview`와 `/api/validation/design-relations/apply`를 사용합니다.
+레거시 5개 정의서 관계 동기화 미리보기를 조회합니다. 신규 자동 수정은 수정 대상 선택 기반
+`/api/validation/design-relations/apply`를 사용하고, 수동 수정/신규 추가는 정의서 편집 팝업을 사용합니다.
 
 - 주요 파라미터:
   - `apply`: `false` 또는 생략만 지원합니다. `true`는 410으로 거부됩니다.
@@ -2502,7 +2508,7 @@ ERD 호환용 관계 검증 엔드포인트입니다. 내부적으로 canonical 
   - `databaseFile`, `entityFile`, `attributeFile`, `tableFile`: 명시 지정 시 매핑값보다 우선합니다.
 - 응답 핵심:
   - `data.deprecated`: `true`
-  - `data.replacement`: 신규 preview/apply API 안내
+  - `data.replacement`: 신규 validation/apply API와 수동 편집 안내
   - `data.mode`: `preview`
   - `data.counts`: 후보 건수/추천 건수. 적용 건수는 항상 0입니다.
   - `data.changes`: 필드별 변경 후보

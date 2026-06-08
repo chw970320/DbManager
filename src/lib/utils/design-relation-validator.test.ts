@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DESIGN_RELATION_SPECS, validateDesignRelations } from './design-relation-validator.js';
+import { buildDisplayKey, buildRelationKey } from './design-relation-canon.js';
 import type { MappingContext } from '$lib/types/erd-mapping.js';
 
 const ts = '2026-01-01T00:00:00.000Z';
@@ -176,6 +177,11 @@ function summaryById(result = validateDesignRelations(context())) {
 }
 
 describe('design-relation-validator canonical relation contract', () => {
+	it('keeps internal relation keys separate from display keys', () => {
+		expect(buildRelationKey([' BKSP ', '사용자', '사용자ID'])).toBe('bksp|사용자|사용자id');
+		expect(buildDisplayKey([' BKSP ', '사용자', '사용자ID'])).toBe('BKSP.사용자.사용자ID');
+	});
+
 	it('uses the six canonical rule ids and drops legacy physical DB_TABLE success', () => {
 		expect(DESIGN_RELATION_SPECS.map((s) => s.id)).toEqual([
 			'DATABASE_ENTITY_LOGICAL_DB',
@@ -356,6 +362,34 @@ describe('design-relation-validator canonical relation contract', () => {
 					targetType: 'term',
 					mode: 'create',
 					prefill: expect.objectContaining({ termName: '사용자ID', columnName: 'USER_ID' })
+				})
+			])
+		);
+	});
+
+	it('does not prefill FK info from display-only reference keys', () => {
+		const ctx = context();
+		ctx.attributes[1] = {
+			...ctx.attributes[1],
+			refEntityName: '부서',
+			refAttributeName: '부서ID'
+		};
+		ctx.columns = ctx.columns.filter((column) => column.id !== 'col-user-name');
+
+		const issue = validateDesignRelations(ctx).issues.find(
+			(i) => i.relationId === 'ATTRIBUTE_COLUMN_KEY' && i.targetId === 'attr-user-name'
+		);
+
+		expect(issue?.expectedKey).toBe('BKSP.사용자.이름');
+		expect(issue?.resolutionTargets).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					targetType: 'column',
+					mode: 'create',
+					prefill: expect.objectContaining({
+						columnKoreanName: '이름',
+						fkInfo: null
+					})
 				})
 			])
 		);

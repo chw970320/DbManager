@@ -15,8 +15,9 @@ export function relationParticipantSummary(issue: RelationIssue): string {
 }
 
 export function relationResolutionTargets(issue: RelationIssue): RelationResolutionTarget[] {
-	if (issue.resolutionTargets?.length) return issue.resolutionTargets;
-	return [
+	const targets = issue.resolutionTargets?.length
+		? issue.resolutionTargets
+		: [
 		...(issue.manualTargets ?? []).map((target) => ({
 			resolutionTargetId: `manual:${target.targetType}:${target.targetId}:${target.field ?? 'row'}`,
 			targetType: target.targetType,
@@ -43,6 +44,36 @@ export function relationResolutionTargets(issue: RelationIssue): RelationResolut
 			previewText: candidate.previewText
 		}))
 	];
+	return sortRelationResolutionTargets(issue, targets);
+}
+
+function relationTargetPriority(
+	issue: RelationIssue,
+	target: RelationResolutionTarget,
+	index: number
+): number {
+	const candidate = issue.candidates?.find(
+		(candidate) => candidate.candidateId === target.candidateId
+	);
+	const confidenceRank =
+		candidate?.confidence === 'high' ? 0 : candidate?.confidence === 'medium' ? 1 : 2;
+	const modeRank =
+		target.mode === 'create' ? 0 : target.mode === 'auto_patch' ? 1 : target.candidateId ? 2 : 3;
+	return modeRank * 100 + confidenceRank * 10 + index;
+}
+
+function sortRelationResolutionTargets(
+	issue: RelationIssue,
+	targets: RelationResolutionTarget[]
+): RelationResolutionTarget[] {
+	return targets
+		.map((target, index) => ({ target, index }))
+		.sort(
+			(left, right) =>
+				relationTargetPriority(issue, left.target, left.index) -
+				relationTargetPriority(issue, right.target, right.index)
+		)
+		.map(({ target }) => target);
 }
 
 export function relationResolutionTargetSummary(target: RelationResolutionTarget): string {

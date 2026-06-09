@@ -248,10 +248,7 @@
 			delete node.dataset.erdManualY;
 			node.classList.remove('erd-manual-node-moved');
 		}
-		for (const edge of getEdgeElements()) {
-			edge.style.display = '';
-		}
-		removeManualEdges();
+		rebuildManualEdges();
 	}
 
 	function parsePolygonPoints(value: string | null): Array<{ x: number; y: number }> {
@@ -413,8 +410,7 @@
 		removeManualEdges(svgElement);
 
 		const edgeElements = getEdgeElements(svgElement);
-		if (!manualLayoutActive || edgeElements.length === 0) {
-			for (const edge of edgeElements) edge.style.display = '';
+		if (edgeElements.length === 0) {
 			return;
 		}
 
@@ -612,22 +608,6 @@
 		return `erd-${mode}.${extension}`;
 	}
 
-	function getRenderDownloadUrl(format: 'svg' | 'png'): string {
-		const url = new URL(renderUrl, window.location.href);
-		url.searchParams.set('format', format);
-		url.searchParams.set('download', 'true');
-		return url.toString();
-	}
-
-	function downloadUrl(url: string, filename: string) {
-		const anchor = document.createElement('a');
-		anchor.href = url;
-		anchor.download = filename;
-		document.body.append(anchor);
-		anchor.click();
-		anchor.remove();
-	}
-
 	function downloadBlob(blob: Blob, filename: string) {
 		const objectUrl = URL.createObjectURL(blob);
 		const anchor = document.createElement('a');
@@ -693,10 +673,6 @@
 
 	async function downloadCurrentPng() {
 		downloadError = null;
-		if (!manualLayoutActive) {
-			downloadUrl(getRenderDownloadUrl('png'), getDownloadFilename('png'));
-			return;
-		}
 		const svgExport = getCurrentSvgExport();
 		if (!svgExport) return;
 		let objectUrl: string | null = null;

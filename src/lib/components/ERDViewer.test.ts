@@ -461,6 +461,19 @@ describe('ERDViewer', () => {
 		expect(preview.getAttribute('style')).not.toBe(initialTransform);
 	});
 
+	it('최초 렌더부터 Graphviz 관계선을 숨기고 브라우저 오버레이 관계선을 표시한다', async () => {
+		fetchMock.mockResolvedValueOnce(mockSvgResponse(layoutSvg));
+		const { container } = render(ERDViewer, { props: defaultProps });
+
+		await screen.findByTestId('erd-svg-preview');
+
+		const graphvizEdge = container.querySelector('g.edge') as SVGGElement;
+		expect(graphvizEdge.style.display).toBe('none');
+		expect(container.querySelector('.erd-manual-edge line')).toBeInTheDocument();
+		expect(container.querySelectorAll('.erd-manual-edge line')).toHaveLength(5);
+		expect(screen.getByRole('button', { name: '테이블 배치 초기화' })).toBeDisabled();
+	});
+
 	it('배치 수정 모드에서 테이블 노드를 드래그하고 수동 관계선을 다시 그린다', async () => {
 		fetchMock.mockResolvedValueOnce(mockSvgResponse(layoutSvg));
 		const { container } = render(ERDViewer, { props: defaultProps });
@@ -539,29 +552,54 @@ describe('ERDViewer', () => {
 		expect(revokeObjectUrl).toHaveBeenCalledWith('blob:erd-svg');
 	});
 
-	it('수동 배치가 없으면 PNG는 서버 렌더 다운로드 URL을 사용한다', async () => {
+	it('수동 배치가 없어도 PNG는 현재 미리보기 SVG를 client-side로 변환한다', async () => {
 		fetchMock.mockResolvedValueOnce(mockSvgResponse(layoutSvg));
-		const createObjectUrl = vi.fn();
+		const createObjectUrl = vi
+			.fn()
+			.mockReturnValueOnce('blob:source-svg')
+			.mockReturnValueOnce('blob:download-png');
+		const revokeObjectUrl = vi.fn();
 		Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectUrl });
-		let clickedHref = '';
-		let clickedDownload = '';
-		vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
-			this: HTMLAnchorElement
-		) {
-			clickedHref = this.href;
-			clickedDownload = this.download;
+		Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeObjectUrl });
+		const clickSpy = vi
+			.spyOn(HTMLAnchorElement.prototype, 'click')
+			.mockImplementation(() => undefined);
+		const drawImage = vi.fn();
+		const fillRect = vi.fn();
+		vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+			drawImage,
+			fillRect,
+			fillStyle: ''
+		} as unknown as CanvasRenderingContext2D);
+		vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((callback) => {
+			callback(new Blob(['png'], { type: 'image/png' }));
 		});
+		class MockImage {
+			onload: (() => void) | null = null;
+			onerror: (() => void) | null = null;
+			set src(_value: string) {
+				queueMicrotask(() => this.onload?.());
+			}
+		}
+		vi.stubGlobal('Image', MockImage);
 
 		const { getActions } = renderWithDownloadActions();
 		await screen.findByTestId('erd-svg-preview');
 
 		await (await findDownloadActions(getActions)).downloadCurrentPng();
 
-		expect(createObjectUrl).not.toHaveBeenCalled();
-		expect(clickedHref).toContain('/api/erd/render?');
-		expect(clickedHref).toContain('format=png');
-		expect(clickedHref).toContain('download=true');
-		expect(clickedDownload).toBe('erd-logical.png');
+		await waitFor(() => expect(drawImage).toHaveBeenCalled());
+		const svgBlob = getBlobArgument(createObjectUrl);
+		const svgText = await readBlobText(svgBlob);
+		expect(svgText).toContain('class="erd-manual-edges"');
+		expect(svgText).toContain('class="erd-manual-edge"');
+		expect(svgText).not.toContain('marker-start');
+		expect(drawImage.mock.calls[0][3]).toBe(500);
+		expect(drawImage.mock.calls[0][4]).toBe(260);
+		expect(fillRect).toHaveBeenCalled();
+		expect(clickSpy).toHaveBeenCalled();
+		expect(revokeObjectUrl).toHaveBeenCalledWith('blob:source-svg');
+		expect(revokeObjectUrl).toHaveBeenCalledWith('blob:download-png');
 	});
 
 	it('현재 수정된 SVG를 PNG로 변환해 client-side로 다운로드한다', async () => {

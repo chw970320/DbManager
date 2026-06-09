@@ -8,7 +8,7 @@ DbManager 프로젝트를 빠르게 시작하는 가이드입니다.
 
 ## 📋 전제 조건
 
-- [Node.js](https://nodejs.org/) (v20 이상)
+- [Node.js](https://nodejs.org/) (v22.13 이상)
 - [pnpm](https://pnpm.io/) (v11.2 이상, 패키지 매니저)
 - [Docker](https://www.docker.com/) (선택 사항)
 
@@ -161,4 +161,4 @@ docker-compose up --build
 
 ---
 
-**마지막 업데이트**: 2026-02-13
+**마지막 업데이트**: 2026-06-09

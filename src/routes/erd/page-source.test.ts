@@ -20,11 +20,14 @@ describe('ERD page sidebar and main controls contract', () => {
 		expect(sidebarSource).toContain('aria-label="ERD 매핑 기준"');
 	});
 
-	it('keeps query, table selection, and download controls in the main content', () => {
+	it('keeps query and table selection controls in the main content and delegates downloads to the viewer', () => {
 		expect(source).toContain('aria-label="ERD 메인 제어 영역"');
 		expect(source).toContain('aria-label="ERD 조회 조건"');
 		expect(source).toContain('aria-label="ERD 테이블 다중 선택"');
-		expect(source).toContain('aria-label="ERD 이미지 다운로드"');
+		expect(source).toContain("<ERDViewer {erdData} renderUrl={getErdRenderUrl('svg')} />");
+		expect(source).not.toContain('aria-label="ERD 이미지 다운로드"');
+		expect(source).not.toContain("href={getErdRenderUrl('svg', true)}");
+		expect(source).not.toContain("href={getErdRenderUrl('png', true)}");
 		expect(sidebarSource).not.toContain('aria-label="ERD 조회 조건"');
 		expect(sidebarSource).not.toContain('aria-label="ERD 테이블 다중 선택"');
 		expect(sidebarSource).not.toContain('aria-label="ERD 이미지 다운로드"');

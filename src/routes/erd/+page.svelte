@@ -740,7 +740,7 @@
 			</div>
 		</section>
 
-		<div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
+		<div class="space-y-4">
 			<section
 				aria-label="ERD 테이블 다중 선택"
 				class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"
@@ -846,30 +846,6 @@
 						검색 후 선택을 조정하세요.
 					</p>
 				{/if}
-			</section>
-
-			<section
-				aria-label="ERD 이미지 다운로드"
-				class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"
-			>
-				<h2 class="text-sm font-semibold text-gray-900">이미지 다운로드</h2>
-				<p class="mt-1 text-xs text-gray-500">현재 조건과 선택 테이블 기준으로 내려받습니다.</p>
-				<div class="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
-					<a
-						href={getErdRenderUrl('svg', true)}
-						download
-						class="rounded-lg border border-gray-300 bg-white px-3 py-2 text-center text-xs font-medium text-gray-700 transition-colors hover:bg-gray-50"
-					>
-						SVG 다운로드
-					</a>
-					<a
-						href={getErdRenderUrl('png', true)}
-						download
-						class="rounded-lg bg-blue-600 px-3 py-2 text-center text-xs font-medium text-white transition-colors hover:bg-blue-700"
-					>
-						PNG 다운로드
-					</a>
-				</div>
 			</section>
 		</div>
 	</section>

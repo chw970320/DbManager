@@ -8,6 +8,9 @@
 		relationValidation?: DesignRelationValidationResult;
 	};
 
+	type SvgBox = { x: number; y: number; width: number; height: number };
+	type SvgExportPayload = { text: string; width: number; height: number };
+
 	let {
 		erdData,
 		renderUrl
@@ -25,6 +28,12 @@
 	const PREVIEW_ERROR_MESSAGE = 'ERD 이미지를 불러오지 못했습니다. 필터 조건을 확인해 주세요.';
 	const VIEWER_BUTTON_CLASS =
 		'rounded-md border border-gray-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50';
+	const ACTIVE_VIEWER_BUTTON_CLASS =
+		'rounded-md border border-blue-500 bg-blue-600 px-3 py-1 text-xs font-medium text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50';
+	const SVG_NS = 'http://www.w3.org/2000/svg';
+	const EXPORT_PADDING = 24;
+	const MAX_PNG_EXPORT_DIMENSION = 16_384;
+	const MAX_PNG_EXPORT_PIXELS = 48_000_000;
 
 	let previewLoading = $state(true);
 	let previewError = $state<string | null>(null);
@@ -36,6 +45,12 @@
 	let translateY = $state(0);
 	let isPanning = $state(false);
 	let viewportElement = $state<HTMLDivElement | null>(null);
+	let canvasElement = $state<HTMLDivElement | null>(null);
+	let layoutEditMode = $state(false);
+	let manualLayoutActive = $state(false);
+	let svgDownloadPending = $state(false);
+	let pngDownloadPending = $state(false);
+	let downloadError = $state<string | null>(null);
 
 	let requestSequence = 0;
 	let activeAbortController: AbortController | null = null;
@@ -43,6 +58,15 @@
 	let panStartY = 0;
 	let panStartTranslateX = 0;
 	let panStartTranslateY = 0;
+	let manualEdgeRebuildFrame: number | null = null;
+	let activeNodeDrag = $state<{
+		node: SVGGElement;
+		pointerId: number;
+		startClientX: number;
+		startClientY: number;
+		startTranslateX: number;
+		startTranslateY: number;
+	} | null>(null);
 
 	let relationshipCount = $derived(
 		erdData.metadata.totalRelationships ?? erdData.metadata.totalEdges
@@ -140,6 +164,516 @@
 		fitToViewport();
 	}
 
+	function getSvgElement(): SVGSVGElement | null {
+		return canvasElement?.querySelector('svg') ?? null;
+	}
+
+	function getGraphElement(svgElement: SVGSVGElement): SVGElement {
+		return svgElement.querySelector('g.graph') ?? svgElement;
+	}
+
+	function getNodeTitle(node: SVGGElement): string {
+		return node.querySelector('title')?.textContent?.trim() ?? '';
+	}
+
+	function getNodeElements(svgElement = getSvgElement()): SVGGElement[] {
+		return Array.from(svgElement?.querySelectorAll('g.node') ?? []) as SVGGElement[];
+	}
+
+	function getEdgeElements(svgElement = getSvgElement()): SVGGElement[] {
+		return Array.from(svgElement?.querySelectorAll('g.edge') ?? []) as SVGGElement[];
+	}
+
+	function getNodeTranslate(node: SVGGElement): { x: number; y: number } {
+		return {
+			x: Number(node.dataset.erdManualX ?? 0) || 0,
+			y: Number(node.dataset.erdManualY ?? 0) || 0
+		};
+	}
+
+	function setNodeTranslate(node: SVGGElement, x: number, y: number) {
+		node.dataset.erdManualBaseTransform ??= node.getAttribute('transform') ?? '';
+		node.dataset.erdManualX = String(x);
+		node.dataset.erdManualY = String(y);
+		const baseTransform = node.dataset.erdManualBaseTransform;
+		node.setAttribute('transform', [baseTransform, `translate(${x} ${y})`].filter(Boolean).join(' '));
+		node.classList.add('erd-manual-node-moved');
+	}
+
+	function setNodeHandleState() {
+		for (const node of getNodeElements()) {
+			if (layoutEditMode) {
+				node.classList.add('erd-manual-node');
+			} else {
+				node.classList.remove('erd-manual-node');
+			}
+		}
+	}
+
+	function cancelScheduledManualEdgeRebuild() {
+		if (manualEdgeRebuildFrame === null) return;
+		if (typeof cancelAnimationFrame !== 'undefined') {
+			cancelAnimationFrame(manualEdgeRebuildFrame);
+		}
+		manualEdgeRebuildFrame = null;
+	}
+
+	function resetManualLayout() {
+		activeNodeDrag = null;
+		manualLayoutActive = false;
+		cancelScheduledManualEdgeRebuild();
+		for (const node of getNodeElements()) {
+			const baseTransform = node.dataset.erdManualBaseTransform;
+			if (baseTransform === undefined) {
+				node.removeAttribute('transform');
+			} else if (baseTransform) {
+				node.setAttribute('transform', baseTransform);
+			} else {
+				node.removeAttribute('transform');
+			}
+			delete node.dataset.erdManualBaseTransform;
+			delete node.dataset.erdManualX;
+			delete node.dataset.erdManualY;
+			node.classList.remove('erd-manual-node-moved');
+		}
+		for (const edge of getEdgeElements()) {
+			edge.style.display = '';
+		}
+		removeManualEdges();
+	}
+
+	function parsePolygonPoints(value: string | null): Array<{ x: number; y: number }> {
+		if (!value) return [];
+		return value
+			.trim()
+			.split(/\s+/)
+			.map((pair) => pair.split(',').map(Number))
+			.filter(([x, y]) => Number.isFinite(x) && Number.isFinite(y))
+			.map(([x, y]) => ({ x, y }));
+	}
+
+	function getNodeBox(node: SVGGElement): { x: number; y: number; width: number; height: number } | null {
+		const svgNode = node as SVGGElement & { getBBox?: () => DOMRect };
+		if (typeof svgNode.getBBox === 'function') {
+			try {
+				const box = svgNode.getBBox();
+				if (box.width > 0 && box.height > 0) {
+					const offset = getNodeTranslate(node);
+					return {
+						x: box.x + offset.x,
+						y: box.y + offset.y,
+						width: box.width,
+						height: box.height
+					};
+				}
+			} catch {
+				// Graphviz polygons below provide a deterministic fallback for test and browser edge cases.
+			}
+		}
+
+		const points = Array.from(node.querySelectorAll('polygon')).flatMap((polygon) =>
+			parsePolygonPoints(polygon.getAttribute('points'))
+		);
+		if (points.length === 0) return null;
+		const xs = points.map((point) => point.x);
+		const ys = points.map((point) => point.y);
+		const offset = getNodeTranslate(node);
+		const minX = Math.min(...xs);
+		const minY = Math.min(...ys);
+		return {
+			x: minX + offset.x,
+			y: minY + offset.y,
+			width: Math.max(Math.max(...xs) - minX, 1),
+			height: Math.max(Math.max(...ys) - minY, 1)
+		};
+	}
+
+	function getConnectionPoint(
+		box: { x: number; y: number; width: number; height: number },
+		target: { x: number; y: number }
+	): { x: number; y: number } {
+		const center = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+		const dx = target.x - center.x;
+		const dy = target.y - center.y;
+		if (Math.abs(dx / Math.max(box.width, 1)) > Math.abs(dy / Math.max(box.height, 1))) {
+			const x = dx >= 0 ? box.x + box.width : box.x;
+			const ratio = Math.abs(dx) > 0 ? (x - center.x) / dx : 0;
+			return { x, y: center.y + dy * ratio };
+		}
+		const y = dy >= 0 ? box.y + box.height : box.y;
+		const ratio = Math.abs(dy) > 0 ? (y - center.y) / dy : 0;
+		return { x: center.x + dx * ratio, y };
+	}
+
+	function parseEdgeTitle(edge: SVGGElement): { source: string; target: string } | null {
+		const title = edge.querySelector('title')?.textContent?.trim();
+		const parts = title?.split('->').map((part) => part.trim()) ?? [];
+		if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
+		return { source: parts[0], target: parts[1] };
+	}
+
+	function ensureManualEdgeMarkers(svgElement: SVGSVGElement) {
+		if (svgElement.querySelector('#erd-manual-edge-markers')) return;
+		const defs = document.createElementNS(SVG_NS, 'defs');
+		defs.setAttribute('id', 'erd-manual-edge-markers');
+
+		const crowMarker = document.createElementNS(SVG_NS, 'marker');
+		crowMarker.setAttribute('id', 'erd-manual-crow');
+		crowMarker.setAttribute('viewBox', '0 -8 12 16');
+		crowMarker.setAttribute('refX', '1');
+		crowMarker.setAttribute('refY', '0');
+		crowMarker.setAttribute('markerWidth', '10');
+		crowMarker.setAttribute('markerHeight', '10');
+		crowMarker.setAttribute('orient', 'auto-start-reverse');
+		const crow = document.createElementNS(SVG_NS, 'path');
+		crow.setAttribute('d', 'M 12 -7 L 1 0 L 12 7 M 1 0 L 12 0');
+		crow.setAttribute('fill', 'none');
+		crow.setAttribute('stroke', '#334155');
+		crow.setAttribute('stroke-width', '1.8');
+		crowMarker.append(crow);
+
+		const teeMarker = document.createElementNS(SVG_NS, 'marker');
+		teeMarker.setAttribute('id', 'erd-manual-tee');
+		teeMarker.setAttribute('viewBox', '-2 -7 8 14');
+		teeMarker.setAttribute('refX', '1');
+		teeMarker.setAttribute('refY', '0');
+		teeMarker.setAttribute('markerWidth', '8');
+		teeMarker.setAttribute('markerHeight', '10');
+		teeMarker.setAttribute('orient', 'auto');
+		const tee = document.createElementNS(SVG_NS, 'path');
+		tee.setAttribute('d', 'M 1 -7 L 1 7');
+		tee.setAttribute('fill', 'none');
+		tee.setAttribute('stroke', '#334155');
+		tee.setAttribute('stroke-width', '1.8');
+		teeMarker.append(tee);
+
+		defs.append(crowMarker, teeMarker);
+		svgElement.insertBefore(defs, svgElement.firstChild);
+	}
+
+	function removeManualEdges(svgElement = getSvgElement()) {
+		svgElement?.querySelectorAll('.erd-manual-edges, #erd-manual-edge-markers').forEach((node) => {
+			node.remove();
+		});
+	}
+
+	function rebuildManualEdges() {
+		cancelScheduledManualEdgeRebuild();
+		const svgElement = getSvgElement();
+		if (!svgElement) return;
+		removeManualEdges(svgElement);
+
+		const edgeElements = getEdgeElements(svgElement);
+		if (!manualLayoutActive || edgeElements.length === 0) {
+			for (const edge of edgeElements) edge.style.display = '';
+			return;
+		}
+
+		for (const edge of edgeElements) edge.style.display = 'none';
+		ensureManualEdgeMarkers(svgElement);
+
+		const nodesByTitle = new Map(getNodeElements(svgElement).map((node) => [getNodeTitle(node), node]));
+		const graphElement = getGraphElement(svgElement);
+		const overlay = document.createElementNS(SVG_NS, 'g');
+		overlay.setAttribute('class', 'erd-manual-edges');
+		overlay.setAttribute('aria-label', '수동 배치 관계선');
+
+		for (const edge of edgeElements) {
+			const edgeTitle = parseEdgeTitle(edge);
+			if (!edgeTitle) continue;
+			const sourceNode = nodesByTitle.get(edgeTitle.source);
+			const targetNode = nodesByTitle.get(edgeTitle.target);
+			if (!sourceNode || !targetNode) continue;
+			const sourceBox = getNodeBox(sourceNode);
+			const targetBox = getNodeBox(targetNode);
+			if (!sourceBox || !targetBox) continue;
+
+			const sourceCenter = {
+				x: sourceBox.x + sourceBox.width / 2,
+				y: sourceBox.y + sourceBox.height / 2
+			};
+			const targetCenter = {
+				x: targetBox.x + targetBox.width / 2,
+				y: targetBox.y + targetBox.height / 2
+			};
+			const start = getConnectionPoint(sourceBox, targetCenter);
+			const end = getConnectionPoint(targetBox, sourceCenter);
+			const isDashed = /stroke-dasharray|dashed/i.test(edge.outerHTML);
+
+			const line = document.createElementNS(SVG_NS, 'line');
+			line.setAttribute('x1', start.x.toFixed(1));
+			line.setAttribute('y1', start.y.toFixed(1));
+			line.setAttribute('x2', end.x.toFixed(1));
+			line.setAttribute('y2', end.y.toFixed(1));
+			line.setAttribute('stroke', isDashed ? '#64748B' : '#334155');
+			line.setAttribute('stroke-width', '1.6');
+			line.setAttribute('fill', 'none');
+			line.setAttribute('marker-start', 'url(#erd-manual-crow)');
+			line.setAttribute('marker-end', 'url(#erd-manual-tee)');
+			if (isDashed) line.setAttribute('stroke-dasharray', '6 4');
+			overlay.append(line);
+		}
+
+		const firstNode = graphElement.querySelector('g.node');
+		graphElement.insertBefore(overlay, firstNode);
+	}
+
+	function scheduleManualEdgesRebuild() {
+		if (manualEdgeRebuildFrame !== null) return;
+		if (typeof requestAnimationFrame === 'undefined') {
+			rebuildManualEdges();
+			return;
+		}
+		manualEdgeRebuildFrame = requestAnimationFrame(() => {
+			manualEdgeRebuildFrame = null;
+			rebuildManualEdges();
+		});
+	}
+
+	function parseViewBox(value: string | null): SvgBox | null {
+		const [x, y, width, height] = (value ?? '').split(/\s+/).map(Number);
+		if (![x, y, width, height].every(Number.isFinite) || width <= 0 || height <= 0) return null;
+		return { x, y, width, height };
+	}
+
+	function unionBoxes(boxes: SvgBox[]): SvgBox | null {
+		if (boxes.length === 0) return null;
+		const minX = Math.min(...boxes.map((box) => box.x));
+		const minY = Math.min(...boxes.map((box) => box.y));
+		const maxX = Math.max(...boxes.map((box) => box.x + box.width));
+		const maxY = Math.max(...boxes.map((box) => box.y + box.height));
+		return {
+			x: minX,
+			y: minY,
+			width: Math.max(maxX - minX, 1),
+			height: Math.max(maxY - minY, 1)
+		};
+	}
+
+	function paddedBox(box: SvgBox, padding = EXPORT_PADDING): SvgBox {
+		return {
+			x: box.x - padding,
+			y: box.y - padding,
+			width: box.width + padding * 2,
+			height: box.height + padding * 2
+		};
+	}
+
+	function transformBox(element: SVGGraphicsElement): SvgBox | null {
+		if (
+			typeof element.getBBox !== 'function' ||
+			typeof element.getCTM !== 'function' ||
+			typeof DOMPoint === 'undefined'
+		) {
+			return null;
+		}
+		try {
+			const box = element.getBBox();
+			const matrix = element.getCTM();
+			if (!matrix || box.width <= 0 || box.height <= 0) return null;
+			const points = [
+				new DOMPoint(box.x, box.y).matrixTransform(matrix),
+				new DOMPoint(box.x + box.width, box.y).matrixTransform(matrix),
+				new DOMPoint(box.x, box.y + box.height).matrixTransform(matrix),
+				new DOMPoint(box.x + box.width, box.y + box.height).matrixTransform(matrix)
+			];
+			const xs = points.map((point) => point.x);
+			const ys = points.map((point) => point.y);
+			const minX = Math.min(...xs);
+			const minY = Math.min(...ys);
+			return {
+				x: minX,
+				y: minY,
+				width: Math.max(Math.max(...xs) - minX, 1),
+				height: Math.max(Math.max(...ys) - minY, 1)
+			};
+		} catch {
+			return null;
+		}
+	}
+
+	function getExportNodeBox(node: SVGGElement): SvgBox | null {
+		return transformBox(node) ?? getNodeBox(node);
+	}
+
+	function getManualExportBounds(svgElement: SVGSVGElement): SvgBox | null {
+		const originalBounds = parseViewBox(svgElement.getAttribute('viewBox')) ?? {
+			x: 0,
+			y: 0,
+			width: svgNaturalWidth,
+			height: svgNaturalHeight
+		};
+		const movedNodeBounds = getNodeElements(svgElement)
+			.filter((node) => node.classList.contains('erd-manual-node-moved'))
+			.map(getExportNodeBox)
+			.filter((box): box is SvgBox => Boolean(box));
+		return paddedBox(unionBoxes([originalBounds, ...movedNodeBounds]) ?? originalBounds);
+	}
+
+	function formatSvgNumber(value: number): string {
+		return Number.isInteger(value) ? String(value) : value.toFixed(1);
+	}
+
+	function applyExportBounds(svgElement: SVGSVGElement, bounds: SvgBox) {
+		const width = Math.ceil(bounds.width);
+		const height = Math.ceil(bounds.height);
+		svgElement.setAttribute(
+			'viewBox',
+			[
+				formatSvgNumber(bounds.x),
+				formatSvgNumber(bounds.y),
+				formatSvgNumber(width),
+				formatSvgNumber(height)
+			].join(' ')
+		);
+		svgElement.setAttribute('width', String(width));
+		svgElement.setAttribute('height', String(height));
+	}
+
+	function findManualNode(target: EventTarget | null): SVGGElement | null {
+		if (!(target instanceof Element)) return null;
+		const node = target.closest('g.node') as SVGGElement | null;
+		if (!node || node.namespaceURI !== SVG_NS || !canvasElement?.contains(node)) return null;
+		return node;
+	}
+
+	function getCurrentSvgExport(): SvgExportPayload | null {
+		const svgElement = getSvgElement();
+		if (!svgElement) return null;
+		const exportBounds = manualLayoutActive ? getManualExportBounds(svgElement) : null;
+		const clone = svgElement.cloneNode(true) as SVGSVGElement;
+		clone.querySelectorAll('[tabindex], [role]').forEach((element) => {
+			element.removeAttribute('tabindex');
+			element.removeAttribute('role');
+		});
+		if (exportBounds) applyExportBounds(clone, exportBounds);
+		return {
+			text: new XMLSerializer().serializeToString(clone),
+			width: Math.max(Math.ceil(exportBounds?.width ?? svgNaturalWidth), 1),
+			height: Math.max(Math.ceil(exportBounds?.height ?? svgNaturalHeight), 1)
+		};
+	}
+
+	function getDownloadFilename(extension: 'svg' | 'png'): string {
+		const url = new URL(renderUrl, window.location.href);
+		const mode = url.searchParams.get('mode') || 'logical';
+		return `erd-${mode}.${extension}`;
+	}
+
+	function getRenderDownloadUrl(format: 'svg' | 'png'): string {
+		const url = new URL(renderUrl, window.location.href);
+		url.searchParams.set('format', format);
+		url.searchParams.set('download', 'true');
+		return url.toString();
+	}
+
+	function downloadUrl(url: string, filename: string) {
+		const anchor = document.createElement('a');
+		anchor.href = url;
+		anchor.download = filename;
+		document.body.append(anchor);
+		anchor.click();
+		anchor.remove();
+	}
+
+	function downloadBlob(blob: Blob, filename: string) {
+		const objectUrl = URL.createObjectURL(blob);
+		const anchor = document.createElement('a');
+		anchor.href = objectUrl;
+		anchor.download = filename;
+		document.body.append(anchor);
+		anchor.click();
+		anchor.remove();
+		URL.revokeObjectURL(objectUrl);
+	}
+
+	function setDownloadError(error: unknown) {
+		downloadError =
+			error instanceof Error ? error.message : '현재 ERD 이미지를 다운로드하지 못했습니다.';
+	}
+
+	async function downloadCurrentSvg() {
+		const svgExport = getCurrentSvgExport();
+		if (!svgExport) return;
+		downloadError = null;
+		svgDownloadPending = true;
+		try {
+			downloadBlob(
+				new Blob([svgExport.text], { type: 'image/svg+xml;charset=utf-8' }),
+				getDownloadFilename('svg')
+			);
+		} catch (error) {
+			setDownloadError(error);
+		} finally {
+			svgDownloadPending = false;
+		}
+	}
+
+	function imageFromObjectUrl(objectUrl: string): Promise<HTMLImageElement> {
+		return new Promise((resolve, reject) => {
+			const image = new Image();
+			image.onload = () => resolve(image);
+			image.onerror = () => reject(new Error('PNG 변환을 위한 SVG 로딩에 실패했습니다.'));
+			image.src = objectUrl;
+		});
+	}
+
+	function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
+		return new Promise((resolve, reject) => {
+			canvas.toBlob((blob) => {
+				if (blob) {
+					resolve(blob);
+				} else {
+					reject(new Error('PNG 변환에 실패했습니다.'));
+				}
+			}, 'image/png');
+		});
+	}
+
+	function assertPngExportSize(width: number, height: number) {
+		if (
+			width > MAX_PNG_EXPORT_DIMENSION ||
+			height > MAX_PNG_EXPORT_DIMENSION ||
+			width * height > MAX_PNG_EXPORT_PIXELS
+		) {
+			throw new Error(
+				'현재 배치 PNG 크기가 브라우저 변환 한도를 초과했습니다. SVG로 다운로드하거나 배치를 줄여 주세요.'
+			);
+		}
+	}
+
+	async function downloadCurrentPng() {
+		downloadError = null;
+		if (!manualLayoutActive) {
+			downloadUrl(getRenderDownloadUrl('png'), getDownloadFilename('png'));
+			return;
+		}
+		const svgExport = getCurrentSvgExport();
+		if (!svgExport) return;
+		pngDownloadPending = true;
+		let objectUrl: string | null = null;
+		try {
+			assertPngExportSize(svgExport.width, svgExport.height);
+			const svgBlob = new Blob([svgExport.text], { type: 'image/svg+xml;charset=utf-8' });
+			objectUrl = URL.createObjectURL(svgBlob);
+			const image = await imageFromObjectUrl(objectUrl);
+			const canvas = document.createElement('canvas');
+			canvas.width = svgExport.width;
+			canvas.height = svgExport.height;
+			const context = canvas.getContext('2d');
+			if (!context) throw new Error('PNG 변환 컨텍스트를 생성하지 못했습니다.');
+			context.fillStyle = '#F8FAFC';
+			context.fillRect(0, 0, canvas.width, canvas.height);
+			context.drawImage(image, 0, 0, canvas.width, canvas.height);
+			downloadBlob(await canvasToBlob(canvas), getDownloadFilename('png'));
+		} catch (error) {
+			setDownloadError(error);
+		} finally {
+			if (objectUrl) URL.revokeObjectURL(objectUrl);
+			pngDownloadPending = false;
+		}
+	}
+
 	async function loadSvgPreview(value: string) {
 		const sequence = ++requestSequence;
 		activeAbortController?.abort();
@@ -149,6 +683,11 @@
 		previewLoading = true;
 		previewError = null;
 		svgMarkup = '';
+		layoutEditMode = false;
+		manualLayoutActive = false;
+		activeNodeDrag = null;
+		downloadError = null;
+		cancelScheduledManualEdgeRebuild();
 
 		try {
 			if (!isAllowedErdSvgRenderUrl(value, window.location.href, window.location.origin)) {
@@ -178,6 +717,8 @@
 			await tick();
 			if (sequence === requestSequence) {
 				fitToViewport();
+				setNodeHandleState();
+				rebuildManualEdges();
 			}
 		} catch (error) {
 			if (abortController.signal.aborted || sequence !== requestSequence) return;
@@ -188,6 +729,24 @@
 
 	function handlePointerDown(event: PointerEvent) {
 		if (event.button !== 0 || !svgMarkup) return;
+		if (layoutEditMode) {
+			const node = findManualNode(event.target);
+			if (!node) return;
+			const currentTranslate = getNodeTranslate(node);
+			activeNodeDrag = {
+				node,
+				pointerId: event.pointerId,
+				startClientX: event.clientX,
+				startClientY: event.clientY,
+				startTranslateX: currentTranslate.x,
+				startTranslateY: currentTranslate.y
+			};
+			event.preventDefault();
+			if (event.currentTarget instanceof HTMLElement && 'setPointerCapture' in event.currentTarget) {
+				event.currentTarget.setPointerCapture(event.pointerId);
+			}
+			return;
+		}
 		isPanning = true;
 		panStartX = event.clientX;
 		panStartY = event.clientY;
@@ -199,12 +758,31 @@
 	}
 
 	function handlePointerMove(event: PointerEvent) {
+		if (activeNodeDrag) {
+			const nextX = activeNodeDrag.startTranslateX + (event.clientX - activeNodeDrag.startClientX) / scale;
+			const nextY = activeNodeDrag.startTranslateY + (event.clientY - activeNodeDrag.startClientY) / scale;
+			setNodeTranslate(activeNodeDrag.node, nextX, nextY);
+			manualLayoutActive = true;
+			scheduleManualEdgesRebuild();
+			return;
+		}
 		if (!isPanning) return;
 		translateX = panStartTranslateX + event.clientX - panStartX;
 		translateY = panStartTranslateY + event.clientY - panStartY;
 	}
 
 	function finishPanning(event: PointerEvent) {
+		if (activeNodeDrag) {
+			if (
+				event.currentTarget instanceof HTMLElement &&
+				'releasePointerCapture' in event.currentTarget
+			) {
+				event.currentTarget.releasePointerCapture(activeNodeDrag.pointerId);
+			}
+			rebuildManualEdges();
+			activeNodeDrag = null;
+			return;
+		}
 		if (!isPanning) return;
 		isPanning = false;
 		if (
@@ -230,6 +808,16 @@
 		return () => {
 			activeAbortController?.abort();
 		};
+	});
+
+	$effect(() => {
+		const currentLayoutEditMode = layoutEditMode;
+		const currentSvgMarkup = svgMarkup;
+		void tick().then(() => {
+			if (currentLayoutEditMode === layoutEditMode && currentSvgMarkup === svgMarkup) {
+				setNodeHandleState();
+			}
+		});
 	});
 
 	$effect(() => {
@@ -298,6 +886,45 @@
 			>
 				초기화
 			</button>
+			<button
+				type="button"
+				class={layoutEditMode ? ACTIVE_VIEWER_BUTTON_CLASS : VIEWER_BUTTON_CLASS}
+				onclick={() => (layoutEditMode = !layoutEditMode)}
+				disabled={!svgMarkup}
+				aria-pressed={layoutEditMode}
+				aria-label="테이블 배치 수정 모드"
+			>
+				배치 수정
+			</button>
+			<button
+				type="button"
+				class={VIEWER_BUTTON_CLASS}
+				onclick={resetManualLayout}
+				disabled={!svgMarkup || !manualLayoutActive}
+				aria-label="테이블 배치 초기화"
+			>
+				배치 초기화
+			</button>
+		</div>
+		<div class="flex flex-wrap items-center gap-1">
+			<button
+				type="button"
+				class={VIEWER_BUTTON_CLASS}
+				onclick={() => void downloadCurrentSvg()}
+				disabled={!svgMarkup || svgDownloadPending}
+				aria-label="현재 배치 SVG 다운로드"
+			>
+				{svgDownloadPending ? 'SVG 생성 중' : 'SVG 다운로드'}
+			</button>
+			<button
+				type="button"
+				class="rounded-md border border-blue-600 bg-blue-600 px-3 py-1 text-xs font-medium text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+				onclick={() => void downloadCurrentPng()}
+				disabled={!svgMarkup || pngDownloadPending}
+				aria-label="현재 배치 PNG 다운로드"
+			>
+				{pngDownloadPending ? 'PNG 생성 중' : 'PNG 다운로드'}
+			</button>
 		</div>
 		<span
 			class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600"
@@ -306,6 +933,11 @@
 			{zoomPercent}%
 		</span>
 	</div>
+	{#if downloadError}
+		<p class="border-b border-red-100 bg-red-50 px-4 py-2 text-xs text-red-700" role="status">
+			{downloadError}
+		</p>
+	{/if}
 
 	<section
 		class="border-b border-sky-100 bg-sky-50/70 px-4 py-3 text-xs text-slate-700"
@@ -320,6 +952,10 @@
 				<p class="text-slate-600">
 					탐색: 맞춤/100%/확대/축소/드래그/휠로 이동 · 안전 렌더링: 허용된 ERD 이미지 URL만
 					표시합니다.
+				</p>
+				<p class="text-slate-600">
+					배치 수정: 배치 수정 모드에서 테이블을 드래그하면 현재 화면의 SVG/PNG 다운로드에
+					반영됩니다. 파일이나 조건을 바꾸면 수동 배치는 초기화됩니다.
 				</p>
 			</div>
 			{#if relationValidationSummary}
@@ -337,6 +973,7 @@
 	<div
 		bind:this={viewportElement}
 		class="erd-svg-viewport relative flex-1 overflow-hidden bg-slate-50"
+		class:erd-layout-editing={layoutEditMode}
 		data-testid="erd-viewer-viewport"
 		onpointerdown={handlePointerDown}
 		onpointermove={handlePointerMove}
@@ -364,6 +1001,7 @@
 			</div>
 		{:else if svgMarkup}
 			<div
+				bind:this={canvasElement}
 				class="erd-svg-canvas absolute left-0 top-0 rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
 				data-testid="erd-svg-preview"
 				style:transform={canvasTransform}
@@ -396,9 +1034,30 @@
 		cursor: grabbing;
 	}
 
+	.erd-svg-viewport.erd-layout-editing,
+	.erd-svg-viewport.erd-layout-editing:active {
+		cursor: default;
+	}
+
 	:global(.erd-svg-canvas svg) {
 		display: block;
 		max-width: none;
 		height: auto;
+	}
+
+	:global(.erd-layout-editing .erd-manual-node) {
+		cursor: move;
+	}
+
+	:global(.erd-layout-editing .erd-manual-node:hover) {
+		filter: drop-shadow(0 0 6px rgb(37 99 235 / 0.35));
+	}
+
+	:global(.erd-manual-node-moved) {
+		filter: drop-shadow(0 0 5px rgb(14 165 233 / 0.25));
+	}
+
+	:global(.erd-manual-edges) {
+		pointer-events: none;
 	}
 </style>

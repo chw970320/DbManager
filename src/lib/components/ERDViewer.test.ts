@@ -166,6 +166,25 @@ const defaultProps = {
 
 const safeSvg =
 	'<svg width="400pt" height="200pt" viewBox="0 0 400 200"><g><text>ERD</text></g></svg>';
+const layoutSvg = `
+<svg width="500" height="260" viewBox="0 0 500 260">
+	<g class="graph">
+		<g class="edge">
+			<title>table_a->table_b</title>
+			<path d="M140 70 L280 70" stroke="#475569" fill="none" />
+		</g>
+		<g class="node">
+			<title>table_a</title>
+			<polygon points="20,20 140,20 140,120 20,120" />
+			<text x="35" y="55">TABLE_A</text>
+		</g>
+		<g class="node">
+			<title>table_b</title>
+			<polygon points="280,40 430,40 430,140 280,140" />
+			<text x="300" y="75">TABLE_B</text>
+		</g>
+	</g>
+</svg>`;
 
 class MockResizeObserver {
 	observe = vi.fn();
@@ -181,6 +200,47 @@ function mockSvgResponse(svg = safeSvg, contentType = 'image/svg+xml; charset=ut
 	);
 }
 
+async function enableLayoutAndDragFirstNode(
+	container: HTMLElement,
+	deltaX: number,
+	deltaY: number,
+	pointerId = 2
+) {
+	await fireEvent.click(screen.getByRole('button', { name: '테이블 배치 수정 모드' }));
+	const firstNode = container.querySelector('g.node') as SVGGElement;
+	expect(firstNode).toBeTruthy();
+	await fireEvent.pointerDown(firstNode, {
+		button: 0,
+		pointerId,
+		clientX: 100,
+		clientY: 100
+	});
+	await fireEvent.pointerMove(screen.getByTestId('erd-viewer-viewport'), {
+		pointerId,
+		clientX: 100 + deltaX,
+		clientY: 100 + deltaY
+	});
+	await fireEvent.pointerUp(screen.getByTestId('erd-viewer-viewport'), {
+		pointerId,
+		clientX: 100 + deltaX,
+		clientY: 100 + deltaY
+	});
+	return firstNode;
+}
+
+function getBlobArgument(mock: { mock: { calls: unknown[][] } }, callIndex = 0): Blob {
+	return mock.mock.calls[callIndex]?.[0] as Blob;
+}
+
+function readBlobText(blob: Blob): Promise<string> {
+	return new Promise((resolve, reject) => {
+		const reader = new FileReader();
+		reader.onload = () => resolve(String(reader.result ?? ''));
+		reader.onerror = () => reject(reader.error ?? new Error('Blob 텍스트를 읽지 못했습니다.'));
+		reader.readAsText(blob);
+	});
+}
+
 describe('ERDViewer', () => {
 	let fetchMock: ReturnType<typeof vi.fn>;
 
@@ -192,6 +252,7 @@ describe('ERDViewer', () => {
 	});
 
 	afterEach(() => {
+		vi.restoreAllMocks();
 		vi.unstubAllGlobals();
 	});
 
@@ -214,6 +275,8 @@ describe('ERDViewer', () => {
 		expect(screen.getByRole('button', { name: '다이어그램 축소' })).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: '다이어그램 확대' })).toBeInTheDocument();
 		expect(screen.getByRole('button', { name: '다이어그램 초기화' })).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: '테이블 배치 수정 모드' })).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: '테이블 배치 초기화' })).toBeDisabled();
 		expect(screen.getByTestId('erd-zoom-percent')).toHaveTextContent(/%/);
 	});
 
@@ -269,13 +332,13 @@ describe('ERDViewer', () => {
 		expect(screen.queryByText('Mermaid 파일 다운로드')).not.toBeInTheDocument();
 	});
 
-	it('미리보기 헤더에 중복 다운로드 링크를 노출하지 않는다', async () => {
+	it('현재 배치 기준 SVG/PNG 다운로드 버튼을 표시한다', async () => {
 		render(ERDViewer, { props: defaultProps });
 
 		await screen.findByTestId('erd-svg-preview');
 
-		expect(screen.queryByText('SVG 다운로드')).not.toBeInTheDocument();
-		expect(screen.queryByText('PNG 다운로드')).not.toBeInTheDocument();
+		expect(screen.getByRole('button', { name: '현재 배치 SVG 다운로드' })).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: '현재 배치 PNG 다운로드' })).toBeInTheDocument();
 	});
 
 	it('이미지 관계 수와 혼동되는 구조적 엣지 수를 노출하지 않는다', async () => {
@@ -358,5 +421,165 @@ describe('ERDViewer', () => {
 		await fireEvent.pointerUp(viewport, { pointerId: 1, clientX: 150, clientY: 130 });
 
 		expect(preview.getAttribute('style')).not.toBe(initialTransform);
+	});
+
+	it('배치 수정 모드에서 테이블 노드를 드래그하고 수동 관계선을 다시 그린다', async () => {
+		fetchMock.mockResolvedValueOnce(mockSvgResponse(layoutSvg));
+		const { container } = render(ERDViewer, { props: defaultProps });
+
+		await screen.findByTestId('erd-svg-preview');
+		const firstNode = await enableLayoutAndDragFirstNode(container, 40, 25);
+
+		expect(firstNode.getAttribute('transform')).toContain('translate(40 25)');
+		expect(firstNode).not.toHaveAttribute('role');
+		expect(firstNode).not.toHaveAttribute('tabindex');
+		expect(container.querySelector('.erd-manual-edges line')).toBeInTheDocument();
+		expect(screen.getByRole('button', { name: '테이블 배치 초기화' })).toBeEnabled();
+	});
+
+	it('renderUrl이 바뀌면 수동 배치를 초기화한다', async () => {
+		fetchMock.mockResolvedValueOnce(mockSvgResponse(layoutSvg));
+		const { container, rerender } = render(ERDViewer, { props: defaultProps });
+
+		await screen.findByTestId('erd-svg-preview');
+		await fireEvent.click(screen.getByRole('button', { name: '테이블 배치 수정 모드' }));
+		const firstNode = container.querySelector('g.node') as SVGGElement;
+		await fireEvent.pointerDown(firstNode, { button: 0, pointerId: 3, clientX: 100, clientY: 100 });
+		await fireEvent.pointerMove(screen.getByTestId('erd-viewer-viewport'), {
+			pointerId: 3,
+			clientX: 130,
+			clientY: 120
+		});
+		expect(firstNode.getAttribute('transform')).toContain('translate(30 20)');
+
+		fetchMock.mockResolvedValueOnce(mockSvgResponse(layoutSvg));
+		await rerender({
+			...defaultProps,
+			renderUrl: '/api/erd/render?format=svg&mode=logical&q=next'
+		});
+
+		await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+		const nextNode = container.querySelector('g.node') as SVGGElement;
+		expect(nextNode.getAttribute('transform')).toBeNull();
+		expect(screen.getByRole('button', { name: '테이블 배치 수정 모드' })).toHaveAttribute(
+			'aria-pressed',
+			'false'
+		);
+	});
+
+	it('현재 수정된 SVG를 client-side로 다운로드한다', async () => {
+		fetchMock.mockResolvedValueOnce(mockSvgResponse(layoutSvg));
+		const createObjectUrl = vi.fn(() => 'blob:erd-svg');
+		const revokeObjectUrl = vi.fn();
+		Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectUrl });
+		Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeObjectUrl });
+		const clickSpy = vi
+			.spyOn(HTMLAnchorElement.prototype, 'click')
+			.mockImplementation(() => undefined);
+
+		const { container } = render(ERDViewer, { props: defaultProps });
+		await screen.findByTestId('erd-svg-preview');
+		await enableLayoutAndDragFirstNode(container, 600, 0, 4);
+
+		await fireEvent.click(screen.getByRole('button', { name: '현재 배치 SVG 다운로드' }));
+
+		expect(createObjectUrl).toHaveBeenCalledWith(expect.any(Blob));
+		const svgBlob = getBlobArgument(createObjectUrl);
+		const svgText = await readBlobText(svgBlob);
+		expect(svgText).toContain('translate(600 0)');
+		expect(svgText).toContain('class="erd-manual-edges"');
+		expect(svgText).toContain('viewBox="-24 -24 788 308"');
+		expect(clickSpy).toHaveBeenCalled();
+		expect(revokeObjectUrl).toHaveBeenCalledWith('blob:erd-svg');
+	});
+
+	it('수동 배치가 없으면 PNG는 서버 렌더 다운로드 URL을 사용한다', async () => {
+		fetchMock.mockResolvedValueOnce(mockSvgResponse(layoutSvg));
+		const createObjectUrl = vi.fn();
+		Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectUrl });
+		let clickedHref = '';
+		let clickedDownload = '';
+		vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (
+			this: HTMLAnchorElement
+		) {
+			clickedHref = this.href;
+			clickedDownload = this.download;
+		});
+
+		render(ERDViewer, { props: defaultProps });
+		await screen.findByTestId('erd-svg-preview');
+
+		await fireEvent.click(screen.getByRole('button', { name: '현재 배치 PNG 다운로드' }));
+
+		expect(createObjectUrl).not.toHaveBeenCalled();
+		expect(clickedHref).toContain('/api/erd/render?');
+		expect(clickedHref).toContain('format=png');
+		expect(clickedHref).toContain('download=true');
+		expect(clickedDownload).toBe('erd-logical.png');
+	});
+
+	it('현재 수정된 SVG를 PNG로 변환해 client-side로 다운로드한다', async () => {
+		fetchMock.mockResolvedValueOnce(mockSvgResponse(layoutSvg));
+		const createObjectUrl = vi
+			.fn()
+			.mockReturnValueOnce('blob:source-svg')
+			.mockReturnValueOnce('blob:download-png');
+		const revokeObjectUrl = vi.fn();
+		Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectUrl });
+		Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: revokeObjectUrl });
+		const clickSpy = vi
+			.spyOn(HTMLAnchorElement.prototype, 'click')
+			.mockImplementation(() => undefined);
+		const drawImage = vi.fn();
+		const fillRect = vi.fn();
+		vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
+			drawImage,
+			fillRect,
+			fillStyle: ''
+		} as unknown as CanvasRenderingContext2D);
+		vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((callback) => {
+			callback(new Blob(['png'], { type: 'image/png' }));
+		});
+		class MockImage {
+			onload: (() => void) | null = null;
+			onerror: (() => void) | null = null;
+			set src(_value: string) {
+				queueMicrotask(() => this.onload?.());
+			}
+		}
+		vi.stubGlobal('Image', MockImage);
+
+		const { container } = render(ERDViewer, { props: defaultProps });
+		await screen.findByTestId('erd-svg-preview');
+		await enableLayoutAndDragFirstNode(container, 600, 0, 5);
+
+		await fireEvent.click(screen.getByRole('button', { name: '현재 배치 PNG 다운로드' }));
+
+		await waitFor(() => expect(drawImage).toHaveBeenCalled());
+		const svgBlob = getBlobArgument(createObjectUrl);
+		const svgText = await readBlobText(svgBlob);
+		expect(svgText).toContain('translate(600 0)');
+		expect(svgText).toContain('viewBox="-24 -24 788 308"');
+		expect(drawImage.mock.calls[0][3]).toBe(788);
+		expect(drawImage.mock.calls[0][4]).toBe(308);
+		expect(fillRect).toHaveBeenCalled();
+		expect(clickSpy).toHaveBeenCalled();
+		expect(revokeObjectUrl).toHaveBeenCalledWith('blob:source-svg');
+		expect(revokeObjectUrl).toHaveBeenCalledWith('blob:download-png');
+	});
+
+	it('수동 배치 PNG가 브라우저 변환 한도를 넘으면 화면에 오류를 표시한다', async () => {
+		fetchMock.mockResolvedValueOnce(mockSvgResponse(layoutSvg));
+		const createObjectUrl = vi.fn();
+		Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectUrl });
+		const { container } = render(ERDViewer, { props: defaultProps });
+
+		await screen.findByTestId('erd-svg-preview');
+		await enableLayoutAndDragFirstNode(container, 20000, 0, 6);
+
+		await fireEvent.click(screen.getByRole('button', { name: '현재 배치 PNG 다운로드' }));
+
+		expect(await screen.findByText(/PNG 크기가 브라우저 변환 한도를 초과/)).toBeInTheDocument();
+		expect(createObjectUrl).not.toHaveBeenCalled();
 	});
 });

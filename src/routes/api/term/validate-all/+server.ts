@@ -76,15 +76,7 @@ import {
 } from '$lib/registry/cache-registry';
 
 import { resolveRelatedFilenames } from '$lib/registry/mapping-registry';
-import {
-	validateTermNameSuffix,
-	validateTermUniqueness,
-	validateTermNameUniqueness,
-	validateTermNameMapping,
-	validateColumnNameMapping,
-	validateTermColumnOrderMapping,
-	validateDomainNameMapping
-} from '$lib/utils/validation.js';
+import { validateTermColumnOrderMapping } from '$lib/utils/validation.js';
 
 /**
  * 우선순위에 따라 오류 정렬
@@ -106,6 +98,261 @@ function sortErrorsByPriority(errors: ValidationError[]): ValidationError[] {
 		const priorityB = b.priority ?? ERROR_PRIORITY[b.type] ?? 999;
 		return priorityA - priorityB;
 	});
+}
+
+type TermValidationIndex = {
+	vocabularyByToken: Map<
+		string,
+		{ standardName: string; abbreviation: string; isFormalWord?: boolean }
+	>;
+	vocabularyByStandardName: Map<
+		string,
+		{ standardName: string; abbreviation: string; isFormalWord?: boolean }
+	>;
+	standardToAbbreviation: Map<string, string>;
+	abbreviationSet: Set<string>;
+	domainNames: Set<string>;
+	termNameCounts: Map<string, number>;
+	termCompositeCounts: Map<string, number>;
+};
+
+function lowerKey(value: string | null | undefined): string {
+	return value?.trim().toLowerCase() ?? '';
+}
+
+function splitParts(value: string): string[] {
+	return value
+		.split('_')
+		.map((part) => part.trim())
+		.filter((part) => part.length > 0);
+}
+
+function increment(map: Map<string, number>, key: string): void {
+	if (!key) return;
+	map.set(key, (map.get(key) ?? 0) + 1);
+}
+
+function termCompositeKey(termName: string, columnName: string, domainName: string): string {
+	return `${lowerKey(termName)}\u0000${lowerKey(columnName)}\u0000${lowerKey(domainName)}`;
+}
+
+function buildTermValidationIndex(
+	termEntries: TermEntry[],
+	vocabularyEntries: VocabularyEntry[],
+	domainEntries: DomainEntry[]
+): TermValidationIndex {
+	const vocabularyByToken = new Map<
+		string,
+		{ standardName: string; abbreviation: string; isFormalWord?: boolean }
+	>();
+	const vocabularyByStandardName = new Map<
+		string,
+		{ standardName: string; abbreviation: string; isFormalWord?: boolean }
+	>();
+	const standardToAbbreviation = new Map<string, string>();
+	const abbreviationSet = new Set<string>();
+	const domainNames = new Set<string>();
+	const termNameCounts = new Map<string, number>();
+	const termCompositeCounts = new Map<string, number>();
+
+	for (const entry of vocabularyEntries) {
+		const standardNameKey = lowerKey(entry.standardName);
+		const abbreviationKey = lowerKey(entry.abbreviation);
+		const indexed = {
+			standardName: entry.standardName,
+			abbreviation: entry.abbreviation,
+			isFormalWord: entry.isFormalWord
+		};
+		if (standardNameKey) {
+			vocabularyByToken.set(standardNameKey, indexed);
+			vocabularyByStandardName.set(standardNameKey, indexed);
+			standardToAbbreviation.set(standardNameKey, entry.abbreviation.trim());
+		}
+		if (abbreviationKey) {
+			vocabularyByToken.set(abbreviationKey, indexed);
+			abbreviationSet.add(abbreviationKey);
+		}
+	}
+
+	for (const entry of domainEntries) {
+		const key = lowerKey(entry.standardDomainName);
+		if (key) domainNames.add(key);
+	}
+
+	for (const entry of termEntries) {
+		increment(termNameCounts, lowerKey(entry.termName));
+		if (entry.termName && entry.columnName && entry.domainName) {
+			increment(
+				termCompositeCounts,
+				termCompositeKey(entry.termName, entry.columnName, entry.domainName)
+			);
+		}
+	}
+
+	return {
+		vocabularyByToken,
+		vocabularyByStandardName,
+		standardToAbbreviation,
+		abbreviationSet,
+		domainNames,
+		termNameCounts,
+		termCompositeCounts
+	};
+}
+
+function validateTermNameSuffixIndexed(
+	termName: string,
+	index: TermValidationIndex
+): string | null {
+	if (!termName || typeof termName !== 'string') return null;
+	const parts = splitParts(termName);
+	if (parts.length === 0) return '용어명이 비어있습니다.';
+
+	const suffix = parts[parts.length - 1].trim();
+	const vocabularyWord = index.vocabularyByStandardName.get(suffix.toLowerCase());
+	if (!vocabularyWord) return `'${suffix}'은(는) 단어집에 등록되지 않은 단어입니다.`;
+	if (vocabularyWord.isFormalWord !== true) {
+		return `'${suffix}'은(는) 형식단어가 아니므로 용어명의 접미사로 사용할 수 없습니다. (형식단어여부: N)`;
+	}
+	return null;
+}
+
+function validateTermNameUniquenessIndexed(
+	termName: string,
+	index: TermValidationIndex
+): string | null {
+	if (!termName || typeof termName !== 'string') return null;
+	const trimmedName = lowerKey(termName);
+	if ((index.termNameCounts.get(trimmedName) ?? 0) > 1) {
+		return `'${termName}'은(는) 이미 사용 중인 용어명입니다.`;
+	}
+	return null;
+}
+
+function validateTermUniquenessIndexed(
+	termName: string,
+	columnName: string,
+	domainName: string,
+	index: TermValidationIndex
+): string | null {
+	if (!termName || typeof termName !== 'string') return null;
+	if (
+		(index.termCompositeCounts.get(termCompositeKey(termName, columnName, domainName)) ?? 0) > 1
+	) {
+		return `동일한 용어명, 컬럼명, 도메인명 조합이 이미 존재합니다. (용어명: ${termName}, 컬럼명: ${columnName}, 도메인명: ${domainName})`;
+	}
+	return null;
+}
+
+function validateTermNameMappingIndexed(
+	termName: string,
+	index: TermValidationIndex
+): string | null {
+	if (!termName || typeof termName !== 'string') return '용어명이 필요합니다.';
+	const termParts = splitParts(termName);
+	if (termParts.length === 0) return '용어명이 비어있습니다.';
+
+	const unmappedParts = termParts.filter(
+		(part) => !index.vocabularyByToken.has(part.toLowerCase())
+	);
+	if (unmappedParts.length > 0) {
+		return `용어명의 다음 부분이 단어집에 등록되지 않았습니다: ${unmappedParts.join(', ')}`;
+	}
+	return null;
+}
+
+function validateColumnNameMappingIndexed(
+	columnName: string,
+	index: TermValidationIndex
+): string | null {
+	if (!columnName || typeof columnName !== 'string') return '컬럼명이 필요합니다.';
+	const columnParts = splitParts(columnName);
+	if (columnParts.length === 0) return '컬럼명이 비어있습니다.';
+
+	const unmappedParts = columnParts.filter(
+		(part) => !index.abbreviationSet.has(part.toLowerCase())
+	);
+	if (unmappedParts.length > 0) {
+		return `컬럼명의 다음 부분이 영문약어로 등록되지 않았습니다: ${unmappedParts.join(', ')}`;
+	}
+	return null;
+}
+
+function validateDomainNameMappingIndexed(
+	domainName: string,
+	index: TermValidationIndex
+): string | null {
+	if (!domainName || typeof domainName !== 'string') return '도메인명이 필요합니다.';
+	if (!index.domainNames.has(lowerKey(domainName))) {
+		return `도메인명 '${domainName}'이(가) 도메인 데이터에 존재하지 않습니다.`;
+	}
+	return null;
+}
+
+function validateTermColumnOrderMappingIndexed(
+	termName: string,
+	columnName: string,
+	index: TermValidationIndex
+): {
+	error: string | null;
+	mismatches: Array<{
+		index: number;
+		termPart: string;
+		expectedAbbreviation: string;
+		actualColumnPart: string;
+	}>;
+	correctedColumnName: string | null;
+} {
+	const result = { error: null, mismatches: [], correctedColumnName: null } as {
+		error: string | null;
+		mismatches: Array<{
+			index: number;
+			termPart: string;
+			expectedAbbreviation: string;
+			actualColumnPart: string;
+		}>;
+		correctedColumnName: string | null;
+	};
+	if (!termName || !columnName) return result;
+
+	const termParts = splitParts(termName);
+	const columnParts = splitParts(columnName);
+	if (termParts.length !== columnParts.length) return result;
+
+	const correctedParts: string[] = [];
+	for (let i = 0; i < termParts.length; i++) {
+		const expectedAbbreviation = index.standardToAbbreviation.get(termParts[i].toLowerCase());
+		const columnPartLower = columnParts[i].toLowerCase();
+		if (expectedAbbreviation) {
+			correctedParts.push(expectedAbbreviation);
+			if (
+				expectedAbbreviation.toLowerCase() !== columnPartLower &&
+				index.abbreviationSet.has(columnPartLower)
+			) {
+				result.mismatches.push({
+					index: i,
+					termPart: termParts[i],
+					expectedAbbreviation,
+					actualColumnPart: columnParts[i]
+				});
+			}
+		} else {
+			correctedParts.push(columnParts[i]);
+		}
+	}
+
+	if (result.mismatches.length > 0) {
+		const mismatchDetails = result.mismatches
+			.map(
+				(m) =>
+					`${m.index + 1}번째: 용어명 '${m.termPart}'에 대응하는 영문약어는 '${m.expectedAbbreviation}'이어야 하지만 실제 컬럼명에는 '${m.actualColumnPart}'가 있습니다`
+			)
+			.join('; ');
+		result.error = `용어명과 컬럼명의 단어 순서가 일치하지 않습니다. ${mismatchDetails}`;
+		result.correctedColumnName = correctedParts.join('_');
+	}
+
+	return result;
 }
 
 /**
@@ -636,6 +883,11 @@ export async function GET({ url }: RequestEvent) {
 		// 현재 파일의 항목들만 사용 (같은 파일 내에서만 중복 검사)
 		// 참고: 전체 파일 간 중복 검사는 필요시 별도로 구현
 		const currentFileEntries = termData.entries;
+		const validationIndex = buildTermValidationIndex(
+			currentFileEntries,
+			vocabularyData.entries,
+			domainData.entries
+		);
 
 		// 각 항목에 대해 validation 수행
 		const validationResults: ValidationResult[] = [];
@@ -665,7 +917,7 @@ export async function GET({ url }: RequestEvent) {
 
 			// 2. 용어명 접미사 validation
 			if (termParts.length >= 2) {
-				const suffixError = validateTermNameSuffix(entry.termName.trim(), vocabularyData.entries);
+				const suffixError = validateTermNameSuffixIndexed(entry.termName.trim(), validationIndex);
 				if (suffixError) {
 					errors.push({
 						type: 'TERM_NAME_SUFFIX',
@@ -680,10 +932,9 @@ export async function GET({ url }: RequestEvent) {
 
 			// 3. 용어명 중복 검사 (현재 파일 내에서만)
 			if (termParts.length >= 2) {
-				const uniquenessError = validateTermNameUniqueness(
+				const uniquenessError = validateTermNameUniquenessIndexed(
 					entry.termName.trim(),
-					currentFileEntries,
-					entry.id
+					validationIndex
 				);
 				if (uniquenessError) {
 					errors.push({
@@ -699,12 +950,11 @@ export async function GET({ url }: RequestEvent) {
 
 			// 4. 용어 유일성 validation (현재 파일 내에서만)
 			if (entry.termName && entry.columnName && entry.domainName) {
-				const termUniquenessError = validateTermUniqueness(
+				const termUniquenessError = validateTermUniquenessIndexed(
 					entry.termName.trim(),
 					entry.columnName.trim(),
 					entry.domainName.trim(),
-					currentFileEntries,
-					entry.id
+					validationIndex
 				);
 				if (termUniquenessError) {
 					errors.push({
@@ -720,9 +970,9 @@ export async function GET({ url }: RequestEvent) {
 
 			// 5. 용어명 매핑 validation
 			if (termParts.length >= 2) {
-				const termMappingError = validateTermNameMapping(
+				const termMappingError = validateTermNameMappingIndexed(
 					entry.termName.trim(),
-					vocabularyData.entries
+					validationIndex
 				);
 				if (termMappingError) {
 					errors.push({
@@ -738,9 +988,9 @@ export async function GET({ url }: RequestEvent) {
 
 			// 6. 컬럼명 매핑 validation
 			if (entry.columnName) {
-				const columnMappingError = validateColumnNameMapping(
+				const columnMappingError = validateColumnNameMappingIndexed(
 					entry.columnName.trim(),
-					vocabularyData.entries
+					validationIndex
 				);
 				if (columnMappingError) {
 					errors.push({
@@ -762,10 +1012,10 @@ export async function GET({ url }: RequestEvent) {
 				!errors.some((e) => e.type === 'TERM_NAME_MAPPING') &&
 				!errors.some((e) => e.type === 'COLUMN_NAME_MAPPING')
 			) {
-				const orderResult = validateTermColumnOrderMapping(
+				const orderResult = validateTermColumnOrderMappingIndexed(
 					entry.termName.trim(),
 					entry.columnName.trim(),
-					vocabularyData.entries
+					validationIndex
 				);
 				if (orderResult.error) {
 					errors.push({
@@ -781,9 +1031,9 @@ export async function GET({ url }: RequestEvent) {
 
 			// 8. 도메인명 매핑 validation
 			if (entry.domainName) {
-				const domainMappingError = validateDomainNameMapping(
+				const domainMappingError = validateDomainNameMappingIndexed(
 					entry.domainName.trim(),
-					domainData.entries
+					validationIndex
 				);
 				if (domainMappingError) {
 					errors.push({

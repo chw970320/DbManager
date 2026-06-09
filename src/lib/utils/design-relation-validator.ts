@@ -405,66 +405,60 @@ function tableEnglishCandidates(
 function columnKoreanCandidates(
 	issueId: string,
 	column: ColumnEntry,
-	terms: TermEntry[],
+	candidateTerms: TermEntry[],
 	validDomains: Set<string>
 ): DesignRelationCandidate[] {
-	const english = normalizeRelationValue(column.columnEnglishName);
-	return sorted(terms)
-		.filter((t) => english && normalizeRelationValue(t.columnName) === english)
-		.map((t, index) => {
-			const domainIsValid = validDomains.has(normalizeRelationValue(t.domainName));
-			const patchFields: PatchFields = domainIsValid
-				? { columnKoreanName: t.termName, domainName: t.domainName }
-				: { columnKoreanName: t.termName };
-			return candidate(
-				issueId,
-				index,
-				'column',
-				column as Entry,
-				['columnEnglishName', 'columnKoreanName'],
-				patchFields,
-				domainIsValid
-					? `용어집 '${t.termName}/${t.columnName}' 기준 후보입니다.`
-					: `용어집 '${t.termName}/${t.columnName}' 기준 후보입니다. 용어 도메인 '${t.domainName}'은 도메인 정의서에 없어 도메인명은 수동 확인해야 합니다.`,
-				domainIsValid
-					? `columnKoreanName/domainName → '${t.termName}'/'${t.domainName}'`
-					: `columnKoreanName: '${column.columnKoreanName ?? ''}' → '${t.termName}'. domainName은 수동 확인`,
-				true,
-				domainIsValid ? 'high' : 'medium'
-			);
-		});
+	return candidateTerms.map((t, index) => {
+		const domainIsValid = validDomains.has(normalizeRelationValue(t.domainName));
+		const patchFields: PatchFields = domainIsValid
+			? { columnKoreanName: t.termName, domainName: t.domainName }
+			: { columnKoreanName: t.termName };
+		return candidate(
+			issueId,
+			index,
+			'column',
+			column as Entry,
+			['columnEnglishName', 'columnKoreanName'],
+			patchFields,
+			domainIsValid
+				? `용어집 '${t.termName}/${t.columnName}' 기준 후보입니다.`
+				: `용어집 '${t.termName}/${t.columnName}' 기준 후보입니다. 용어 도메인 '${t.domainName}'은 도메인 정의서에 없어 도메인명은 수동 확인해야 합니다.`,
+			domainIsValid
+				? `columnKoreanName/domainName → '${t.termName}'/'${t.domainName}'`
+				: `columnKoreanName: '${column.columnKoreanName ?? ''}' → '${t.termName}'. domainName은 수동 확인`,
+			true,
+			domainIsValid ? 'high' : 'medium'
+		);
+	});
 }
 function columnEnglishCandidates(
 	issueId: string,
 	column: ColumnEntry,
-	terms: TermEntry[],
+	candidateTerms: TermEntry[],
 	validDomains: Set<string>
 ): DesignRelationCandidate[] {
-	const korean = normalizeRelationValue(column.columnKoreanName);
-	return sorted(terms)
-		.filter((t) => korean && normalizeRelationValue(t.termName) === korean)
-		.map((t, index) => {
-			const domainIsValid = validDomains.has(normalizeRelationValue(t.domainName));
-			const patchFields: PatchFields = domainIsValid
-				? { columnEnglishName: t.columnName, domainName: t.domainName }
-				: { columnEnglishName: t.columnName };
-			return candidate(
-				issueId,
-				index,
-				'column',
-				column as Entry,
-				['columnEnglishName', 'columnKoreanName'],
-				patchFields,
-				domainIsValid
-					? `용어집 '${t.termName}/${t.columnName}' 기준 후보입니다.`
-					: `용어집 '${t.termName}/${t.columnName}' 기준 후보입니다. 용어 도메인 '${t.domainName}'은 도메인 정의서에 없어 도메인명은 수동 확인해야 합니다.`,
-				domainIsValid
-					? `columnEnglishName/domainName → '${t.columnName}'/'${t.domainName}'`
-					: `columnEnglishName: '${column.columnEnglishName ?? ''}' → '${t.columnName}'. domainName은 수동 확인`,
-				true,
-				domainIsValid ? 'high' : 'medium'
-			);
-		});
+	return candidateTerms.map((t, index) => {
+		const domainIsValid = validDomains.has(normalizeRelationValue(t.domainName));
+		const patchFields: PatchFields = domainIsValid
+			? { columnEnglishName: t.columnName, domainName: t.domainName }
+			: { columnEnglishName: t.columnName };
+		return candidate(
+			issueId,
+			index,
+			'column',
+			column as Entry,
+			['columnEnglishName', 'columnKoreanName'],
+			patchFields,
+			domainIsValid
+				? `용어집 '${t.termName}/${t.columnName}' 기준 후보입니다.`
+				: `용어집 '${t.termName}/${t.columnName}' 기준 후보입니다. 용어 도메인 '${t.domainName}'은 도메인 정의서에 없어 도메인명은 수동 확인해야 합니다.`,
+			domainIsValid
+				? `columnEnglishName/domainName → '${t.columnName}'/'${t.domainName}'`
+				: `columnEnglishName: '${column.columnEnglishName ?? ''}' → '${t.columnName}'. domainName은 수동 확인`,
+			true,
+			domainIsValid ? 'high' : 'medium'
+		);
+	});
 }
 
 export function validateDesignRelations(
@@ -1046,7 +1040,7 @@ export function validateDesignRelations(
 									'termName'
 								)
 							],
-							candidates: (id) => columnKoreanCandidates(id, c, terms, validDomains)
+							candidates: (id) => columnKoreanCandidates(id, c, termsByCol, validDomains)
 						})
 					);
 			}
@@ -1084,7 +1078,7 @@ export function validateDesignRelations(
 									'columnName'
 								)
 							],
-							candidates: (id) => columnEnglishCandidates(id, c, terms, validDomains)
+							candidates: (id) => columnEnglishCandidates(id, c, termsByName, validDomains)
 						})
 					);
 			}

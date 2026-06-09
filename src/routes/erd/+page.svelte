@@ -26,6 +26,10 @@
 	interface ERDDataWithValidation extends ERDData {
 		relationValidation?: DesignRelationValidationResult;
 	}
+	type ERDViewerDownloadActions = {
+		downloadCurrentSvg: () => Promise<void>;
+		downloadCurrentPng: () => Promise<void>;
+	};
 	interface UnifiedValidationSummary {
 		totalIssues: number;
 		errorCount: number;
@@ -87,6 +91,7 @@
 	let unifiedValidationSummary = $state<UnifiedValidationSummary | null>(null);
 	let unifiedValidationLoading = $state(false);
 	let unifiedValidationError = $state<string | null>(null);
+	let erdDownloadActions = $state<ERDViewerDownloadActions | null>(null);
 
 	let filterRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 	let tableRequestSeq = 0;
@@ -231,6 +236,18 @@
 
 	function getErdRenderUrl(format: 'svg' | 'png', download = false): string {
 		return `/api/erd/render?${buildErdParams({ format, download }).toString()}`;
+	}
+
+	function handleErdDownloadActionsReady(actions: ERDViewerDownloadActions | null) {
+		erdDownloadActions = actions;
+	}
+
+	function downloadCurrentErdSvg() {
+		void erdDownloadActions?.downloadCurrentSvg();
+	}
+
+	function downloadCurrentErdPng() {
+		void erdDownloadActions?.downloadCurrentPng();
 	}
 
 	function getGenerateUrl(): string {
@@ -740,7 +757,7 @@
 			</div>
 		</section>
 
-		<div class="space-y-4">
+		<div class="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
 			<section
 				aria-label="ERD 테이블 다중 선택"
 				class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"
@@ -846,6 +863,33 @@
 						검색 후 선택을 조정하세요.
 					</p>
 				{/if}
+			</section>
+			<section
+				aria-label="ERD 이미지 다운로드"
+				class="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm"
+			>
+				<h2 class="text-sm font-semibold text-gray-900">이미지 다운로드</h2>
+				<p class="mt-2 text-xs text-gray-500">현재 미리보기와 수동 배치 기준으로 내려받습니다.</p>
+				<div class="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+					<button
+						type="button"
+						onclick={downloadCurrentErdSvg}
+						disabled={!erdDownloadActions}
+						aria-label="현재 배치 SVG 다운로드"
+						class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-center text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+					>
+						SVG 다운로드
+					</button>
+					<button
+						type="button"
+						onclick={downloadCurrentErdPng}
+						disabled={!erdDownloadActions}
+						aria-label="현재 배치 PNG 다운로드"
+						class="rounded-lg bg-blue-600 px-4 py-2 text-center text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+					>
+						PNG 다운로드
+					</button>
+				</div>
 			</section>
 		</div>
 	</section>
@@ -988,7 +1032,11 @@
 				</div>
 			</div>
 		{:else if erdData}
-			<ERDViewer {erdData} renderUrl={getErdRenderUrl('svg')} />
+			<ERDViewer
+				{erdData}
+				renderUrl={getErdRenderUrl('svg')}
+				onDownloadActionsReady={handleErdDownloadActionsReady}
+			/>
 		{:else}
 			<div class="flex h-full items-center justify-center">
 				<div class="text-center">

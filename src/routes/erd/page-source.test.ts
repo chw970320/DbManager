@@ -20,12 +20,14 @@ describe('ERD page sidebar and main controls contract', () => {
 		expect(sidebarSource).toContain('aria-label="ERD 매핑 기준"');
 	});
 
-	it('keeps query and table selection controls in the main content and delegates downloads to the viewer', () => {
+	it('keeps query, table selection, and download card in the main content', () => {
 		expect(source).toContain('aria-label="ERD 메인 제어 영역"');
 		expect(source).toContain('aria-label="ERD 조회 조건"');
 		expect(source).toContain('aria-label="ERD 테이블 다중 선택"');
-		expect(source).toContain("<ERDViewer {erdData} renderUrl={getErdRenderUrl('svg')} />");
-		expect(source).not.toContain('aria-label="ERD 이미지 다운로드"');
+		expect(source).toContain('aria-label="ERD 이미지 다운로드"');
+		expect(source).toContain('onDownloadActionsReady={handleErdDownloadActionsReady}');
+		expect(source).toContain('onclick={downloadCurrentErdSvg}');
+		expect(source).toContain('onclick={downloadCurrentErdPng}');
 		expect(source).not.toContain("href={getErdRenderUrl('svg', true)}");
 		expect(source).not.toContain("href={getErdRenderUrl('png', true)}");
 		expect(sidebarSource).not.toContain('aria-label="ERD 조회 조건"');
@@ -80,7 +82,9 @@ describe('ERD page sidebar and main controls contract', () => {
 		expect(source).not.toContain('relationResolutionTargetSummary');
 		expect(source).not.toContain('조치 가이드: {issue.actionGuide}');
 		expect(source).toContain('bind:checked={includeExternalReferences}');
-		expect(source).toContain("params.set('includeExternalReferences', includeExternalReferences.toString())");
+		expect(source).toContain(
+			"params.set('includeExternalReferences', includeExternalReferences.toString())"
+		);
 		expect(source).toContain('레거시 동기화 미리보기');
 		expect(source).toContain('자동 수정은 DB/엔터티/속성/테이블/컬럼 정의서의 유효성 검사 패널');
 		expect(source).not.toContain('candidateSummary');

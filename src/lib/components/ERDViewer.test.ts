@@ -164,6 +164,11 @@ const defaultProps = {
 	renderUrl: '/api/erd/render?format=svg&mode=logical'
 };
 
+type DownloadActions = {
+	downloadCurrentSvg: () => Promise<void>;
+	downloadCurrentPng: () => Promise<void>;
+};
+
 const safeSvg =
 	'<svg width="400pt" height="200pt" viewBox="0 0 400 200"><g><text>ERD</text></g></svg>';
 const layoutSvg = `
@@ -241,6 +246,30 @@ function readBlobText(blob: Blob): Promise<string> {
 	});
 }
 
+function renderWithDownloadActions(props: typeof defaultProps = defaultProps) {
+	let actions: DownloadActions | null = null;
+	return {
+		...render(ERDViewer, {
+			props: {
+				...props,
+				onDownloadActionsReady: (nextActions: DownloadActions | null) => {
+					actions = nextActions;
+				}
+			}
+		}),
+		getActions: () => actions
+	};
+}
+
+async function findDownloadActions(
+	getActions: () => DownloadActions | null
+): Promise<DownloadActions> {
+	await waitFor(() => expect(getActions()).not.toBeNull());
+	const actions = getActions();
+	if (!actions) throw new Error('다운로드 액션이 준비되지 않았습니다.');
+	return actions;
+}
+
 describe('ERDViewer', () => {
 	let fetchMock: ReturnType<typeof vi.fn>;
 
@@ -301,7 +330,9 @@ describe('ERDViewer', () => {
 		expect(screen.queryByText(/참여: table:사용자 \/ column:USER_NM/)).not.toBeInTheDocument();
 		expect(screen.queryByText(/조치 상태: 자동 1건 · 수동 0건 · 신규 1건/)).not.toBeInTheDocument();
 		expect(screen.queryByText(/수정 대상:/)).not.toBeInTheDocument();
-		expect(screen.queryByText(/조치: 후보를 선택해 컬럼 정의서를 자동 수정/)).not.toBeInTheDocument();
+		expect(
+			screen.queryByText(/조치: 후보를 선택해 컬럼 정의서를 자동 수정/)
+		).not.toBeInTheDocument();
 	});
 
 	it('큰 ERD 그래프에는 확대/이동 탐색 힌트를 우선 표시한다', async () => {
@@ -332,13 +363,20 @@ describe('ERDViewer', () => {
 		expect(screen.queryByText('Mermaid 파일 다운로드')).not.toBeInTheDocument();
 	});
 
-	it('현재 배치 기준 SVG/PNG 다운로드 버튼을 표시한다', async () => {
-		render(ERDViewer, { props: defaultProps });
+	it('현재 배치 기준 SVG/PNG 다운로드 액션을 부모에 제공하고 버튼은 직접 표시하지 않는다', async () => {
+		const { getActions } = renderWithDownloadActions();
 
 		await screen.findByTestId('erd-svg-preview');
 
-		expect(screen.getByRole('button', { name: '현재 배치 SVG 다운로드' })).toBeInTheDocument();
-		expect(screen.getByRole('button', { name: '현재 배치 PNG 다운로드' })).toBeInTheDocument();
+		const actions = await findDownloadActions(getActions);
+		expect(actions.downloadCurrentSvg).toEqual(expect.any(Function));
+		expect(actions.downloadCurrentPng).toEqual(expect.any(Function));
+		expect(
+			screen.queryByRole('button', { name: '현재 배치 SVG 다운로드' })
+		).not.toBeInTheDocument();
+		expect(
+			screen.queryByRole('button', { name: '현재 배치 PNG 다운로드' })
+		).not.toBeInTheDocument();
 	});
 
 	it('이미지 관계 수와 혼동되는 구조적 엣지 수를 노출하지 않는다', async () => {
@@ -433,7 +471,13 @@ describe('ERDViewer', () => {
 		expect(firstNode.getAttribute('transform')).toContain('translate(40 25)');
 		expect(firstNode).not.toHaveAttribute('role');
 		expect(firstNode).not.toHaveAttribute('tabindex');
-		expect(container.querySelector('.erd-manual-edges line')).toBeInTheDocument();
+		const manualLine = container.querySelector('.erd-manual-edge line') as SVGLineElement;
+		expect(manualLine).toBeInTheDocument();
+		expect(manualLine.getAttribute('marker-start')).toBeNull();
+		expect(manualLine.getAttribute('marker-end')).toBeNull();
+		expect(Number(manualLine.getAttribute('x1'))).toBeGreaterThan(180);
+		expect(Number(manualLine.getAttribute('x2'))).toBeLessThan(280);
+		expect(container.querySelectorAll('.erd-manual-edge line')).toHaveLength(5);
 		expect(screen.getByRole('button', { name: '테이블 배치 초기화' })).toBeEnabled();
 	});
 
@@ -477,17 +521,19 @@ describe('ERDViewer', () => {
 			.spyOn(HTMLAnchorElement.prototype, 'click')
 			.mockImplementation(() => undefined);
 
-		const { container } = render(ERDViewer, { props: defaultProps });
+		const { container, getActions } = renderWithDownloadActions();
 		await screen.findByTestId('erd-svg-preview');
 		await enableLayoutAndDragFirstNode(container, 600, 0, 4);
 
-		await fireEvent.click(screen.getByRole('button', { name: '현재 배치 SVG 다운로드' }));
+		await (await findDownloadActions(getActions)).downloadCurrentSvg();
 
 		expect(createObjectUrl).toHaveBeenCalledWith(expect.any(Blob));
 		const svgBlob = getBlobArgument(createObjectUrl);
 		const svgText = await readBlobText(svgBlob);
 		expect(svgText).toContain('translate(600 0)');
 		expect(svgText).toContain('class="erd-manual-edges"');
+		expect(svgText).toContain('class="erd-manual-edge"');
+		expect(svgText).not.toContain('marker-start');
 		expect(svgText).toContain('viewBox="-24 -24 788 308"');
 		expect(clickSpy).toHaveBeenCalled();
 		expect(revokeObjectUrl).toHaveBeenCalledWith('blob:erd-svg');
@@ -506,10 +552,10 @@ describe('ERDViewer', () => {
 			clickedDownload = this.download;
 		});
 
-		render(ERDViewer, { props: defaultProps });
+		const { getActions } = renderWithDownloadActions();
 		await screen.findByTestId('erd-svg-preview');
 
-		await fireEvent.click(screen.getByRole('button', { name: '현재 배치 PNG 다운로드' }));
+		await (await findDownloadActions(getActions)).downloadCurrentPng();
 
 		expect(createObjectUrl).not.toHaveBeenCalled();
 		expect(clickedHref).toContain('/api/erd/render?');
@@ -549,11 +595,11 @@ describe('ERDViewer', () => {
 		}
 		vi.stubGlobal('Image', MockImage);
 
-		const { container } = render(ERDViewer, { props: defaultProps });
+		const { container, getActions } = renderWithDownloadActions();
 		await screen.findByTestId('erd-svg-preview');
 		await enableLayoutAndDragFirstNode(container, 600, 0, 5);
 
-		await fireEvent.click(screen.getByRole('button', { name: '현재 배치 PNG 다운로드' }));
+		await (await findDownloadActions(getActions)).downloadCurrentPng();
 
 		await waitFor(() => expect(drawImage).toHaveBeenCalled());
 		const svgBlob = getBlobArgument(createObjectUrl);
@@ -572,12 +618,12 @@ describe('ERDViewer', () => {
 		fetchMock.mockResolvedValueOnce(mockSvgResponse(layoutSvg));
 		const createObjectUrl = vi.fn();
 		Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectUrl });
-		const { container } = render(ERDViewer, { props: defaultProps });
+		const { container, getActions } = renderWithDownloadActions();
 
 		await screen.findByTestId('erd-svg-preview');
 		await enableLayoutAndDragFirstNode(container, 20000, 0, 6);
 
-		await fireEvent.click(screen.getByRole('button', { name: '현재 배치 PNG 다운로드' }));
+		await (await findDownloadActions(getActions)).downloadCurrentPng();
 
 		expect(await screen.findByText(/PNG 크기가 브라우저 변환 한도를 초과/)).toBeInTheDocument();
 		expect(createObjectUrl).not.toHaveBeenCalled();

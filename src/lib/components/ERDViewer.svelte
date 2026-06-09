@@ -8,15 +8,22 @@
 		relationValidation?: DesignRelationValidationResult;
 	};
 
+	type ERDViewerDownloadActions = {
+		downloadCurrentSvg: () => Promise<void>;
+		downloadCurrentPng: () => Promise<void>;
+	};
 	type SvgBox = { x: number; y: number; width: number; height: number };
+	type SvgPoint = { x: number; y: number };
 	type SvgExportPayload = { text: string; width: number; height: number };
 
 	let {
 		erdData,
-		renderUrl
+		renderUrl,
+		onDownloadActionsReady
 	}: {
 		erdData: ERDViewerData;
 		renderUrl: string;
+		onDownloadActionsReady?: (actions: ERDViewerDownloadActions | null) => void;
 	} = $props();
 
 	const MIN_SCALE = 0.25;
@@ -34,6 +41,10 @@
 	const EXPORT_PADDING = 24;
 	const MAX_PNG_EXPORT_DIMENSION = 16_384;
 	const MAX_PNG_EXPORT_PIXELS = 48_000_000;
+	const RELATION_ENDPOINT_GAP = 10;
+	const CROW_DEPTH = 13;
+	const CROW_HALF_WIDTH = 7;
+	const TEE_HALF_LENGTH = 7;
 
 	let previewLoading = $state(true);
 	let previewError = $state<string | null>(null);
@@ -48,8 +59,6 @@
 	let canvasElement = $state<HTMLDivElement | null>(null);
 	let layoutEditMode = $state(false);
 	let manualLayoutActive = $state(false);
-	let svgDownloadPending = $state(false);
-	let pngDownloadPending = $state(false);
 	let downloadError = $state<string | null>(null);
 
 	let requestSequence = 0;
@@ -196,7 +205,10 @@
 		node.dataset.erdManualX = String(x);
 		node.dataset.erdManualY = String(y);
 		const baseTransform = node.dataset.erdManualBaseTransform;
-		node.setAttribute('transform', [baseTransform, `translate(${x} ${y})`].filter(Boolean).join(' '));
+		node.setAttribute(
+			'transform',
+			[baseTransform, `translate(${x} ${y})`].filter(Boolean).join(' ')
+		);
 		node.classList.add('erd-manual-node-moved');
 	}
 
@@ -252,7 +264,9 @@
 			.map(([x, y]) => ({ x, y }));
 	}
 
-	function getNodeBox(node: SVGGElement): { x: number; y: number; width: number; height: number } | null {
+	function getNodeBox(
+		node: SVGGElement
+	): { x: number; y: number; width: number; height: number } | null {
 		const svgNode = node as SVGGElement & { getBBox?: () => DOMRect };
 		if (typeof svgNode.getBBox === 'function') {
 			try {
@@ -312,49 +326,84 @@
 		return { source: parts[0], target: parts[1] };
 	}
 
-	function ensureManualEdgeMarkers(svgElement: SVGSVGElement) {
-		if (svgElement.querySelector('#erd-manual-edge-markers')) return;
-		const defs = document.createElementNS(SVG_NS, 'defs');
-		defs.setAttribute('id', 'erd-manual-edge-markers');
-
-		const crowMarker = document.createElementNS(SVG_NS, 'marker');
-		crowMarker.setAttribute('id', 'erd-manual-crow');
-		crowMarker.setAttribute('viewBox', '0 -8 12 16');
-		crowMarker.setAttribute('refX', '1');
-		crowMarker.setAttribute('refY', '0');
-		crowMarker.setAttribute('markerWidth', '10');
-		crowMarker.setAttribute('markerHeight', '10');
-		crowMarker.setAttribute('orient', 'auto-start-reverse');
-		const crow = document.createElementNS(SVG_NS, 'path');
-		crow.setAttribute('d', 'M 12 -7 L 1 0 L 12 7 M 1 0 L 12 0');
-		crow.setAttribute('fill', 'none');
-		crow.setAttribute('stroke', '#334155');
-		crow.setAttribute('stroke-width', '1.8');
-		crowMarker.append(crow);
-
-		const teeMarker = document.createElementNS(SVG_NS, 'marker');
-		teeMarker.setAttribute('id', 'erd-manual-tee');
-		teeMarker.setAttribute('viewBox', '-2 -7 8 14');
-		teeMarker.setAttribute('refX', '1');
-		teeMarker.setAttribute('refY', '0');
-		teeMarker.setAttribute('markerWidth', '8');
-		teeMarker.setAttribute('markerHeight', '10');
-		teeMarker.setAttribute('orient', 'auto');
-		const tee = document.createElementNS(SVG_NS, 'path');
-		tee.setAttribute('d', 'M 1 -7 L 1 7');
-		tee.setAttribute('fill', 'none');
-		tee.setAttribute('stroke', '#334155');
-		tee.setAttribute('stroke-width', '1.8');
-		teeMarker.append(tee);
-
-		defs.append(crowMarker, teeMarker);
-		svgElement.insertBefore(defs, svgElement.firstChild);
+	function removeLegacyManualEdgeMarkers(svgElement: SVGSVGElement) {
+		svgElement.querySelector('#erd-manual-edge-markers')?.remove();
 	}
 
 	function removeManualEdges(svgElement = getSvgElement()) {
 		svgElement?.querySelectorAll('.erd-manual-edges, #erd-manual-edge-markers').forEach((node) => {
 			node.remove();
 		});
+	}
+
+	function normalizeVector(from: SvgPoint, to: SvgPoint): SvgPoint | null {
+		const dx = to.x - from.x;
+		const dy = to.y - from.y;
+		const distance = Math.hypot(dx, dy);
+		if (distance <= 0.1) return null;
+		return { x: dx / distance, y: dy / distance };
+	}
+
+	function offsetPoint(point: SvgPoint, vector: SvgPoint, distance: number): SvgPoint {
+		return {
+			x: point.x + vector.x * distance,
+			y: point.y + vector.y * distance
+		};
+	}
+
+	function perpendicularVector(vector: SvgPoint): SvgPoint {
+		return { x: -vector.y, y: vector.x };
+	}
+
+	function createRelationLine(
+		start: SvgPoint,
+		end: SvgPoint,
+		color: string,
+		isDashed = false
+	): SVGLineElement {
+		const line = document.createElementNS(SVG_NS, 'line');
+		line.setAttribute('x1', start.x.toFixed(1));
+		line.setAttribute('y1', start.y.toFixed(1));
+		line.setAttribute('x2', end.x.toFixed(1));
+		line.setAttribute('y2', end.y.toFixed(1));
+		line.setAttribute('stroke', color);
+		line.setAttribute('stroke-width', '1.6');
+		line.setAttribute('fill', 'none');
+		line.setAttribute('stroke-linecap', 'square');
+		if (isDashed) line.setAttribute('stroke-dasharray', '6 4');
+		return line;
+	}
+
+	function appendCrowSymbol(group: SVGGElement, point: SvgPoint, vector: SvgPoint, color: string) {
+		const perpendicular = perpendicularVector(vector);
+		const tip = point;
+		const center = offsetPoint(tip, vector, CROW_DEPTH);
+		const upper = {
+			x: center.x + perpendicular.x * CROW_HALF_WIDTH,
+			y: center.y + perpendicular.y * CROW_HALF_WIDTH
+		};
+		const lower = {
+			x: center.x - perpendicular.x * CROW_HALF_WIDTH,
+			y: center.y - perpendicular.y * CROW_HALF_WIDTH
+		};
+		group.append(
+			createRelationLine(tip, upper, color),
+			createRelationLine(tip, center, color),
+			createRelationLine(tip, lower, color)
+		);
+	}
+
+	function appendTeeSymbol(group: SVGGElement, point: SvgPoint, vector: SvgPoint, color: string) {
+		const perpendicular = perpendicularVector(vector);
+		const start = {
+			x: point.x + perpendicular.x * TEE_HALF_LENGTH,
+			y: point.y + perpendicular.y * TEE_HALF_LENGTH
+		};
+		const end = {
+			x: point.x - perpendicular.x * TEE_HALF_LENGTH,
+			y: point.y - perpendicular.y * TEE_HALF_LENGTH
+		};
+		group.append(createRelationLine(start, end, color));
 	}
 
 	function rebuildManualEdges() {
@@ -370,9 +419,11 @@
 		}
 
 		for (const edge of edgeElements) edge.style.display = 'none';
-		ensureManualEdgeMarkers(svgElement);
+		removeLegacyManualEdgeMarkers(svgElement);
 
-		const nodesByTitle = new Map(getNodeElements(svgElement).map((node) => [getNodeTitle(node), node]));
+		const nodesByTitle = new Map(
+			getNodeElements(svgElement).map((node) => [getNodeTitle(node), node])
+		);
 		const graphElement = getGraphElement(svgElement);
 		const overlay = document.createElementNS(SVG_NS, 'g');
 		overlay.setAttribute('class', 'erd-manual-edges');
@@ -399,19 +450,20 @@
 			const start = getConnectionPoint(sourceBox, targetCenter);
 			const end = getConnectionPoint(targetBox, sourceCenter);
 			const isDashed = /stroke-dasharray|dashed/i.test(edge.outerHTML);
+			const vector = normalizeVector(start, end);
+			if (!vector) continue;
+			const distance = Math.hypot(end.x - start.x, end.y - start.y);
+			const endpointGap = Math.min(RELATION_ENDPOINT_GAP, Math.max(distance / 4, 0));
+			const safeStart = offsetPoint(start, vector, endpointGap);
+			const safeEnd = offsetPoint(end, vector, -endpointGap);
+			const color = isDashed ? '#64748B' : '#334155';
 
-			const line = document.createElementNS(SVG_NS, 'line');
-			line.setAttribute('x1', start.x.toFixed(1));
-			line.setAttribute('y1', start.y.toFixed(1));
-			line.setAttribute('x2', end.x.toFixed(1));
-			line.setAttribute('y2', end.y.toFixed(1));
-			line.setAttribute('stroke', isDashed ? '#64748B' : '#334155');
-			line.setAttribute('stroke-width', '1.6');
-			line.setAttribute('fill', 'none');
-			line.setAttribute('marker-start', 'url(#erd-manual-crow)');
-			line.setAttribute('marker-end', 'url(#erd-manual-tee)');
-			if (isDashed) line.setAttribute('stroke-dasharray', '6 4');
-			overlay.append(line);
+			const relationGroup = document.createElementNS(SVG_NS, 'g');
+			relationGroup.setAttribute('class', 'erd-manual-edge');
+			relationGroup.append(createRelationLine(safeStart, safeEnd, color, isDashed));
+			appendCrowSymbol(relationGroup, safeStart, vector, color);
+			appendTeeSymbol(relationGroup, safeEnd, vector, color);
+			overlay.append(relationGroup);
 		}
 
 		const firstNode = graphElement.querySelector('g.node');
@@ -596,7 +648,6 @@
 		const svgExport = getCurrentSvgExport();
 		if (!svgExport) return;
 		downloadError = null;
-		svgDownloadPending = true;
 		try {
 			downloadBlob(
 				new Blob([svgExport.text], { type: 'image/svg+xml;charset=utf-8' }),
@@ -604,8 +655,6 @@
 			);
 		} catch (error) {
 			setDownloadError(error);
-		} finally {
-			svgDownloadPending = false;
 		}
 	}
 
@@ -650,7 +699,6 @@
 		}
 		const svgExport = getCurrentSvgExport();
 		if (!svgExport) return;
-		pngDownloadPending = true;
 		let objectUrl: string | null = null;
 		try {
 			assertPngExportSize(svgExport.width, svgExport.height);
@@ -670,7 +718,6 @@
 			setDownloadError(error);
 		} finally {
 			if (objectUrl) URL.revokeObjectURL(objectUrl);
-			pngDownloadPending = false;
 		}
 	}
 
@@ -742,7 +789,10 @@
 				startTranslateY: currentTranslate.y
 			};
 			event.preventDefault();
-			if (event.currentTarget instanceof HTMLElement && 'setPointerCapture' in event.currentTarget) {
+			if (
+				event.currentTarget instanceof HTMLElement &&
+				'setPointerCapture' in event.currentTarget
+			) {
 				event.currentTarget.setPointerCapture(event.pointerId);
 			}
 			return;
@@ -759,8 +809,10 @@
 
 	function handlePointerMove(event: PointerEvent) {
 		if (activeNodeDrag) {
-			const nextX = activeNodeDrag.startTranslateX + (event.clientX - activeNodeDrag.startClientX) / scale;
-			const nextY = activeNodeDrag.startTranslateY + (event.clientY - activeNodeDrag.startClientY) / scale;
+			const nextX =
+				activeNodeDrag.startTranslateX + (event.clientX - activeNodeDrag.startClientX) / scale;
+			const nextY =
+				activeNodeDrag.startTranslateY + (event.clientY - activeNodeDrag.startClientY) / scale;
 			setNodeTranslate(activeNodeDrag.node, nextX, nextY);
 			manualLayoutActive = true;
 			scheduleManualEdgesRebuild();
@@ -808,6 +860,15 @@
 		return () => {
 			activeAbortController?.abort();
 		};
+	});
+
+	$effect(() => {
+		if (!svgMarkup) {
+			onDownloadActionsReady?.(null);
+			return;
+		}
+		onDownloadActionsReady?.({ downloadCurrentSvg, downloadCurrentPng });
+		return () => onDownloadActionsReady?.(null);
 	});
 
 	$effect(() => {
@@ -904,26 +965,6 @@
 				aria-label="테이블 배치 초기화"
 			>
 				배치 초기화
-			</button>
-		</div>
-		<div class="flex flex-wrap items-center gap-1">
-			<button
-				type="button"
-				class={VIEWER_BUTTON_CLASS}
-				onclick={() => void downloadCurrentSvg()}
-				disabled={!svgMarkup || svgDownloadPending}
-				aria-label="현재 배치 SVG 다운로드"
-			>
-				{svgDownloadPending ? 'SVG 생성 중' : 'SVG 다운로드'}
-			</button>
-			<button
-				type="button"
-				class="rounded-md border border-blue-600 bg-blue-600 px-3 py-1 text-xs font-medium text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
-				onclick={() => void downloadCurrentPng()}
-				disabled={!svgMarkup || pngDownloadPending}
-				aria-label="현재 배치 PNG 다운로드"
-			>
-				{pngDownloadPending ? 'PNG 생성 중' : 'PNG 다운로드'}
 			</button>
 		</div>
 		<span

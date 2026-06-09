@@ -309,7 +309,7 @@ describe('ERDViewer', () => {
 		expect(screen.getByTestId('erd-zoom-percent')).toHaveTextContent(/%/);
 	});
 
-	it('희박한 ERD 그래프 상태와 안전 렌더링 안내를 표시한다', async () => {
+	it('관계 검증 요약만 표시하고 그래프 상태 안내는 노출하지 않는다', async () => {
 		render(ERDViewer, {
 			props: {
 				...defaultProps,
@@ -319,11 +319,13 @@ describe('ERDViewer', () => {
 
 		await screen.findByTestId('erd-svg-preview');
 
-		expect(screen.getByLabelText('ERD 그래프 상태 안내')).toBeInTheDocument();
-		expect(screen.getByText(/그래프 상태: 희박\/빈 관계/)).toBeInTheDocument();
-		expect(screen.getByText(/관계가 없거나 매우 적습니다/)).toBeInTheDocument();
-		expect(screen.getByText(/탐색: 맞춤\/100%\/확대\/축소\/드래그\/휠로 이동/)).toBeInTheDocument();
-		expect(screen.getByText(/안전 렌더링: 허용된 ERD 이미지 URL만 표시합니다/)).toBeInTheDocument();
+		expect(screen.getByLabelText('ERD 관계 검증 요약')).toBeInTheDocument();
+		expect(screen.queryByLabelText('ERD 그래프 상태 안내')).not.toBeInTheDocument();
+		expect(screen.queryByText(/그래프 상태:/)).not.toBeInTheDocument();
+		expect(screen.queryByText(/관계가 없거나 매우 적습니다/)).not.toBeInTheDocument();
+		expect(screen.queryByText(/탐색:/)).not.toBeInTheDocument();
+		expect(screen.queryByText(/안전 렌더링:/)).not.toBeInTheDocument();
+		expect(screen.queryByText(/배치 수정:/)).not.toBeInTheDocument();
 		expect(screen.getByText(/관계 검증: 미매칭 3건 · 오류\s*2건 · 경고\s*1건/)).toBeInTheDocument();
 		expect(screen.queryByLabelText('ERD 관계 검증 이슈')).not.toBeInTheDocument();
 		expect(screen.queryByText(/테이블 -> 컬럼 · USER_NM/)).not.toBeInTheDocument();
@@ -335,7 +337,7 @@ describe('ERDViewer', () => {
 		).not.toBeInTheDocument();
 	});
 
-	it('큰 ERD 그래프에는 확대/이동 탐색 힌트를 우선 표시한다', async () => {
+	it('큰 ERD 그래프에도 그래프 상태 문구를 노출하지 않는다', async () => {
 		render(ERDViewer, {
 			props: {
 				...defaultProps,
@@ -348,8 +350,12 @@ describe('ERDViewer', () => {
 
 		await screen.findByTestId('erd-svg-preview');
 
-		expect(screen.getByText(/그래프 상태: 큰 그래프/)).toBeInTheDocument();
-		expect(screen.getByText(/맞춤, 축소\/확대, 드래그 이동으로 탐색하세요/)).toBeInTheDocument();
+		expect(screen.queryByText(/그래프 상태:/)).not.toBeInTheDocument();
+		expect(screen.queryByText(/큰 그래프/)).not.toBeInTheDocument();
+		expect(screen.queryByText(/노드와 관계가 많습니다/)).not.toBeInTheDocument();
+		expect(
+			screen.queryByText(/맞춤, 축소\/확대, 드래그 이동으로 탐색하세요/)
+		).not.toBeInTheDocument();
 	});
 
 	it('렌더러 기술명을 화면에 노출하지 않는다', async () => {

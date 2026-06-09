@@ -297,8 +297,8 @@ function addCandidateBundle(
 	candidates.push(bundle);
 }
 
-async function readLegacyDataFileMappingCandidates(): Promise<SharedFileMappingBundle[]> {
-	const candidates: SharedFileMappingBundle[] = [];
+async function readLegacyDataFileMappingCandidates(): Promise<LegacyDataFileMappingCandidate[]> {
+	const candidates: LegacyDataFileMappingCandidate[] = [];
 
 	for (const type of ALL_DATA_TYPES) {
 		let files: string[] = [];
@@ -331,22 +331,26 @@ async function readLegacyDataFileMappingCandidates(): Promise<SharedFileMappingB
 			}
 
 			const parsed = JSON.parse(raw) as { mapping?: unknown };
-			if (
-				(!parsed.mapping || typeof parsed.mapping !== 'object') &&
-				file === DEFAULT_FILENAMES[type]
-			) {
+			const hasExplicitMapping = Boolean(
+				parsed.mapping &&
+					typeof parsed.mapping === 'object' &&
+					Object.keys(parsed.mapping).length > 0
+			);
+			if (!hasExplicitMapping && file === DEFAULT_FILENAMES[type]) {
 				continue;
 			}
 
-			addCandidateBundle(
-				candidates,
-				normalizeMappingBundleFromLegacy(
+			candidates.push({
+				bundle: normalizeMappingBundleFromLegacy(
 					type,
 					file,
-					parsed.mapping && typeof parsed.mapping === 'object' ? parsed.mapping : undefined
+					hasExplicitMapping ? parsed.mapping : undefined
 				),
-				`${type}/${file}`
-			);
+				source: `${type}/${file}`,
+				type,
+				filename: file,
+				hasExplicitMapping
+			});
 		}
 	}
 
@@ -358,10 +362,143 @@ type LegacyRelation = {
 	sourceFilename?: unknown;
 	targetType?: unknown;
 	targetFilename?: unknown;
+	createdAt?: unknown;
+	updatedAt?: unknown;
+};
+
+type LegacyRegistryNode = {
+	type: DataType;
+	filename: string;
+	groupKey: string;
+	updatedAt: string;
+};
+
+type LegacyDataFileMappingCandidate = {
+	bundle: SharedFileMappingBundle;
+	source: string;
+	type: DataType;
+	filename: string;
+	hasExplicitMapping: boolean;
 };
 
 function isDataType(value: unknown): value is DataType {
 	return typeof value === 'string' && ALL_DATA_TYPES.includes(value as DataType);
+}
+
+function getLegacyRegistryGroupKey(type: DataType, filename: string): string {
+	const stem = filename.replace(/\.json$/i, '');
+	if (stem === type) {
+		return DEFAULT_SHARED_FILE_MAPPING_ID;
+	}
+
+	const typePrefixPattern = new RegExp(`^${type}[-_]`, 'i');
+	if (typePrefixPattern.test(stem)) {
+		return stem.slice(type.length + 1);
+	}
+
+	return stem;
+}
+
+function getLegacyRelationUpdatedAt(relation: LegacyRelation): string {
+	return typeof relation.updatedAt === 'string' && relation.updatedAt.trim()
+		? relation.updatedAt
+		: typeof relation.createdAt === 'string' && relation.createdAt.trim()
+			? relation.createdAt
+			: '';
+}
+
+function pickPreferredLegacyRegistryNode(
+	current: LegacyRegistryNode | undefined,
+	next: LegacyRegistryNode
+): LegacyRegistryNode {
+	if (!current) {
+		return next;
+	}
+	if (next.updatedAt !== current.updatedAt) {
+		return next.updatedAt > current.updatedAt ? next : current;
+	}
+	if (
+		current.filename === DEFAULT_FILENAMES[current.type] &&
+		next.filename !== DEFAULT_FILENAMES[next.type]
+	) {
+		return next;
+	}
+	return next.filename.localeCompare(current.filename) > 0 ? next : current;
+}
+
+function addLegacyRegistryNode(
+	nodesByKey: Map<string, LegacyRegistryNode>,
+	type: DataType,
+	filename: string,
+	updatedAt: string
+): string {
+	const key = `${type}:${filename}`;
+	const current = nodesByKey.get(key);
+	const next = {
+		type,
+		filename,
+		groupKey: getLegacyRegistryGroupKey(type, filename),
+		updatedAt
+	};
+	nodesByKey.set(key, pickPreferredLegacyRegistryNode(current, next));
+	return key;
+}
+
+function createBundleFromLegacyRegistryNodes(
+	graphNodes: string[],
+	nodesByKey: Map<string, LegacyRegistryNode>
+): SharedFileMappingBundle {
+	const bundle = createDefaultBundle();
+	for (const graphNode of graphNodes) {
+		const nodeInfo = nodesByKey.get(graphNode);
+		if (nodeInfo) {
+			bundle[nodeInfo.type] = nodeInfo.filename;
+		}
+	}
+	return bundle;
+}
+
+function splitAmbiguousLegacyRegistryComponent(
+	graphNodes: string[],
+	nodesByKey: Map<string, LegacyRegistryNode>
+): SharedFileMappingBundle[] {
+	const grouped = new Map<string, LegacyRegistryNode[]>();
+	for (const graphNode of graphNodes) {
+		const nodeInfo = nodesByKey.get(graphNode);
+		if (!nodeInfo) {
+			continue;
+		}
+		grouped.set(nodeInfo.groupKey, [...(grouped.get(nodeInfo.groupKey) ?? []), nodeInfo]);
+	}
+
+	const bundles: SharedFileMappingBundle[] = [];
+	for (const groupNodes of grouped.values()) {
+		const bundle = createDefaultBundle();
+		const selectedByType = new Map<DataType, LegacyRegistryNode>();
+		for (const nodeInfo of groupNodes) {
+			selectedByType.set(
+				nodeInfo.type,
+				pickPreferredLegacyRegistryNode(selectedByType.get(nodeInfo.type), nodeInfo)
+			);
+		}
+
+		for (const nodeInfo of selectedByType.values()) {
+			bundle[nodeInfo.type] = nodeInfo.filename;
+		}
+		bundles.push(bundle);
+	}
+
+	return bundles;
+}
+
+function hasBundleFile(
+	candidates: SharedFileMappingBundle[],
+	type: DataType,
+	filename: string
+): boolean {
+	return (
+		filename !== DEFAULT_FILENAMES[type] && candidates.some((bundle) => bundle[type] === filename)
+	);
 }
 
 async function readLegacyRegistryBundleCandidates(): Promise<SharedFileMappingBundle[]> {
@@ -377,6 +514,8 @@ async function readLegacyRegistryBundleCandidates(): Promise<SharedFileMappingBu
 
 	const parent = new Map<string, string>();
 	const nodes = new Set<string>();
+	const nodesByKey = new Map<string, LegacyRegistryNode>();
+	const directTargetsBySourceAndType = new Map<string, Set<string>>();
 
 	function node(type: DataType, filename: string): string {
 		return `${type}:${filename}`;
@@ -414,8 +553,32 @@ async function readLegacyRegistryBundleCandidates(): Promise<SharedFileMappingBu
 			continue;
 		}
 
-		const sourceNode = node(relation.sourceType, relation.sourceFilename.trim());
-		const targetNode = node(relation.targetType, relation.targetFilename.trim());
+		const sourceFilename = relation.sourceFilename.trim();
+		const targetFilename = relation.targetFilename.trim();
+		const directKey = node(relation.sourceType, sourceFilename);
+		const relatedTargetsKey = `${directKey}|${relation.targetType}`;
+		const relatedTargets = directTargetsBySourceAndType.get(relatedTargetsKey) ?? new Set<string>();
+		relatedTargets.add(targetFilename);
+		directTargetsBySourceAndType.set(relatedTargetsKey, relatedTargets);
+		if (relatedTargets.size > 1) {
+			throw new Error(
+				`공통 파일 매핑 마이그레이션 충돌: registry.json에서 ${directKey}가 ${relation.targetType} 파일을 둘 이상 참조합니다.`
+			);
+		}
+
+		const updatedAt = getLegacyRelationUpdatedAt(relation);
+		const sourceNode = addLegacyRegistryNode(
+			nodesByKey,
+			relation.sourceType,
+			sourceFilename,
+			updatedAt
+		);
+		const targetNode = addLegacyRegistryNode(
+			nodesByKey,
+			relation.targetType,
+			targetFilename,
+			updatedAt
+		);
 		nodes.add(sourceNode);
 		nodes.add(targetNode);
 		union(sourceNode, targetNode);
@@ -429,23 +592,28 @@ async function readLegacyRegistryBundleCandidates(): Promise<SharedFileMappingBu
 
 	const candidates: SharedFileMappingBundle[] = [];
 	for (const graphNodes of components.values()) {
-		const bundle = createDefaultBundle();
 		const seen = new Map<DataType, string>();
+		let hasDuplicateType = false;
 		for (const graphNode of graphNodes) {
-			const separator = graphNode.indexOf(':');
-			const type = graphNode.slice(0, separator) as DataType;
-			const filename = graphNode.slice(separator + 1);
+			const nodeInfo = nodesByKey.get(graphNode);
+			if (!nodeInfo) {
+				continue;
+			}
+			const { type, filename } = nodeInfo;
 			const previous = seen.get(type);
 			if (previous && previous !== filename) {
-				throw new Error(
-					`공통 파일 매핑 마이그레이션 충돌: registry.json 컴포넌트에 ${type} 파일이 둘 이상 포함되었습니다.`
-				);
+				hasDuplicateType = true;
+				break;
 			}
 			seen.set(type, filename);
-			bundle[type] = filename;
 		}
 
-		addCandidateBundle(candidates, bundle, 'registry.json');
+		const bundles = hasDuplicateType
+			? splitAmbiguousLegacyRegistryComponent(graphNodes, nodesByKey)
+			: [createBundleFromLegacyRegistryNodes(graphNodes, nodesByKey)];
+		for (const bundle of bundles) {
+			addCandidateBundle(candidates, bundle, 'registry.json');
+		}
 	}
 
 	return candidates;
@@ -465,8 +633,14 @@ async function buildMigratedRegistryData(
 	for (const bundle of await readLegacyRegistryBundleCandidates()) {
 		addCandidateBundle(candidates, bundle, 'registry.json');
 	}
-	for (const bundle of await readLegacyDataFileMappingCandidates()) {
-		addCandidateBundle(candidates, bundle, 'legacy mapping field');
+	for (const candidate of await readLegacyDataFileMappingCandidates()) {
+		if (
+			!candidate.hasExplicitMapping &&
+			hasBundleFile(candidates, candidate.type, candidate.filename)
+		) {
+			continue;
+		}
+		addCandidateBundle(candidates, candidate.bundle, candidate.source);
 	}
 
 	const now = new Date().toISOString();

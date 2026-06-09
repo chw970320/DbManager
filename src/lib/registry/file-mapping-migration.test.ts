@@ -79,6 +79,142 @@ describe('file mapping v2 migration', () => {
 		);
 	});
 
+	it('splits ambiguous legacy registry components by file group during migration', async () => {
+		const dataPath = await createTempDataPath();
+		await writeFile(
+			join(dataPath, 'registry.json'),
+			JSON.stringify(
+				{
+					relations: [
+						{
+							sourceType: 'column',
+							sourceFilename: 'column-a.json',
+							targetType: 'term',
+							targetFilename: 'term-a.json'
+						},
+						{
+							sourceType: 'column',
+							sourceFilename: 'column-b.json',
+							targetType: 'term',
+							targetFilename: 'term-b.json'
+						},
+						{
+							sourceType: 'column',
+							sourceFilename: 'column-a.json',
+							targetType: 'domain',
+							targetFilename: 'domain-shared.json'
+						},
+						{
+							sourceType: 'column',
+							sourceFilename: 'column-b.json',
+							targetType: 'domain',
+							targetFilename: 'domain-shared.json'
+						},
+						{
+							sourceType: 'term',
+							sourceFilename: 'term-a.json',
+							targetType: 'vocabulary',
+							targetFilename: 'vocabulary-a.json'
+						},
+						{
+							sourceType: 'term',
+							sourceFilename: 'term-b.json',
+							targetType: 'vocabulary',
+							targetFilename: 'vocabulary-b.json'
+						}
+					]
+				},
+				null,
+				2
+			)
+		);
+		const { ensureFileMappingMigrated } = await importRegistry(dataPath);
+
+		await ensureFileMappingMigrated();
+
+		const migrated = await readSharedMapping(dataPath);
+		expect(migrated.bundles).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					files: expect.objectContaining({
+						vocabulary: 'vocabulary-a.json',
+						term: 'term-a.json',
+						column: 'column-a.json'
+					})
+				}),
+				expect.objectContaining({
+					files: expect.objectContaining({
+						vocabulary: 'vocabulary-b.json',
+						term: 'term-b.json',
+						column: 'column-b.json'
+					})
+				}),
+				expect.objectContaining({
+					files: expect.objectContaining({
+						domain: 'domain-shared.json'
+					})
+				})
+			])
+		);
+	});
+
+	it('does not add implicit data-file seeds for files already covered by registry migration', async () => {
+		const dataPath = await createTempDataPath();
+		await mkdir(join(dataPath, 'term'), { recursive: true });
+		await writeFile(
+			join(dataPath, 'term', 'term-a.json'),
+			JSON.stringify(
+				{
+					entries: [],
+					lastUpdated: '2026-01-01T00:00:00.000Z',
+					totalCount: 0
+				},
+				null,
+				2
+			)
+		);
+		await writeFile(
+			join(dataPath, 'registry.json'),
+			JSON.stringify(
+				{
+					relations: [
+						{
+							sourceType: 'term',
+							sourceFilename: 'term-a.json',
+							targetType: 'vocabulary',
+							targetFilename: 'vocabulary-a.json'
+						},
+						{
+							sourceType: 'term',
+							sourceFilename: 'term-a.json',
+							targetType: 'domain',
+							targetFilename: 'domain-a.json'
+						}
+					]
+				},
+				null,
+				2
+			)
+		);
+		const { ensureFileMappingMigrated } = await importRegistry(dataPath);
+
+		await ensureFileMappingMigrated();
+
+		const migrated = await readSharedMapping(dataPath);
+		expect(migrated.bundles.filter((entry) => entry.files.term === 'term-a.json')).toHaveLength(1);
+		expect(migrated.bundles).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					files: expect.objectContaining({
+						term: 'term-a.json',
+						vocabulary: 'vocabulary-a.json',
+						domain: 'domain-a.json'
+					})
+				})
+			])
+		);
+	});
+
 	it('migrates legacy per-file mapping fields into shared-file-mappings v2', async () => {
 		const dataPath = await createTempDataPath();
 		await mkdir(join(dataPath, 'term'), { recursive: true });

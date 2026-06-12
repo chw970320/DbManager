@@ -14,8 +14,19 @@ vi.mock('$lib/registry/mapping-registry', () => ({
 	resolveRelatedFilenames: vi.fn()
 }));
 
+vi.mock('$lib/registry/cache-registry', () => ({
+	getCachedData: vi.fn(),
+	getCachedVocabularyData: vi.fn(),
+	getCachedDomainData: vi.fn(),
+	getCachedTermData: vi.fn(),
+	invalidateCache: vi.fn(),
+	invalidateDataCache: vi.fn(),
+	invalidateAllCaches: vi.fn()
+}));
+
 import { loadData, saveData } from '$lib/registry/data-registry';
 import { resolveRelatedFilenames } from '$lib/registry/mapping-registry';
+import { invalidateDataCache } from '$lib/registry/cache-registry';
 
 const createMockColumnData = (): ColumnData => ({
 	entries: [
@@ -245,6 +256,7 @@ describe('Column Sync-Term API: /api/column/sync-term', () => {
 			expect(result.data.matchedDomain).toBe(1);
 			expect(result.data.unmatchedDomain).toBe(0);
 			expect(result.data.total).toBe(2);
+			expect(invalidateDataCache).toHaveBeenCalledWith('column', 'column.json');
 		});
 
 		it('should return preview and skip save when apply is false', async () => {
@@ -270,6 +282,7 @@ describe('Column Sync-Term API: /api/column/sync-term', () => {
 			expect(result.data.changes[0]).toHaveProperty('before');
 			expect(result.data.changes[0]).toHaveProperty('after');
 			expect(saveData).not.toHaveBeenCalled();
+			expect(invalidateDataCache).not.toHaveBeenCalled();
 		});
 
 		it('should update columnKoreanName when term matches', async () => {
@@ -285,6 +298,45 @@ describe('Column Sync-Term API: /api/column/sync-term', () => {
 			expect(result.success).toBe(true);
 			expect(result.data.updated).toBeGreaterThan(0);
 			expect(saveData).toHaveBeenCalled();
+		});
+
+		it('should skip invalidation when apply mode has no saved changes', async () => {
+			vi.mocked(loadData).mockImplementation(async (type: string) => {
+				if (type === 'column') {
+					const columnData = createMockColumnData();
+					return {
+						...columnData,
+						entries: columnData.entries.map((entry) =>
+							entry.id === 'entry-1'
+								? {
+										...entry,
+										columnKoreanName: '컬럼1용어',
+										domainName: 'USER_NAME_DOM',
+										dataType: 'VARCHAR',
+										dataLength: '200',
+										dataDecimalLength: '0'
+									}
+								: entry
+						)
+					};
+				}
+				if (type === 'term') return createMockTermData();
+				if (type === 'domain') return createMockDomainData();
+				throw new Error('unsupported');
+			});
+			const event = createMockRequestEvent({
+				method: 'POST',
+				body: {}
+			});
+
+			const response = await POST(event);
+			const result = await response.json();
+
+			expect(response.status).toBe(200);
+			expect(result.success).toBe(true);
+			expect(result.data.updated).toBe(0);
+			expect(saveData).not.toHaveBeenCalled();
+			expect(invalidateDataCache).not.toHaveBeenCalled();
 		});
 
 		it('should use specified filename parameters', async () => {

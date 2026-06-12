@@ -53,12 +53,13 @@ describe('API: /api/alignment/sync', () => {
 					}
 				});
 			}
-			if (path.includes('/api/erd/relations/sync')) {
+			if (path.includes('/api/validation/design-relations')) {
 				return makeJsonResponse({
 					success: true,
 					data: {
-						mode: 'preview',
-						counts: { appliedTotalUpdates: 0 }
+						validation: {
+							totals: { unmatched: 1 }
+						}
 					}
 				});
 			}
@@ -105,10 +106,13 @@ describe('API: /api/alignment/sync', () => {
 		expect(fetchMock).toHaveBeenCalledTimes(5);
 		expect(fetchMock.mock.calls[0][0].toString()).toContain('/api/vocabulary/sync-domain');
 		expect(fetchMock.mock.calls[1][0].toString()).toContain('/api/term/sync');
-		expect(fetchMock.mock.calls[2][0].toString()).toContain('/api/erd/relations/sync');
+		expect(fetchMock.mock.calls[2][0].toString()).toContain('/api/validation/design-relations');
 		expect(fetchMock.mock.calls[3][0].toString()).toContain('/api/column/sync-term');
 		expect(fetchMock.mock.calls[4][0].toString()).toContain('/api/validation/report');
-		expect(fetchMock.mock.calls[2][1]?.body?.toString()).toContain('"apply":false');
+		expect(fetchMock.mock.calls[2][0].toString()).toContain('vocabularyFile=vocabulary.json');
+		expect(fetchMock.mock.calls[2][0].toString()).toContain('domainFile=domain.json');
+		expect(fetchMock.mock.calls[2][0].toString()).toContain('termFile=term-custom.json');
+		expect(fetchMock.mock.calls[2][0].toString()).not.toContain('/api/erd/relations/sync');
 		expect(fetchMock.mock.calls[4][0].toString()).toContain('vocabularyFile=vocabulary.json');
 		expect(fetchMock.mock.calls[4][0].toString()).toContain('domainFile=domain.json');
 		expect(fetchMock.mock.calls[4][0].toString()).toContain('termFile=term-custom.json');
@@ -123,7 +127,7 @@ describe('API: /api/alignment/sync', () => {
 			if (path.includes('/api/term/sync')) {
 				return makeJsonResponse({ success: true, data: { updated: 0 } });
 			}
-			if (path.includes('/api/erd/relations/sync')) {
+			if (path.includes('/api/validation/design-relations')) {
 				return makeJsonResponse({ success: false, error: 'relation failed' }, 500);
 			}
 			return makeJsonResponse({ success: true, data: {} });
@@ -146,8 +150,11 @@ describe('API: /api/alignment/sync', () => {
 			if (path.includes('/api/term/sync')) {
 				return makeJsonResponse({ success: true, data: { updated: 0 } });
 			}
-			if (path.includes('/api/erd/relations/sync')) {
-				return makeJsonResponse({ success: true, data: { counts: { appliedTotalUpdates: 0 } } });
+			if (path.includes('/api/validation/design-relations')) {
+				return makeJsonResponse({
+					success: true,
+					data: { validation: { totals: { unmatched: 0 } } }
+				});
 			}
 			if (path.includes('/api/column/sync-term')) {
 				return makeJsonResponse({ success: true, data: { updated: 0 } });

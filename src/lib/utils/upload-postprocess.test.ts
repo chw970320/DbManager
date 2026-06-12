@@ -28,7 +28,9 @@ describe('upload-postprocess', () => {
 	});
 
 	it('runs steps for validate-sync', async () => {
-		const fetchMock = vi.fn(async () => okResponse({ success: true }));
+		const fetchMock = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+			okResponse({ success: true })
+		);
 		const result = await runUploadPostProcess({
 			fetch: fetchMock,
 			dataType: 'column',
@@ -37,5 +39,11 @@ describe('upload-postprocess', () => {
 		});
 		expect(result.steps.length).toBe(2);
 		expect(result.steps.every((step) => step.success)).toBe(true);
+		expect(fetchMock.mock.calls[0][0].toString()).toContain('/api/validation/design-relations');
+		expect(fetchMock.mock.calls[0][0].toString()).toContain('columnFile=column.json');
+		expect(fetchMock.mock.calls[0][0].toString()).toContain('scopeType=column');
+		expect(fetchMock.mock.calls[0][0].toString()).toContain('scopeFile=column.json');
+		expect(fetchMock.mock.calls[0][0].toString()).not.toContain('/api/erd/relations');
+		expect(fetchMock.mock.calls[1][0].toString()).toContain('/api/alignment/sync');
 	});
 });

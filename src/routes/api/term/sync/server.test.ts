@@ -14,8 +14,19 @@ vi.mock('$lib/registry/mapping-registry', () => ({
 	resolveRelatedFilenames: vi.fn()
 }));
 
+vi.mock('$lib/registry/cache-registry', () => ({
+	getCachedData: vi.fn(),
+	getCachedVocabularyData: vi.fn(),
+	getCachedDomainData: vi.fn(),
+	getCachedTermData: vi.fn(),
+	invalidateCache: vi.fn(),
+	invalidateDataCache: vi.fn(),
+	invalidateAllCaches: vi.fn()
+}));
+
 import { loadData, saveData } from '$lib/registry/data-registry';
 import { resolveRelatedFilenames } from '$lib/registry/mapping-registry';
+import { invalidateDataCache } from '$lib/registry/cache-registry';
 
 const createMockTermData = (): TermData => ({
 	entries: [
@@ -140,6 +151,7 @@ describe('Term Sync API: /api/term/sync', () => {
 		expect(result.data.mode).toBe('apply');
 		expect(result.data.total).toBe(2);
 		expect(saveData).toHaveBeenCalledWith('term', expect.any(Object), 'term.json');
+		expect(invalidateDataCache).toHaveBeenCalledWith('term', 'term.json');
 	});
 
 	it('apply=false이면 미리보기만 수행하고 저장하지 않는다', async () => {
@@ -162,6 +174,7 @@ describe('Term Sync API: /api/term/sync', () => {
 		expect(result.data.changes[0]).toHaveProperty('before');
 		expect(result.data.changes[0]).toHaveProperty('after');
 		expect(saveData).not.toHaveBeenCalled();
+		expect(invalidateDataCache).not.toHaveBeenCalled();
 	});
 
 	it('filename 파라미터 사용', async () => {
@@ -227,5 +240,6 @@ describe('Term Sync API: /api/term/sync', () => {
 
 		expect(response.status).toBe(500);
 		expect(result.success).toBe(false);
+		expect(invalidateDataCache).not.toHaveBeenCalled();
 	});
 });

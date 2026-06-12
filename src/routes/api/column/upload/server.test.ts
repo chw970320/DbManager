@@ -125,7 +125,9 @@ describe('Column Upload API: /api/column/upload', () => {
 			expect(response.status).toBe(200);
 			expect(result.success).toBe(true);
 			expect(result.data.supportedFormats).toContain('.xlsx');
-			expect(result.data.requiredColumns).toBeInstanceOf(Array);
+			expect(result.data.requiredColumns).toEqual(['스키마명', '컬럼영문명', '자료길이', 'PK정보']);
+			expect(result.data.optionalColumns).toContain('자료소수점길이');
+			expect(result.data.optionalColumns).toContain('인덱스명');
 		});
 	});
 

@@ -93,6 +93,17 @@ function definitionFileParamKey(
 	return 'columnFile';
 }
 
+function definitionRelationValidationEndpoint(
+	dataType: Exclude<UploadDataType, 'vocabulary' | 'domain' | 'term'>,
+	filename: string
+): string {
+	const params = new URLSearchParams();
+	params.set(definitionFileParamKey(dataType), filename);
+	params.set('scopeType', dataType);
+	params.set('scopeFile', filename);
+	return `/api/validation/design-relations?${params.toString()}`;
+}
+
 export async function runUploadPostProcess(
 	params: RunPostProcessParams
 ): Promise<PostProcessResult> {
@@ -192,7 +203,7 @@ export async function runUploadPostProcess(
 		await callApi(
 			fetchFn,
 			'definition-relation-validate',
-			`/api/erd/relations?${fileParam}=${encodeURIComponent(filename)}`,
+			definitionRelationValidationEndpoint(dataType, filename),
 			'GET'
 		)
 	);

@@ -125,7 +125,9 @@ describe('Attribute Upload API: /api/attribute/upload', () => {
 			expect(response.status).toBe(200);
 			expect(result.success).toBe(true);
 			expect(result.data.supportedFormats).toContain('.xlsx');
-			expect(result.data.requiredColumns).toBeInstanceOf(Array);
+			expect(result.data.requiredColumns).toEqual(['스키마명', '엔터티명', '속성명']);
+			expect(result.data.optionalColumns).toContain('필수입력여부');
+			expect(result.data.optionalColumns).toContain('참조엔터티명');
 		});
 	});
 

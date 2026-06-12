@@ -28,6 +28,32 @@ function readString(value: unknown): string | undefined {
 	return typeof value === 'string' && value.trim() !== '' ? value : undefined;
 }
 
+function setIfPresent(params: URLSearchParams, key: string, value: string | undefined): void {
+	if (value) params.set(key, value);
+}
+
+function relationValidationEndpoint(payload: {
+	vocabularyFile: string;
+	domainFile: string;
+	termFile: string;
+	databaseFile?: string;
+	entityFile?: string;
+	attributeFile?: string;
+	tableFile?: string;
+	columnFile?: string;
+}): string {
+	const params = new URLSearchParams();
+	setIfPresent(params, 'vocabularyFile', payload.vocabularyFile);
+	setIfPresent(params, 'domainFile', payload.domainFile);
+	setIfPresent(params, 'termFile', payload.termFile);
+	setIfPresent(params, 'databaseFile', payload.databaseFile);
+	setIfPresent(params, 'entityFile', payload.entityFile);
+	setIfPresent(params, 'attributeFile', payload.attributeFile);
+	setIfPresent(params, 'tableFile', payload.tableFile);
+	setIfPresent(params, 'columnFile', payload.columnFile);
+	return `/api/validation/design-relations?${params.toString()}`;
+}
+
 async function readUpstream<T>(
 	response: Response
 ): Promise<{ status: number; body: UpstreamResult<T> }> {
@@ -115,7 +141,9 @@ export async function POST({ request, url, fetch }: RequestEvent) {
 		}
 
 		const relationPayload = {
-			apply: false,
+			vocabularyFile: vocabularyFilename,
+			domainFile: domainFilename,
+			termFile: termFilename,
 			databaseFile:
 				readString(rawBody.databaseFile) || readString(url.searchParams.get('databaseFile')),
 			entityFile: readString(rawBody.entityFile) || readString(url.searchParams.get('entityFile')),
@@ -125,11 +153,7 @@ export async function POST({ request, url, fetch }: RequestEvent) {
 			columnFile: readString(rawBody.columnFile) || readString(url.searchParams.get('columnFile'))
 		};
 
-		const relationResponse = await fetch('/api/erd/relations/sync', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify(relationPayload)
-		});
+		const relationResponse = await fetch(relationValidationEndpoint(relationPayload));
 		const relation = await readUpstream(relationResponse);
 		if (!relationResponse.ok || relation.body.success !== true) {
 			return json(

@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { parseColumnXlsxToJson, parseTableXlsxToJson } from './database-design-xlsx-parser';
+import {
+	parseAttributeXlsxToJson,
+	parseColumnXlsxToJson,
+	parseEntityXlsxToJson,
+	parseTableXlsxToJson
+} from './database-design-xlsx-parser';
 
 vi.mock('xlsx-js-style', () => ({
 	default: {
@@ -83,6 +88,7 @@ describe('database-design-xlsx-parser', () => {
 		expect(result[0].columnEnglishName).toBe('user_id');
 		expect(result[0].dataType).toBe('VARCHAR');
 		expect(result[0].domainName).toBeUndefined();
+		expect(result[0].indexName).toBe('');
 	});
 
 	it('필수 헤더를 포함한 시트가 없으면 오류를 반환한다', () => {
@@ -99,8 +105,57 @@ describe('database-design-xlsx-parser', () => {
 		] as string[][]);
 
 		expect(() => parseColumnXlsxToJson(Buffer.from('mock-xlsx'))).toThrow(
-			'필수 헤더(컬럼영문명, 자료길이, PK정보)를 포함한 시트를 찾을 수 없습니다.'
+			'필수 헤더(스키마명, 컬럼영문명, 자료길이, PK정보)를 포함한 시트를 찾을 수 없습니다.'
 		);
+	});
+
+	it('USER_GUIDE 기준 엔터티 필수 헤더와 schema alias를 사용한다', () => {
+		const sheet = { __sheet: '엔터티' };
+
+		vi.mocked(XLSX.read).mockReturnValue({
+			SheetNames: ['엔터티'],
+			Sheets: {
+				엔터티: sheet
+			}
+		} as ReturnType<typeof XLSX.read>);
+
+		vi.mocked(XLSX.utils.sheet_to_json).mockReturnValue([
+			['논리DB명', 'schema', '엔터티명', '엔터티설명'],
+			['LDB', 'bksp', '생물종', '생물종 엔터티']
+		] as string[][]);
+
+		const result = parseEntityXlsxToJson(Buffer.from('mock-xlsx'));
+
+		expect(result).toHaveLength(1);
+		expect(result[0].logicalDbName).toBe('LDB');
+		expect(result[0].schemaName).toBe('bksp');
+		expect(result[0].entityName).toBe('생물종');
+		expect(result[0].superTypeEntityName).toBeUndefined();
+	});
+
+	it('USER_GUIDE 기준 속성 필수 헤더만으로 파싱한다', () => {
+		const sheet = { __sheet: '속성' };
+
+		vi.mocked(XLSX.read).mockReturnValue({
+			SheetNames: ['속성'],
+			Sheets: {
+				속성: sheet
+			}
+		} as ReturnType<typeof XLSX.read>);
+
+		vi.mocked(XLSX.utils.sheet_to_json).mockReturnValue([
+			['스키마명', '엔터티명', '속성명', '속성유형'],
+			['bksp', '생물종', '생물종ID', 'VARCHAR']
+		] as string[][]);
+
+		const result = parseAttributeXlsxToJson(Buffer.from('mock-xlsx'));
+
+		expect(result).toHaveLength(1);
+		expect(result[0].schemaName).toBe('bksp');
+		expect(result[0].entityName).toBe('생물종');
+		expect(result[0].attributeName).toBe('생물종ID');
+		expect(result[0].requiredInput).toBe('');
+		expect(result[0].refEntityName).toBe('');
 	});
 
 	it('헤더 공백/개행 차이와 헤더 행 위치가 달라도 컬럼 정의서를 파싱한다', () => {
@@ -219,5 +274,32 @@ describe('database-design-xlsx-parser', () => {
 		expect(result[0].tableKoreanName).toBe('생물종기본');
 		expect(result[0].tableType).toBe('기본');
 		expect(result[0].retentionPeriod).toBe('10년');
+	});
+
+	it('테이블 정의서는 schema와 테이블명 필수 헤더만으로 파싱한다', () => {
+		const sheet = { __sheet: '테이블' };
+
+		vi.mocked(XLSX.read).mockReturnValue({
+			SheetNames: ['테이블'],
+			Sheets: {
+				테이블: sheet
+			}
+		} as ReturnType<typeof XLSX.read>);
+
+		vi.mocked(XLSX.utils.sheet_to_json).mockReturnValue([
+			['schema', '테이블 영문명', '테이블한글명'],
+			['bksp', 'TBL_BIOSPC_BSC', '생물종기본']
+		] as string[][]);
+
+		const result = parseTableXlsxToJson(Buffer.from('mock-xlsx'));
+
+		expect(result).toHaveLength(1);
+		expect(result[0].schemaName).toBe('bksp');
+		expect(result[0].tableEnglishName).toBe('TBL_BIOSPC_BSC');
+		expect(result[0].tableKoreanName).toBe('생물종기본');
+		expect(result[0].businessClassification).toBe('');
+		expect(result[0].tableVolume).toBe('');
+		expect(result[0].nonPublicReason).toBe('');
+		expect(result[0].openDataList).toBe('');
 	});
 });

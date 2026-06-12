@@ -271,4 +271,5 @@ docker-compose up --build
 - 남은 유지보수 체크리스트: `docs/MAINTENANCE_CHECKLIST.md`
 - API 명세: `docs/specs/api-reference.md`
 - 데이터 모델: `docs/specs/data-model.md`
+- 라우트 부수효과 매트릭스: `docs/specs/route-side-effect-matrix.md`
 - 변경 이력: `docs/CHANGELOG.md`

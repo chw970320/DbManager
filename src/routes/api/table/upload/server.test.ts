@@ -125,7 +125,9 @@ describe('Table Upload API: /api/table/upload', () => {
 			expect(response.status).toBe(200);
 			expect(result.success).toBe(true);
 			expect(result.data.supportedFormats).toContain('.xlsx');
-			expect(result.data.requiredColumns).toBeInstanceOf(Array);
+			expect(result.data.requiredColumns).toEqual(['스키마명', '테이블영문명', '테이블한글명']);
+			expect(result.data.optionalColumns).toContain('업무분류체계');
+			expect(result.data.optionalColumns).toContain('테이블볼륨');
 		});
 	});
 

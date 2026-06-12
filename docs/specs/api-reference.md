@@ -2430,6 +2430,7 @@ ERD 대상 테이블 목록을 조회합니다.
 ### GET /api/validation/design-relations
 
 8종 공통 파일 매핑을 기준으로 DB 설계 정의서 관계와 표준 참조 정합성을 검증합니다.
+업로드 후처리와 통합 정합화의 관계 진단 단계는 이 canonical 엔드포인트를 사용합니다.
 
 - 주요 파라미터:
   - `scopeType`, `scopeFile`: 현재 화면에서 선택한 파일. 공통 파일 매핑 번들 해석 기준입니다.
@@ -2490,7 +2491,7 @@ ERD 대상 테이블 목록을 조회합니다.
 
 ### GET /api/erd/relations
 
-ERD 호환용 관계 검증 엔드포인트입니다. 내부적으로 canonical 검증 서비스를 사용하지만 STANDARD_REFERENCES 파일 누락 시 fail-fast하지 않으므로, 신규 UI와 자동 수정은 `/api/validation/design-relations`를 사용하세요.
+ERD 호환용 관계 검증 엔드포인트입니다. 내부적으로 canonical 검증 서비스를 사용하지만 STANDARD_REFERENCES 파일 누락 시 fail-fast하지 않으므로, 신규 UI, 업로드 후처리, 통합 정합화, 자동 수정은 `/api/validation/design-relations`를 사용하세요.
 
 - 주요 파라미터:
   - `scopeType`, `scopeFile`
@@ -2500,8 +2501,10 @@ ERD 호환용 관계 검증 엔드포인트입니다. 내부적으로 canonical 
 
 ### GET /api/erd/relations/sync
 
-레거시 5개 정의서 관계 동기화 미리보기를 조회합니다. 신규 자동 수정은 수정 대상 선택 기반
-`/api/validation/design-relations/apply`를 사용하고, 수동 수정/신규 추가는 정의서 편집 팝업을 사용합니다.
+레거시 5개 정의서 관계 동기화 미리보기를 조회합니다. ERD 화면의 호환 동작을 위해 남아 있으며,
+신규 자동 수정은 수정 대상 선택 기반 `/api/validation/design-relations/apply`를 사용하고,
+업로드 후처리/통합 정합화의 관계 진단은 `GET /api/validation/design-relations`를 사용합니다.
+수동 수정/신규 추가는 정의서 편집 팝업을 사용합니다.
 
 - 주요 파라미터:
   - `apply`: `false` 또는 생략만 지원합니다. `true`는 410으로 거부됩니다.
@@ -2543,23 +2546,23 @@ ERD 호환용 관계 검증 엔드포인트입니다. 내부적으로 canonical 
 
 Query string 또는 JSON body에서 다음 값을 받을 수 있습니다.
 
-| 필드                            | 타입    | 기본값            | 설명                                                                                                     |
-| ------------------------------- | ------- | ----------------- | -------------------------------------------------------------------------------------------------------- |
-| `apply`                         | boolean | `true`            | `false`이면 미리보기 모드, `true`이면 적용 모드. 관계 단계는 legacy apply를 사용하지 않고 preview만 실행 |
-| `vocabularyFilename`            | string  | `vocabulary.json` | 단어집 파일명                                                                                            |
-| `termFilename`                  | string  | `term.json`       | 용어 파일명                                                                                              |
-| `domainFilename`                | string  | `domain.json`     | 도메인 파일명                                                                                            |
-| `databaseFile`                  | string  | 공통 매핑         | 데이터베이스 정의서 파일명                                                                               |
-| `entityFile`                    | string  | 공통 매핑         | 엔터티 정의서 파일명                                                                                     |
-| `attributeFile`                 | string  | 공통 매핑         | 속성 정의서 파일명                                                                                       |
-| `tableFile`                     | string  | 공통 매핑         | 테이블 정의서 파일명                                                                                     |
-| `columnFile` / `columnFilename` | string  | `column.json`     | 컬럼 정의서 파일명                                                                                       |
+| 필드                            | 타입    | 기본값            | 설명                                                                                                                 |
+| ------------------------------- | ------- | ----------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `apply`                         | boolean | `true`            | `false`이면 미리보기 모드, `true`이면 적용 모드. 관계 단계는 canonical validation 조회만 수행하고 자동 적용하지 않음 |
+| `vocabularyFilename`            | string  | `vocabulary.json` | 단어집 파일명                                                                                                        |
+| `termFilename`                  | string  | `term.json`       | 용어 파일명                                                                                                          |
+| `domainFilename`                | string  | `domain.json`     | 도메인 파일명                                                                                                        |
+| `databaseFile`                  | string  | 공통 매핑         | 데이터베이스 정의서 파일명                                                                                           |
+| `entityFile`                    | string  | 공통 매핑         | 엔터티 정의서 파일명                                                                                                 |
+| `attributeFile`                 | string  | 공통 매핑         | 속성 정의서 파일명                                                                                                   |
+| `tableFile`                     | string  | 공통 매핑         | 테이블 정의서 파일명                                                                                                 |
+| `columnFile` / `columnFilename` | string  | `column.json`     | 컬럼 정의서 파일명                                                                                                   |
 
 #### 실행 순서
 
 1. `POST /api/vocabulary/sync-domain`
 2. `POST /api/term/sync`
-3. `POST /api/erd/relations/sync` (`apply=false`로 relation preview만 조회)
+3. `GET /api/validation/design-relations` (관계 진단만 조회)
 4. `POST /api/column/sync-term`
 5. `GET /api/validation/report`
 

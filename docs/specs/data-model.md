@@ -68,6 +68,7 @@
 
 - 정본 API: `GET /api/validation/design-relations`
 - 호환 API: `GET /api/erd/relations` (STANDARD_REFERENCES 파일 누락 시 fail-fast하지 않는 ERD 호환용)
+- 업로드 후처리와 통합 정합화의 관계 진단 단계는 정본 API를 사용하며, ERD 호환 API는 ERD 화면/레거시 호환 경계에만 둡니다.
 - 대상 파일: `vocabulary/domain/term/database/entity/attribute/table/column` 8종 공통 파일 매핑 번들
 - canonical 관계:
   - `DATABASE_ENTITY_LOGICAL_DB`: `DatabaseEntry.logicalDbName` ↔ `EntityEntry.logicalDbName`

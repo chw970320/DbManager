@@ -125,7 +125,8 @@ describe('Entity Upload API: /api/entity/upload', () => {
 			expect(response.status).toBe(200);
 			expect(result.success).toBe(true);
 			expect(result.data.supportedFormats).toContain('.xlsx');
-			expect(result.data.requiredColumns).toBeInstanceOf(Array);
+			expect(result.data.requiredColumns).toEqual(['논리DB명', '스키마명', '엔터티명']);
+			expect(result.data.optionalColumns).toContain('수퍼타입엔터티명');
 		});
 	});
 

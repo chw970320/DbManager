@@ -372,6 +372,62 @@ describe('DesignRelationValidationPanel', () => {
 		expect(screen.getByText(/데이터베이스 정의서를 신규 추가합니다/)).toBeInTheDocument();
 	});
 
+	it('filters entity, attribute, table, and column validation issues by schema', async () => {
+		const bkspIssue = createIssue({
+			issueId: 'issue-bksp',
+			targetId: 'column-bksp',
+			targetLabel: 'BKSP_COL',
+			involvedTypes: ['table', 'column'],
+			participants: [
+				{
+					type: 'column',
+					id: 'column-bksp',
+					label: 'BKSP_COL',
+					role: 'target',
+					identityFields: [
+						{ key: 'schemaName', label: 'schema', value: 'bksp' },
+						{ key: 'tableEnglishName', label: '테이블영문명', value: 'TB_USER' },
+						{ key: 'columnEnglishName', label: '컬럼영문명', value: 'BKSP_COL' }
+					]
+				}
+			]
+		});
+		const backupIssue = createIssue({
+			issueId: 'issue-backup',
+			targetId: 'column-backup',
+			targetLabel: 'BACKUP_COL',
+			involvedTypes: ['table', 'column'],
+			participants: [
+				{
+					type: 'column',
+					id: 'column-backup',
+					label: 'BACKUP_COL',
+					role: 'target',
+					identityFields: [
+						{ key: 'schemaName', label: 'schema', value: 'backup' },
+						{ key: 'tableEnglishName', label: '테이블영문명', value: 'TB_BACKUP' },
+						{ key: 'columnEnglishName', label: '컬럼영문명', value: 'BACKUP_COL' }
+					]
+				}
+			]
+		});
+		renderPanel({
+			definitionType: 'column',
+			validation: createValidation([bkspIssue, backupIssue])
+		});
+
+		expect(screen.getAllByText('BKSP_COL').length).toBeGreaterThan(0);
+		expect(screen.getAllByText('BACKUP_COL').length).toBeGreaterThan(0);
+
+		await fireEvent.change(screen.getByLabelText('스키마 유형'), {
+			target: { value: 'backup' }
+		});
+
+		expect(screen.queryByText('BKSP_COL')).not.toBeInTheDocument();
+		expect(screen.getAllByText('BACKUP_COL').length).toBeGreaterThan(0);
+		expect(screen.getByText('표시 중: 1개 / 전체: 2개')).toBeInTheDocument();
+	});
+
 	it('renders user-recognizable problem location identity without exposing row ids', () => {
 		const attributeKeyIssue = createIssue({
 			issueId: 'issue-attribute-key',

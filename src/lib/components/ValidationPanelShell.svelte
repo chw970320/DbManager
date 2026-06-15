@@ -12,6 +12,10 @@
 		errorTypes?: string[];
 		errorTypeLabels?: Record<string, string>;
 		selectedErrorType?: string;
+		additionalFilterLabel?: string;
+		additionalFilterAllLabel?: string;
+		additionalFilterOptions?: Array<{ value: string; label: string }>;
+		additionalFilterValue?: string;
 		searchPlaceholder?: string;
 		searchQuery?: string;
 		filteredCount?: number;
@@ -28,6 +32,10 @@
 		errorTypes = [],
 		errorTypeLabels = {},
 		selectedErrorType = $bindable('ALL'),
+		additionalFilterLabel = '',
+		additionalFilterAllLabel = '전체',
+		additionalFilterOptions = [],
+		additionalFilterValue = $bindable('ALL'),
 		searchPlaceholder = '검색...',
 		searchQuery = $bindable(''),
 		filteredCount = 0,
@@ -131,6 +139,26 @@
 						{/each}
 					</select>
 				</div>
+				{#if additionalFilterOptions.length}
+					<div class="flex-1">
+						<label
+							for="{panelId}-additional-filter"
+							class="block text-xs font-medium text-content-secondary"
+						>
+							{additionalFilterLabel || '필터'}
+						</label>
+						<select
+							id="{panelId}-additional-filter"
+							bind:value={additionalFilterValue}
+							class="input mt-1 text-sm"
+						>
+							<option value="ALL">{additionalFilterAllLabel}</option>
+							{#each additionalFilterOptions as option (option.value)}
+								<option value={option.value}>{option.label}</option>
+							{/each}
+						</select>
+					</div>
+				{/if}
 				<div class="flex-1">
 					<label for="{panelId}-search" class="block text-xs font-medium text-content-secondary"
 						>검색</label

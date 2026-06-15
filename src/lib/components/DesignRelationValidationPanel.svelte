@@ -76,6 +76,7 @@
 		ATTRIBUTE_COLUMN_KEY: '속성 ↔ 컬럼 키',
 		STANDARD_REFERENCES: '표준 단어/용어/도메인'
 	};
+	const schemaFilterTypes = new Set<DataType>(['entity', 'attribute', 'table', 'column']);
 
 	let allIssues = $derived(
 		validation?.issues ?? validation?.summaries.flatMap((s) => s.issues) ?? []
@@ -86,6 +87,50 @@
 	let relationTypes = $derived(
 		Array.from(new Set(issues.map((issue) => issue.relationId))) as DesignRelationRuleId[]
 	);
+	let selectedSchema = $state('ALL');
+
+	function schemaKey(value: string): string {
+		return value.trim().toLowerCase();
+	}
+
+	function issueSchemas(issue: RelationIssue): Array<{ value: string; label: string }> {
+		const schemas = new Map<string, string>();
+		for (const participant of issue.participants ?? []) {
+			if (!schemaFilterTypes.has(participant.type)) continue;
+			for (const field of participant.identityFields ?? []) {
+				if (field.key !== 'schemaName') continue;
+				const label = field.value.trim();
+				if (!label) continue;
+				const value = schemaKey(label);
+				if (!schemas.has(value)) schemas.set(value, label);
+			}
+		}
+		return Array.from(schemas, ([value, label]) => ({ value, label }));
+	}
+
+	let schemaOptions = $derived(
+		schemaFilterTypes.has(definitionType)
+			? Array.from(
+					issues.reduce((schemas, issue) => {
+						for (const schema of issueSchemas(issue)) {
+							if (!schemas.has(schema.value)) schemas.set(schema.value, schema.label);
+						}
+						return schemas;
+					}, new Map<string, string>())
+				)
+					.map(([value, label]) => ({ value, label }))
+					.sort((left, right) => left.label.localeCompare(right.label, 'ko'))
+			: []
+	);
+
+	$effect(() => {
+		if (
+			selectedSchema !== 'ALL' &&
+			!schemaOptions.some((schema) => schema.value === selectedSchema)
+		) {
+			selectedSchema = 'ALL';
+		}
+	});
 
 	function targetsForIssue(issue: RelationIssue): RelationResolutionTarget[] {
 		return relationResolutionTargets(issue);
@@ -134,6 +179,12 @@
 	let filteredIssues = $derived(
 		issues.filter((issue) => {
 			if (selectedRelationId !== 'ALL' && issue.relationId !== selectedRelationId) {
+				return false;
+			}
+			if (
+				selectedSchema !== 'ALL' &&
+				!issueSchemas(issue).some((schema) => schema.value === selectedSchema)
+			) {
 				return false;
 			}
 			const query = searchQuery.trim().toLowerCase();
@@ -280,6 +331,10 @@
 	errorTypes={relationTypes}
 	errorTypeLabels={relationLabels}
 	bind:selectedErrorType={selectedRelationId}
+	additionalFilterLabel="스키마 유형"
+	additionalFilterAllLabel="전체 스키마"
+	additionalFilterOptions={schemaOptions}
+	bind:additionalFilterValue={selectedSchema}
 	bind:searchQuery
 	searchPlaceholder="관계, 대상, 기대값, 사유 검색..."
 	filteredCount={displayedCount}

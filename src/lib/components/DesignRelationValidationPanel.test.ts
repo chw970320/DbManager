@@ -382,10 +382,10 @@ describe('DesignRelationValidationPanel', () => {
 			targetType: 'attribute',
 			targetId: 'attr-eol-39',
 			targetLabel: 'EOL_아이디',
-			expectedKey: 'requiredInput=Y; pkInfo=Y',
+			expectedKey: '식별자여부=Y; PK정보=PK 표시 필요',
 			actualKey: '',
-			reason: '필수입력 속성에 대응하는 컬럼 PK정보를 확인해야 합니다.',
-			message: '필수입력 속성에 대응하는 컬럼 PK정보를 확인해야 합니다.',
+			reason: '식별자 속성에 대응하는 컬럼 PK정보를 확인해야 합니다.',
+			message: '식별자 속성에 대응하는 컬럼 PK정보를 확인해야 합니다.',
 			field: 'pkInfo',
 			involvedTypes: ['attribute', 'column'],
 			participants: [

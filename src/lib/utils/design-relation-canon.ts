@@ -65,15 +65,15 @@ export const CANONICAL_DESIGN_RELATION_RULES: RelationSpec[] = [
 	},
 	{
 		id: 'ATTRIBUTE_COLUMN_KEY',
-		name: '속성 필수/참조 정보 ↔ 컬럼 PK/FK 정보',
+		name: '속성 식별자/참조 정보 ↔ 컬럼 PK/FK 정보',
 		sourceType: 'attribute',
 		targetType: 'column',
 		mappingKey:
-			'Attribute.attributeName + requiredInput + refEntityName/refAttributeName = Column.columnKoreanName + pkInfo + fkInfo',
+			'Attribute.attributeName + identifierFlag + refEntityName/refAttributeName = Column.columnKoreanName + pkInfo + fkInfo',
 		cardinality: '1:1',
 		severity: 'warning',
 		description:
-			'속성명, 필수입력여부, 참조 속성 정보가 컬럼 한글명, PK정보, FK정보와 일관되어야 합니다.',
+			'속성명, 식별자여부, 참조 속성 정보가 컬럼 한글명, PK정보, FK정보와 일관되어야 합니다.',
 		autoFixPolicy: 'manual_only'
 	},
 	{

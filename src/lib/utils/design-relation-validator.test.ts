@@ -40,6 +40,7 @@ function context(): MappingContext {
 				id: 'attr-user-id',
 				requiredInput: 'Y',
 				refEntityName: '-',
+				identifierFlag: 'Y',
 				schemaName: 'BKSP',
 				entityName: '사용자',
 				attributeName: '사용자ID',
@@ -405,7 +406,7 @@ describe('design-relation-validator canonical relation contract', () => {
 		);
 		expect(keyIssue?.severity).toBe('warning');
 		expect(keyIssue?.autoFixable).toBe(false);
-		expect(keyIssue?.expectedKey).toBe('필수입력여부=Y; PK정보=PK 표시 필요');
+		expect(keyIssue?.expectedKey).toBe('식별자여부=Y; PK정보=PK 표시 필요');
 		expect(keyIssue?.actualKey).toBe('PK정보=미입력');
 		expect(keyIssue?.candidates[0]).toMatchObject({ autoFixable: false, patch: { fields: {} } });
 	});
@@ -415,11 +416,30 @@ describe('design-relation-validator canonical relation contract', () => {
 		expect(hasPrimaryKeyInfo('PK1')).toBe(true);
 		expect(hasPrimaryKeyInfo('N')).toBe(false);
 		const ctx = context();
-		ctx.attributes[0] = { ...ctx.attributes[0], requiredInput: '필수' };
+		ctx.attributes[0] = { ...ctx.attributes[0], identifierFlag: 'PK' };
 		ctx.columns[0] = { ...ctx.columns[0], pkInfo: 'PK01' };
 
 		const keyIssue = validateDesignRelations(ctx).issues.find(
 			(i) => i.relationId === 'ATTRIBUTE_COLUMN_KEY' && i.field === 'pkInfo'
+		);
+
+		expect(keyIssue).toBeUndefined();
+	});
+
+	it('does not require column PK info for required non-identifier attributes', () => {
+		const ctx = context();
+		ctx.attributes[1] = {
+			...ctx.attributes[1],
+			requiredInput: '필수',
+			identifierFlag: ''
+		};
+		ctx.columns[1] = { ...ctx.columns[1], pkInfo: '' };
+
+		const keyIssue = validateDesignRelations(ctx).issues.find(
+			(i) =>
+				i.relationId === 'ATTRIBUTE_COLUMN_KEY' &&
+				i.field === 'pkInfo' &&
+				i.targetId === 'attr-user-name'
 		);
 
 		expect(keyIssue).toBeUndefined();

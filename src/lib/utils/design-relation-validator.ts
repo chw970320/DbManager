@@ -25,7 +25,6 @@ import {
 	CANONICAL_DESIGN_RELATION_RULES,
 	fkInfoContainsReference,
 	hasPrimaryKeyInfo,
-	isAffirmativeFlag,
 	normalizeRelationValue,
 	referenceRequiresFk,
 	relationCandidateId,
@@ -889,7 +888,7 @@ export function validateDesignRelations(
 									schemaName: a.schemaName ?? null,
 									relatedEntityName: a.entityName ?? null,
 									columnKoreanName: a.attributeName ?? null,
-									pkInfo: isAffirmativeFlag(a.requiredInput) ? 'Y' : null,
+									pkInfo: hasPrimaryKeyInfo(a.identifierFlag) ? 'Y' : null,
 									fkInfo: null
 								},
 								'속성과 연결되는 컬럼을 컬럼 정의서에 신규 추가합니다.',
@@ -901,7 +900,7 @@ export function validateDesignRelations(
 				);
 				continue;
 			}
-			const pkExpected = isAffirmativeFlag(a.requiredInput);
+			const pkExpected = hasPrimaryKeyInfo(a.identifierFlag);
 			if (!pkExpected || cols.some((c) => hasPrimaryKeyInfo(c.pkInfo))) pass(s);
 			else
 				fail(
@@ -911,10 +910,10 @@ export function validateDesignRelations(
 						targetType: 'attribute',
 						target: a as Entry,
 						labelFields: ['attributeName'],
-						expectedKey: `필수입력여부=${a.requiredInput}; PK정보=PK 표시 필요`,
+						expectedKey: `식별자여부=${a.identifierFlag || '미입력'}; PK정보=PK 표시 필요`,
 						actualKey: `PK정보=${cols.map((c) => c.pkInfo || '미입력').join(', ')}`,
 						field: 'pkInfo',
-						reason: '필수입력 속성에 대응하는 컬럼 PK정보를 확인해야 합니다.',
+						reason: '식별자 속성에 대응하는 컬럼 PK정보를 확인해야 합니다.',
 						participants: () => attrColumnParticipants(cols),
 						candidates: (id) => manualCandidates(id, cols, 'pkInfo')
 					})

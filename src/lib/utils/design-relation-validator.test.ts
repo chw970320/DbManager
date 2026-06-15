@@ -643,6 +643,86 @@ describe('design-relation-validator canonical relation contract', () => {
 		expect(standard?.issues[0]?.candidates[0]?.patch.fields).toEqual({ domainName: 'ID' });
 	});
 
+	it('accepts table Korean and English names when every underscore token exists in vocabulary', () => {
+		const ctx = context();
+		ctx.tables[0] = {
+			...ctx.tables[0],
+			tableKoreanName: '생물종_기본',
+			tableEnglishName: 'TBL_BIOSPC_BSC'
+		};
+		ctx.vocabularies = [
+			...(ctx.vocabularies ?? []),
+			{
+				id: 'v-table',
+				standardName: '테이블',
+				abbreviation: 'TBL',
+				englishName: 'TABLE',
+				createdAt: ts,
+				updatedAt: ts
+			},
+			{
+				id: 'v-biospc',
+				standardName: '생물종',
+				abbreviation: 'BIOSPC',
+				englishName: 'BIOSPC',
+				createdAt: ts,
+				updatedAt: ts
+			},
+			{
+				id: 'v-basic',
+				standardName: '기본',
+				abbreviation: 'BSC',
+				englishName: 'BASIC',
+				createdAt: ts,
+				updatedAt: ts
+			}
+		];
+
+		const standardIssues = validateDesignRelations(ctx).issues.filter(
+			(i) =>
+				i.relationId === 'STANDARD_REFERENCES' &&
+				i.targetId === 'table-user' &&
+				['tableKoreanName', 'tableEnglishName'].includes(i.field ?? '')
+		);
+
+		expect(standardIssues).toHaveLength(0);
+	});
+
+	it('accepts column Korean and English names by vocabulary tokens when no full term exists', () => {
+		const ctx = context();
+		ctx.columns[0] = {
+			...ctx.columns[0],
+			columnKoreanName: '생물종_기본',
+			columnEnglishName: 'BIOSPC_BSC',
+			domainName: 'WRONG_DOMAIN'
+		};
+		ctx.vocabularies = [
+			...(ctx.vocabularies ?? []),
+			{
+				id: 'v-biospc',
+				standardName: '생물종',
+				abbreviation: 'BIOSPC',
+				englishName: 'BIOSPC',
+				createdAt: ts,
+				updatedAt: ts
+			},
+			{
+				id: 'v-basic',
+				standardName: '기본',
+				abbreviation: 'BSC',
+				englishName: 'BASIC',
+				createdAt: ts,
+				updatedAt: ts
+			}
+		];
+
+		const standardIssues = validateDesignRelations(ctx).issues.filter(
+			(i) => i.relationId === 'STANDARD_REFERENCES' && i.targetId === 'col-user-id'
+		);
+
+		expect(standardIssues).toHaveLength(0);
+	});
+
 	it('surfaces term-domain mismatches even when the matched term domain is not in domain refs', () => {
 		const ctx = context();
 		ctx.terms![0] = { ...ctx.terms![0], domainName: 'MISSING_STANDARD_DOMAIN' };

@@ -20,6 +20,7 @@ import type {
 import type { TermEntry } from '$lib/types/term.js';
 import type { VocabularyEntry } from '$lib/types/vocabulary.js';
 import { parseForeignKeyReference } from './erd-fk-reference.js';
+import { splitUnderscoreParts } from './mapping-key.js';
 import {
 	buildDisplayKey,
 	buildRelationKey,
@@ -395,6 +396,19 @@ function vocabEntries(context: MappingContext): VocabularyEntry[] {
 	return [...dedup.values()];
 }
 
+function underscoreTokens(value: string | undefined | null): string[] {
+	return splitUnderscoreParts(value).filter((part) => normalizeRelationValue(part));
+}
+
+function allTokensMatch(value: string | undefined | null, validTokens: Set<string>): boolean {
+	const tokens = underscoreTokens(value);
+	return tokens.length > 0 && tokens.every((token) => validTokens.has(token));
+}
+
+function normalizedSet(values: Array<string | undefined | null>): Set<string> {
+	return new Set(values.map((value) => normalizeRelationValue(value)).filter(Boolean));
+}
+
 function tableKoreanCandidates(
 	issueId: string,
 	table: TableEntry,
@@ -556,6 +570,9 @@ export function validateDesignRelations(
 		]),
 		(v) => normalizeRelationValue(v.key)
 	);
+	const vocabStandardTokens = normalizedSet(vocabs.map((v) => v.standardName));
+	const vocabAbbreviationTokens = normalizedSet(vocabs.map((v) => v.abbreviation));
+	const vocabEnglishTokens = normalizedSet(vocabs.flatMap((v) => [v.abbreviation, v.englishName]));
 	const termByName = by(terms, (t) => normalizeRelationValue(t.termName));
 	const termByColumn = by(terms, (t) => normalizeRelationValue(t.columnName));
 	const validDomains = new Set(
@@ -980,10 +997,15 @@ export function validateDesignRelations(
 	if (includeStandardReferences) {
 		const r = rule.get('STANDARD_REFERENCES')!;
 		const s = sm.get(r.id)!;
+		// Token fallback suppresses missing-name warnings only; term/domain relations remain exact.
 		for (const t of tables) {
 			const korean = normalizeRelationValue(t.tableKoreanName);
 			if (korean) {
-				if (get(vocabByStandard, korean).length) pass(s);
+				if (
+					get(vocabByStandard, korean).length ||
+					allTokensMatch(t.tableKoreanName, vocabStandardTokens)
+				)
+					pass(s);
 				else
 					fail(
 						s,
@@ -1028,7 +1050,11 @@ export function validateDesignRelations(
 			}
 			const english = normalizeRelationValue(t.tableEnglishName);
 			if (english) {
-				if (get(vocabByEnglish, english).length) pass(s);
+				if (
+					get(vocabByEnglish, english).length ||
+					allTokensMatch(t.tableEnglishName, vocabEnglishTokens)
+				)
+					pass(s);
 				else
 					fail(
 						s,
@@ -1078,7 +1104,7 @@ export function validateDesignRelations(
 			const termsByName = korean ? get(termByName, korean) : [];
 			const termsByCol = english ? get(termByColumn, english) : [];
 			if (korean) {
-				if (termsByName.length) pass(s);
+				if (termsByName.length || allTokensMatch(c.columnKoreanName, vocabStandardTokens)) pass(s);
 				else
 					fail(
 						s,
@@ -1121,7 +1147,8 @@ export function validateDesignRelations(
 					);
 			}
 			if (english) {
-				if (termsByCol.length) pass(s);
+				if (termsByCol.length || allTokensMatch(c.columnEnglishName, vocabAbbreviationTokens))
+					pass(s);
 				else
 					fail(
 						s,

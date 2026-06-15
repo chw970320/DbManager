@@ -76,7 +76,7 @@
   - `ENTITY_TABLE_MAPPING`: `EntityEntry(schemaName, tableKoreanName, entityName)` ↔ `TableEntry(schemaName, tableKoreanName, relatedEntityName)`
   - `TABLE_COLUMN_MAPPING`: `TableEntry(subjectArea, schemaName, tableEnglishName, relatedEntityName)` ↔ `ColumnEntry(subjectArea, schemaName, tableEnglishName, relatedEntityName)`
   - `ATTRIBUTE_COLUMN_KEY`: `AttributeEntry(attributeName, identifierFlag, reference entity+attribute)` ↔ `ColumnEntry(columnKoreanName, pkInfo, fkInfo)`. `pkInfo`는 `Y`, `PK`, `PK01` 같은 PK 표시/순번 값을 인정하고, `fkInfo`는 참조 엔터티/속성에 대응하는 `schema.table.column` 물리 경로를 인정합니다.
-  - `STANDARD_REFERENCES`: 테이블 한글/영문명 ↔ 단어집, 컬럼 한글/영문명 ↔ 용어집, 컬럼 도메인명 ↔ 용어 도메인명
+  - `STANDARD_REFERENCES`: 테이블 한글/영문명 ↔ 단어집 전체/토큰, 컬럼 한글/영문명 ↔ 용어집 전체 또는 단어집 토큰, 컬럼 도메인명 ↔ 용어 도메인명
 - 결과:
   - 관계별 `matched/unmatched`
   - `error/warning/autoFixable` 집계

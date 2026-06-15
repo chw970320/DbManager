@@ -86,7 +86,7 @@ export const CANONICAL_DESIGN_RELATION_RULES: RelationSpec[] = [
 		cardinality: 'N:1',
 		severity: 'warning',
 		description:
-			'테이블 한글/영문명은 단어집에, 컬럼 한글/영문명은 용어집에 있고 용어 도메인은 컬럼 도메인과 일치해야 합니다.',
+			'테이블 한글/영문명은 단어집 전체 또는 토큰에, 컬럼 한글/영문명은 용어집 전체 또는 단어집 토큰에 있고 용어 도메인은 컬럼 도메인과 일치해야 합니다.',
 		autoFixPolicy: 'single_or_selected'
 	}
 ];

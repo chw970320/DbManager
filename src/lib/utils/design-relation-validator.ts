@@ -41,6 +41,29 @@ type ValidateDesignRelationsOptions = {
 	includeStandardReferences?: boolean;
 	files?: Partial<Record<DataType, string>>;
 };
+type IdentityFieldSpec = { key: string; label: string };
+
+const PARTICIPANT_IDENTITY_PRESETS: Partial<Record<DataType, IdentityFieldSpec[]>> = {
+	database: [{ key: 'physicalDbName', label: '물리DB명' }],
+	entity: [
+		{ key: 'schemaName', label: 'schema' },
+		{ key: 'entityName', label: '엔터티명' }
+	],
+	attribute: [
+		{ key: 'schemaName', label: 'schema' },
+		{ key: 'entityName', label: '엔터티명' },
+		{ key: 'attributeName', label: '속성명' }
+	],
+	table: [
+		{ key: 'schemaName', label: 'schema' },
+		{ key: 'tableEnglishName', label: '테이블영문명' }
+	],
+	column: [
+		{ key: 'schemaName', label: 'schema' },
+		{ key: 'tableEnglishName', label: '테이블영문명' },
+		{ key: 'columnEnglishName', label: '컬럼영문명' }
+	]
+};
 
 function label(entry: Entry, fields: string[]): string {
 	for (const field of fields) {
@@ -48,6 +71,23 @@ function label(entry: Entry, fields: string[]): string {
 		if (typeof value === 'string' && value.trim()) return value;
 	}
 	return entry.id;
+}
+
+function participantIdentityFields(type: DataType, entry: Entry | undefined) {
+	if (!entry) return undefined;
+	const fields = PARTICIPANT_IDENTITY_PRESETS[type];
+	if (!fields?.length) return undefined;
+	const entryRecord = entry as unknown as Record<string, unknown>;
+	const identityFields = fields
+		.map((field) => {
+			const value = entryRecord[field.key];
+			if (value === undefined || value === null) return null;
+			const text = String(value).trim();
+			if (!text) return null;
+			return { ...field, value: text };
+		})
+		.filter((field): field is { key: string; label: string; value: string } => Boolean(field));
+	return identityFields.length ? identityFields : undefined;
 }
 
 function sorted<T extends { id: string }>(entries: T[]): T[] {
@@ -106,13 +146,14 @@ function participant(
 	entry: Entry | undefined,
 	fields: string[],
 	role: RelationParticipant['role'],
-	fallbackLabel?: string
+	defaultLabel?: string
 ): RelationParticipant {
 	return {
 		type,
 		id: entry?.id,
-		label: entry ? label(entry, fields) : (fallbackLabel ?? type),
-		role
+		label: entry ? label(entry, fields) : (defaultLabel ?? type),
+		role,
+		identityFields: participantIdentityFields(type, entry)
 	};
 }
 
@@ -196,7 +237,8 @@ function guide(rule: RelationSpec, candidates: DesignRelationCandidate[]): strin
 		return '후보를 참고해 수동 수정하세요. 이 관계는 PK/FK 형식 안정성 때문에 자동 수정하지 않습니다.';
 	if (!candidates.some((c) => c.autoFixable))
 		return '후보는 참고용입니다. 표준/정의서 값을 함께 확인한 뒤 수동 수정하세요.';
-	if (candidates.length === 1) return '단일 후보가 있어 조치 가이드 확인 후 자동 수정할 수 있습니다.';
+	if (candidates.length === 1)
+		return '단일 후보가 있어 조치 가이드 확인 후 자동 수정할 수 있습니다.';
 	return '후보가 여러 개입니다. 조치 대상을 선택하면 조치 가이드와 실행 버튼이 해당 대상 기준으로 변경됩니다.';
 }
 
@@ -806,15 +848,7 @@ export function validateDesignRelations(
 					? rows.map((c) =>
 							participant('column', c as Entry, ['columnEnglishName', 'columnKoreanName'], 'target')
 						)
-					: [
-							participant(
-								'column',
-								undefined,
-								[],
-								'target',
-								a.attributeName || '누락 컬럼'
-							)
-						])
+					: [participant('column', undefined, [], 'target', a.attributeName || '누락 컬럼')])
 			];
 			const manualCandidates = (id: string, rows: ColumnEntry[], field: string) =>
 				sorted(rows).map((c, i) =>
@@ -1022,7 +1056,12 @@ export function validateDesignRelations(
 							suffix: 'columnKoreanName',
 							reason: '컬럼한글명이 용어집 용어명에 없습니다.',
 							participants: () => [
-								participant('column', c as Entry, ['columnEnglishName', 'columnKoreanName'], 'target'),
+								participant(
+									'column',
+									c as Entry,
+									['columnEnglishName', 'columnKoreanName'],
+									'target'
+								),
 								participant('term', undefined, [], 'reference', c.columnKoreanName || '누락 용어')
 							],
 							resolutionTargets: (id) => [
@@ -1060,7 +1099,12 @@ export function validateDesignRelations(
 							suffix: 'columnEnglishName',
 							reason: '컬럼영문명이 용어집 컬럼명에 없습니다.',
 							participants: () => [
-								participant('column', c as Entry, ['columnEnglishName', 'columnKoreanName'], 'target'),
+								participant(
+									'column',
+									c as Entry,
+									['columnEnglishName', 'columnKoreanName'],
+									'target'
+								),
 								participant('term', undefined, [], 'reference', c.columnEnglishName || '누락 용어')
 							],
 							resolutionTargets: (id) => [
@@ -1108,7 +1152,12 @@ export function validateDesignRelations(
 							? '매칭된 용어의 도메인명이 컬럼 정의서의 도메인명과 다릅니다.'
 							: '매칭된 용어의 도메인명이 도메인 정의서에 없습니다. 용어/도메인/컬럼 정의서를 함께 확인해야 합니다.',
 						participants: () => [
-							participant('column', c as Entry, ['columnEnglishName', 'columnKoreanName'], 'target'),
+							participant(
+								'column',
+								c as Entry,
+								['columnEnglishName', 'columnKoreanName'],
+								'target'
+							),
 							participant('term', term as Entry, ['termName', 'columnName'], 'reference'),
 							participant('domain', undefined, [], 'reference', term.domainName || '누락 도메인')
 						],

@@ -117,11 +117,18 @@
 			issue.actualKey,
 			issue.reason,
 			...(issue.participants ?? []).map((participant) => participant.label),
+			...(issue.participants ?? []).flatMap((participant) =>
+				(participant.identityFields ?? []).flatMap((field) => [field.label, field.value])
+			),
 			...targetsForIssue(issue).map((target) => `${target.targetLabel} ${target.reason}`)
 		]
 			.filter(Boolean)
 			.join(' ')
 			.toLowerCase();
+	}
+
+	function problemLocationParticipants(issue: RelationIssue) {
+		return (issue.participants ?? []).filter((participant) => participant.identityFields?.length);
 	}
 
 	let filteredIssues = $derived(
@@ -308,6 +315,7 @@
 		{#each filteredIssues as issue (issue.issueId)}
 			{@const issueTargets = targetsForIssue(issue)}
 			{@const selectedTarget = targetForIssue(issue)}
+			{@const problemLocations = problemLocationParticipants(issue)}
 			<div class="rounded-lg border border-border bg-surface p-4">
 				<div class="flex flex-wrap items-start justify-between gap-3">
 					<div>
@@ -321,6 +329,27 @@
 						<p class="mt-1 text-sm text-content-secondary">{issue.message || issue.reason}</p>
 					</div>
 				</div>
+
+				{#if problemLocations.length}
+					<div class="mt-3 rounded-md border border-border bg-surface-muted p-3">
+						<p class="text-xs font-medium text-content-secondary">문제 위치</p>
+						<div class="mt-2 grid gap-2">
+							{#each problemLocations as participant, index (`${participant.type}-${participant.id ?? participant.label}-${index}`)}
+								<div>
+									<p class="text-xs font-medium text-content">{typeLabel(participant.type)}</p>
+									<dl class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-content-secondary">
+										{#each participant.identityFields ?? [] as field (`${field.key}-${field.value}`)}
+											<div class="flex min-w-0 gap-1">
+												<dt class="shrink-0 font-medium">{field.label}</dt>
+												<dd class="min-w-0 break-all">{field.value}</dd>
+											</div>
+										{/each}
+									</dl>
+								</div>
+							{/each}
+						</div>
+					</div>
+				{/if}
 
 				<div class="mt-3 rounded-md border px-3 py-2 text-xs {severityClass(issue)}">
 					<div class="grid grid-cols-1 gap-2">

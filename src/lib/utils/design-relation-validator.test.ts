@@ -296,7 +296,9 @@ describe('design-relation-validator canonical relation contract', () => {
 			])
 		);
 		expect(dbIssue?.manualTargets).toEqual(
-			expect.arrayContaining([expect.objectContaining({ targetType: 'entity', file: 'entity-a.json' })])
+			expect.arrayContaining([
+				expect.objectContaining({ targetType: 'entity', file: 'entity-a.json' })
+			])
 		);
 		expect(dbIssue?.resolutionTargets).toEqual(
 			expect.arrayContaining([
@@ -404,6 +406,37 @@ describe('design-relation-validator canonical relation contract', () => {
 		expect(keyIssue?.severity).toBe('warning');
 		expect(keyIssue?.autoFixable).toBe(false);
 		expect(keyIssue?.candidates[0]).toMatchObject({ autoFixable: false, patch: { fields: {} } });
+	});
+
+	it('adds user-facing identity fields to DB design relation participants', () => {
+		const ctx = context();
+		ctx.columns[0] = { ...ctx.columns[0], pkInfo: '' };
+		const keyIssue = validateDesignRelations(ctx).issues.find(
+			(i) => i.relationId === 'ATTRIBUTE_COLUMN_KEY' && i.field === 'pkInfo'
+		);
+
+		expect(keyIssue?.participants).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					type: 'attribute',
+					id: 'attr-user-id',
+					identityFields: [
+						{ key: 'schemaName', label: 'schema', value: 'BKSP' },
+						{ key: 'entityName', label: '엔터티명', value: '사용자' },
+						{ key: 'attributeName', label: '속성명', value: '사용자ID' }
+					]
+				}),
+				expect.objectContaining({
+					type: 'column',
+					id: 'col-user-id',
+					identityFields: [
+						{ key: 'schemaName', label: 'schema', value: 'BKSP' },
+						{ key: 'tableEnglishName', label: '테이블영문명', value: 'USER' },
+						{ key: 'columnEnglishName', label: '컬럼영문명', value: 'USER_ID' }
+					]
+				})
+			])
+		);
 	});
 
 	it('validates STANDARD_REFERENCES field comparisons and suggests deterministic domain correction', () => {

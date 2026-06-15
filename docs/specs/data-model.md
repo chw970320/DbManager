@@ -86,6 +86,9 @@
   - `expectedKey`/`actualKey`: 사용자 표시용 관계 키입니다. 내부 매칭 키는 `|`를 유지하지만
     화면/API 표시 값은 DB 참조 관례에 맞춰 `schema.entity.attribute`처럼 `.` 구분자를 사용합니다.
   - `participants`: 이슈에 연관된 정의서 항목 목록과 역할(`source`/`target`/`reference`)입니다.
+    DB 설계 5종 참가자는 사용자 식별용 `identityFields`를 포함할 수 있으며, 유효성 검사 패널의
+    `문제 위치` 블록은 이 값을 사용합니다. `identityFields`는 사용자에게 의미 있는 최소 키만 담고
+    내부 `id`는 표시용 값으로 포함하지 않습니다.
   - `involvedTypes`: 현재 정의서 화면에서 이슈를 노출할지 판단하는 정의서 타입 목록입니다.
   - `resolutionTargets`: 사용자가 선택할 수정 대상 목록입니다. `auto_patch`는 기존 행 patch
     자동 적용, `edit`는 기존 행 수동 수정, `create`는 신규 행 작성 팝업을 의미합니다.

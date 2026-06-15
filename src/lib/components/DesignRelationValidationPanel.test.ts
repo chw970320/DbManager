@@ -372,9 +372,67 @@ describe('DesignRelationValidationPanel', () => {
 		expect(screen.getByText(/데이터베이스 정의서를 신규 추가합니다/)).toBeInTheDocument();
 	});
 
+	it('renders user-recognizable problem location identity without exposing row ids', () => {
+		const attributeKeyIssue = createIssue({
+			issueId: 'issue-attribute-key',
+			relationId: 'ATTRIBUTE_COLUMN_KEY',
+			relationName: '속성 -> 컬럼 키',
+			severity: 'warning',
+			sourceType: 'attribute',
+			targetType: 'attribute',
+			targetId: 'attr-eol-39',
+			targetLabel: 'EOL_아이디',
+			expectedKey: 'requiredInput=Y; pkInfo=Y',
+			actualKey: '',
+			reason: '필수입력 속성에 대응하는 컬럼 PK정보를 확인해야 합니다.',
+			message: '필수입력 속성에 대응하는 컬럼 PK정보를 확인해야 합니다.',
+			field: 'pkInfo',
+			involvedTypes: ['attribute', 'column'],
+			participants: [
+				{
+					type: 'attribute',
+					id: 'attr-eol-39',
+					label: 'EOL_아이디',
+					role: 'source',
+					identityFields: [
+						{ key: 'schemaName', label: 'schema', value: 'BIOMIMICRY' },
+						{ key: 'entityName', label: '엔터티명', value: '생태문헌' },
+						{ key: 'attributeName', label: '속성명', value: 'EOL_아이디' }
+					]
+				},
+				{
+					type: 'column',
+					id: 'column-eol-39',
+					label: 'EOL_ID',
+					role: 'target',
+					identityFields: [
+						{ key: 'schemaName', label: 'schema', value: 'BIOMIMICRY' },
+						{ key: 'tableEnglishName', label: '테이블영문명', value: 'TBL_ECLGY_DOC' },
+						{ key: 'columnEnglishName', label: '컬럼영문명', value: 'EOL_ID' }
+					]
+				}
+			]
+		});
+		renderPanel({
+			definitionType: 'attribute',
+			validation: createValidation([attributeKeyIssue])
+		});
+
+		const card = screen.getAllByText('EOL_아이디')[0].closest('.rounded-lg');
+		expect(card).not.toBeNull();
+		expect(within(card as HTMLElement).getByText('문제 위치')).toBeInTheDocument();
+		expect(within(card as HTMLElement).getByText('속성 정의서')).toBeInTheDocument();
+		expect(within(card as HTMLElement).getByText('컬럼 정의서')).toBeInTheDocument();
+		expect(within(card as HTMLElement).getByText('생태문헌')).toBeInTheDocument();
+		expect(within(card as HTMLElement).getByText('TBL_ECLGY_DOC')).toBeInTheDocument();
+		expect(card as HTMLElement).not.toHaveTextContent('attr-eol-39');
+		expect(card as HTMLElement).not.toHaveTextContent('column-eol-39');
+	});
+
 	it('emits manual edit target details', async () => {
 		const onedit = vi.fn();
-		renderPanel({ onedit });
+		const onclose = vi.fn();
+		renderPanel({ onedit, onclose });
 
 		const issueCard = screen.getByText('USER_NM').closest('.rounded-lg');
 		expect(issueCard).not.toBeNull();
@@ -389,6 +447,7 @@ describe('DesignRelationValidationPanel', () => {
 				targetId: 'column-1'
 			})
 		);
+		expect(onclose).not.toHaveBeenCalled();
 	});
 
 	it('emits close when the dismiss control is clicked', async () => {

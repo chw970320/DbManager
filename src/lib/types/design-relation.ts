@@ -41,12 +41,19 @@ export interface DesignRelationPatch {
 
 export type RelationParticipantRole = 'source' | 'target' | 'reference';
 
+export interface RelationIdentityField {
+	key: string;
+	label: string;
+	value: string;
+}
+
 export interface RelationParticipant {
 	type: DataType;
 	id?: string;
 	label: string;
 	file?: string | null;
 	role: RelationParticipantRole;
+	identityFields?: RelationIdentityField[];
 }
 
 export type RelationResolutionMode = 'edit' | 'create' | 'auto_patch';

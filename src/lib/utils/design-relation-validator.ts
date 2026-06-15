@@ -24,6 +24,7 @@ import {
 	buildRelationKey,
 	CANONICAL_DESIGN_RELATION_RULES,
 	fkInfoContainsReference,
+	hasPrimaryKeyInfo,
 	isAffirmativeFlag,
 	normalizeRelationValue,
 	referenceRequiresFk,
@@ -901,7 +902,7 @@ export function validateDesignRelations(
 				continue;
 			}
 			const pkExpected = isAffirmativeFlag(a.requiredInput);
-			if (!pkExpected || cols.some((c) => isAffirmativeFlag(c.pkInfo))) pass(s);
+			if (!pkExpected || cols.some((c) => hasPrimaryKeyInfo(c.pkInfo))) pass(s);
 			else
 				fail(
 					s,
@@ -910,8 +911,8 @@ export function validateDesignRelations(
 						targetType: 'attribute',
 						target: a as Entry,
 						labelFields: ['attributeName'],
-						expectedKey: `requiredInput=${a.requiredInput}; pkInfo=Y`,
-						actualKey: cols.map((c) => c.pkInfo || '').join(', '),
+						expectedKey: `필수입력여부=${a.requiredInput}; PK정보=PK 표시 필요`,
+						actualKey: `PK정보=${cols.map((c) => c.pkInfo || '미입력').join(', ')}`,
 						field: 'pkInfo',
 						reason: '필수입력 속성에 대응하는 컬럼 PK정보를 확인해야 합니다.',
 						participants: () => attrColumnParticipants(cols),

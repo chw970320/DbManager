@@ -75,7 +75,7 @@
   - `ENTITY_ATTRIBUTE_PRIMARY`: `EntityEntry(schemaName, entityName, primaryIdentifier)` ↔ `AttributeEntry(schemaName, entityName, attributeName)`
   - `ENTITY_TABLE_MAPPING`: `EntityEntry(schemaName, tableKoreanName, entityName)` ↔ `TableEntry(schemaName, tableKoreanName, relatedEntityName)`
   - `TABLE_COLUMN_MAPPING`: `TableEntry(subjectArea, schemaName, tableEnglishName, relatedEntityName)` ↔ `ColumnEntry(subjectArea, schemaName, tableEnglishName, relatedEntityName)`
-  - `ATTRIBUTE_COLUMN_KEY`: `AttributeEntry(attributeName, required, reference entity+attribute)` ↔ `ColumnEntry(columnKoreanName, pkInfo, fkInfo)`
+  - `ATTRIBUTE_COLUMN_KEY`: `AttributeEntry(attributeName, required, reference entity+attribute)` ↔ `ColumnEntry(columnKoreanName, pkInfo, fkInfo)`. `pkInfo`는 `Y`, `PK`, `PK01` 같은 PK 표시/순번 값을 인정합니다.
   - `STANDARD_REFERENCES`: 테이블 한글/영문명 ↔ 단어집, 컬럼 한글/영문명 ↔ 용어집, 컬럼 도메인명 ↔ 용어 도메인명
 - 결과:
   - 관계별 `matched/unmatched`

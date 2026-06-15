@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { DESIGN_RELATION_SPECS, validateDesignRelations } from './design-relation-validator.js';
-import { buildDisplayKey, buildRelationKey } from './design-relation-canon.js';
+import { buildDisplayKey, buildRelationKey, hasPrimaryKeyInfo } from './design-relation-canon.js';
 import type { MappingContext } from '$lib/types/erd-mapping.js';
 
 const ts = '2026-01-01T00:00:00.000Z';
@@ -405,7 +405,24 @@ describe('design-relation-validator canonical relation contract', () => {
 		);
 		expect(keyIssue?.severity).toBe('warning');
 		expect(keyIssue?.autoFixable).toBe(false);
+		expect(keyIssue?.expectedKey).toBe('필수입력여부=Y; PK정보=PK 표시 필요');
+		expect(keyIssue?.actualKey).toBe('PK정보=미입력');
 		expect(keyIssue?.candidates[0]).toMatchObject({ autoFixable: false, patch: { fields: {} } });
+	});
+
+	it('treats PK sequence values as existing column PK info', () => {
+		expect(hasPrimaryKeyInfo('PK01')).toBe(true);
+		expect(hasPrimaryKeyInfo('PK1')).toBe(true);
+		expect(hasPrimaryKeyInfo('N')).toBe(false);
+		const ctx = context();
+		ctx.attributes[0] = { ...ctx.attributes[0], requiredInput: '필수' };
+		ctx.columns[0] = { ...ctx.columns[0], pkInfo: 'PK01' };
+
+		const keyIssue = validateDesignRelations(ctx).issues.find(
+			(i) => i.relationId === 'ATTRIBUTE_COLUMN_KEY' && i.field === 'pkInfo'
+		);
+
+		expect(keyIssue).toBeUndefined();
 	});
 
 	it('adds user-facing identity fields to DB design relation participants', () => {

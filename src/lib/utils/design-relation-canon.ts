@@ -135,6 +135,14 @@ export function isAffirmativeFlag(value: string | undefined | null): boolean {
 	return /\bpk\b|primary\s*key|기본키/.test(normalized);
 }
 
+export function hasPrimaryKeyInfo(value: string | undefined | null): boolean {
+	const normalized = normalizeRelationValue(value);
+	if (!normalized) return false;
+	if (['n', 'no', 'false', '0', '아니오', '아님'].includes(normalized)) return false;
+	if (isAffirmativeFlag(value)) return true;
+	return /^pk\s*0*\d+$/.test(normalized);
+}
+
 export function referenceRequiresFk(
 	refEntityName: string | undefined | null,
 	refAttributeName: string | undefined | null

@@ -420,7 +420,10 @@ describe('DesignRelationValidationPanel', () => {
 
 		const card = screen.getAllByText('EOL_아이디')[0].closest('.rounded-lg');
 		expect(card).not.toBeNull();
-		expect(within(card as HTMLElement).getByText('문제 위치')).toBeInTheDocument();
+		expect(
+			within(card as HTMLElement).getByRole('region', { name: '문제 위치' })
+		).toBeInTheDocument();
+		expect(within(card as HTMLElement).getByText('정의서 최소 식별 키')).toBeInTheDocument();
 		expect(within(card as HTMLElement).getByText('속성 정의서')).toBeInTheDocument();
 		expect(within(card as HTMLElement).getByText('컬럼 정의서')).toBeInTheDocument();
 		expect(within(card as HTMLElement).getByText('생태문헌')).toBeInTheDocument();

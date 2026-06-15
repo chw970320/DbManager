@@ -331,24 +331,34 @@
 				</div>
 
 				{#if problemLocations.length}
-					<div class="mt-3 rounded-md border border-border bg-surface-muted p-3">
-						<p class="text-xs font-medium text-content-secondary">문제 위치</p>
-						<div class="mt-2 grid gap-2">
+					<section
+						class="mt-3 border-y border-border bg-surface-muted/60 px-3 py-2"
+						aria-label="문제 위치"
+					>
+						<div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+							<p class="text-xs font-semibold text-content">문제 위치</p>
+							<p class="text-xs text-content-muted">정의서 최소 식별 키</p>
+						</div>
+						<div class="mt-2 divide-y divide-border">
 							{#each problemLocations as participant, index (`${participant.type}-${participant.id ?? participant.label}-${index}`)}
-								<div>
-									<p class="text-xs font-medium text-content">{typeLabel(participant.type)}</p>
-									<dl class="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-content-secondary">
+								<div
+									class="grid gap-1.5 py-2 first:pt-0 last:pb-0 sm:grid-cols-[5.5rem_minmax(0,1fr)]"
+								>
+									<p class="text-xs font-medium text-content-secondary">
+										{typeLabel(participant.type)}
+									</p>
+									<dl class="flex min-w-0 flex-wrap gap-x-3 gap-y-1">
 										{#each participant.identityFields ?? [] as field (`${field.key}-${field.value}`)}
-											<div class="flex min-w-0 gap-1">
-												<dt class="shrink-0 font-medium">{field.label}</dt>
-												<dd class="min-w-0 break-all">{field.value}</dd>
+											<div class="inline-flex min-w-0 items-baseline gap-1 text-xs">
+												<dt class="shrink-0 text-content-muted">{field.label}</dt>
+												<dd class="min-w-0 break-all font-medium text-content">{field.value}</dd>
 											</div>
 										{/each}
 									</dl>
 								</div>
 							{/each}
 						</div>
-					</div>
+					</section>
 				{/if}
 
 				<div class="mt-3 rounded-md border px-3 py-2 text-xs {severityClass(issue)}">

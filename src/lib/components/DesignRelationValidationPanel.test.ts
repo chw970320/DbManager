@@ -206,6 +206,10 @@ describe('DesignRelationValidationPanel', () => {
 		expect(dialog).toHaveTextContent('조치 대상 선택');
 		expect(dialog).toHaveTextContent('회원.public.TB_USER.사용자');
 		expect(dialog).toHaveTextContent('회원.public.TB_USER.고객');
+		const keyComparisonGrid = screen.getAllByText('회원.public.TB_USER.사용자')[0].closest('.grid');
+		expect(keyComparisonGrid).not.toBeNull();
+		expect(keyComparisonGrid as HTMLElement).toHaveClass('grid-cols-1');
+		expect(keyComparisonGrid as HTMLElement).not.toHaveClass('sm:grid-cols-2');
 
 		const manualCard = screen.getByText('ORDER_ID').closest('.rounded-lg');
 		expect(manualCard).not.toBeNull();

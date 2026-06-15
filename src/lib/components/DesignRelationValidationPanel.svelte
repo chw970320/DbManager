@@ -77,7 +77,9 @@
 		STANDARD_REFERENCES: '표준 단어/용어/도메인'
 	};
 
-	let allIssues = $derived(validation?.issues ?? validation?.summaries.flatMap((s) => s.issues) ?? []);
+	let allIssues = $derived(
+		validation?.issues ?? validation?.summaries.flatMap((s) => s.issues) ?? []
+	);
 	let issues = $derived(
 		allIssues.filter((issue) => relationIssueInvolvedTypes(issue).includes(definitionType))
 	);
@@ -93,10 +95,7 @@
 		const targets = targetsForIssue(issue);
 		if (targets.length === 0) return undefined;
 		const selectedId = selectedTargetIds[issue.issueId];
-		return (
-			targets.find((target) => target.resolutionTargetId === selectedId) ??
-			targets[0]
-		);
+		return targets.find((target) => target.resolutionTargetId === selectedId) ?? targets[0];
 	}
 
 	function targetIsAutoFixable(target?: RelationResolutionTarget): boolean {
@@ -324,7 +323,7 @@
 				</div>
 
 				<div class="mt-3 rounded-md border px-3 py-2 text-xs {severityClass(issue)}">
-					<div class="grid gap-2 sm:grid-cols-2">
+					<div class="grid grid-cols-1 gap-2">
 						<div>
 							<span class="font-medium">기대값</span>
 							<p class="mt-1 break-all">{issue.expectedKey}</p>
@@ -369,9 +368,7 @@
 									{modeLabel(issueTargets[0].mode)}
 								</p>
 							{:else}
-								<p class="mt-1 text-sm text-content-muted">
-									수정 대상 없음 · 수동 확인 필요
-								</p>
+								<p class="mt-1 text-sm text-content-muted">수정 대상 없음 · 수동 확인 필요</p>
 							{/if}
 						</div>
 

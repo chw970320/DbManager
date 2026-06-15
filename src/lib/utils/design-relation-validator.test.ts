@@ -445,6 +445,138 @@ describe('design-relation-validator canonical relation contract', () => {
 		expect(keyIssue).toBeUndefined();
 	});
 
+	it('matches FK info physical references to referenced entity attribute columns', () => {
+		const ctx = context();
+		ctx.entities.push(
+			{
+				id: 'entity-search-history',
+				logicalDbName: 'LDB_MAIN',
+				schemaName: 'bksp',
+				entityName: '검색어_이력_관리',
+				primaryIdentifier: '검색어_이력_아이디',
+				tableKoreanName: '검색어_이력_관리',
+				createdAt: ts,
+				updatedAt: ts
+			},
+			{
+				id: 'entity-content-history',
+				logicalDbName: 'LDB_MAIN',
+				schemaName: 'bksp',
+				entityName: '콘텐츠_조회_이력_관리',
+				primaryIdentifier: '콘텐츠_조회_이력_아이디',
+				tableKoreanName: '콘텐츠_조회_이력_관리',
+				createdAt: ts,
+				updatedAt: ts
+			}
+		);
+		ctx.attributes.push(
+			{
+				id: 'attr-search-history-id',
+				requiredInput: '필수',
+				refEntityName: '',
+				identifierFlag: 'PK',
+				schemaName: 'bksp',
+				entityName: '검색어_이력_관리',
+				attributeName: '검색어_이력_아이디',
+				createdAt: ts,
+				updatedAt: ts
+			},
+			{
+				id: 'attr-content-search-history-id',
+				requiredInput: '필수',
+				refEntityName: '검색어_이력_관리',
+				refAttributeName: '검색어_이력_아이디',
+				schemaName: 'bksp',
+				entityName: '콘텐츠_조회_이력_관리',
+				attributeName: '검색어_이력_아이디',
+				createdAt: ts,
+				updatedAt: ts
+			}
+		);
+		ctx.tables.push(
+			{
+				id: 'table-search-history',
+				businessClassification: '업무',
+				tableVolume: '1',
+				nonPublicReason: '-',
+				openDataList: '-',
+				subjectArea: '검색',
+				schemaName: 'bksp',
+				tableEnglishName: 'TBL_SRWRD_HSTRY_MNG',
+				tableKoreanName: '검색어_이력_관리',
+				relatedEntityName: '검색어_이력_관리',
+				createdAt: ts,
+				updatedAt: ts
+			},
+			{
+				id: 'table-content-history',
+				businessClassification: '업무',
+				tableVolume: '1',
+				nonPublicReason: '-',
+				openDataList: '-',
+				subjectArea: '검색',
+				schemaName: 'bksp',
+				tableEnglishName: 'TBL_CONTS_INQ_HSTRY_MNG',
+				tableKoreanName: '콘텐츠_조회_이력_관리',
+				relatedEntityName: '콘텐츠_조회_이력_관리',
+				createdAt: ts,
+				updatedAt: ts
+			}
+		);
+		ctx.columns.push(
+			{
+				id: 'col-search-history-id',
+				dataLength: '20',
+				dataDecimalLength: '0',
+				dataFormat: '-',
+				pkInfo: 'PK01',
+				indexName: '',
+				indexOrder: '',
+				akInfo: '',
+				constraint: '',
+				subjectArea: '검색',
+				schemaName: 'bksp',
+				tableEnglishName: 'TBL_SRWRD_HSTRY_MNG',
+				columnEnglishName: 'SRWRD_HSTRY_ID',
+				columnKoreanName: '검색어_이력_아이디',
+				relatedEntityName: '검색어_이력_관리',
+				domainName: 'ID',
+				createdAt: ts,
+				updatedAt: ts
+			},
+			{
+				id: 'col-content-search-history-id',
+				dataLength: '20',
+				dataDecimalLength: '0',
+				dataFormat: '-',
+				pkInfo: '',
+				indexName: '',
+				indexOrder: '',
+				akInfo: '',
+				constraint: '',
+				subjectArea: '검색',
+				schemaName: 'bksp',
+				tableEnglishName: 'TBL_CONTS_INQ_HSTRY_MNG',
+				columnEnglishName: 'SRWRD_HSTRY_ID',
+				columnKoreanName: '검색어_이력_아이디',
+				relatedEntityName: '콘텐츠_조회_이력_관리',
+				domainName: 'ID',
+				fkInfo: 'bksp.tbl_srwrd_hstry_mng.srwrd_hstry_id',
+				createdAt: ts,
+				updatedAt: ts
+			}
+		);
+
+		const keyIssue = validateDesignRelations(ctx, { includeStandardReferences: false }).issues.find(
+			(i) =>
+				i.relationId === 'ATTRIBUTE_COLUMN_KEY' &&
+				i.field === 'fkInfo' &&
+				i.targetId === 'attr-content-search-history-id'
+		);
+
+		expect(keyIssue).toBeUndefined();
+	});
+
 	it('adds user-facing identity fields to DB design relation participants', () => {
 		const ctx = context();
 		ctx.columns[0] = { ...ctx.columns[0], pkInfo: '' };

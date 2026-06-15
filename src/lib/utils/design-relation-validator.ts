@@ -19,6 +19,7 @@ import type {
 } from '$lib/types/database-design.js';
 import type { TermEntry } from '$lib/types/term.js';
 import type { VocabularyEntry } from '$lib/types/vocabulary.js';
+import { parseForeignKeyReference } from './erd-fk-reference.js';
 import {
 	buildDisplayKey,
 	buildRelationKey,
@@ -540,6 +541,9 @@ export function validateDesignRelations(
 		buildRelationKey([t.schemaName, t.tableEnglishName])
 	);
 	const tableByEntity = by(tables, (t) => buildRelationKey([t.relatedEntityName]));
+	const tableBySchemaEntity = by(tables, (t) =>
+		buildRelationKey([t.schemaName, t.relatedEntityName])
+	);
 	const columnByAttr = by(columns, (c) =>
 		buildRelationKey([c.schemaName, c.relatedEntityName, c.columnKoreanName])
 	);
@@ -559,6 +563,45 @@ export function validateDesignRelations(
 	);
 	const scopedIssue = (issueOptions: Parameters<typeof issue>[0]) =>
 		issue({ ...issueOptions, files: options.files });
+	const fkMatchesAttributeReference = (column: ColumnEntry, attribute: AttributeEntry) => {
+		if (
+			fkInfoContainsReference(column.fkInfo, attribute.refEntityName, attribute.refAttributeName)
+		) {
+			return true;
+		}
+		const reference = parseForeignKeyReference(column.fkInfo, column);
+		if (!reference) return false;
+		const referenceColumnKey = buildRelationKey([
+			reference.schemaName,
+			reference.tableEnglishName,
+			reference.columnEnglishName
+		]);
+		const expectedColumns = get(
+			columnByAttr,
+			buildRelationKey([attribute.schemaName, attribute.refEntityName, attribute.refAttributeName])
+		);
+		if (
+			expectedColumns.some(
+				(refColumn) =>
+					buildRelationKey([
+						refColumn.schemaName,
+						refColumn.tableEnglishName,
+						refColumn.columnEnglishName
+					]) === referenceColumnKey
+			)
+		) {
+			return true;
+		}
+		if (normalizeRelationValue(attribute.refAttributeName)) return false;
+		const referenceTableKey = buildRelationKey([reference.schemaName, reference.tableEnglishName]);
+		return get(
+			tableBySchemaEntity,
+			buildRelationKey([attribute.schemaName, attribute.refEntityName])
+		).some(
+			(refTable) =>
+				buildRelationKey([refTable.schemaName, refTable.tableEnglishName]) === referenceTableKey
+		);
+	};
 
 	{
 		const r = rule.get('DATABASE_ENTITY_LOGICAL_DB')!;
@@ -919,8 +962,7 @@ export function validateDesignRelations(
 					})
 				);
 			if (!referenceRequiresFk(a.refEntityName, a.refAttributeName)) continue;
-			if (cols.some((c) => fkInfoContainsReference(c.fkInfo, a.refEntityName, a.refAttributeName)))
-				pass(s);
+			if (cols.some((c) => fkMatchesAttributeReference(c, a))) pass(s);
 			else
 				fail(
 					s,

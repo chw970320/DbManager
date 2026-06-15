@@ -69,11 +69,20 @@ describe('ERD page sidebar and main controls contract', () => {
 		expect(source).not.toContain('includeRelated');
 	});
 
-	it('keeps ERD relation validation compact and marks legacy sync preview', () => {
-		expect(source).toContain('정의서 관계 유효성 검사');
-		expect(source).toContain('관계 검증의 미매칭·오류·경고 건수만 조회용으로 표시합니다');
-		expect(source).toContain('미매칭 {erdData.relationValidation.totals.unmatched}건');
-		expect(source).toContain('{erdData.relationValidation.totals.errorCount}건 · 경고');
+	it('removes ERD relation summary and legacy sync entry points', () => {
+		const relationSummaryLabel = ['연관관계', '요약'].join(' ');
+		const relationSummaryTitle = ['데이터', '연관관계', '요약'].join(' ');
+		const legacySyncLabel = ['레거시', '동기화', '미리보기'].join(' ');
+		const legacySyncPath = ['/api/erd/relations', 'sync'].join('/');
+
+		expect(source).not.toContain(relationSummaryLabel);
+		expect(source).not.toContain(relationSummaryTitle);
+		expect(source).not.toContain(legacySyncLabel);
+		expect(source).not.toContain(legacySyncPath);
+		expect(source).not.toMatch(/handleRelation\w+Preview/);
+		expect(source).not.toContain('showMappingSummary');
+		expect(source).not.toContain('mappingStats');
+		expect(source).not.toContain('통합 정합성 요약');
 		expect(source).not.toContain('ERD 정의서 관계 미매칭 상세');
 		expect(source).not.toContain('미매칭·참여 정의서·수정 대상·조치 정보');
 		expect(source).not.toContain('relationParticipantSummary(issue)');
@@ -85,8 +94,6 @@ describe('ERD page sidebar and main controls contract', () => {
 		expect(source).toContain(
 			"params.set('includeExternalReferences', includeExternalReferences.toString())"
 		);
-		expect(source).toContain('레거시 동기화 미리보기');
-		expect(source).toContain('자동 수정은 DB/엔터티/속성/테이블/컬럼 정의서의 유효성 검사 패널');
 		expect(source).not.toContain('candidateSummary');
 	});
 });

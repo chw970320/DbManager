@@ -1,5 +1,18 @@
 # 변경 이력
 
+## 2026-06-16
+
+### 요약
+
+- ERD 화면의 데이터 연관관계 요약과 레거시 관계 동기화 미리보기 진입점을 제거했습니다.
+- 레거시 ERD 관계 동기화 API를 제거하고 canonical 관계 검증/preview/apply API만 지원 대상으로 남겼습니다.
+
+### 상세 변경
+
+- `/erd`의 `연관관계 요약` 버튼, 데이터 연관관계 요약 카드, 통합 정합성 요약 호출을 삭제했습니다.
+- `/api/erd/relations/sync` 라우트와 전용 동기화 유틸/테스트를 삭제했습니다.
+- `/api/erd/relations`, `/api/validation/design-relations`, `/preview`, `/apply` 계약은 유지했습니다.
+
 ## 2026-06-09
 
 ### 요약

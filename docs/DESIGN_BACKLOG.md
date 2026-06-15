@@ -53,7 +53,7 @@ Last updated: 2026-06-04
 - [x] 표준화 dense table: `/domain/browse` screenshot 수집
 - [x] DB 설계 dense table: `/database/browse` screenshot 수집
 - [x] bundle/recovery: `/snapshot/browse` screenshot 수집, upload/file-manager mutation state는 fixture blocker로 기록
-- [x] relation/sync: `/erd` 관계 요약 smoke 확인, browse relation panel은 후속 cleanup에서 제거
+- [x] relation/sync: 당시 `/erd` 관계 표시 smoke 확인, browse relation panel은 후속 cleanup에서 제거
 - [x] operations/quality: `/profiling/browse`, `/quality-rule/browse` screenshot 수집
 - [x] ERD/relation: `/erd` route smoke screenshot 수집
 
@@ -115,7 +115,7 @@ Fixture blocker 처리 결과:
 근거:
 
 - Legacy evidence: `.omx/plans/alignment-sync-readability-20260604T093500Z.md`
-- Preserved API tests: `pnpm vitest run src/routes/api/alignment/sync/server.test.ts src/routes/api/erd/relations/sync/server.test.ts`
+- Preserved API tests: `pnpm vitest run src/routes/api/alignment/sync/server.test.ts src/routes/api/erd/relations/integration.test.ts`
 - Preserved boundary: database/entity/attribute/table/column browse에는 새 validation UI를 추가하지 않고 내부 검증/보정 capability만 유지
 
 - [x] browse `연관 파일` 패널 제거
@@ -126,18 +126,18 @@ Fixture blocker 처리 결과:
 
 ### ERD / relation visual QA lane
 
-상태: 완료됨. ERD viewport에 그래프 규모/희박 상태, 탐색 힌트, 안전 렌더링 경계, 관계 검증 요약을 텍스트로 보강했습니다.
+상태: 완료됨(2026-06-04 visual QA 기록). 현재 ERD 화면의 retired relation surface는 2026-06-16 cleanup에서 제거되었고, 이 lane은 그래프 탐색과 렌더링 경계 evidence만 과거 근거로 보존합니다.
 
 근거:
 
 - 변경 파일: `src/lib/components/ERDViewer.svelte`, `tests/e2e/design-fixture-evidence.spec.ts`
-- Targeted tests: `pnpm vitest run src/lib/components/ERDViewer.test.ts src/routes/erd/page-source.test.ts src/routes/api/erd/relations/server.test.ts`
+- Targeted tests: `pnpm vitest run src/lib/components/ERDViewer.test.ts src/routes/erd/page-source.test.ts src/routes/api/erd/relations/integration.test.ts`
 - Browser evidence: `.omx/plans/erd-relation-visual-qa-screenshots/20260604T094639Z/`
 - Evidence report: `.omx/plans/erd-relation-visual-qa-20260604T094800Z.md`
 
 - [x] 큰 그래프 탐색 UX 확인
 - [x] 빈 관계/희박 관계 상태 확인
-- [x] relation severity 설명과 ERD 화면 내 관계 요약 확인
+- [x] ERD 화면 smoke와 FK 관계 표현 확인
 - [x] Graphviz layout 알고리즘 변경은 visual polish와 분리
 
 ## P2 — 설계 결정이 먼저 필요한 후보

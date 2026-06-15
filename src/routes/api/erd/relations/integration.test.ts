@@ -24,15 +24,6 @@ function createGetEvent(url: string): RequestEvent {
 	} as RequestEvent;
 }
 
-function createPostEvent(url: string, body: unknown): RequestEvent {
-	return {
-		url: new URL(url),
-		request: {
-			json: async () => body
-		} as Request
-	} as RequestEvent;
-}
-
 describe('API: /api/erd/relations integration (fixture-based)', () => {
 	let tempDataDir = '';
 
@@ -168,9 +159,8 @@ describe('API: /api/erd/relations integration (fixture-based)', () => {
 		}
 	});
 
-	it('should reject legacy sync apply and keep fixture data unchanged', async () => {
+	it('should keep relation validation read-only and fixture data unchanged', async () => {
 		const relationsModule = await import('./+server');
-		const syncModule = await import('./sync/+server');
 
 		const beforeResponse = await relationsModule.GET(
 			createGetEvent('http://localhost/api/erd/relations')
@@ -182,26 +172,6 @@ describe('API: /api/erd/relations integration (fixture-based)', () => {
 		expect(beforePayload.data.files.database).toBe('database.json');
 		expect(beforePayload.data.files.column).toBe('column.json');
 		expect(beforePayload.data.validation.totals.unmatched).toBeGreaterThan(0);
-
-		const previewResponse = await syncModule.POST(
-			createPostEvent('http://localhost/api/erd/relations/sync', { apply: false })
-		);
-		const previewPayload = await previewResponse.json();
-
-		expect(previewResponse.status).toBe(200);
-		expect(previewPayload.success).toBe(true);
-		expect(previewPayload.data.mode).toBe('preview');
-		expect(previewPayload.data.counts.totalCandidates).toBeGreaterThan(0);
-		expect(previewPayload.data.counts.appliedTotalUpdates).toBe(0);
-
-		const syncResponse = await syncModule.POST(
-			createPostEvent('http://localhost/api/erd/relations/sync', { apply: true })
-		);
-		const syncPayload = await syncResponse.json();
-
-		expect(syncResponse.status).toBe(410);
-		expect(syncPayload.success).toBe(false);
-		expect(syncPayload.error).toContain('/api/validation/design-relations/apply');
 
 		const afterResponse = await relationsModule.GET(
 			createGetEvent('http://localhost/api/erd/relations')

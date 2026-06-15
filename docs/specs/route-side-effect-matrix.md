@@ -18,10 +18,9 @@ This matrix records side effects for the upload, sync, and validation routes tou
 | `runUploadPostProcess` relation step     | Delegates to route fetch                                                                | None             | None directly                                                        | Delegated to called routes                                        | None                   | `validate-only` calls canonical validation; `validate-sync` also calls alignment sync              |
 | `POST /api/alignment/sync` relation step | Delegates to vocabulary, term, canonical relation validation, column, and report routes | None directly    | None directly                                                        | Delegated to called sync routes                                   | None                   | `apply` propagates to vocabulary/term/column sync; relation step is canonical read-only validation |
 | `GET /api/validation/design-relations`   | `runDesignRelationValidation(...)`                                                      | None in route    | None                                                                 | No                                                                | None                   | Canonical read-only relation validation                                                            |
-| `GET/POST /api/erd/relations/sync`       | Legacy ERD relation context loaders                                                     | None             | None; `apply=true` returns 410                                       | No                                                                | None                   | ERD compatibility preview only                                                                     |
 
 Notes:
 
 - Upload routes intentionally expose required-column metadata but do not perform cache invalidation in route code.
 - `term/sync` and `column/sync-term` invalidate only after a successful save so preview and failed-save paths cannot evict warm data.
-- Non-ERD relation diagnostics should call `GET /api/validation/design-relations`; `/api/erd/relations*` remains compatibility-only.
+- Non-ERD relation diagnostics should call `GET /api/validation/design-relations`; `GET /api/erd/relations` remains compatibility-only.

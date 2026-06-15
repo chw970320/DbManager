@@ -112,7 +112,6 @@ describe('API: /api/alignment/sync', () => {
 		expect(fetchMock.mock.calls[2][0].toString()).toContain('vocabularyFile=vocabulary.json');
 		expect(fetchMock.mock.calls[2][0].toString()).toContain('domainFile=domain.json');
 		expect(fetchMock.mock.calls[2][0].toString()).toContain('termFile=term-custom.json');
-		expect(fetchMock.mock.calls[2][0].toString()).not.toContain('/api/erd/relations/sync');
 		expect(fetchMock.mock.calls[4][0].toString()).toContain('vocabularyFile=vocabulary.json');
 		expect(fetchMock.mock.calls[4][0].toString()).toContain('domainFile=domain.json');
 		expect(fetchMock.mock.calls[4][0].toString()).toContain('termFile=term-custom.json');

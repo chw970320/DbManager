@@ -8,10 +8,7 @@
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { filterColumnFiles } from '$lib/utils/file-filter';
 	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
-	import type {
-		DesignRelationSyncPreview,
-		DesignRelationValidationResult
-	} from '$lib/types/design-relation.js';
+	import type { DesignRelationValidationResult } from '$lib/types/design-relation.js';
 
 	interface ERDTableInfo {
 		id: string;
@@ -30,29 +27,6 @@
 		downloadCurrentSvg: () => Promise<void>;
 		downloadCurrentPng: () => Promise<void>;
 	};
-	interface UnifiedValidationSummary {
-		totalIssues: number;
-		errorCount: number;
-		autoFixableCount: number;
-		warningCount: number;
-		infoCount: number;
-		termFailedCount: number;
-		relationUnmatchedCount: number;
-		termPassedCount: number;
-		termTotalCount: number;
-	}
-	interface RelationSyncResult {
-		mode: 'preview' | 'apply';
-		counts: DesignRelationSyncPreview['counts'] & {
-			appliedTableUpdates: number;
-			appliedColumnUpdates: number;
-			appliedTotalUpdates: number;
-		};
-		changes: DesignRelationSyncPreview['changes'];
-		suggestions: DesignRelationSyncPreview['suggestions'];
-		validationBefore: DesignRelationValidationResult;
-		validationAfter: DesignRelationValidationResult;
-	}
 	type ColumnMappingResult = {
 		mapping?: Record<string, string>;
 	};
@@ -84,66 +58,11 @@
 	let includeExternalReferences = $state(true);
 	let loadingTables = $state(false);
 	let isTableSelectionExpanded = $state(false);
-	let showMappingSummary = $state(false);
-	let relationSyncLoading = $state(false);
-	let relationSyncError = $state<string | null>(null);
-	let relationSyncResult = $state<RelationSyncResult | null>(null);
-	let unifiedValidationSummary = $state<UnifiedValidationSummary | null>(null);
-	let unifiedValidationLoading = $state(false);
-	let unifiedValidationError = $state<string | null>(null);
 	let erdDownloadActions = $state<ERDViewerDownloadActions | null>(null);
 
 	let filterRefreshTimer: ReturnType<typeof setTimeout> | null = null;
 	let tableRequestSeq = 0;
 	let erdRequestSeq = 0;
-
-	let mappingStats = $derived(() => {
-		if (!erdData) return null;
-		return {
-			databases: erdData.nodes.filter((n) => n.type === 'database').length,
-			entities: erdData.nodes.filter((n) => n.type === 'entity').length,
-			attributes: erdData.nodes.filter((n) => n.type === 'attribute').length,
-			tables: erdData.nodes.filter((n) => n.type === 'table').length,
-			columns: erdData.nodes.filter((n) => n.type === 'column').length,
-			domains: erdData.nodes.filter((n) => n.type === 'domain').length,
-			dbEntity: erdData.mappings.filter(
-				(m) => m.sourceType === 'database' && m.targetType === 'entity'
-			).length,
-			dbTable: erdData.mappings.filter(
-				(m) => m.sourceType === 'database' && m.targetType === 'table'
-			).length,
-			entityAttribute: erdData.mappings.filter(
-				(m) => m.sourceType === 'entity' && m.targetType === 'attribute'
-			).length,
-			entityInheritance: erdData.mappings.filter(
-				(m) =>
-					m.sourceType === 'entity' &&
-					m.targetType === 'entity' &&
-					m.mappingKey === 'superTypeEntityName'
-			).length,
-			tableColumn: erdData.mappings.filter(
-				(m) => m.sourceType === 'table' && m.targetType === 'column'
-			).length,
-			tableEntity: erdData.mappings.filter(
-				(m) => m.sourceType === 'table' && m.targetType === 'entity'
-			).length,
-			columnFK: erdData.mappings.filter(
-				(m) => m.sourceType === 'column' && m.targetType === 'column' && m.mappingKey === 'fkInfo'
-			).length,
-			columnEntity: erdData.mappings.filter(
-				(m) => m.sourceType === 'column' && m.targetType === 'entity'
-			).length,
-			attributeColumn: erdData.mappings.filter(
-				(m) => m.sourceType === 'attribute' && m.targetType === 'column'
-			).length,
-			attributeEntityRef: erdData.mappings.filter(
-				(m) => m.sourceType === 'attribute' && m.targetType === 'entity'
-			).length,
-			columnDomain: erdData.mappings.filter(
-				(m) => m.sourceType === 'column' && m.targetType === 'domain'
-			).length
-		};
-	});
 
 	let subjectAreaOptions = $derived(() => uniqueSorted(tables.map((table) => table.subjectArea)));
 	let schemaOptions = $derived(() => getSchemaOptionsForSubject());
@@ -365,7 +284,6 @@
 		debouncedTableSearchQuery = '';
 		scopeFlagFilter = '';
 		isTableSelectionExpanded = false;
-		relationSyncResult = null;
 		await loadColumnMapping(selectedColumnFile);
 		await loadTables();
 		await loadERDData();
@@ -434,97 +352,6 @@
 		await loadColumnMapping(selectedColumnFile);
 		await loadTables();
 		await loadERDData();
-		await loadUnifiedValidationSummary();
-	}
-
-	async function loadUnifiedValidationSummary(
-		termFilename = definitionMapping.term || 'term.json'
-	) {
-		unifiedValidationLoading = true;
-		unifiedValidationError = null;
-		try {
-			const params = new URLSearchParams({
-				termFilename,
-				termFile: termFilename,
-				scopeType: 'column',
-				scopeFile: selectedColumnFile,
-				columnFile: selectedColumnFile
-			});
-			for (const type of [
-				'vocabulary',
-				'domain',
-				'database',
-				'entity',
-				'attribute',
-				'table'
-			] as const) {
-				const filename = definitionMapping[type];
-				if (filename) {
-					params.set(`${type}File`, filename);
-				}
-			}
-			const response = await fetch(`/api/validation/report?${params.toString()}`);
-			const result: DbDesignApiResponse<{
-				summary: Omit<UnifiedValidationSummary, 'termPassedCount' | 'termTotalCount'>;
-				sections: {
-					term: {
-						totalCount: number;
-						passedCount: number;
-						failedCount: number;
-					};
-				};
-			}> = await response.json();
-			if (!result.success || !result.data) {
-				unifiedValidationError = result.error || '통합 진단 요약을 불러오지 못했습니다.';
-				unifiedValidationSummary = null;
-				return;
-			}
-			unifiedValidationSummary = {
-				...result.data.summary,
-				termPassedCount: result.data.sections.term?.passedCount || 0,
-				termTotalCount: result.data.sections.term?.totalCount || 0
-			};
-		} catch (err) {
-			console.error('통합 진단 요약 로드 오류:', err);
-			unifiedValidationError =
-				err instanceof Error ? err.message : '통합 진단 요약을 불러오는 중 오류가 발생했습니다.';
-			unifiedValidationSummary = null;
-		} finally {
-			unifiedValidationLoading = false;
-		}
-	}
-
-	async function handleRelationSyncPreview() {
-		relationSyncLoading = true;
-		relationSyncError = null;
-		try {
-			const response = await fetch('/api/erd/relations/sync', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					apply: false,
-					columnFile: selectedColumnFile,
-					tableFile: mappedTableFile ?? undefined
-				})
-			});
-			const result: DbDesignApiResponse<RelationSyncResult> = await response.json();
-
-			if (!result.success || !result.data) {
-				relationSyncError =
-					result.error || '레거시 관계 동기화 미리보기 실행 중 오류가 발생했습니다.';
-				return;
-			}
-
-			relationSyncResult = result.data;
-		} catch (err) {
-			console.error('레거시 관계 동기화 미리보기 오류:', err);
-			relationSyncError =
-				err instanceof Error
-					? err.message
-					: '레거시 관계 동기화 미리보기 실행 중 오류가 발생했습니다.';
-		} finally {
-			relationSyncLoading = false;
-		}
 	}
 
 	onMount(() => {
@@ -536,7 +363,6 @@
 		void (async () => {
 			await loadColumnFiles();
 			await reloadForColumnFile();
-			await loadUnifiedValidationSummary();
 		})();
 
 		return () => {
@@ -638,15 +464,6 @@
 {/snippet}
 
 {#snippet actions()}
-	<button
-		type="button"
-		onclick={() => (showMappingSummary = !showMappingSummary)}
-		class="rounded-lg border px-4 py-2 text-sm font-medium transition-colors {showMappingSummary
-			? 'border-indigo-300 bg-indigo-50 text-indigo-700'
-			: 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'}"
-	>
-		연관관계 요약
-	</button>
 	<button
 		type="button"
 		onclick={handleRefresh}
@@ -893,116 +710,6 @@
 			</section>
 		</div>
 	</section>
-
-	{#if showMappingSummary && erdData}
-		{@const stats = mappingStats()}
-		{#if stats}
-			<section class="mb-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
-				<div class="mb-3 flex items-center justify-between">
-					<h2 class="text-sm font-semibold text-gray-900">데이터 연관관계 요약</h2>
-					<button
-						type="button"
-						onclick={handleRelationSyncPreview}
-						disabled={relationSyncLoading}
-						class="rounded border border-amber-300 bg-white px-2 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
-					>
-						{relationSyncLoading ? '확인 중...' : '레거시 동기화 미리보기'}
-					</button>
-				</div>
-				<p class="mb-3 text-xs text-gray-500">
-					자동 수정은 DB/엔터티/속성/테이블/컬럼 정의서의 유효성 검사 패널에서 후보를 선택해
-					실행합니다. ERD에서는 관계 검증의 미매칭·오류·경고 건수만 조회용으로 표시합니다.
-				</p>
-				<div class="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3 lg:grid-cols-6">
-					<div class="rounded-lg border border-blue-200 bg-blue-50 p-2 text-center">
-						<div class="font-bold text-blue-700">{stats.databases}</div>
-						<div class="text-xs text-blue-600">데이터베이스</div>
-					</div>
-					<div class="rounded-lg border border-green-200 bg-green-50 p-2 text-center">
-						<div class="font-bold text-green-700">{stats.entities}</div>
-						<div class="text-xs text-green-600">엔터티</div>
-					</div>
-					<div class="rounded-lg border border-teal-200 bg-teal-50 p-2 text-center">
-						<div class="font-bold text-teal-700">{stats.attributes}</div>
-						<div class="text-xs text-teal-600">속성</div>
-					</div>
-					<div class="rounded-lg border border-purple-200 bg-purple-50 p-2 text-center">
-						<div class="font-bold text-purple-700">{stats.tables}</div>
-						<div class="text-xs text-purple-600">테이블</div>
-					</div>
-					<div class="rounded-lg border border-orange-200 bg-orange-50 p-2 text-center">
-						<div class="font-bold text-orange-700">{stats.columns}</div>
-						<div class="text-xs text-orange-600">컬럼</div>
-					</div>
-					<div class="rounded-lg border border-pink-200 bg-pink-50 p-2 text-center">
-						<div class="font-bold text-pink-700">{stats.domains}</div>
-						<div class="text-xs text-pink-600">도메인</div>
-					</div>
-				</div>
-
-				{#if erdData.relationValidation}
-					<div
-						class="mt-3 space-y-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800"
-					>
-						<div>
-							<p class="font-semibold text-amber-900">정의서 관계 유효성 검사</p>
-							<p class="mt-1">
-								미매칭 {erdData.relationValidation.totals.unmatched}건 · 오류
-								{erdData.relationValidation.totals.errorCount}건 · 경고
-								{erdData.relationValidation.totals.warningCount}건
-							</p>
-						</div>
-					</div>
-				{/if}
-
-				{#if relationSyncError}
-					<div class="mt-3 rounded border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-						{relationSyncError}
-					</div>
-				{/if}
-				{#if relationSyncResult}
-					<div
-						class="mt-3 rounded border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800"
-					>
-						최근 레거시 동기화 미리보기: 후보 테이블 {relationSyncResult.counts.tableCandidates}건 ·
-						후보 컬럼
-						{relationSyncResult.counts.columnCandidates}건 · 추천
-						{relationSyncResult.counts.attributeColumnSuggestions}건
-					</div>
-				{/if}
-
-				<div
-					class="mt-3 rounded-lg border border-indigo-200 bg-indigo-50 p-3 text-xs text-indigo-800"
-				>
-					<div class="mb-1 flex items-center justify-between">
-						<span class="font-semibold">통합 정합성 요약</span>
-						<button
-							type="button"
-							onclick={() => loadUnifiedValidationSummary()}
-							disabled={unifiedValidationLoading}
-							class="rounded border border-indigo-300 bg-white px-2 py-1 font-medium text-indigo-700 hover:bg-indigo-100 disabled:opacity-50"
-						>
-							재검증
-						</button>
-					</div>
-					{#if unifiedValidationSummary}
-						관계 미매칭 {unifiedValidationSummary.relationUnmatchedCount}건 · 용어계 실패
-						{unifiedValidationSummary.termFailedCount}건 · 전체 이슈
-						{unifiedValidationSummary.totalIssues}건
-					{:else if unifiedValidationLoading}
-						통합 진단 요약을 불러오는 중...
-					{:else}
-						요약 정보가 없습니다.
-					{/if}
-					{#if unifiedValidationError}
-						<div class="mt-2 rounded border border-red-200 bg-red-50 px-2 py-1 text-red-700">
-							{unifiedValidationError}
-						</div>
-					{/if}
-				</div>
-			</section>
-		{/if}
-	{/if}
 
 	<div
 		class="h-[calc(100vh-13rem)] min-h-[560px] overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"

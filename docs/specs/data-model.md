@@ -122,7 +122,7 @@
   - 선택한 `auto_patch` 대상의 `patch.targetType`, `patch.targetId`, `patch.fields`만 대상 파일에 저장합니다.
   - 신규 행 생성/삭제/병합/대량 수정은 자동 적용 범위가 아니며 정의서 편집 팝업에서 수동 처리합니다.
   - 저장 시 대상 엔트리 `updatedAt`, 데이터 컨테이너 `lastUpdated`, `totalCount`를 갱신합니다.
-- `GET/POST /api/erd/relations/sync`는 레거시 동기화 미리보기 API로만 남아 있으며, `apply=true`는 후보 선택 없이 대량 수정하던 legacy 동작이므로 410으로 거부됩니다.
+- 레거시 ERD 관계 동기화 API는 제거되었습니다. 관계 진단은 `GET /api/validation/design-relations`, 후보 선택형 자동 수정은 `/api/validation/design-relations/preview|apply`를 사용합니다.
 
 ### 충돌 정책
 

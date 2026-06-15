@@ -818,12 +818,7 @@ export function validateDesignRelations(
 						rule: r,
 						target: c as Entry,
 						labelFields: ['columnEnglishName', 'columnKoreanName'],
-						expectedKey: buildDisplayKey([
-							c.subjectArea,
-							c.schemaName,
-							c.tableEnglishName,
-							c.relatedEntityName
-						]),
+						expectedKey: buildDisplayKey([c.schemaName, c.tableEnglishName]),
 						actualKey: '미매칭',
 						field: 'tableEnglishName',
 						reason:

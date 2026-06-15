@@ -2455,6 +2455,7 @@ ERD 대상 테이블 목록을 조회합니다.
     같은 관계의 `FK정보` 검증은 참조 엔터티/속성에 대응하는 `schema.table.column` 물리 경로도
     참조로 인정합니다.
     `expectedKey`/`actualKey`는 사용자 표시용 값이며 내부 매칭 키와 달리 `.` 구분자를 사용합니다.
+    `테이블 ↔ 컬럼` 기대값은 물리 테이블명 확인에 필요한 `schema.tableEnglishName`만 표시합니다.
     정의서 패널은 `resolutionTargets` 중 권장 조치 대상을 기본 선택하고, 선택 대상의
     `previewText`/`reason`/`actionGuide`를 별도 API 호출 없이 조치 가이드로 표시합니다.
   - `validation.summaries`: 관계별 `matched/unmatched` 및 현재 스코프 이슈 샘플

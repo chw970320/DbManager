@@ -85,6 +85,7 @@
     `actionGuide`
   - `expectedKey`/`actualKey`: 사용자 표시용 관계 키입니다. 내부 매칭 키는 `|`를 유지하지만
     화면/API 표시 값은 DB 참조 관례에 맞춰 `schema.entity.attribute`처럼 `.` 구분자를 사용합니다.
+    `TABLE_COLUMN_MAPPING` 기대값은 물리 테이블명 확인에 필요한 `schema.tableEnglishName`만 표시합니다.
   - `participants`: 이슈에 연관된 정의서 항목 목록과 역할(`source`/`target`/`reference`)입니다.
     DB 설계 5종 참가자는 사용자 식별용 `identityFields`를 포함할 수 있으며, 유효성 검사 패널의
     `문제 위치` 블록은 이 값을 사용합니다. `identityFields`는 사용자에게 의미 있는 최소 키만 담고

@@ -398,6 +398,26 @@ describe('design-relation-validator canonical relation contract', () => {
 		);
 	});
 
+	it('shows physical table key only for TABLE_COLUMN_MAPPING expected values', () => {
+		const ctx = context();
+		ctx.tables = [];
+		ctx.columns[0] = {
+			...ctx.columns[0],
+			subjectArea: '수집백업',
+			schemaName: 'backup',
+			tableEnglishName: 'TBL_BIOSPC_RGN_LANG',
+			relatedEntityName: '생물종_지역_언어'
+		};
+
+		const issue = validateDesignRelations(ctx).issues.find(
+			(i) => i.relationId === 'TABLE_COLUMN_MAPPING' && i.targetId === 'col-user-id'
+		);
+
+		expect(issue?.expectedKey).toBe('backup.TBL_BIOSPC_RGN_LANG');
+		expect(issue?.expectedKey).not.toContain('수집백업');
+		expect(issue?.expectedKey).not.toContain('생물종_지역_언어');
+	});
+
 	it('keeps ATTRIBUTE_COLUMN_KEY candidates manual-only for PK/FK ambiguity', () => {
 		const ctx = context();
 		ctx.columns[0] = { ...ctx.columns[0], pkInfo: '' };

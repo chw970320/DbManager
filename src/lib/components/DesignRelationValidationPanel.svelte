@@ -333,25 +333,34 @@
 				{#if problemLocations.length}
 					<section
 						class="mt-3 border-y border-border bg-surface-muted/60 px-3 py-2"
-						aria-label="문제 위치"
+						aria-labelledby="problem-location-title-{issue.issueId}"
 					>
-						<div class="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-							<p class="text-xs font-semibold text-content">문제 위치</p>
+						<div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+							<h4
+								id="problem-location-title-{issue.issueId}"
+								class="text-sm font-semibold text-content"
+							>
+								문제 위치
+							</h4>
 							<p class="text-xs text-content-muted">정의서 최소 식별 키</p>
 						</div>
 						<div class="mt-2 divide-y divide-border">
 							{#each problemLocations as participant, index (`${participant.type}-${participant.id ?? participant.label}-${index}`)}
 								<div
-									class="grid gap-1.5 py-2 first:pt-0 last:pb-0 sm:grid-cols-[5.5rem_minmax(0,1fr)]"
+									class="grid gap-2 py-2 first:pt-0 last:pb-0 sm:grid-cols-[6.5rem_minmax(0,1fr)]"
 								>
-									<p class="text-xs font-medium text-content-secondary">
+									<p
+										class="border-l-2 border-border-strong pl-2 text-sm font-semibold text-content"
+									>
 										{typeLabel(participant.type)}
 									</p>
-									<dl class="flex min-w-0 flex-wrap gap-x-3 gap-y-1">
+									<dl class="grid min-w-0 gap-2 sm:grid-cols-[repeat(auto-fit,minmax(8rem,1fr))]">
 										{#each participant.identityFields ?? [] as field (`${field.key}-${field.value}`)}
-											<div class="inline-flex min-w-0 items-baseline gap-1 text-xs">
-												<dt class="shrink-0 text-content-muted">{field.label}</dt>
-												<dd class="min-w-0 break-all font-medium text-content">{field.value}</dd>
+											<div class="min-w-0">
+												<dt class="text-xs font-medium text-content-muted">{field.label}</dt>
+												<dd class="mt-0.5 min-w-0 break-all text-sm font-medium text-content">
+													{field.value}
+												</dd>
 											</div>
 										{/each}
 									</dl>

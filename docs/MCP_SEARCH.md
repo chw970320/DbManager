@@ -97,6 +97,8 @@ All data-reading MCP tools require one of these selectors:
 
 When no selector is supplied, the tool returns `needs_bundle_selection` with available bundles. It does not silently use default filenames. This prevents mixed-context answers, such as reading `term/biomimicry.json` while using default vocabulary data.
 
+The internal `default-shared-file-mapping` bundle is shown only when it is the only available bundle. If any custom/shared bundle exists, `list_file_bundles` and `needs_bundle_selection` hide the default bundle so clients do not auto-select it as a user-facing context.
+
 Raw filenames are not public MCP tool inputs. The MCP server resolves filenames from the selected bundle before proxying to the backing API routes.
 
 If both `bundleId` and `bundleName` are supplied, they must resolve to the same bundle. Conflicting selector state returns `bundle_resolution_error`.
@@ -107,23 +109,23 @@ Search limits mirror the backing routes: vocabulary search accepts `limit` up to
 
 ## Tools
 
-| Tool                  | Backing API                                | Notes                                                                            |
-| --------------------- | ------------------------------------------ | -------------------------------------------------------------------------------- |
-| `list_file_bundles`   | `GET /api/design-snapshots`                | Returns only `data.bundles`.                                                     |
-| `resolve_file_bundle` | `GET /api/design-snapshots`                | Resolves exact id, exact name, then unique case-insensitive name substring.      |
-| `search_vocabulary`   | `GET /api/search`                          | Uses `bundle.files.vocabulary`.                                                  |
-| `suggest_vocabulary`  | `POST /api/search?filename=...`            | Uses `bundle.files.vocabulary`.                                                  |
-| `search_domain`       | `GET /api/domain`                          | Uses `bundle.files.domain`.                                                      |
-| `search_term`         | `GET /api/term`                            | Uses `bundle.files.term`.                                                        |
-| `search_database`     | `GET /api/database`                        | Uses `bundle.files.database`.                                                    |
-| `search_entity`       | `GET /api/entity`                          | Uses `bundle.files.entity`.                                                      |
-| `search_attribute`    | `GET /api/attribute`                       | Uses `bundle.files.attribute`.                                                   |
-| `search_table`        | `GET /api/table`                           | Uses `bundle.files.table`.                                                       |
-| `search_column`       | `GET /api/column`                          | Uses `bundle.files.column`.                                                      |
-| `get_filter_options`  | `GET /api/{type}/filter-options`           | Supports all 8 data types.                                                       |
-| `search_bundle`       | Multiple GET routes                        | Searches grouped connected-set results. Defaults to all 8 data types.            |
-| `convert_term`        | `POST /api/generator?filename=...`         | Uses the resolved term file so the API follows its connected vocabulary mapping. |
-| `segment_term`        | `POST /api/generator/segment?filename=...` | Uses the resolved term file before segmentation.                                 |
+| Tool                  | Backing API                                | Notes                                                                                       |
+| --------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| `list_file_bundles`   | `GET /api/design-snapshots`                | Returns user-facing bundles; hides `default-shared-file-mapping` when custom bundles exist. |
+| `resolve_file_bundle` | `GET /api/design-snapshots`                | Resolves exact id, exact name, then unique case-insensitive name substring.                 |
+| `search_vocabulary`   | `GET /api/search`                          | Uses `bundle.files.vocabulary`.                                                             |
+| `suggest_vocabulary`  | `POST /api/search?filename=...`            | Uses `bundle.files.vocabulary`.                                                             |
+| `search_domain`       | `GET /api/domain`                          | Uses `bundle.files.domain`.                                                                 |
+| `search_term`         | `GET /api/term`                            | Uses `bundle.files.term`.                                                                   |
+| `search_database`     | `GET /api/database`                        | Uses `bundle.files.database`.                                                               |
+| `search_entity`       | `GET /api/entity`                          | Uses `bundle.files.entity`.                                                                 |
+| `search_attribute`    | `GET /api/attribute`                       | Uses `bundle.files.attribute`.                                                              |
+| `search_table`        | `GET /api/table`                           | Uses `bundle.files.table`.                                                                  |
+| `search_column`       | `GET /api/column`                          | Uses `bundle.files.column`.                                                                 |
+| `get_filter_options`  | `GET /api/{type}/filter-options`           | Supports all 8 data types.                                                                  |
+| `search_bundle`       | Multiple GET routes                        | Searches grouped connected-set results. Defaults to all 8 data types.                       |
+| `convert_term`        | `POST /api/generator?filename=...`         | Uses the resolved term file so the API follows its connected vocabulary mapping.            |
+| `segment_term`        | `POST /api/generator/segment?filename=...` | Uses the resolved term file before segmentation.                                            |
 
 ## Example Use Cases
 

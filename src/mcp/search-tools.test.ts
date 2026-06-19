@@ -41,6 +41,17 @@ const ECOBANK_FILES: FileBundle = {
 	column: 'ecobank.json'
 };
 
+const DEFAULT_FILES: FileBundle = {
+	vocabulary: 'vocabulary.json',
+	domain: 'domain.json',
+	term: 'term.json',
+	database: 'database.json',
+	entity: 'entity.json',
+	attribute: 'attribute.json',
+	table: 'table.json',
+	column: 'column.json'
+};
+
 function jsonResponse(data: unknown, init: ResponseInit = {}): Response {
 	return new Response(JSON.stringify(data), {
 		...init,
@@ -83,6 +94,13 @@ function createApiWithMock(
 							id: 'eco',
 							name: 'ecobank 번들',
 							files: ECOBANK_FILES,
+							createdAt: '2026-01-01T00:00:00.000Z',
+							updatedAt: '2026-01-02T00:00:00.000Z'
+						},
+						{
+							id: 'default-shared-file-mapping',
+							name: '기본 공통 번들',
+							files: DEFAULT_FILES,
 							createdAt: '2026-01-01T00:00:00.000Z',
 							updatedAt: '2026-01-02T00:00:00.000Z'
 						}
@@ -129,6 +147,49 @@ describe('DbManager MCP bundle resolution', () => {
 		expect(resolution.status).toBe('resolved');
 		if (resolution.status === 'resolved') {
 			expect(resolution.bundle.files.term).toBe('biomimicry.json');
+		}
+	});
+
+	it('hides the default bundle when custom bundles exist', async () => {
+		const { api } = createApiWithMock();
+
+		const bundles = await listFileBundles(api);
+		const result = await searchVocabulary(api, { query: '방문자' });
+
+		expect(bundles.map((bundle) => bundle.id)).toEqual(['bio', 'eco']);
+		expect(result.status).toBe('needs_bundle_selection');
+		if (result.status === 'needs_bundle_selection') {
+			expect(result.bundles.map((bundle) => bundle.id)).toEqual(['bio', 'eco']);
+		}
+	});
+
+	it('shows the default bundle when it is the only available bundle', async () => {
+		const { api } = createApiWithMock((url) => {
+			if (url.pathname === '/api/design-snapshots') {
+				return jsonResponse({
+					success: true,
+					data: {
+						bundles: [
+							{
+								id: 'default-shared-file-mapping',
+								name: '기본 공통 번들',
+								files: DEFAULT_FILES
+							}
+						]
+					}
+				});
+			}
+
+			return jsonResponse({ success: true, data: { entries: [] } });
+		});
+
+		const bundles = await listFileBundles(api);
+		const result = await searchVocabulary(api, { query: '방문자' });
+
+		expect(bundles.map((bundle) => bundle.id)).toEqual(['default-shared-file-mapping']);
+		expect(result.status).toBe('needs_bundle_selection');
+		if (result.status === 'needs_bundle_selection') {
+			expect(result.bundles.map((bundle) => bundle.id)).toEqual(['default-shared-file-mapping']);
 		}
 	});
 

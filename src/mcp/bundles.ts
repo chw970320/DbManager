@@ -62,6 +62,8 @@ const bundleFileShape = Object.fromEntries(
 	DATA_TYPES.map((type) => [type, z.string().min(1)])
 ) as Record<DataType, z.ZodString>;
 
+const DEFAULT_SHARED_FILE_MAPPING_ID = 'default-shared-file-mapping';
+
 export const bundleFilesInputSchema = z.object(bundleFileShape);
 
 const resolveBundleInputSchema = {
@@ -127,7 +129,9 @@ export async function listFileBundles(apiClient: DbManagerApiClient): Promise<Fi
 		throw new Error('DbManager design snapshot response did not include data.bundles.');
 	}
 
-	return rawBundles.map((bundle, index) => normalizeBundleEntry(bundle, index));
+	return hideDefaultBundleWhenCustomBundlesExist(
+		rawBundles.map((bundle, index) => normalizeBundleEntry(bundle, index))
+	);
 }
 
 export async function resolveFileBundle(
@@ -352,4 +356,9 @@ function normalizeBundleEntry(value: unknown, index: number): FileBundleEntry {
 		createdAt: typeof entry.createdAt === 'string' ? entry.createdAt : undefined,
 		updatedAt: typeof entry.updatedAt === 'string' ? entry.updatedAt : undefined
 	};
+}
+
+function hideDefaultBundleWhenCustomBundlesExist(bundles: FileBundleEntry[]): FileBundleEntry[] {
+	const customBundles = bundles.filter((bundle) => bundle.id !== DEFAULT_SHARED_FILE_MAPPING_ID);
+	return customBundles.length > 0 ? customBundles : bundles;
 }

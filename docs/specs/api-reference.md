@@ -3152,7 +3152,7 @@ const data = await response.json();
 
 ### `GET /api/assistant/bundles`
 
-전역 AI Assistant drawer에서 사용할 8종 파일 번들 목록을 조회합니다. MCP의 공개 `list_file_bundles`와 달리 인앱 Assistant에서는 `default-shared-file-mapping`도 항상 선택 가능하도록 반환합니다.
+전역 AI Assistant 화면에서 사용할 8종 파일 번들 목록을 조회합니다. MCP의 공개 `list_file_bundles`와 달리 인앱 Assistant에서는 `default-shared-file-mapping`도 항상 선택 가능하도록 반환합니다.
 
 #### 응답
 

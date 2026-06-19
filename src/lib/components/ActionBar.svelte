@@ -13,7 +13,7 @@
 
 	const positionClass =
 		position === 'sticky'
-			? 'sticky top-16 z-30 bg-surface/95 backdrop-blur-sm py-3 border-b border-border'
+			? 'sticky top-[var(--layout-header-height)] z-30 bg-surface/95 backdrop-blur-sm py-3 border-b border-border'
 			: position === 'bottom'
 				? 'mt-4 pt-4 border-t border-border'
 				: 'mb-4';

@@ -1,6 +1,6 @@
 # DbManager AI Assistant
 
-DbManager AI Assistant is an in-app, right-side chat drawer for asking questions about the currently selected 8-file bundle. It uses the internal LLM server and DbManager read-only MCP/search tool surface, then shows source/provenance and user-clicked action buttons.
+DbManager AI Assistant is an in-app chat surface for asking questions about the currently selected 8-file bundle. It uses the internal LLM server and DbManager read-only MCP/search tool surface, then shows source/provenance and user-clicked action buttons.
 
 ## Setup
 
@@ -27,8 +27,12 @@ The assistant then returns a deterministic source summary from the collected DbM
 
 ## Behavior
 
-- The assistant is available globally from the floating AI Assistant button.
-- The drawer uses the highest app layer so it appears above validation panels, dialogs, toasts, and tooltips.
+- The assistant is available globally from the left-edge AI Assistant launcher.
+- The default view is a compact fixed-position floating window in the left-bottom area.
+- Users can switch to a left overlay tab panel when they want a taller docked review surface.
+- The last selected assistant view mode is remembered in browser storage.
+- Assistant surfaces use the highest app layer so they appear above validation panels, dialogs, toasts, and tooltips.
+- The assistant no longer uses a right-side full-height drawer, so it does not compete with validation panels that open from the right.
 - A bundle is always selected.
 - The default shared bundle remains selectable.
 - If non-default bundles exist, the first non-default bundle is selected by default.
@@ -45,7 +49,7 @@ Chat history is stored in the browser, not on the server.
 - Conversations are partitioned by bundle id, so switching bundles does not replay another bundle's transcript into the current request.
 - History survives normal reloads, hard reloads, and HTTP cache clearing.
 - Browser site-data deletion can still remove it.
-- The drawer provides export, import, and delete controls for the currently selected bundle conversation.
+- The assistant provides export, import, and delete controls for the currently selected bundle conversation.
 
 Server-side user history, login/session identity, and recovery-key storage are intentionally out of scope for the first pass.
 

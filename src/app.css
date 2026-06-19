@@ -39,6 +39,8 @@
 		--color-status-info: 30 64 175;
 		--color-status-info-bg: 219 234 254;
 		--color-status-info-border: 191 219 254;
+
+		--layout-header-height: 4rem;
 	}
 
 	/* 다크모드 대응 (향후 테마 전환 기능 적용 시 자동 반영) */

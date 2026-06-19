@@ -18,7 +18,15 @@
 	} from '$lib/types/assistant.js';
 	import type { SharedFileMappingBundleEntry } from '$lib/types/shared-file-mapping.js';
 
+	type AssistantViewMode = 'floating' | 'tab';
+
+	const ASSISTANT_MODE_STORAGE_KEY = 'dbmanager.assistant.view-mode';
+	const MODE_BUTTON_CLASS =
+		'rounded-md p-2 text-content-muted transition-colors hover:bg-surface-raised hover:text-content';
+	const ACTIVE_MODE_BUTTON_CLASS = `${MODE_BUTTON_CLASS} bg-brand-50 text-brand`;
+
 	let open = $state(false);
+	let viewMode = $state<AssistantViewMode>('floating');
 	let bundles = $state<SharedFileMappingBundleEntry[]>([]);
 	let selectedBundleId = $state('');
 	let messages = $state<AssistantChatMessage[]>([]);
@@ -27,6 +35,8 @@
 	let loadingBundles = $state(true);
 	let sending = $state(false);
 	let errorMessage = $state('');
+	let launcherButton: HTMLButtonElement | undefined = $state();
+	let assistantPanel: HTMLDivElement | undefined = $state();
 	let importInput: HTMLInputElement | undefined = $state();
 	let messageList: HTMLDivElement | undefined = $state();
 
@@ -35,10 +45,54 @@
 	);
 	const canSend = $derived(input.trim().length > 0 && Boolean(selectedBundleId) && !sending);
 	const historyLocked = $derived(loadingBundles || sending || !selectedBundleId);
+	const panelAriaLabel = $derived(
+		viewMode === 'floating' ? 'AI Assistant 플로팅 창' : 'AI Assistant 좌측 탭'
+	);
+	const panelClass = $derived(
+		viewMode === 'floating'
+			? 'fixed inset-x-3 bottom-3 z-assistant flex h-[calc(100vh-1.5rem)] max-h-[42rem] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl sm:inset-x-auto sm:bottom-6 sm:left-6 sm:h-[38rem] sm:w-[28rem] sm:max-w-[calc(100vw-3rem)]'
+			: 'fixed left-0 top-[var(--layout-header-height)] z-assistant flex h-[calc(100vh-var(--layout-header-height))] w-full max-w-md flex-col overflow-hidden border-r border-border bg-surface shadow-2xl sm:w-[24rem]'
+	);
+	const floatingModeButtonClass = $derived(
+		viewMode === 'floating' ? ACTIVE_MODE_BUTTON_CLASS : MODE_BUTTON_CLASS
+	);
+	const tabModeButtonClass = $derived(
+		viewMode === 'tab' ? ACTIVE_MODE_BUTTON_CLASS : MODE_BUTTON_CLASS
+	);
 
 	onMount(() => {
+		viewMode = readAssistantViewMode();
 		void initializeAssistant();
 	});
+
+	function readAssistantViewMode(): AssistantViewMode {
+		try {
+			return localStorage.getItem(ASSISTANT_MODE_STORAGE_KEY) === 'tab' ? 'tab' : 'floating';
+		} catch {
+			return 'floating';
+		}
+	}
+
+	function setViewMode(nextMode: AssistantViewMode) {
+		viewMode = nextMode;
+		try {
+			localStorage.setItem(ASSISTANT_MODE_STORAGE_KEY, nextMode);
+		} catch {
+			// Mode memory is a convenience; the assistant remains usable if storage is blocked.
+		}
+	}
+
+	async function openAssistant() {
+		open = true;
+		await tick();
+		assistantPanel?.focus();
+	}
+
+	async function closeAssistant() {
+		open = false;
+		await tick();
+		launcherButton?.focus();
+	}
 
 	async function initializeAssistant() {
 		loadingBundles = true;
@@ -307,6 +361,13 @@
 		}
 	}
 
+	function handlePanelKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape') {
+			event.preventDefault();
+			void closeAssistant();
+		}
+	}
+
 	function formatTime(value: string): string {
 		const date = new Date(value);
 		if (Number.isNaN(date.getTime())) {
@@ -316,216 +377,242 @@
 	}
 </script>
 
-<button
-	type="button"
-	class="fixed bottom-24 right-8 z-assistant flex h-12 w-12 items-center justify-center rounded-full bg-gray-900 text-white shadow-xl transition-all duration-200 hover:-translate-y-0.5 hover:bg-brand focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2"
-	aria-label="AI Assistant 열기"
-	title="AI Assistant"
-	onclick={() => (open = true)}
->
-	<Icon name="message-circle" size="lg" />
-</button>
+{#if !open}
+	<button
+		type="button"
+		class="fixed left-0 top-1/2 z-assistant flex h-12 w-11 -translate-y-1/2 items-center justify-center rounded-r-full border border-l-0 border-border bg-surface text-brand shadow-lg transition-all duration-200 hover:w-12 hover:bg-brand-50 focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2"
+		aria-label="AI Assistant 열기"
+		title="AI Assistant"
+		bind:this={launcherButton}
+		onclick={openAssistant}
+	>
+		<Icon name="message-circle" size="lg" />
+	</button>
+{/if}
 
 {#if open}
-	<div class="fixed inset-0 z-assistant">
-		<button
-			type="button"
-			class="absolute inset-0 h-full w-full cursor-default bg-gray-900/20"
-			aria-label="AI Assistant 닫기"
-			onclick={() => (open = false)}
-		></button>
-
-		<aside
-			class="absolute right-0 top-0 flex h-full w-full max-w-xl flex-col border-l border-border bg-surface shadow-2xl sm:w-[30rem]"
-			aria-label="AI Assistant"
-		>
-			<header class="border-b border-border bg-surface px-4 py-4">
-				<div class="flex items-start justify-between gap-3">
-					<div>
-						<h2 class="text-base font-semibold text-content">AI Assistant</h2>
-						<p class="mt-1 text-xs text-content-muted">
-							선택한 번들의 검색 출처를 기준으로 답변합니다.
-						</p>
-					</div>
+	<div
+		bind:this={assistantPanel}
+		class={panelClass}
+		role="dialog"
+		aria-modal="false"
+		aria-label={panelAriaLabel}
+		tabindex="-1"
+		onkeydown={handlePanelKeydown}
+	>
+		<header class="border-b border-border bg-surface px-4 py-4">
+			<div class="flex items-start justify-between gap-3">
+				<div>
+					<h2 class="text-base font-semibold text-content">AI Assistant</h2>
+					<p class="mt-1 text-xs text-content-muted">
+						선택한 번들의 검색 출처를 기준으로 답변합니다.
+					</p>
+				</div>
+				<div class="flex shrink-0 items-center gap-1">
 					<button
 						type="button"
-						class="btn btn-ghost btn-sm"
+						class={floatingModeButtonClass}
+						aria-label="플로팅 보기"
+						aria-pressed={viewMode === 'floating'}
+						title="플로팅 보기"
+						onclick={() => setViewMode('floating')}
+					>
+						<Icon name="window" size="sm" />
+					</button>
+					<button
+						type="button"
+						class={tabModeButtonClass}
+						aria-label="좌측 탭 보기"
+						aria-pressed={viewMode === 'tab'}
+						title="좌측 탭 보기"
+						onclick={() => setViewMode('tab')}
+					>
+						<Icon name="panel-left" size="sm" />
+					</button>
+					<button
+						type="button"
+						class="rounded-md p-2 text-content-muted transition-colors hover:bg-surface-raised hover:text-content"
 						aria-label="AI Assistant 닫기"
-						onclick={() => (open = false)}
+						onclick={closeAssistant}
 					>
 						<Icon name="x" size="sm" />
 					</button>
 				</div>
-
-				<div class="mt-4">
-					<label for="assistant-bundle" class="mb-1 block text-xs font-medium text-content">
-						번들
-					</label>
-					<select
-						id="assistant-bundle"
-						class="input text-sm"
-						value={selectedBundleId}
-						onchange={handleBundleChange}
-						disabled={loadingBundles || sending || bundles.length === 0}
-					>
-						{#each bundles as bundle (bundle.id)}
-							<option value={bundle.id}>{bundle.name}</option>
-						{/each}
-					</select>
-					{#if selectedBundle}
-						<p class="mt-1 text-xs text-content-muted">
-							용어 {selectedBundle.files.term} · 컬럼 {selectedBundle.files.column}
-						</p>
-					{/if}
-				</div>
-			</header>
-
-			<div class="flex items-center gap-2 border-b border-border bg-surface-muted px-4 py-2">
-				<button
-					type="button"
-					class="btn btn-ghost btn-sm"
-					onclick={exportHistory}
-					disabled={historyLocked}
-				>
-					<Icon name="download" size="sm" />
-					내보내기
-				</button>
-				<button
-					type="button"
-					class="btn btn-ghost btn-sm"
-					onclick={openImportDialog}
-					disabled={historyLocked}
-				>
-					<Icon name="upload" size="sm" />
-					가져오기
-				</button>
-				<button
-					type="button"
-					class="btn btn-ghost btn-sm text-status-error"
-					onclick={clearHistory}
-					disabled={historyLocked}
-				>
-					<Icon name="trash" size="sm" />
-					삭제
-				</button>
-				<input
-					bind:this={importInput}
-					type="file"
-					accept="application/json,.json"
-					class="hidden"
-					onchange={importHistory}
-				/>
 			</div>
 
-			<div bind:this={messageList} class="flex-1 space-y-4 overflow-y-auto bg-surface-muted p-4">
-				{#if loadingBundles}
-					<div class="rounded-lg border border-border bg-surface p-4 text-sm text-content-muted">
-						Assistant를 준비하는 중입니다.
-					</div>
-				{:else if messages.length === 0}
-					<div
-						class="rounded-lg border border-dashed border-border bg-surface p-5 text-sm text-content-muted"
+			<div class="mt-4">
+				<label for="assistant-bundle" class="mb-1 block text-xs font-medium text-content">
+					번들
+				</label>
+				<select
+					id="assistant-bundle"
+					class="input text-sm"
+					value={selectedBundleId}
+					onchange={handleBundleChange}
+					disabled={loadingBundles || sending || bundles.length === 0}
+				>
+					{#each bundles as bundle (bundle.id)}
+						<option value={bundle.id}>{bundle.name}</option>
+					{/each}
+				</select>
+				{#if selectedBundle}
+					<p class="mt-1 text-xs text-content-muted">
+						용어 {selectedBundle.files.term} · 컬럼 {selectedBundle.files.column}
+					</p>
+				{/if}
+			</div>
+		</header>
+
+		<div
+			class="flex flex-wrap items-center gap-2 border-b border-border bg-surface-muted px-4 py-2"
+		>
+			<button
+				type="button"
+				class="btn btn-ghost btn-sm"
+				onclick={exportHistory}
+				disabled={historyLocked}
+			>
+				<Icon name="download" size="sm" />
+				내보내기
+			</button>
+			<button
+				type="button"
+				class="btn btn-ghost btn-sm"
+				onclick={openImportDialog}
+				disabled={historyLocked}
+			>
+				<Icon name="upload" size="sm" />
+				가져오기
+			</button>
+			<button
+				type="button"
+				class="btn btn-ghost btn-sm text-status-error"
+				onclick={clearHistory}
+				disabled={historyLocked}
+			>
+				<Icon name="trash" size="sm" />
+				삭제
+			</button>
+			<input
+				bind:this={importInput}
+				type="file"
+				accept="application/json,.json"
+				class="hidden"
+				onchange={importHistory}
+			/>
+		</div>
+
+		<div
+			bind:this={messageList}
+			class="min-h-0 flex-1 space-y-4 overflow-y-auto bg-surface-muted p-4"
+		>
+			{#if loadingBundles}
+				<div class="rounded-lg border border-border bg-surface p-4 text-sm text-content-muted">
+					Assistant를 준비하는 중입니다.
+				</div>
+			{:else if messages.length === 0}
+				<div
+					class="rounded-lg border border-dashed border-border bg-surface p-5 text-sm text-content-muted"
+				>
+					<p class="font-medium text-content-secondary">질문을 입력해 주세요.</p>
+					<p class="mt-2">
+						예: 휴일_전전일자 영문약어가 뭐야? 또는 방문자 관련 단어와 컬럼을 찾아줘.
+					</p>
+				</div>
+			{:else}
+				{#each messages as message (message.id)}
+					<article
+						class="rounded-lg border px-4 py-3 shadow-sm {message.role === 'user'
+							? 'ml-8 border-brand-100 bg-brand-50'
+							: 'mr-8 border-border bg-surface'}"
 					>
-						<p class="font-medium text-content-secondary">질문을 입력해 주세요.</p>
-						<p class="mt-2">
-							예: 휴일_전전일자 영문약어가 뭐야? 또는 방문자 관련 단어와 컬럼을 찾아줘.
+						<div class="flex items-center justify-between gap-3">
+							<span class="text-xs font-semibold text-content-secondary">
+								{message.role === 'user' ? '나' : 'AI Assistant'}
+							</span>
+							<span class="text-[11px] text-content-subtle">{formatTime(message.createdAt)}</span>
+						</div>
+						<p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-content">
+							{message.content}
 						</p>
-					</div>
-				{:else}
-					{#each messages as message (message.id)}
-						<article
-							class="rounded-lg border px-4 py-3 shadow-sm {message.role === 'user'
-								? 'ml-8 border-brand-100 bg-brand-50'
-								: 'mr-8 border-border bg-surface'}"
-						>
-							<div class="flex items-center justify-between gap-3">
-								<span class="text-xs font-semibold text-content-secondary">
-									{message.role === 'user' ? '나' : 'AI Assistant'}
-								</span>
-								<span class="text-[11px] text-content-subtle">{formatTime(message.createdAt)}</span>
-							</div>
-							<p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-content">
-								{message.content}
-							</p>
 
-							{#if message.sources?.length}
-								<div class="mt-3 border-t border-border pt-3">
-									<p class="text-xs font-semibold text-content-secondary">출처</p>
-									<div class="mt-2 flex flex-wrap gap-2">
-										{#each message.sources as source (source.id)}
-											<span
-												class="inline-flex items-center rounded-full border border-border bg-surface-muted px-2 py-1 text-[11px] text-content-muted"
-												title={`${source.bundleName}${source.filename ? ` · ${source.filename}` : ''}`}
-											>
-												{source.title}
-												{source.count !== undefined ? ` · ${source.count}건` : ''}
-											</span>
-										{/each}
-									</div>
-								</div>
-							{/if}
-
-							{#if message.actions?.length}
-								<div class="mt-3 flex flex-wrap gap-2">
-									{#each message.actions as action (action.id)}
-										<button
-											type="button"
-											class="btn btn-outline btn-sm"
-											title={action.description}
-											onclick={() => handleAction(action)}
+						{#if message.sources?.length}
+							<div class="mt-3 border-t border-border pt-3">
+								<p class="text-xs font-semibold text-content-secondary">출처</p>
+								<div class="mt-2 flex flex-wrap gap-2">
+									{#each message.sources as source (source.id)}
+										<span
+											class="inline-flex items-center rounded-full border border-border bg-surface-muted px-2 py-1 text-[11px] text-content-muted"
+											title={`${source.bundleName}${source.filename ? ` · ${source.filename}` : ''}`}
 										>
-											<Icon name="external-link" size="sm" />
-											{action.label}
-										</button>
+											{source.title}
+											{source.count !== undefined ? ` · ${source.count}건` : ''}
+										</span>
 									{/each}
 								</div>
-							{/if}
-						</article>
-					{/each}
-				{/if}
+							</div>
+						{/if}
 
-				{#if sending}
-					<div
-						class="mr-8 rounded-lg border border-border bg-surface px-4 py-3 text-sm text-content-muted"
-					>
-						<Icon name="spinner" size="sm" class="mr-2 inline-block" />
-						응답을 생성하는 중입니다.
-					</div>
-				{/if}
+						{#if message.actions?.length}
+							<div class="mt-3 flex flex-wrap gap-2">
+								{#each message.actions as action (action.id)}
+									<button
+										type="button"
+										class="btn btn-outline btn-sm"
+										title={action.description}
+										onclick={() => handleAction(action)}
+									>
+										<Icon name="external-link" size="sm" />
+										{action.label}
+									</button>
+								{/each}
+							</div>
+						{/if}
+					</article>
+				{/each}
+			{/if}
 
-				{#if errorMessage}
-					<div
-						class="rounded-lg border border-status-error-border bg-status-error-bg px-4 py-3 text-sm text-status-error"
-					>
-						{errorMessage}
-					</div>
-				{/if}
-			</div>
-
-			<form
-				class="border-t border-border bg-surface p-4"
-				onsubmit={(event) => {
-					event.preventDefault();
-					void sendMessage();
-				}}
-			>
-				<label for="assistant-input" class="sr-only">Assistant 질문</label>
-				<textarea
-					id="assistant-input"
-					class="input min-h-24 resize-none text-sm"
-					placeholder="선택한 번들에 대해 질문하세요."
-					bind:value={input}
-					onkeydown={handleComposerKeydown}
-					disabled={!selectedBundleId || sending}
-				></textarea>
-				<div class="mt-3 flex items-center justify-between gap-3">
-					<span aria-hidden="true"></span>
-					<button type="submit" class="btn btn-primary btn-sm" disabled={!canSend}>
-						<Icon name="send" size="sm" />
-						전송
-					</button>
+			{#if sending}
+				<div
+					class="mr-8 rounded-lg border border-border bg-surface px-4 py-3 text-sm text-content-muted"
+				>
+					<Icon name="spinner" size="sm" class="mr-2 inline-block" />
+					응답을 생성하는 중입니다.
 				</div>
-			</form>
-		</aside>
+			{/if}
+
+			{#if errorMessage}
+				<div
+					class="rounded-lg border border-status-error-border bg-status-error-bg px-4 py-3 text-sm text-status-error"
+				>
+					{errorMessage}
+				</div>
+			{/if}
+		</div>
+
+		<form
+			class="border-t border-border bg-surface p-4"
+			onsubmit={(event) => {
+				event.preventDefault();
+				void sendMessage();
+			}}
+		>
+			<label for="assistant-input" class="sr-only">Assistant 질문</label>
+			<textarea
+				id="assistant-input"
+				class="input min-h-20 resize-none text-sm"
+				placeholder="선택한 번들에 대해 질문하세요."
+				bind:value={input}
+				onkeydown={handleComposerKeydown}
+				disabled={!selectedBundleId || sending}
+			></textarea>
+			<div class="mt-3 flex items-center justify-between gap-3">
+				<span aria-hidden="true"></span>
+				<button type="submit" class="btn btn-primary btn-sm" disabled={!canSend}>
+					<Icon name="send" size="sm" />
+					전송
+				</button>
+			</div>
+		</form>
 	</div>
 {/if}

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import AssistantDrawer from './AssistantDrawer.svelte';
 import { goto } from '$app/navigation';
@@ -16,6 +16,8 @@ const deferredChatResponses: Array<{
 	resolve: (response: Response) => void;
 }> = [];
 let deferChatResponses = false;
+
+const ASSISTANT_MODE_STORAGE_KEY = 'dbmanager.assistant.view-mode';
 
 const defaultBundle = {
 	id: 'default-shared-file-mapping',
@@ -135,6 +137,72 @@ describe('AssistantDrawer', () => {
 		vi.clearAllMocks();
 		localStorage.clear();
 		mockFetch();
+	});
+
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
+
+	it('opens from the left launcher as a compact floating assistant by default', async () => {
+		render(AssistantDrawer);
+
+		const launcher = screen.getByRole('button', { name: 'AI Assistant 열기' });
+		expect(launcher.className).toContain('left-0');
+		expect(launcher.className).not.toContain('right-8');
+
+		await fireEvent.click(launcher);
+		const dialog = await screen.findByRole('dialog', { name: 'AI Assistant 플로팅 창' });
+
+		expect(dialog.className).toContain('bottom-3');
+		expect(dialog.className).toContain('sm:left-6');
+		expect(screen.getByRole('button', { name: '플로팅 보기' })).toHaveAttribute(
+			'aria-pressed',
+			'true'
+		);
+	});
+
+	it('moves keyboard focus into the assistant and restores it to the launcher on Escape', async () => {
+		render(AssistantDrawer);
+
+		await fireEvent.click(screen.getByRole('button', { name: 'AI Assistant 열기' }));
+		const dialog = await screen.findByRole('dialog', { name: 'AI Assistant 플로팅 창' });
+
+		await waitFor(() => expect(dialog).toHaveFocus());
+		await fireEvent.keyDown(dialog, { key: 'Escape' });
+
+		const launcher = await screen.findByRole('button', { name: 'AI Assistant 열기' });
+		await waitFor(() => expect(launcher).toHaveFocus());
+	});
+
+	it('switches to the left tab mode without pushing layout and remembers the mode', async () => {
+		const { unmount } = render(AssistantDrawer);
+
+		await fireEvent.click(screen.getByRole('button', { name: 'AI Assistant 열기' }));
+		await fireEvent.click(await screen.findByRole('button', { name: '좌측 탭 보기' }));
+
+		const tabDialog = await screen.findByRole('dialog', { name: 'AI Assistant 좌측 탭' });
+		expect(tabDialog.className).toContain('left-0');
+		expect(tabDialog.className).toContain('top-[var(--layout-header-height)]');
+		expect(localStorage.getItem(ASSISTANT_MODE_STORAGE_KEY)).toBe('tab');
+
+		unmount();
+		render(AssistantDrawer);
+		await fireEvent.click(screen.getByRole('button', { name: 'AI Assistant 열기' }));
+
+		expect(await screen.findByRole('dialog', { name: 'AI Assistant 좌측 탭' })).toBeInTheDocument();
+	});
+
+	it('keeps mode switching usable when browser mode storage is unavailable', async () => {
+		const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+			throw new Error('storage blocked for test');
+		});
+		render(AssistantDrawer);
+
+		await fireEvent.click(screen.getByRole('button', { name: 'AI Assistant 열기' }));
+		await fireEvent.click(await screen.findByRole('button', { name: '좌측 탭 보기' }));
+
+		expect(await screen.findByRole('dialog', { name: 'AI Assistant 좌측 탭' })).toBeInTheDocument();
+		expect(setItem).toHaveBeenCalledWith(ASSISTANT_MODE_STORAGE_KEY, 'tab');
 	});
 
 	it('shows a required bundle selectbox with default selectable and first custom selected', async () => {

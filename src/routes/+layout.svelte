@@ -41,7 +41,7 @@
 	<!-- 글래스모피즘 네비게이션 -->
 	<header class="sticky top-0 z-50 border-b border-white/20 bg-white/80 shadow-sm backdrop-blur-xl">
 		<div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-			<div class="flex h-16 items-center justify-between">
+			<div class="flex h-[var(--layout-header-height)] items-center justify-between">
 				<!-- 로고 -->
 				<div class="flex items-center space-x-8">
 					<a

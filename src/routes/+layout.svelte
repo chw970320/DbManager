@@ -4,6 +4,7 @@
 	import ScrollToTop from '$lib/components/ScrollToTop.svelte';
 	import Toast from '$lib/components/Toast.svelte';
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
+	import AssistantDrawer from '$lib/components/AssistantDrawer.svelte';
 	import Icon from '$lib/components/Icon.svelte';
 	import { menuGroups, type NavigationMenuGroup } from '$lib/utils/navigation';
 
@@ -195,6 +196,7 @@
 	</footer>
 
 	<ScrollToTop />
+	<AssistantDrawer />
 	<Toast />
 	<ConfirmDialog />
 </div>

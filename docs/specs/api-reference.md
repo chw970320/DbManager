@@ -3148,6 +3148,105 @@ const data = await response.json();
 
 ---
 
+## AI Assistant API
+
+### `GET /api/assistant/bundles`
+
+전역 AI Assistant drawer에서 사용할 8종 파일 번들 목록을 조회합니다. MCP의 공개 `list_file_bundles`와 달리 인앱 Assistant에서는 `default-shared-file-mapping`도 항상 선택 가능하도록 반환합니다.
+
+#### 응답
+
+```json
+{
+	"success": true,
+	"data": {
+		"bundles": [
+			{
+				"id": "default-shared-file-mapping",
+				"name": "기본 공통 번들",
+				"files": {
+					"vocabulary": "vocabulary.json",
+					"domain": "domain.json",
+					"term": "term.json",
+					"database": "database.json",
+					"entity": "entity.json",
+					"attribute": "attribute.json",
+					"table": "table.json",
+					"column": "column.json"
+				},
+				"createdAt": "2026-06-01T03:56:20.230Z",
+				"updatedAt": "2026-06-01T03:56:20.230Z"
+			}
+		],
+		"recommendedBundleId": "default-shared-file-mapping",
+		"defaultBundleId": "default-shared-file-mapping"
+	}
+}
+```
+
+### `POST /api/assistant/chat`
+
+선택한 파일 번들과 최근 대화 메시지를 기준으로 Assistant 응답을 생성합니다. 서버는 private LLM 환경 변수를 읽고, read-only MCP 검색/용어 변환 도구 결과를 출처로 구성합니다. 서버에는 대화 기록을 저장하지 않습니다.
+
+#### 요청
+
+```json
+{
+	"bundleId": "cccaa4b0-ade1-45af-8a43-fe6c44708173",
+	"messages": [
+		{
+			"role": "user",
+			"content": "휴일_전전일자 영문약어가 뭐야?"
+		}
+	]
+}
+```
+
+#### 응답
+
+```json
+{
+	"success": true,
+	"data": {
+		"bundle": {
+			"id": "cccaa4b0-ade1-45af-8a43-fe6c44708173",
+			"name": "biomimicry 번들"
+		},
+		"message": {
+			"id": "uuid",
+			"role": "assistant",
+			"content": "biomimicry 번들 기준으로 확인했습니다.\n\n출처: ...",
+			"createdAt": "2026-06-19T07:00:00.000Z",
+			"sources": [],
+			"actions": []
+		},
+		"sources": [
+			{
+				"id": "convert_term-term",
+				"tool": "convert_term",
+				"title": "용어 변환 결과",
+				"summary": "HLDY_DAYBY",
+				"bundleId": "cccaa4b0-ade1-45af-8a43-fe6c44708173",
+				"bundleName": "biomimicry 번들",
+				"type": "term",
+				"filename": "biomimicry.json",
+				"count": 1
+			}
+		],
+		"actions": [
+			{
+				"id": "open-term",
+				"type": "navigate",
+				"label": "용어집 화면 열기",
+				"href": "/term/browse"
+			}
+		]
+	}
+}
+```
+
+---
+
 ## 에러 코드
 
 ### HTTP 상태 코드
@@ -3217,4 +3316,4 @@ const data = await response.json();
 
 ---
 
-**마지막 업데이트**: 2026-03-13
+**마지막 업데이트**: 2026-06-19

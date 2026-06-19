@@ -58,7 +58,8 @@ export default {
 				modal: '500',
 				popover: '600',
 				toast: '700',
-				tooltip: '800'
+				tooltip: '800',
+				assistant: '900'
 			},
 			keyframes: {
 				'fade-in-up': {

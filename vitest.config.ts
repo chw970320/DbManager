@@ -8,6 +8,7 @@ export default defineConfig({
 		alias: {
 			$lib: path.resolve(__dirname, 'src/lib'),
 			'$app/environment': path.resolve(__dirname, 'src/app/environment.mock.ts'),
+			'$app/navigation': path.resolve(__dirname, 'src/app/navigation.mock.ts'),
 			'$env/dynamic/private': path.resolve(__dirname, 'src/app/env-dynamic-private.mock.ts')
 		},
 		// Svelte 5 브라우저 모드 활성화

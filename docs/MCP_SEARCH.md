@@ -1,16 +1,51 @@
 # DbManager MCP Search Server
 
-DbManager MCP search server exposes the existing local SvelteKit search/filter/generator APIs as read-only MCP tools. It is a thin HTTP proxy: it does not read `static/data` directly and it does not change existing `/api/...` response contracts.
+DbManager MCP search server exposes the existing SvelteKit search/filter/generator APIs as read-only MCP tools. It is a thin HTTP proxy: it does not read `static/data` directly and it does not change existing `/api/...` response contracts.
 
 ## Requirements
 
-1. Start the DbManager app server first.
+Set a shared MCP API key before starting the app server:
 
-```bash
-pnpm run dev
+PowerShell:
+
+```powershell
+$env:MCP_API_KEY = "replace-with-internal-shared-key"
+pnpm run dev -- --host 0.0.0.0
 ```
 
-2. Start the MCP server in a separate process.
+Bash:
+
+```bash
+MCP_API_KEY=replace-with-internal-shared-key pnpm run dev -- --host 0.0.0.0
+```
+
+For app-only local development without MCP access, plain `pnpm run dev` is enough. Any `/mcp` access, including local MCP client access, requires `MCP_API_KEY`. For internal remote clients, bind the SvelteKit dev/preview server to the internal interface your clients can reach.
+
+If `DBMANAGER_API_BASE_URL` is omitted, the remote `/mcp` endpoint proxies backing API calls to the same request origin. Set `DBMANAGER_API_BASE_URL` only when the MCP endpoint should call a different DbManager app base URL.
+
+## Remote MCP Endpoint
+
+The primary MCP endpoint is served by the existing SvelteKit server:
+
+```text
+http://<dbmanager-host>:5173/mcp
+```
+
+The endpoint is request-scoped and stateless in this first pass. Remote JSON-RPC MCP calls use `POST`; `GET` and `DELETE` are auth-gated and then return `405` with `Allow: POST`.
+
+Remote MCP clients must send the shared key as a bearer token:
+
+```http
+Authorization: Bearer <MCP_API_KEY>
+```
+
+Keys in query strings are not accepted. Missing `MCP_API_KEY` fails closed with `503`; missing or invalid bearer tokens fail before MCP tool execution with `401` or `403`.
+
+This first remote pass is intended for trusted internal networks. TLS/SSL, OAuth/OIDC, per-client keys, and public-internet hardening are intentionally out of scope. Without TLS, the bearer token is plaintext on the internal network.
+
+## Optional Stdio Mode
+
+`pnpm run mcp:search` remains available for MCP clients that launch local stdio servers.
 
 PowerShell:
 
@@ -27,7 +62,7 @@ DBMANAGER_API_BASE_URL=http://localhost:5173 pnpm run mcp:search
 
 If `DBMANAGER_API_BASE_URL` is omitted, the MCP server uses `http://localhost:5173`.
 
-## MCP Client Command
+## Stdio MCP Client Command
 
 Use this command from an MCP client that supports stdio servers:
 
@@ -107,4 +142,4 @@ This first pass intentionally excludes:
 - validation report tools
 - ERD graph/image tools
 - direct file or registry reads
-- auth or hosted network exposure
+- OAuth/OIDC, per-client keys, or public hosted network exposure

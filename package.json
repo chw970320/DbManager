@@ -18,6 +18,7 @@
 		"format:check": "prettier --check .",
 		"lint": "eslint . --quiet",
 		"lint:all": "eslint .",
+		"mcp:search": "tsx src/mcp/server.ts",
 		"test": "vitest",
 		"validate": "pnpm check && pnpm lint && pnpm vitest run",
 		"reset:test-data": "node ./scripts/reset-test-data.mjs",
@@ -74,6 +75,7 @@
 		"svelte": "^5.0.0",
 		"svelte-check": "^4.0.0",
 		"tailwindcss": "^3.4.17",
+		"tsx": "^4.22.4",
 		"typescript": "^5.0.0",
 		"typescript-eslint": "^8.20.0",
 		"vite": "^6.2.6",
@@ -83,9 +85,11 @@
 		"svelte"
 	],
 	"dependencies": {
+		"@modelcontextprotocol/sdk": "^1.29.0",
 		"pg": "^8.20.0",
 		"uuid": "^11.1.0",
 		"xlsx": "^0.18.5",
-		"xlsx-js-style": "^1.2.0"
+		"xlsx-js-style": "^1.2.0",
+		"zod": "^4.4.3"
 	}
 }

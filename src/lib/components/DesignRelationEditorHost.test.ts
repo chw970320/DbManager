@@ -434,8 +434,7 @@ describe('DesignRelationEditorHost', () => {
 			)
 		);
 		const saveCall = fetchMock.mock.calls.find(
-			([url, init]) =>
-				String(url) === '/api/domain?filename=domain.json' && init?.method === 'POST'
+			([url, init]) => String(url) === '/api/domain?filename=domain.json' && init?.method === 'POST'
 		);
 		const saveBody = JSON.parse(String(saveCall?.[1]?.body));
 		expect(saveBody).toEqual(expect.objectContaining({ applyCascade: false }));

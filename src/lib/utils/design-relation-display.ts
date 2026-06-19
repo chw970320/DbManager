@@ -18,32 +18,32 @@ export function relationResolutionTargets(issue: RelationIssue): RelationResolut
 	const targets = issue.resolutionTargets?.length
 		? issue.resolutionTargets
 		: [
-		...(issue.manualTargets ?? []).map((target) => ({
-			resolutionTargetId: `manual:${target.targetType}:${target.targetId}:${target.field ?? 'row'}`,
-			targetType: target.targetType,
-			targetId: target.targetId,
-			targetLabel: target.targetLabel,
-			mode: 'edit' as const,
-			file: target.file,
-			field: target.field,
-			autoFixable: false,
-			reason: issue.reason,
-			previewText: '수동 수정으로 대상 정의서 항목을 확인합니다.',
-			route: target.route
-		})),
-		...(issue.candidates ?? []).map((candidate) => ({
-			resolutionTargetId: candidate.candidateId,
-			targetType: candidate.targetType,
-			targetId: candidate.targetId,
-			targetLabel: candidate.targetLabel,
-			mode: candidate.autoFixable ? ('auto_patch' as const) : ('edit' as const),
-			candidateId: candidate.candidateId,
-			patch: candidate.patch,
-			autoFixable: candidate.autoFixable,
-			reason: candidate.reason,
-			previewText: candidate.previewText
-		}))
-	];
+				...(issue.manualTargets ?? []).map((target) => ({
+					resolutionTargetId: `manual:${target.targetType}:${target.targetId}:${target.field ?? 'row'}`,
+					targetType: target.targetType,
+					targetId: target.targetId,
+					targetLabel: target.targetLabel,
+					mode: 'edit' as const,
+					file: target.file,
+					field: target.field,
+					autoFixable: false,
+					reason: issue.reason,
+					previewText: '수동 수정으로 대상 정의서 항목을 확인합니다.',
+					route: target.route
+				})),
+				...(issue.candidates ?? []).map((candidate) => ({
+					resolutionTargetId: candidate.candidateId,
+					targetType: candidate.targetType,
+					targetId: candidate.targetId,
+					targetLabel: candidate.targetLabel,
+					mode: candidate.autoFixable ? ('auto_patch' as const) : ('edit' as const),
+					candidateId: candidate.candidateId,
+					patch: candidate.patch,
+					autoFixable: candidate.autoFixable,
+					reason: candidate.reason,
+					previewText: candidate.previewText
+				}))
+			];
 	return sortRelationResolutionTargets(issue, targets);
 }
 
@@ -78,13 +78,19 @@ function sortRelationResolutionTargets(
 
 export function relationResolutionTargetSummary(target: RelationResolutionTarget): string {
 	const modeLabel =
-		target.mode === 'auto_patch' ? '자동 수정' : target.mode === 'create' ? '신규 추가' : '수동 수정';
+		target.mode === 'auto_patch'
+			? '자동 수정'
+			: target.mode === 'create'
+				? '신규 추가'
+				: '수동 수정';
 	return `${target.targetType}:${target.targetLabel}(${modeLabel})`;
 }
 
 export function relationActionStateSummary(issue: RelationIssue): string {
 	const targets = relationResolutionTargets(issue);
-	const autoCount = targets.filter((target) => target.mode === 'auto_patch' && target.autoFixable).length;
+	const autoCount = targets.filter(
+		(target) => target.mode === 'auto_patch' && target.autoFixable
+	).length;
 	const createCount = targets.filter((target) => target.mode === 'create').length;
 	const editCount = targets.filter((target) => target.mode === 'edit').length;
 	return `자동 ${autoCount}건 · 수동 ${editCount}건 · 신규 ${createCount}건`;

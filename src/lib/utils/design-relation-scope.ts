@@ -48,7 +48,10 @@ function relationIssueFiles(issue: RelationIssue, scopeType?: DataType): Set<str
 	return files;
 }
 
-export function relationIssueMatchesScope(issue: RelationIssue, scope: DesignRelationScope): boolean {
+export function relationIssueMatchesScope(
+	issue: RelationIssue,
+	scope: DesignRelationScope
+): boolean {
 	if (!scope.scopeType) return true;
 	if (!relationIssueInvolvedTypes(issue).includes(scope.scopeType)) return false;
 
@@ -59,7 +62,10 @@ export function relationIssueMatchesScope(issue: RelationIssue, scope: DesignRel
 	return files.size === 0 || files.has(scopeFile);
 }
 
-function summaryMatchesScope(summary: RelationValidationSummary, scope: DesignRelationScope): boolean {
+function summaryMatchesScope(
+	summary: RelationValidationSummary,
+	scope: DesignRelationScope
+): boolean {
 	if (!scope.scopeType) return true;
 	return summary.issues.some((issue) => relationIssueMatchesScope(issue, scope));
 }

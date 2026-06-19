@@ -615,10 +615,10 @@
 		</div>
 	</BentoGrid>
 
-<DesignRelationEditorHost
-	 target={relationEditTarget}
-	 files={relationValidationFiles}
-	 on:close={() => (relationEditTarget = null)}
-	 on:saved={handleRelationEditorSaved}
-/>
+	<DesignRelationEditorHost
+		target={relationEditTarget}
+		files={relationValidationFiles}
+		on:close={() => (relationEditTarget = null)}
+		on:saved={handleRelationEditorSaved}
+	/>
 </BrowsePageLayout>

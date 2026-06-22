@@ -380,7 +380,7 @@
 {#if !open}
 	<button
 		type="button"
-		class="fixed bottom-8 right-24 z-assistant flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition-all duration-300 hover:scale-110 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+		class="fixed bottom-8 left-8 z-assistant flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition-all duration-300 hover:scale-110 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
 		aria-label="AI Assistant 열기"
 		title="AI Assistant"
 		bind:this={launcherButton}

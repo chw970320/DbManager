@@ -27,7 +27,7 @@ The assistant then returns a deterministic source summary from the collected DbM
 
 ## Behavior
 
-- The assistant is available globally from a bottom-right circular launcher aligned with the scroll-to-top control.
+- The assistant is available globally from a bottom-left circular launcher.
 - The default view is a compact fixed-position floating window in the left-bottom area.
 - Users can switch to a left overlay tab panel when they want a taller docked review surface.
 - The last selected assistant view mode is remembered in browser storage.

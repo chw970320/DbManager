@@ -1,10 +1,13 @@
 <script lang="ts">
 	import AssistantMarkdownInline from './AssistantMarkdownInline.svelte';
-	import { parseAssistantMarkdown } from '$lib/utils/assistant-markdown';
+	import {
+		parseAssistantMarkdown,
+		stripAssistantResponseBoilerplate
+	} from '$lib/utils/assistant-markdown';
 
 	let { content }: { content: string } = $props();
 
-	const blocks = $derived(parseAssistantMarkdown(content));
+	const blocks = $derived(parseAssistantMarkdown(stripAssistantResponseBoilerplate(content)));
 </script>
 
 <div class="space-y-3 text-sm leading-6 text-content">

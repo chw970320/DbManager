@@ -3215,7 +3215,7 @@ const data = await response.json();
 		"message": {
 			"id": "uuid",
 			"role": "assistant",
-			"content": "biomimicry 번들 기준으로 확인했습니다.\n\n출처: ...",
+			"content": "biomimicry 번들 기준으로 확인했습니다.\n\n- 휴일_전전일자는 HLDY_DAYBY로 확인됩니다.",
 			"createdAt": "2026-06-19T07:00:00.000Z",
 			"sources": [],
 			"actions": []
@@ -3250,6 +3250,8 @@ const data = await response.json();
 #### Assistant action href
 
 `actions[].href`는 사용자가 버튼을 클릭했을 때 이동할 same-origin route입니다. 검색 결과 기반 action은 가능한 경우 다음 query params를 포함합니다.
+
+Assistant 답변 본문은 `출처:` footer나 `참고: 답변은 제공된 도구 검색 결과에 기반...` 같은 보일러플레이트를 포함하지 않습니다. 출처/provenance는 `sources` 배열과 클라이언트의 별도 출처 영역으로 표시합니다.
 
 - `filename`: 선택 번들의 해당 정의서 파일명
 - `q`: Assistant가 사용한 검색어

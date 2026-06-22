@@ -90,7 +90,7 @@ function mockFetch() {
 						message: {
 							id: `assistant-${chatRequests.length}`,
 							role: 'assistant',
-							content: `**${bundle.name}** 기준으로 확인했습니다.\n\n- 출처: ${bundle.name}\n- 코드: \`HLDY\``,
+							content: `**${bundle.name}** 기준으로 확인했습니다.\n\n- 출처: ${bundle.name}\n- 코드: \`HLDY\`\n\n*참고: 답변은 제공된 도구 검색 결과에 기반하여 작성되었습니다.*`,
 							createdAt: '2026-06-19T00:00:00.000Z',
 							bundleId: bundle.id,
 							sources: [
@@ -238,6 +238,10 @@ describe('AssistantDrawer', () => {
 		expect(
 			screen.getAllByText('biomimicry 번들').some((element) => element.tagName === 'STRONG')
 		).toBe(true);
+		expect(screen.queryByText('출처: biomimicry 번들')).not.toBeInTheDocument();
+		expect(
+			screen.queryByText('참고: 답변은 제공된 도구 검색 결과에 기반하여 작성되었습니다.')
+		).not.toBeInTheDocument();
 		expect(screen.getByText('HLDY').tagName).toBe('CODE');
 		expect(goto).not.toHaveBeenCalled();
 

@@ -15,6 +15,7 @@ import type {
 	SharedFileMappingRegistryData
 } from '$lib/types/shared-file-mapping.js';
 import { loadSharedFileMappingRegistryData } from '$lib/registry/shared-file-mapping-registry.js';
+import { stripAssistantResponseBoilerplate } from '$lib/utils/assistant-markdown.js';
 import { createBrowseHref } from '$lib/utils/browse-url-state.js';
 
 import { createDbManagerApiClient, type DbManagerApiClient } from '../../mcp/http-client.js';
@@ -548,7 +549,7 @@ async function createAssistantAnswer(options: {
 		throw new AssistantError(502, 'LLM 응답에 assistant content가 없습니다.');
 	}
 
-	return ensureSourceNote(content, options.bundle, options.toolContext.sources);
+	return stripAssistantResponseBoilerplate(content) || fallback;
 }
 
 function buildLlmMessages(options: {
@@ -562,7 +563,7 @@ function buildLlmMessages(options: {
 	const systemMessage: LlmChatMessage = {
 		role: 'system',
 		content:
-			'당신은 DbManager의 한국어 AI Assistant입니다. 답변은 간결하고 업무용으로 작성하세요. DbManager 데이터에 관한 주장은 제공된 도구 결과와 번들 출처를 우선 근거로 삼고, 직접 생성/수정/삭제를 수행했다고 말하지 마세요. 출처가 없으면 일반 안내임을 밝혀야 합니다.'
+			'당신은 DbManager의 한국어 AI Assistant입니다. 답변은 간결하고 업무용으로 작성하세요. DbManager 데이터에 관한 주장은 제공된 도구 결과와 선택 번들을 우선 근거로 삼고, 직접 생성/수정/삭제를 수행했다고 말하지 마세요. 출처 목록은 UI가 별도 영역으로 표시하므로 답변 본문에 출처 섹션, 출처 줄, 도구 결과 기반 참고 문구를 쓰지 마세요. 출처가 없으면 일반 안내임을 밝혀야 합니다.'
 	};
 	const userPrefix = [
 		`선택 번들: ${options.bundle.name} (${options.bundle.id})`,
@@ -570,7 +571,7 @@ function buildLlmMessages(options: {
 		'도구 결과:'
 	].join('\n');
 	const userSuffix =
-		'위 정보를 바탕으로 답변하고, DbManager 데이터 근거가 있으면 출처를 명확히 언급하세요.';
+		'위 정보를 바탕으로 답변하세요. 출처는 별도 UI 영역으로 제공되므로 본문에 출처/참고 문구를 반복하지 마세요.';
 	const fixedPromptTokens =
 		estimateMessageTokens(systemMessage) +
 		estimateTokens(userPrefix) +
@@ -746,9 +747,7 @@ function createFallbackAnswer(
 	if (!sourceSummary) {
 		return [
 			`${bundle.name} 기준으로 "${question}"을 확인했지만 연결된 검색 결과는 찾지 못했습니다.`,
-			'질문 범위를 더 좁히거나 다른 번들을 선택해 다시 물어보세요.',
-			'',
-			`출처: ${bundle.name} / MCP 검색 결과 0건`
+			'질문 범위를 더 좁히거나 다른 번들을 선택해 다시 물어보세요.'
 		].join('\n');
 	}
 
@@ -757,24 +756,8 @@ function createFallbackAnswer(
 		'',
 		sourceSummary,
 		'',
-		'아래 출처와 관련 화면 버튼에서 실제 데이터를 이어서 확인할 수 있습니다.',
-		`출처: ${bundle.name} / ${toolContext.sources.map((source) => source.tool).join(', ')}`
+		'관련 화면 버튼에서 실제 데이터를 이어서 확인할 수 있습니다.'
 	].join('\n');
-}
-
-function ensureSourceNote(
-	content: string,
-	bundle: SharedFileMappingBundleEntry,
-	sources: AssistantSource[]
-): string {
-	if (content.includes('출처')) {
-		return content;
-	}
-
-	const sourceLabels = sources.length
-		? sources.map((source) => `${source.title}(${source.filename ?? source.bundleName})`).join(', ')
-		: `${bundle.name} / 도구 결과 없음`;
-	return `${content}\n\n출처: ${sourceLabels}`;
 }
 
 function compactForPrompt(value: unknown): unknown {

@@ -102,7 +102,7 @@ describe('API: /api/assistant/chat', () => {
 
 		expect(response.status).toBe(200);
 		expect(result.success).toBe(true);
-		expect(result.data.message.content).toContain('출처');
+		expect(result.data.message.content).not.toContain('출처');
 		expect(JSON.stringify(result)).not.toContain('llm-secret-for-test');
 		expect(result.data.sources).toEqual(
 			expect.arrayContaining([
@@ -149,11 +149,18 @@ describe('API: /api/assistant/chat', () => {
 		process.env.LLM_RESPONSE_RESERVE_TOKENS = '256';
 		const llmFetch = vi.fn(async () =>
 			jsonResponse({
-				choices: [{ message: { content: '요약 답변\n\n출처: 단어집 검색' } }]
+				choices: [
+					{
+						message: {
+							content:
+								'요약 답변\n\n출처: 단어집 검색\n\n*참고: 답변은 제공된 도구 검색 결과에 기반하여 작성되었습니다.*'
+						}
+					}
+				]
 			})
 		) as typeof fetch;
 
-		await createAssistantChatResponse({
+		const result = await createAssistantChatResponse({
 			bundleId: 'default-shared-file-mapping',
 			messages: [
 				{ role: 'user', content: '이전 질문 '.repeat(100) },
@@ -166,9 +173,11 @@ describe('API: /api/assistant/chat', () => {
 			env: process.env
 		});
 
+		expect(result.message.content).toBe('요약 답변');
 		const body = JSON.parse(
 			String((llmFetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0][1].body)
 		);
+		expect(JSON.stringify(body.messages)).toContain('본문에 출처/참고 문구를 반복하지 마세요');
 		expect(body.max_tokens).toBe(256);
 		expect(JSON.stringify(body.messages)).toContain(
 			'[도구 결과 일부가 context budget에 맞춰 축약되었습니다.]'

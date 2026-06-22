@@ -35,6 +35,53 @@ export type AssistantMarkdownBlock =
 const UNORDERED_LIST_PATTERN = /^\s*[-*]\s+(.+)$/;
 const ORDERED_LIST_PATTERN = /^\s*\d+[.)]\s+(.+)$/;
 const TABLE_SEPARATOR_PATTERN = /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/;
+const SOURCE_LINE_PATTERN = /^\s*(?:[-*]\s*)?(?:#{1,6}\s*)?\*{0,2}출처\*{0,2}\s*[:：]\s*\*{0,2}.+$/;
+const SOURCE_HEADING_PATTERN =
+	/^\s*(?:[-*]\s*)?(?:#{1,6}\s*)?\*{0,2}출처\*{0,2}\s*[:：]?\s*\*{0,2}\s*$/;
+const TOOL_RESULT_NOTE_PATTERN =
+	/^\s*(?:[-*]\s*)?\*?\s*참고\s*[:：]\s*답변은\s*제공된\s*도구\s*검색\s*결과에\s*기반(?:하여)?\s*작성되었습니다\.?\s*\*?\s*$/;
+
+export function stripAssistantResponseBoilerplate(content: string): string {
+	const lines = content.replace(/\r\n/g, '\n').split('\n');
+	const keptLines: string[] = [];
+	let inCodeFence = false;
+	let skippingSourceBlock = false;
+
+	for (const line of lines) {
+		const trimmed = line.trim();
+		if (trimmed.startsWith('```')) {
+			inCodeFence = !inCodeFence;
+			skippingSourceBlock = false;
+			keptLines.push(line);
+			continue;
+		}
+
+		if (!inCodeFence && skippingSourceBlock) {
+			if (!trimmed) {
+				skippingSourceBlock = false;
+				keptLines.push(line);
+			}
+			continue;
+		}
+
+		if (!inCodeFence && TOOL_RESULT_NOTE_PATTERN.test(line)) {
+			continue;
+		}
+
+		if (!inCodeFence && SOURCE_LINE_PATTERN.test(line)) {
+			continue;
+		}
+
+		if (!inCodeFence && SOURCE_HEADING_PATTERN.test(line)) {
+			skippingSourceBlock = true;
+			continue;
+		}
+
+		keptLines.push(line);
+	}
+
+	return collapseBlankLines(keptLines).join('\n').trim();
+}
 
 export function parseAssistantMarkdown(markdown: string): AssistantMarkdownBlock[] {
 	const lines = markdown.replace(/\r\n/g, '\n').split('\n');
@@ -201,4 +248,24 @@ function isTableRow(line: string): boolean {
 function splitTableCells(line: string): string[] {
 	const trimmed = line.trim().replace(/^\|/, '').replace(/\|$/, '');
 	return trimmed.split('|').map((cell) => cell.trim());
+}
+
+function collapseBlankLines(lines: string[]): string[] {
+	const collapsed: string[] = [];
+	for (const line of lines) {
+		const isBlank = !line.trim();
+		const previousIsBlank = collapsed.length > 0 && !collapsed.at(-1)?.trim();
+		if (isBlank && previousIsBlank) {
+			continue;
+		}
+		collapsed.push(line);
+	}
+
+	while (collapsed.length > 0 && !collapsed[0]?.trim()) {
+		collapsed.shift();
+	}
+	while (collapsed.length > 0 && !collapsed.at(-1)?.trim()) {
+		collapsed.pop();
+	}
+	return collapsed;
 }

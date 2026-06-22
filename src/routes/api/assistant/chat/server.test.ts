@@ -109,6 +109,12 @@ describe('API: /api/assistant/chat', () => {
 				expect.objectContaining({
 					tool: 'convert_term',
 					filename: 'term.json'
+				}),
+				expect.objectContaining({
+					tool: 'search_bundle',
+					filename: 'vocabulary.json',
+					targetId: 'vocabulary-1',
+					targetLabel: '휴일'
 				})
 			])
 		);
@@ -116,7 +122,7 @@ describe('API: /api/assistant/chat', () => {
 			expect.arrayContaining([
 				expect.objectContaining({
 					type: 'navigate',
-					href: '/browse?filename=vocabulary.json&q=%ED%9C%B4%EC%9D%BC&field=all&exact=false'
+					href: '/browse?filename=vocabulary.json&q=%ED%9C%B4%EC%9D%BC&field=all&exact=false&target=vocabulary-1&open=detail'
 				})
 			])
 		);

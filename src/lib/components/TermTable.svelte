@@ -22,6 +22,10 @@
 		value: string | null;
 	};
 
+	type EntryClickEvent = {
+		entry: TermEntry;
+	};
+
 	// 컴포넌트 속성
 	let {
 		entries = [] as TermEntry[],
@@ -39,6 +43,7 @@
 		onsort,
 		onpagechange,
 		onfilter,
+		onentryclick,
 		onClearAllFilters
 	}: {
 		entries?: TermEntry[];
@@ -56,13 +61,20 @@
 		onsort: (detail: SortEvent) => void;
 		onpagechange: (detail: PageChangeEvent) => void;
 		onfilter?: (detail: FilterEvent) => void;
+		onentryclick?: (detail: EntryClickEvent) => void;
 		onClearAllFilters?: () => void;
 	} = $props();
 
 	// Event dispatcher
 	const dispatch = createEventDispatcher<{
 		filter: FilterEvent;
+		entryclick: EntryClickEvent;
 	}>();
+
+	function handleRowClick(entry: TermEntry) {
+		onentryclick?.({ entry });
+		dispatch('entryclick', { entry });
+	}
 
 	// 테이블 컬럼 정의
 	type ColumnAlignment = 'left' | 'center' | 'right';
@@ -408,7 +420,19 @@
 				{:else}
 					<!-- 데이터 행 -->
 					{#each entries as entry (entry.id)}
-						<tr class="border-t border-border">
+						<tr
+							class="cursor-pointer border-t border-border transition-colors hover:bg-surface-muted/70"
+							onclick={() => handleRowClick(entry)}
+							role="button"
+							tabindex="0"
+							onkeydown={(event: KeyboardEvent) => {
+								if (event.key === 'Enter' || event.key === ' ') {
+									event.preventDefault();
+									handleRowClick(entry);
+								}
+							}}
+							aria-label="항목 클릭하여 상세 정보 보기"
+						>
 							{#each columns as column (column.key)}
 								{@const formattedValue = formatValue(entry[column.key as keyof TermEntry])}
 								{@const highlightedSegments = getCellHighlightSegments(

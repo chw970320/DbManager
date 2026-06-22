@@ -18,7 +18,7 @@
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { filterTableFiles } from '$lib/utils/file-filter';
 	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
-	import { readBrowseUrlState } from '$lib/utils/browse-url-state';
+	import { readBrowseUrlState, type BrowseOpenMode } from '$lib/utils/browse-url-state';
 	import type { DataType } from '$lib/types/base.js';
 	import type {
 		RelationResolutionTarget,
@@ -49,6 +49,9 @@
 	let editorServerError = $state('');
 	let isFileManagerOpen = $state(false);
 	let currentEditingEntry = $state<TableEntry | null>(null);
+	let initialTargetId = $state('');
+	let initialTargetOpen = $state<BrowseOpenMode>('');
+	let initialTargetConsumed = $state(false);
 
 	const RELATION_SCOPE_TYPE = 'table' as const satisfies DataType;
 	let showRelationValidationPanel = $state(false);
@@ -73,6 +76,23 @@
 			searchExact = urlState.exact;
 			currentPage = 1;
 		}
+		initialTargetId = urlState.targetId;
+		initialTargetOpen = urlState.open;
+		initialTargetConsumed = false;
+	}
+
+	function maybeOpenInitialTarget() {
+		if (initialTargetConsumed || !initialTargetId || initialTargetOpen !== 'detail') {
+			return;
+		}
+
+		const entry = entries.find((item) => item.id === initialTargetId);
+		if (!entry) {
+			return;
+		}
+
+		initialTargetConsumed = true;
+		handleEntryClick({ entry });
 	}
 
 	onMount(() => {
@@ -209,6 +229,7 @@
 					pagination?: { totalCount: number; totalPages: number };
 				};
 				entries = data.entries || [];
+				maybeOpenInitialTarget();
 				if (data.pagination) {
 					totalCount = data.pagination.totalCount || 0;
 					totalPages = data.pagination.totalPages || 1;

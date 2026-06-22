@@ -15,6 +15,7 @@
 - `LLM_CONTEXT_TOKENS`, `LLM_RESPONSE_RESERVE_TOKENS` 기준으로 LLM 요청 history/tool context를 축약합니다.
 - Assistant 답변의 markdown 문단, 목록, 표, inline code, code block을 안전 렌더링합니다.
 - 화면 열기 action이 `filename`, `q`, `field`, `exact` URL params를 포함하고, browse 화면은 이를 초기 검색/하이라이트 상태로 반영합니다.
+- 검색 결과 기반 화면 열기 action에 `target`/`open=detail`을 추가해, 대상 row가 로드된 경우 기존 상세 팝업까지 자동으로 연결합니다.
 
 ## 2026-06-19
 

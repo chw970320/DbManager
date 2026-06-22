@@ -24,7 +24,7 @@
 	import { addToast } from '$lib/stores/toast-store';
 	import { filterDomainFiles, isSystemDomainFile } from '$lib/utils/file-filter';
 	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
-	import { readBrowseUrlState } from '$lib/utils/browse-url-state';
+	import { readBrowseUrlState, type BrowseOpenMode } from '$lib/utils/browse-url-state';
 
 	// 상태 변수
 	let entries = $state<DomainEntry[]>([]);
@@ -57,6 +57,9 @@
 	let showEditor = $state(false);
 	let editorServerError = $state('');
 	let currentEditingEntry = $state<DomainEntry | null>(null);
+	let initialTargetId = $state('');
+	let initialTargetOpen = $state<BrowseOpenMode>('');
+	let initialTargetConsumed = $state(false);
 	let showImpactConfirm = $state(false);
 	let pendingSaveEntry = $state<DomainEntry | null>(null);
 	let pendingImpactPreview = $state<EditorSaveImpactPreview | null>(null);
@@ -103,6 +106,23 @@
 			searchExact = urlState.exact;
 			currentPage = 1;
 		}
+		initialTargetId = urlState.targetId;
+		initialTargetOpen = urlState.open;
+		initialTargetConsumed = false;
+	}
+
+	function maybeOpenInitialTarget() {
+		if (initialTargetConsumed || !initialTargetId || initialTargetOpen !== 'detail') {
+			return;
+		}
+
+		const entry = entries.find((item) => item.id === initialTargetId);
+		if (!entry) {
+			return;
+		}
+
+		initialTargetConsumed = true;
+		handleEntryClick({ entry });
 	}
 
 	function reconcileSelectedFilename(files: string[]) {
@@ -126,7 +146,11 @@
 			if (fileList.length > 0) {
 				reconcileSelectedFilename(fileList);
 				await loadFilterOptions();
-				await loadDomainData();
+				if (searchQuery) {
+					await executeSearch();
+				} else {
+					await loadDomainData();
+				}
 			}
 		})();
 
@@ -279,6 +303,7 @@
 					lastUpdated: string;
 				};
 				entries = data.entries || [];
+				maybeOpenInitialTarget();
 				totalCount = data.pagination?.totalCount || 0;
 				totalPages = data.pagination?.totalPages || 1;
 				_lastUpdated = data.lastUpdated || '';
@@ -359,6 +384,7 @@
 					lastUpdated: string;
 				};
 				entries = data.entries || [];
+				maybeOpenInitialTarget();
 				totalCount = data.pagination?.totalCount || 0;
 				totalPages = data.pagination?.totalPages || 1;
 				_lastUpdated = data.lastUpdated || '';

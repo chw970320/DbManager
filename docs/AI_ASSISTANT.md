@@ -41,7 +41,8 @@ The assistant then returns a deterministic source summary from the collected DbM
 - DbManager data operations are read-only in this first pass.
 - Suggested route actions are rendered as buttons and run only after the user clicks them.
 - Route actions preserve search context with `filename`, `q`, `field`, and `exact` URL params when possible.
-- Linked browse screens hydrate those params into the search bar and existing table highlighting.
+- Search-result route actions can also include `target` and `open=detail` so linked browse screens open the matched row detail when the row is present in the hydrated result page.
+- Linked browse screens hydrate those params into the search bar and existing table highlighting, then safely fall back to the search result view when the target row is not present.
 - Answers emphasize source/provenance from selected bundle files and tool results.
 - Assistant answers render safe markdown blocks for paragraphs, lists, tables, inline code, and code fences.
 - The browser limits a single user question to 1200 characters.

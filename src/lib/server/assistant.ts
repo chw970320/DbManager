@@ -365,10 +365,12 @@ function buildSearchBundleSources(
 	const sources = ALL_DATA_TYPES.flatMap((type) => {
 		const result = asRecord(results[type]);
 		const response = asRecord(result?.response);
-		const count = countEntries(response);
+		const entries = extractResponseEntries(response);
+		const count = entries.length;
 		if (count === 0) {
 			return [];
 		}
+		const target = extractEntryIdentity(type, entries[0]);
 
 		return [
 			{
@@ -380,7 +382,9 @@ function buildSearchBundleSources(
 				bundleName: bundle.name,
 				type,
 				filename: typeof result?.filename === 'string' ? result.filename : bundle.files[type],
-				count
+				count,
+				targetId: target.id,
+				targetLabel: target.label
 			} satisfies AssistantSource
 		];
 	});
@@ -402,14 +406,51 @@ function buildSearchBundleSources(
 	];
 }
 
-function countEntries(response: Record<string, unknown> | null): number {
+function extractResponseEntries(
+	response: Record<string, unknown> | null
+): Record<string, unknown>[] {
 	const data = asRecord(response?.data);
 	const entries = Array.isArray(data?.entries)
 		? data.entries
 		: Array.isArray(response?.entries)
 			? response.entries
 			: [];
-	return entries.length;
+	return entries.filter(
+		(entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === 'object'
+	);
+}
+
+function extractEntryIdentity(type: DataType, entry: Record<string, unknown> | undefined) {
+	if (!entry) {
+		return { id: undefined, label: undefined };
+	}
+
+	const id = normalizeTextValue(entry.id);
+	const label = extractEntryLabel(type, entry);
+	return { id, label };
+}
+
+function extractEntryLabel(type: DataType, entry: Record<string, unknown>): string | undefined {
+	const labelKeysByType: Record<DataType, string[]> = {
+		vocabulary: ['standardName', 'abbreviation', 'englishName'],
+		domain: ['standardDomainName', 'domainCategory', 'domainGroup'],
+		term: ['termName', 'columnName', 'domainName'],
+		database: ['logicalDbName', 'physicalDbName', 'organizationName'],
+		entity: ['entityName', 'schemaName', 'tableKoreanName'],
+		attribute: ['attributeName', 'entityName', 'schemaName'],
+		table: ['tableEnglishName', 'tableKoreanName', 'schemaName'],
+		column: ['columnEnglishName', 'columnKoreanName', 'tableEnglishName']
+	};
+
+	return labelKeysByType[type].map((key) => normalizeTextValue(entry[key])).find(Boolean);
+}
+
+function normalizeTextValue(value: unknown): string | undefined {
+	if (typeof value !== 'string') {
+		return undefined;
+	}
+	const normalized = value.trim();
+	return normalized || undefined;
 }
 
 function summarizeGeneratorResult(payload: unknown): string {
@@ -466,9 +507,15 @@ function buildActions(sources: AssistantSource[], query: string): AssistantActio
 				filename: source.filename,
 				query,
 				field: 'all',
-				exact: false
+				exact: false,
+				targetId: source.targetId,
+				open: source.targetId ? 'detail' : ''
 			}),
-			description: source.filename ? `${source.filename} 기준으로 확인` : undefined
+			description: source.targetLabel
+				? `${source.filename ?? source.bundleName} · ${source.targetLabel} 상세로 이동`
+				: source.filename
+					? `${source.filename} 기준으로 확인`
+					: undefined
 		});
 		if (actions.length >= 4) {
 			break;

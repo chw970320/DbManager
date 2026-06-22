@@ -87,6 +87,21 @@ describe('TermTable', () => {
 		expect(screen.getByText('검색 결과가 없습니다')).toBeInTheDocument();
 	});
 
+	it('행 클릭 시 선택한 용어 entry를 전달한다', async () => {
+		const onentryclick = vi.fn();
+		renderTable({ onentryclick });
+
+		await fireEvent.click(
+			screen.getAllByRole('button', { name: '항목 클릭하여 상세 정보 보기' })[0]
+		);
+
+		expect(onentryclick).toHaveBeenCalledWith(
+			expect.objectContaining({
+				entry: expect.objectContaining({ id: 'entry-1' })
+			})
+		);
+	});
+
 	it.each([
 		[undefined, 'asc'],
 		['asc', 'desc'],

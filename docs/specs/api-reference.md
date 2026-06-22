@@ -3222,15 +3222,17 @@ const data = await response.json();
 		},
 		"sources": [
 			{
-				"id": "convert_term-term",
-				"tool": "convert_term",
-				"title": "용어 변환 결과",
-				"summary": "HLDY_DAYBY",
+				"id": "search_bundle-term",
+				"tool": "search_bundle",
+				"title": "용어 검색",
+				"summary": "용어 1건",
 				"bundleId": "cccaa4b0-ade1-45af-8a43-fe6c44708173",
 				"bundleName": "biomimicry 번들",
 				"type": "term",
 				"filename": "biomimicry.json",
-				"count": 1
+				"count": 1,
+				"targetId": "term-1",
+				"targetLabel": "휴일"
 			}
 		],
 		"actions": [
@@ -3238,7 +3240,7 @@ const data = await response.json();
 				"id": "open-term",
 				"type": "navigate",
 				"label": "용어집 화면 열기",
-				"href": "/term/browse?filename=biomimicry.json&q=%ED%9C%B4%EC%9D%BC&field=all&exact=false"
+				"href": "/term/browse?filename=biomimicry.json&q=%ED%9C%B4%EC%9D%BC&field=all&exact=false&target=term-1&open=detail"
 			}
 		]
 	}
@@ -3253,8 +3255,10 @@ const data = await response.json();
 - `q`: Assistant가 사용한 검색어
 - `field`: 검색 필드, 기본값 `all`
 - `exact`: 정확 일치 여부
+- `target`: 검색 결과에서 대표로 식별한 row id
+- `open`: `target`이 있고 값이 `detail`이면 browse 화면에서 해당 row의 상세 팝업을 엽니다
 
-각 browse 화면은 위 query params를 초기 검색 상태로 읽어 검색창과 테이블 하이라이트에 반영합니다. 상세 팝업 자동 표시는 현재 계약에 포함하지 않습니다.
+각 browse 화면은 위 query params를 초기 검색 상태로 읽어 검색창과 테이블 하이라이트에 반영합니다. `target` row가 현재 로드된 결과에 있으면 기존 row click 동작과 같은 상세 팝업을 열고, 없으면 검색 결과 화면으로 안전하게 fallback합니다.
 
 ---
 

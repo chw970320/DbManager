@@ -5,12 +5,16 @@ import { createBrowseHref, readBrowseUrlState } from './browse-url-state';
 describe('browse URL state', () => {
 	it('reads assistant navigation query params', () => {
 		expect(
-			readBrowseUrlState('?filename=biomimicry.json&q=%EB%B0%A9%EB%AC%B8%EC%9E%90&exact=true')
+			readBrowseUrlState(
+				'?filename=biomimicry.json&q=%EB%B0%A9%EB%AC%B8%EC%9E%90&exact=true&target=vocabulary-1&open=detail'
+			)
 		).toEqual({
 			filename: 'biomimicry.json',
 			query: '방문자',
 			field: 'all',
-			exact: true
+			exact: true,
+			targetId: 'vocabulary-1',
+			open: 'detail'
 		});
 	});
 
@@ -20,8 +24,12 @@ describe('browse URL state', () => {
 				filename: 'biomimicry.json',
 				query: '방문자',
 				field: 'all',
-				exact: false
+				exact: false,
+				targetId: 'vocabulary-1',
+				open: 'detail'
 			})
-		).toBe('/browse?filename=biomimicry.json&q=%EB%B0%A9%EB%AC%B8%EC%9E%90&field=all&exact=false');
+		).toBe(
+			'/browse?filename=biomimicry.json&q=%EB%B0%A9%EB%AC%B8%EC%9E%90&field=all&exact=false&target=vocabulary-1&open=detail'
+		);
 	});
 });

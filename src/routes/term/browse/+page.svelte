@@ -30,7 +30,7 @@
 	import { termDataStore as termStore } from '$lib/stores/unified-store';
 	import { filterTermFiles, isSystemTermFile } from '$lib/utils/file-filter';
 	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
-	import { readBrowseUrlState } from '$lib/utils/browse-url-state';
+	import { readBrowseUrlState, type BrowseOpenMode } from '$lib/utils/browse-url-state';
 
 	// 상태 변수
 	let entries = $state<TermEntry[]>([]);
@@ -59,6 +59,9 @@
 	let showEditor = $state(false);
 	let editorServerError = $state('');
 	let initialEntry = $state<Partial<TermEntry>>({});
+	let initialTargetId = $state('');
+	let initialTargetOpen = $state<BrowseOpenMode>('');
+	let initialTargetConsumed = $state(false);
 	let showImpactConfirm = $state(false);
 	let pendingSaveEntry = $state<TermEntry | null>(null);
 	let pendingImpactPreview = $state<EditorSaveImpactPreview | null>(null);
@@ -110,6 +113,29 @@
 			searchExact = urlState.exact;
 			currentPage = 1;
 		}
+		initialTargetId = urlState.targetId;
+		initialTargetOpen = urlState.open;
+		initialTargetConsumed = false;
+	}
+
+	function maybeOpenInitialTarget() {
+		if (initialTargetConsumed || !initialTargetId || initialTargetOpen !== 'detail') {
+			return;
+		}
+
+		const entry = entries.find((item) => item.id === initialTargetId);
+		if (!entry) {
+			return;
+		}
+
+		initialTargetConsumed = true;
+		handleEntryClick({ entry });
+	}
+
+	function handleEntryClick(event: { entry: TermEntry }) {
+		initialEntry = { ...event.entry };
+		showEditor = true;
+		editorServerError = '';
 	}
 
 	function reconcileSelectedFilename(files: string[]) {
@@ -195,7 +221,11 @@
 			if (fileList.length > 0) {
 				reconcileSelectedFilename(fileList);
 				await loadFilterOptions();
-				await loadTermData();
+				if (searchQuery) {
+					await executeSearch();
+				} else {
+					await loadTermData();
+				}
 			}
 		})();
 
@@ -273,6 +303,7 @@
 					lastUpdated: string;
 				};
 				entries = data.entries || [];
+				maybeOpenInitialTarget();
 				totalCount = data.pagination?.totalCount || 0;
 				totalPages = data.pagination?.totalPages || 1;
 				_lastUpdated = data.lastUpdated || '';
@@ -353,6 +384,7 @@
 					lastUpdated: string;
 				};
 				entries = data.entries || [];
+				maybeOpenInitialTarget();
 				totalCount = data.pagination?.totalCount || 0;
 				totalPages = data.pagination?.totalPages || 1;
 				_lastUpdated = data.lastUpdated || '';
@@ -473,8 +505,6 @@
 
 			if (result.success && result.data) {
 				validationResults = result.data as ValidationCheckResult;
-				console.log('Validation 결과:', validationResults);
-				console.log('실패 항목 수:', validationResults.failedEntries?.length || 0);
 			} else {
 				errorMessage = result.error || '유효성 검사 중 오류가 발생했습니다.';
 				console.error('Validation 실패:', result);
@@ -1358,6 +1388,7 @@
 						onsort={handleSort}
 						onpagechange={handlePageChange}
 						onfilter={handleFilter}
+						onentryclick={handleEntryClick}
 						onClearAllFilters={handleClearAllFilters}
 					/>
 				</div>

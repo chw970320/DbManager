@@ -21,7 +21,7 @@
 	import { addToast } from '$lib/stores/toast-store';
 	import { filterVocabularyFiles, isSystemVocabularyFile } from '$lib/utils/file-filter';
 	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
-	import { readBrowseUrlState } from '$lib/utils/browse-url-state';
+	import { readBrowseUrlState, type BrowseOpenMode } from '$lib/utils/browse-url-state';
 
 	// 이벤트 상세 타입 정의
 	type SearchDetail = { query: string; field: string; exact: boolean };
@@ -59,6 +59,9 @@
 	let editorServerError = $state('');
 	let isFileManagerOpen = $state(false);
 	let currentEditingEntry = $state<VocabularyEntry | null>(null);
+	let initialTargetId = $state('');
+	let initialTargetOpen = $state<BrowseOpenMode>('');
+	let initialTargetConsumed = $state(false);
 	let showValidationPanel = $state(false);
 	let showImpactConfirm = $state(false);
 	let pendingSaveEntry = $state<VocabularyEntry | null>(null);
@@ -94,6 +97,23 @@
 			searchExact = urlState.exact;
 			currentPage = 1;
 		}
+		initialTargetId = urlState.targetId;
+		initialTargetOpen = urlState.open;
+		initialTargetConsumed = false;
+	}
+
+	function maybeOpenInitialTarget() {
+		if (initialTargetConsumed || !initialTargetId || initialTargetOpen !== 'detail') {
+			return;
+		}
+
+		const entry = entries.find((item) => item.id === initialTargetId);
+		if (!entry) {
+			return;
+		}
+
+		initialTargetConsumed = true;
+		handleEntryClick({ entry });
 	}
 
 	// 설정 변경 시 파일 목록 재필터링
@@ -135,7 +155,11 @@
 			await loadVocabularyFiles();
 			if (browser) {
 				await loadFilterOptions();
-				await loadVocabularyData();
+				if (searchQuery) {
+					await executeSearch();
+				} else {
+					await loadVocabularyData();
+				}
 			}
 		})();
 
@@ -296,6 +320,7 @@
 				Array.isArray((result.data as { entries: unknown }).entries)
 			) {
 				entries = result.data.entries as VocabularyEntry[];
+				maybeOpenInitialTarget();
 				if (
 					'pagination' in result.data &&
 					result.data.pagination &&
@@ -383,6 +408,7 @@
 				Array.isArray(result.data.entries)
 			) {
 				entries = result.data.entries as VocabularyEntry[];
+				maybeOpenInitialTarget();
 				if (
 					'pagination' in result.data &&
 					result.data.pagination &&

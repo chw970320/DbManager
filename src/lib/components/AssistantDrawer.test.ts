@@ -103,7 +103,9 @@ function mockFetch() {
 									bundleName: bundle.name,
 									type: 'vocabulary',
 									filename: bundle.files.vocabulary,
-									count: 1
+									count: 1,
+									targetId: 'vocabulary-1',
+									targetLabel: '방문자'
 								}
 							],
 							actions: [
@@ -111,7 +113,7 @@ function mockFetch() {
 									id: 'open-vocabulary',
 									type: 'navigate',
 									label: '단어집 화면 열기',
-									href: '/browse?filename=biomimicry.json&q=%EB%B0%A9%EB%AC%B8%EC%9E%90&field=all&exact=false'
+									href: '/browse?filename=biomimicry.json&q=%EB%B0%A9%EB%AC%B8%EC%9E%90&field=all&exact=false&target=vocabulary-1&open=detail'
 								}
 							]
 						}
@@ -241,7 +243,7 @@ describe('AssistantDrawer', () => {
 
 		await fireEvent.click(action);
 		expect(goto).toHaveBeenCalledWith(
-			'/browse?filename=biomimicry.json&q=%EB%B0%A9%EB%AC%B8%EC%9E%90&field=all&exact=false'
+			'/browse?filename=biomimicry.json&q=%EB%B0%A9%EB%AC%B8%EC%9E%90&field=all&exact=false&target=vocabulary-1&open=detail'
 		);
 	});
 

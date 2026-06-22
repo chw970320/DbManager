@@ -13,6 +13,8 @@ export interface AssistantSource {
 	type?: DataType;
 	filename?: string;
 	count?: number;
+	targetId?: string;
+	targetLabel?: string;
 }
 
 export interface AssistantAction {

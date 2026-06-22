@@ -162,6 +162,10 @@ describe('AssistantDrawer', () => {
 
 		expect(dialog.className).toContain('bottom-3');
 		expect(dialog.className).toContain('sm:left-6');
+		expect(dialog.className).toContain('sm:w-[30rem]');
+		expect(
+			screen.queryByText('선택한 번들의 검색 출처를 기준으로 답변합니다.')
+		).not.toBeInTheDocument();
 		expect(screen.getByRole('button', { name: '플로팅 보기' })).toHaveAttribute(
 			'aria-pressed',
 			'true'
@@ -221,6 +225,7 @@ describe('AssistantDrawer', () => {
 		await waitFor(() => expect(select.value).toBe('bio'));
 		expect(screen.getByRole('option', { name: '기본 공통 번들' })).toBeInTheDocument();
 		expect(screen.getByRole('option', { name: 'biomimicry 번들' })).toBeInTheDocument();
+		expect(screen.queryByText(/용어 biomimicry\.json/)).not.toBeInTheDocument();
 	});
 
 	it('renders response sources and runs navigation only after action click', async () => {

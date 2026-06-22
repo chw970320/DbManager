@@ -35,6 +35,7 @@ The assistant then returns a deterministic source summary from the collected DbM
 - The last selected assistant view mode is remembered in browser storage.
 - Assistant surfaces use the highest app layer so they appear above validation panels, dialogs, toasts, and tooltips.
 - The assistant no longer uses a right-side full-height drawer, so it does not compete with validation panels that open from the right.
+- Header and history controls stay compact so the conversation area remains the primary reading surface.
 - A bundle is always selected.
 - The default shared bundle remains selectable.
 - If non-default bundles exist, the first non-default bundle is selected by default.

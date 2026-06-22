@@ -24,8 +24,10 @@
 	const ASSISTANT_MODE_STORAGE_KEY = 'dbmanager.assistant.view-mode';
 	const MAX_ASSISTANT_INPUT_LENGTH = 1200;
 	const MODE_BUTTON_CLASS =
-		'rounded-md p-2 text-content-muted transition-colors hover:bg-surface-raised hover:text-content';
+		'rounded-md p-1.5 text-content-muted transition-colors hover:bg-surface-raised hover:text-content disabled:cursor-not-allowed disabled:opacity-50';
 	const ACTIVE_MODE_BUTTON_CLASS = `${MODE_BUTTON_CLASS} bg-brand-50 text-brand`;
+	const HEADER_ICON_BUTTON_CLASS =
+		'rounded-md p-1.5 text-content-muted transition-colors hover:bg-surface-raised hover:text-content disabled:cursor-not-allowed disabled:opacity-50';
 
 	let open = $state(false);
 	let viewMode = $state<AssistantViewMode>('floating');
@@ -42,9 +44,6 @@
 	let importInput: HTMLInputElement | undefined = $state();
 	let messageList: HTMLDivElement | undefined = $state();
 
-	const selectedBundle = $derived(
-		bundles.find((bundle) => bundle.id === selectedBundleId) ?? bundles[0] ?? null
-	);
 	const inputLength = $derived(input.length);
 	const inputTooLong = $derived(inputLength > MAX_ASSISTANT_INPUT_LENGTH);
 	const canSend = $derived(
@@ -56,8 +55,8 @@
 	);
 	const panelClass = $derived(
 		viewMode === 'floating'
-			? 'fixed inset-x-3 bottom-3 z-assistant flex h-[calc(100vh-1.5rem)] max-h-[42rem] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl sm:inset-x-auto sm:bottom-6 sm:left-6 sm:h-[38rem] sm:w-[28rem] sm:max-w-[calc(100vw-3rem)]'
-			: 'fixed left-0 top-[var(--layout-header-height)] z-assistant flex h-[calc(100vh-var(--layout-header-height))] w-full max-w-md flex-col overflow-hidden border-r border-border bg-surface shadow-2xl sm:w-[24rem]'
+			? 'fixed inset-x-3 bottom-3 z-assistant flex h-[calc(100vh-1.5rem)] max-h-[46rem] flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-2xl sm:inset-x-auto sm:bottom-6 sm:left-6 sm:h-[calc(100vh-3rem)] sm:w-[30rem] sm:max-w-[calc(100vw-3rem)]'
+			: 'fixed left-0 top-[var(--layout-header-height)] z-assistant flex h-[calc(100vh-var(--layout-header-height))] w-full max-w-lg flex-col overflow-hidden border-r border-border bg-surface shadow-2xl sm:w-[26rem]'
 	);
 	const floatingModeButtonClass = $derived(
 		viewMode === 'floating' ? ACTIVE_MODE_BUTTON_CLASS : MODE_BUTTON_CLASS
@@ -406,14 +405,9 @@
 		tabindex="-1"
 		onkeydown={handlePanelKeydown}
 	>
-		<header class="border-b border-border bg-surface px-4 py-4">
-			<div class="flex items-start justify-between gap-3">
-				<div>
-					<h2 class="text-base font-semibold text-content">AI Assistant</h2>
-					<p class="mt-1 text-xs text-content-muted">
-						선택한 번들의 검색 출처를 기준으로 답변합니다.
-					</p>
-				</div>
+		<header class="border-b border-border bg-surface px-3 py-3">
+			<div class="flex items-center justify-between gap-2">
+				<h2 class="min-w-0 truncate text-base font-semibold text-content">AI Assistant</h2>
 				<div class="flex shrink-0 items-center gap-1">
 					<button
 						type="button"
@@ -437,7 +431,37 @@
 					</button>
 					<button
 						type="button"
-						class="rounded-md p-2 text-content-muted transition-colors hover:bg-surface-raised hover:text-content"
+						class={HEADER_ICON_BUTTON_CLASS}
+						aria-label="내보내기"
+						title="내보내기"
+						onclick={exportHistory}
+						disabled={historyLocked}
+					>
+						<Icon name="download" size="sm" />
+					</button>
+					<button
+						type="button"
+						class={HEADER_ICON_BUTTON_CLASS}
+						aria-label="가져오기"
+						title="가져오기"
+						onclick={openImportDialog}
+						disabled={historyLocked}
+					>
+						<Icon name="upload" size="sm" />
+					</button>
+					<button
+						type="button"
+						class={`${HEADER_ICON_BUTTON_CLASS} text-status-error hover:text-status-error`}
+						aria-label="삭제"
+						title="삭제"
+						onclick={clearHistory}
+						disabled={historyLocked}
+					>
+						<Icon name="trash" size="sm" />
+					</button>
+					<button
+						type="button"
+						class={HEADER_ICON_BUTTON_CLASS}
 						aria-label="AI Assistant 닫기"
 						onclick={closeAssistant}
 					>
@@ -446,13 +470,11 @@
 				</div>
 			</div>
 
-			<div class="mt-4">
-				<label for="assistant-bundle" class="mb-1 block text-xs font-medium text-content">
-					번들
-				</label>
+			<div class="mt-2">
+				<label for="assistant-bundle" class="sr-only">번들</label>
 				<select
 					id="assistant-bundle"
-					class="input text-sm"
+					class="input h-9 text-sm"
 					value={selectedBundleId}
 					onchange={handleBundleChange}
 					disabled={loadingBundles || sending || bundles.length === 0}
@@ -461,44 +483,7 @@
 						<option value={bundle.id}>{bundle.name}</option>
 					{/each}
 				</select>
-				{#if selectedBundle}
-					<p class="mt-1 text-xs text-content-muted">
-						용어 {selectedBundle.files.term} · 컬럼 {selectedBundle.files.column}
-					</p>
-				{/if}
 			</div>
-		</header>
-
-		<div
-			class="flex flex-wrap items-center gap-2 border-b border-border bg-surface-muted px-4 py-2"
-		>
-			<button
-				type="button"
-				class="btn btn-ghost btn-sm"
-				onclick={exportHistory}
-				disabled={historyLocked}
-			>
-				<Icon name="download" size="sm" />
-				내보내기
-			</button>
-			<button
-				type="button"
-				class="btn btn-ghost btn-sm"
-				onclick={openImportDialog}
-				disabled={historyLocked}
-			>
-				<Icon name="upload" size="sm" />
-				가져오기
-			</button>
-			<button
-				type="button"
-				class="btn btn-ghost btn-sm text-status-error"
-				onclick={clearHistory}
-				disabled={historyLocked}
-			>
-				<Icon name="trash" size="sm" />
-				삭제
-			</button>
 			<input
 				bind:this={importInput}
 				type="file"
@@ -506,19 +491,19 @@
 				class="hidden"
 				onchange={importHistory}
 			/>
-		</div>
+		</header>
 
 		<div
 			bind:this={messageList}
-			class="min-h-0 flex-1 space-y-4 overflow-y-auto bg-surface-muted p-4"
+			class="min-h-0 flex-1 space-y-3 overflow-y-auto bg-surface-muted p-3"
 		>
 			{#if loadingBundles}
-				<div class="rounded-lg border border-border bg-surface p-4 text-sm text-content-muted">
+				<div class="rounded-lg border border-border bg-surface p-3 text-sm text-content-muted">
 					Assistant를 준비하는 중입니다.
 				</div>
 			{:else if messages.length === 0}
 				<div
-					class="rounded-lg border border-dashed border-border bg-surface p-5 text-sm text-content-muted"
+					class="rounded-lg border border-dashed border-border bg-surface p-4 text-sm text-content-muted"
 				>
 					<p class="font-medium text-content-secondary">질문을 입력해 주세요.</p>
 					<p class="mt-2">
@@ -528,9 +513,9 @@
 			{:else}
 				{#each messages as message (message.id)}
 					<article
-						class="rounded-lg border px-4 py-3 shadow-sm {message.role === 'user'
-							? 'ml-8 border-brand-100 bg-brand-50'
-							: 'mr-8 border-border bg-surface'}"
+						class="rounded-lg border px-3 py-2.5 shadow-sm {message.role === 'user'
+							? 'ml-4 border-brand-100 bg-brand-50'
+							: 'mr-4 border-border bg-surface'}"
 					>
 						<div class="flex items-center justify-between gap-3">
 							<span class="text-xs font-semibold text-content-secondary">
@@ -549,24 +534,22 @@
 						</div>
 
 						{#if message.sources?.length}
-							<div class="mt-3 border-t border-border pt-3">
-								<p class="text-xs font-semibold text-content-secondary">출처</p>
-								<div class="mt-2 flex flex-wrap gap-2">
-									{#each message.sources as source (source.id)}
-										<span
-											class="inline-flex items-center rounded-full border border-border bg-surface-muted px-2 py-1 text-[11px] text-content-muted"
-											title={`${source.bundleName}${source.filename ? ` · ${source.filename}` : ''}`}
-										>
-											{source.title}
-											{source.count !== undefined ? ` · ${source.count}건` : ''}
-										</span>
-									{/each}
-								</div>
+							<div class="mt-2 flex flex-wrap items-center gap-1.5 border-t border-border pt-2">
+								<span class="mr-1 text-[11px] font-semibold text-content-secondary">출처</span>
+								{#each message.sources as source (source.id)}
+									<span
+										class="inline-flex items-center rounded-full border border-border bg-surface-muted px-2 py-0.5 text-[11px] text-content-muted"
+										title={`${source.bundleName}${source.filename ? ` · ${source.filename}` : ''}`}
+									>
+										{source.title}
+										{source.count !== undefined ? ` · ${source.count}건` : ''}
+									</span>
+								{/each}
 							</div>
 						{/if}
 
 						{#if message.actions?.length}
-							<div class="mt-3 flex flex-wrap gap-2">
+							<div class="mt-2 flex flex-wrap gap-1.5">
 								{#each message.actions as action (action.id)}
 									<button
 										type="button"
@@ -586,7 +569,7 @@
 
 			{#if sending}
 				<div
-					class="mr-8 rounded-lg border border-border bg-surface px-4 py-3 text-sm text-content-muted"
+					class="mr-4 rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-content-muted"
 				>
 					<Icon name="spinner" size="sm" class="mr-2 inline-block" />
 					응답을 생성하는 중입니다.
@@ -603,7 +586,7 @@
 		</div>
 
 		<form
-			class="border-t border-border bg-surface p-4"
+			class="border-t border-border bg-surface p-3"
 			onsubmit={(event) => {
 				event.preventDefault();
 				void sendMessage();
@@ -612,14 +595,14 @@
 			<label for="assistant-input" class="sr-only">Assistant 질문</label>
 			<textarea
 				id="assistant-input"
-				class="input min-h-20 resize-none text-sm"
+				class="input min-h-16 resize-none text-sm"
 				placeholder="선택한 번들에 대해 질문하세요."
 				bind:value={input}
 				maxlength={MAX_ASSISTANT_INPUT_LENGTH}
 				onkeydown={handleComposerKeydown}
 				disabled={!selectedBundleId || sending}
 			></textarea>
-			<div class="mt-3 flex items-center justify-between gap-3">
+			<div class="mt-2 flex items-center justify-between gap-3">
 				<span
 					class="text-xs {inputTooLong ? 'text-status-error' : 'text-content-muted'}"
 					aria-live="polite"

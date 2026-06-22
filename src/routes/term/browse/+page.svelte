@@ -30,6 +30,7 @@
 	import { termDataStore as termStore } from '$lib/stores/unified-store';
 	import { filterTermFiles, isSystemTermFile } from '$lib/utils/file-filter';
 	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
+	import { readBrowseUrlState } from '$lib/utils/browse-url-state';
 
 	// 상태 변수
 	let entries = $state<TermEntry[]>([]);
@@ -95,6 +96,19 @@
 		selectedFilename = filename;
 		if (get(termStore).selectedFilename !== filename) {
 			termStore.set({ selectedFilename: filename });
+		}
+	}
+
+	function applyInitialBrowseUrlState() {
+		const urlState = readBrowseUrlState(window.location.search);
+		if (urlState.filename) {
+			syncSelectedFilename(urlState.filename);
+		}
+		if (urlState.query) {
+			searchQuery = urlState.query;
+			searchField = urlState.field;
+			searchExact = urlState.exact;
+			currentPage = 1;
 		}
 	}
 
@@ -174,6 +188,7 @@
 	 * 컴포넌트 마운트 시 초기 데이터 로드
 	 */
 	onMount(() => {
+		applyInitialBrowseUrlState();
 		void (async () => {
 			await loadFileList();
 			// 파일 목록 로드 후 데이터 로드

@@ -18,6 +18,7 @@
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { filterEntityFiles } from '$lib/utils/file-filter';
 	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
+	import { readBrowseUrlState } from '$lib/utils/browse-url-state';
 	import type { DataType } from '$lib/types/base.js';
 	import type {
 		RelationResolutionTarget,
@@ -63,7 +64,22 @@
 	let settingsUnsubscribe: () => void;
 	let pageDataRequestSeq = 0;
 
+	function applyInitialBrowseUrlState() {
+		const urlState = readBrowseUrlState(window.location.search);
+		if (urlState.filename) {
+			selectedFilename = urlState.filename;
+			entityStore.update((store) => ({ ...store, selectedFilename: urlState.filename }));
+		}
+		if (urlState.query) {
+			searchQuery = urlState.query;
+			searchField = urlState.field;
+			searchExact = urlState.exact;
+			currentPage = 1;
+		}
+	}
+
 	onMount(() => {
+		applyInitialBrowseUrlState();
 		settingsUnsubscribe = settingsStore.subscribe((settings) => {
 			showSystemFiles = settings.showEntitySystemFiles ?? false;
 			if (allEntityFiles.length > 0) {

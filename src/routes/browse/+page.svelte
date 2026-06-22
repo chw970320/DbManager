@@ -21,6 +21,7 @@
 	import { addToast } from '$lib/stores/toast-store';
 	import { filterVocabularyFiles, isSystemVocabularyFile } from '$lib/utils/file-filter';
 	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
+	import { readBrowseUrlState } from '$lib/utils/browse-url-state';
 
 	// 이벤트 상세 타입 정의
 	type SearchDetail = { query: string; field: string; exact: boolean };
@@ -81,6 +82,20 @@
 
 	let unsubscribe: () => void;
 
+	function applyInitialBrowseUrlState() {
+		const urlState = readBrowseUrlState(window.location.search);
+		if (urlState.filename) {
+			selectedFilename = urlState.filename;
+			vocabularyStore.update((store) => ({ ...store, selectedFilename: urlState.filename }));
+		}
+		if (urlState.query) {
+			searchQuery = urlState.query;
+			searchField = urlState.field;
+			searchExact = urlState.exact;
+			currentPage = 1;
+		}
+	}
+
 	// 설정 변경 시 파일 목록 재필터링
 	$effect(() => {
 		const unsubscribe = settingsStore.subscribe((settings) => {
@@ -114,6 +129,7 @@
 
 	// 스토어 구독 및 초기 데이터 로드
 	onMount(() => {
+		applyInitialBrowseUrlState();
 		// 비동기 초기화 함수 실행
 		(async () => {
 			await loadVocabularyFiles();

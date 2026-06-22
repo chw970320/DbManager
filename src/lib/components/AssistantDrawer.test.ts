@@ -90,7 +90,7 @@ function mockFetch() {
 						message: {
 							id: `assistant-${chatRequests.length}`,
 							role: 'assistant',
-							content: `${bundle.name} 기준으로 확인했습니다.\n\n출처: ${bundle.name}`,
+							content: `**${bundle.name}** 기준으로 확인했습니다.\n\n- 출처: ${bundle.name}\n- 코드: \`HLDY\``,
 							createdAt: '2026-06-19T00:00:00.000Z',
 							bundleId: bundle.id,
 							sources: [
@@ -111,7 +111,7 @@ function mockFetch() {
 									id: 'open-vocabulary',
 									type: 'navigate',
 									label: '단어집 화면 열기',
-									href: '/browse'
+									href: '/browse?filename=biomimicry.json&q=%EB%B0%A9%EB%AC%B8%EC%9E%90&field=all&exact=false'
 								}
 							]
 						}
@@ -233,10 +233,29 @@ describe('AssistantDrawer', () => {
 
 		const action = await screen.findByRole('button', { name: '단어집 화면 열기' });
 		expect(screen.getByText('단어집 검색 · 1건')).toBeInTheDocument();
+		expect(
+			screen.getAllByText('biomimicry 번들').some((element) => element.tagName === 'STRONG')
+		).toBe(true);
+		expect(screen.getByText('HLDY').tagName).toBe('CODE');
 		expect(goto).not.toHaveBeenCalled();
 
 		await fireEvent.click(action);
-		expect(goto).toHaveBeenCalledWith('/browse');
+		expect(goto).toHaveBeenCalledWith(
+			'/browse?filename=biomimicry.json&q=%EB%B0%A9%EB%AC%B8%EC%9E%90&field=all&exact=false'
+		);
+	});
+
+	it('limits assistant input length in the composer', async () => {
+		render(AssistantDrawer);
+
+		await fireEvent.click(screen.getByRole('button', { name: 'AI Assistant 열기' }));
+		const input = (await screen.findByLabelText('Assistant 질문')) as HTMLTextAreaElement;
+
+		expect(input.maxLength).toBe(1200);
+		expect(screen.getByText('0/1200')).toBeInTheDocument();
+
+		await fireEvent.input(input, { target: { value: '방문자' } });
+		expect(screen.getByText('3/1200')).toBeInTheDocument();
 	});
 
 	it('keeps chat history scoped to the selected bundle', async () => {
@@ -250,7 +269,7 @@ describe('AssistantDrawer', () => {
 			target: { value: '방문자 찾아줘' }
 		});
 		await fireEvent.click(screen.getByRole('button', { name: '전송' }));
-		await screen.findByText(/biomimicry 번들 기준으로 확인했습니다/);
+		await screen.findByText('HLDY');
 
 		await fireEvent.change(select, { target: { value: 'default-shared-file-mapping' } });
 		await waitFor(() => expect(select.value).toBe('default-shared-file-mapping'));

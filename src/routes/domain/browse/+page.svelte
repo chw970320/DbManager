@@ -24,6 +24,7 @@
 	import { addToast } from '$lib/stores/toast-store';
 	import { filterDomainFiles, isSystemDomainFile } from '$lib/utils/file-filter';
 	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
+	import { readBrowseUrlState } from '$lib/utils/browse-url-state';
 
 	// 상태 변수
 	let entries = $state<DomainEntry[]>([]);
@@ -91,6 +92,19 @@
 		}
 	}
 
+	function applyInitialBrowseUrlState() {
+		const urlState = readBrowseUrlState(window.location.search);
+		if (urlState.filename) {
+			syncSelectedFilename(urlState.filename);
+		}
+		if (urlState.query) {
+			searchQuery = urlState.query;
+			searchField = urlState.field;
+			searchExact = urlState.exact;
+			currentPage = 1;
+		}
+	}
+
 	function reconcileSelectedFilename(files: string[]) {
 		const resolvedFilename = resolvePreferredFilename({
 			files,
@@ -104,6 +118,7 @@
 	 * 컴포넌트 마운트 시 초기 데이터 로드
 	 */
 	onMount(() => {
+		applyInitialBrowseUrlState();
 		void (async () => {
 			await loadDataTypeMappings();
 			await loadFileList();

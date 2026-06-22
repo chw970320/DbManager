@@ -3238,12 +3238,23 @@ const data = await response.json();
 				"id": "open-term",
 				"type": "navigate",
 				"label": "용어집 화면 열기",
-				"href": "/term/browse"
+				"href": "/term/browse?filename=biomimicry.json&q=%ED%9C%B4%EC%9D%BC&field=all&exact=false"
 			}
 		]
 	}
 }
 ```
+
+#### Assistant action href
+
+`actions[].href`는 사용자가 버튼을 클릭했을 때 이동할 same-origin route입니다. 검색 결과 기반 action은 가능한 경우 다음 query params를 포함합니다.
+
+- `filename`: 선택 번들의 해당 정의서 파일명
+- `q`: Assistant가 사용한 검색어
+- `field`: 검색 필드, 기본값 `all`
+- `exact`: 정확 일치 여부
+
+각 browse 화면은 위 query params를 초기 검색 상태로 읽어 검색창과 테이블 하이라이트에 반영합니다. 상세 팝업 자동 표시는 현재 계약에 포함하지 않습니다.
 
 ---
 

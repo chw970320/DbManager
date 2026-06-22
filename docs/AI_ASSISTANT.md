@@ -13,6 +13,8 @@ LLM_MODEL=qwen3.5-4b
 LLM_API_KEY=<secret>
 LLM_TIMEOUT_MS=60000
 LLM_ENABLE_REAL_CALLS=true
+LLM_CONTEXT_TOKENS=4096
+LLM_RESPONSE_RESERVE_TOKENS=768
 ```
 
 Secrets are read only by server routes. The browser receives assistant messages, source metadata, and action buttons; it does not receive `LLM_API_KEY`.
@@ -38,7 +40,12 @@ The assistant then returns a deterministic source summary from the collected DbM
 - If non-default bundles exist, the first non-default bundle is selected by default.
 - DbManager data operations are read-only in this first pass.
 - Suggested route actions are rendered as buttons and run only after the user clicks them.
+- Route actions preserve search context with `filename`, `q`, `field`, and `exact` URL params when possible.
+- Linked browse screens hydrate those params into the search bar and existing table highlighting.
 - Answers emphasize source/provenance from selected bundle files and tool results.
+- Assistant answers render safe markdown blocks for paragraphs, lists, tables, inline code, and code fences.
+- The browser limits a single user question to 1200 characters.
+- The server trims recent history and tool context against `LLM_CONTEXT_TOKENS - LLM_RESPONSE_RESERVE_TOKENS`.
 
 ## Local History
 

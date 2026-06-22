@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount, tick } from 'svelte';
 	import { goto } from '$app/navigation';
+	import AssistantMarkdown from './AssistantMarkdown.svelte';
 	import Icon from './Icon.svelte';
 	import {
 		createEmptyAssistantState,
@@ -21,6 +22,7 @@
 	type AssistantViewMode = 'floating' | 'tab';
 
 	const ASSISTANT_MODE_STORAGE_KEY = 'dbmanager.assistant.view-mode';
+	const MAX_ASSISTANT_INPUT_LENGTH = 1200;
 	const MODE_BUTTON_CLASS =
 		'rounded-md p-2 text-content-muted transition-colors hover:bg-surface-raised hover:text-content';
 	const ACTIVE_MODE_BUTTON_CLASS = `${MODE_BUTTON_CLASS} bg-brand-50 text-brand`;
@@ -43,7 +45,11 @@
 	const selectedBundle = $derived(
 		bundles.find((bundle) => bundle.id === selectedBundleId) ?? bundles[0] ?? null
 	);
-	const canSend = $derived(input.trim().length > 0 && Boolean(selectedBundleId) && !sending);
+	const inputLength = $derived(input.length);
+	const inputTooLong = $derived(inputLength > MAX_ASSISTANT_INPUT_LENGTH);
+	const canSend = $derived(
+		input.trim().length > 0 && !inputTooLong && Boolean(selectedBundleId) && !sending
+	);
 	const historyLocked = $derived(loadingBundles || sending || !selectedBundleId);
 	const panelAriaLabel = $derived(
 		viewMode === 'floating' ? 'AI Assistant 플로팅 창' : 'AI Assistant 좌측 탭'
@@ -532,9 +538,15 @@
 							</span>
 							<span class="text-[11px] text-content-subtle">{formatTime(message.createdAt)}</span>
 						</div>
-						<p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-content">
-							{message.content}
-						</p>
+						<div class="mt-2">
+							{#if message.role === 'assistant'}
+								<AssistantMarkdown content={message.content} />
+							{:else}
+								<p class="whitespace-pre-wrap text-sm leading-6 text-content">
+									{message.content}
+								</p>
+							{/if}
+						</div>
 
 						{#if message.sources?.length}
 							<div class="mt-3 border-t border-border pt-3">
@@ -603,11 +615,17 @@
 				class="input min-h-20 resize-none text-sm"
 				placeholder="선택한 번들에 대해 질문하세요."
 				bind:value={input}
+				maxlength={MAX_ASSISTANT_INPUT_LENGTH}
 				onkeydown={handleComposerKeydown}
 				disabled={!selectedBundleId || sending}
 			></textarea>
 			<div class="mt-3 flex items-center justify-between gap-3">
-				<span aria-hidden="true"></span>
+				<span
+					class="text-xs {inputTooLong ? 'text-status-error' : 'text-content-muted'}"
+					aria-live="polite"
+				>
+					{inputLength}/{MAX_ASSISTANT_INPUT_LENGTH}
+				</span>
 				<button type="submit" class="btn btn-primary btn-sm" disabled={!canSend}>
 					<Icon name="send" size="sm" />
 					전송

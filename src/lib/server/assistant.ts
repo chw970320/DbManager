@@ -15,13 +15,21 @@ import type {
 	SharedFileMappingRegistryData
 } from '$lib/types/shared-file-mapping.js';
 import { loadSharedFileMappingRegistryData } from '$lib/registry/shared-file-mapping-registry.js';
+import { createBrowseHref } from '$lib/utils/browse-url-state.js';
 
 import { createDbManagerApiClient, type DbManagerApiClient } from '../../mcp/http-client.js';
 import { convertTerm, searchBundle, segmentTerm } from '../../mcp/search-tools.js';
 
 const DEFAULT_SHARED_FILE_MAPPING_ID = 'default-shared-file-mapping';
 const MAX_HISTORY_MESSAGES = 8;
+const MAX_ASSISTANT_INPUT_CHARS = 1200;
+const MAX_HISTORY_MESSAGE_CHARS = 2000;
 const DEFAULT_LLM_TIMEOUT_MS = 60000;
+const DEFAULT_LLM_CONTEXT_TOKENS = 4096;
+const DEFAULT_LLM_RESPONSE_RESERVE_TOKENS = 768;
+const PROMPT_SAFETY_MARGIN_TOKENS = 128;
+const MIN_TOOL_CONTEXT_TOKENS = 256;
+const ESTIMATED_CHARS_PER_TOKEN = 2;
 
 const ROUTE_BY_TYPE: Record<DataType, string> = {
 	vocabulary: '/browse',
@@ -93,6 +101,8 @@ export async function createAssistantChatResponse(
 	options: CreateAssistantResponseOptions
 ): Promise<AssistantChatResponseData> {
 	const now = options.now ?? (() => new Date());
+	const env = options.env ?? process.env;
+	validateLatestUserInput(options.messages, env);
 	const messages = sanitizeMessages(options.messages);
 	const lastUserMessage = [...messages].reverse().find((message) => message.role === 'user');
 	if (!lastUserMessage) {
@@ -110,7 +120,7 @@ export async function createAssistantChatResponse(
 		messages,
 		question: lastUserMessage.content,
 		toolContext,
-		env: options.env ?? process.env,
+		env,
 		fetchImpl: options.llmFetchImpl ?? options.fetchImpl
 	});
 
@@ -165,8 +175,23 @@ function sanitizeMessages(messages: AssistantChatRequestMessage[]): AssistantCha
 		.slice(-MAX_HISTORY_MESSAGES)
 		.map((message) => ({
 			role: message.role,
-			content: message.content.trim().slice(0, 4000)
+			content: message.content.trim().slice(0, MAX_HISTORY_MESSAGE_CHARS)
 		}));
+}
+
+function validateLatestUserInput(messages: AssistantChatRequestMessage[], env: AssistantEnv) {
+	if (!Array.isArray(messages)) {
+		return;
+	}
+	const limit = getAssistantInputLimit(env);
+	const latestUserMessage = [...messages].reverse().find((message) => message?.role === 'user');
+	if (
+		latestUserMessage &&
+		typeof latestUserMessage.content === 'string' &&
+		latestUserMessage.content.trim().length > limit
+	) {
+		throw new AssistantError(400, `질문은 ${limit}자 이하로 입력해 주세요.`);
+	}
 }
 
 async function collectToolContext(
@@ -175,6 +200,7 @@ async function collectToolContext(
 	question: string
 ): Promise<ToolContext> {
 	const searchQuery = extractSearchQuery(question);
+	const actionQuery = searchQuery || extractTermCandidate(question);
 	const bundleSelector = { bundleFiles: bundle.files };
 	const toolResults: Array<{ tool: string; payload: unknown }> = [];
 
@@ -215,7 +241,7 @@ async function collectToolContext(
 	const sources = buildSources(bundle, toolResults);
 	return {
 		sources,
-		actions: buildActions(sources),
+		actions: buildActions(sources, actionQuery),
 		contextText: JSON.stringify(
 			{
 				selectedBundle: {
@@ -263,6 +289,11 @@ function normalizeTermCandidate(value: string): string {
 }
 
 function extractSearchQuery(question: string): string {
+	const relatedMatch = question.match(/([A-Za-z가-힣0-9_]+)\s*(?:관련|에\s*관한)/);
+	if (relatedMatch?.[1]) {
+		return normalizeTermCandidate(relatedMatch[1]);
+	}
+
 	const termCandidate = extractTermCandidate(question);
 	if (termCandidate) {
 		return termCandidate.split('_').find((token) => token.length > 0) ?? termCandidate;
@@ -418,7 +449,7 @@ function extractResultValues(value: unknown): string[] {
 	return [];
 }
 
-function buildActions(sources: AssistantSource[]): AssistantAction[] {
+function buildActions(sources: AssistantSource[], query: string): AssistantAction[] {
 	const seen = new Set<DataType>();
 	const actions: AssistantAction[] = [];
 
@@ -431,7 +462,12 @@ function buildActions(sources: AssistantSource[]): AssistantAction[] {
 			id: `open-${source.type}`,
 			type: 'navigate',
 			label: `${DATA_TYPE_LABELS[source.type]} 화면 열기`,
-			href: ROUTE_BY_TYPE[source.type],
+			href: createBrowseHref(ROUTE_BY_TYPE[source.type], {
+				filename: source.filename,
+				query,
+				field: 'all',
+				exact: false
+			}),
 			description: source.filename ? `${source.filename} 기준으로 확인` : undefined
 		});
 		if (actions.length >= 4) {
@@ -473,27 +509,53 @@ function buildLlmMessages(options: {
 	messages: AssistantChatRequestMessage[];
 	question: string;
 	toolContext: ToolContext;
+	env?: AssistantEnv;
 }): LlmChatMessage[] {
-	const history = options.messages.slice(0, -1).map((message) => ({
-		role: message.role,
-		content: message.content
-	}));
+	const promptBudget = getLlmPromptBudget(options.env);
+	const systemMessage: LlmChatMessage = {
+		role: 'system',
+		content:
+			'당신은 DbManager의 한국어 AI Assistant입니다. 답변은 간결하고 업무용으로 작성하세요. DbManager 데이터에 관한 주장은 제공된 도구 결과와 번들 출처를 우선 근거로 삼고, 직접 생성/수정/삭제를 수행했다고 말하지 마세요. 출처가 없으면 일반 안내임을 밝혀야 합니다.'
+	};
+	const userPrefix = [
+		`선택 번들: ${options.bundle.name} (${options.bundle.id})`,
+		`사용자 질문: ${options.question}`,
+		'도구 결과:'
+	].join('\n');
+	const userSuffix =
+		'위 정보를 바탕으로 답변하고, DbManager 데이터 근거가 있으면 출처를 명확히 언급하세요.';
+	const fixedPromptTokens =
+		estimateMessageTokens(systemMessage) +
+		estimateTokens(userPrefix) +
+		estimateTokens(userSuffix) +
+		16;
+	const remainingTokens = Math.max(0, promptBudget - fixedPromptTokens);
+	const toolContextBudget = Math.max(
+		0,
+		Math.min(remainingTokens, Math.max(MIN_TOOL_CONTEXT_TOKENS, Math.floor(remainingTokens * 0.7)))
+	);
+	const contextText = truncateToEstimatedTokens(options.toolContext.contextText, toolContextBudget);
+	const historyBudget = Math.max(0, remainingTokens - estimateTokens(contextText));
+	const history = fitHistoryToBudget(
+		options.messages.slice(0, -1).map((message) => ({
+			role: message.role,
+			content: message.content
+		})),
+		historyBudget
+	);
 
 	return [
-		{
-			role: 'system',
-			content:
-				'당신은 DbManager의 한국어 AI Assistant입니다. 답변은 간결하고 업무용으로 작성하세요. DbManager 데이터에 관한 주장은 제공된 도구 결과와 번들 출처를 우선 근거로 삼고, 직접 생성/수정/삭제를 수행했다고 말하지 마세요. 출처가 없으면 일반 안내임을 밝혀야 합니다.'
-		},
+		systemMessage,
 		...history,
 		{
 			role: 'user',
 			content: [
-				`선택 번들: ${options.bundle.name} (${options.bundle.id})`,
-				`사용자 질문: ${options.question}`,
-				'도구 결과:',
-				options.toolContext.contextText,
-				'위 정보를 바탕으로 답변하고, DbManager 데이터 근거가 있으면 출처를 명확히 언급하세요.'
+				userPrefix,
+				contextText,
+				contextText === options.toolContext.contextText
+					? ''
+					: '[도구 결과 일부가 context budget에 맞춰 축약되었습니다.]',
+				userSuffix
 			].join('\n')
 		}
 	];
@@ -528,13 +590,21 @@ async function callLlm(options: {
 			body: JSON.stringify({
 				model,
 				messages: options.messages,
-				temperature: 0.2
+				temperature: 0.2,
+				max_tokens: parsePositiveInteger(
+					options.env.LLM_RESPONSE_RESERVE_TOKENS,
+					DEFAULT_LLM_RESPONSE_RESERVE_TOKENS
+				)
 			}),
 			signal: controller.signal
 		});
 		const body = (await response.json().catch(() => null)) as unknown;
 		if (!response.ok) {
-			throw new AssistantError(502, 'LLM 서버 호출에 실패했습니다.');
+			const message = extractLlmErrorMessage(body);
+			throw new AssistantError(
+				502,
+				message ? `LLM 서버 호출에 실패했습니다: ${message}` : 'LLM 서버 호출에 실패했습니다.'
+			);
 		}
 
 		const choices = asRecord(body)?.choices;
@@ -552,9 +622,68 @@ async function callLlm(options: {
 	}
 }
 
+function extractLlmErrorMessage(body: unknown): string {
+	const record = asRecord(body);
+	const error = asRecord(record?.error);
+	const candidates = [error?.message, record?.message, record?.error];
+	return candidates.find((candidate): candidate is string => typeof candidate === 'string') ?? '';
+}
+
 function parseTimeout(value: string | undefined): number {
 	const parsed = Number(value);
 	return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_LLM_TIMEOUT_MS;
+}
+
+function getAssistantInputLimit(env: AssistantEnv): number {
+	return parsePositiveInteger(env.LLM_INPUT_MAX_CHARS, MAX_ASSISTANT_INPUT_CHARS);
+}
+
+function getLlmPromptBudget(env: AssistantEnv | undefined): number {
+	const contextTokens = parsePositiveInteger(env?.LLM_CONTEXT_TOKENS, DEFAULT_LLM_CONTEXT_TOKENS);
+	const responseReserveTokens = parsePositiveInteger(
+		env?.LLM_RESPONSE_RESERVE_TOKENS,
+		DEFAULT_LLM_RESPONSE_RESERVE_TOKENS
+	);
+	return Math.max(512, contextTokens - responseReserveTokens - PROMPT_SAFETY_MARGIN_TOKENS);
+}
+
+function parsePositiveInteger(value: string | undefined, fallback: number): number {
+	const parsed = Number(value);
+	return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function fitHistoryToBudget(messages: LlmChatMessage[], budgetTokens: number): LlmChatMessage[] {
+	if (budgetTokens <= 0) {
+		return [];
+	}
+
+	const selected: LlmChatMessage[] = [];
+	let usedTokens = 0;
+	for (const message of [...messages].reverse()) {
+		const messageTokens = estimateMessageTokens(message);
+		if (usedTokens + messageTokens > budgetTokens) {
+			continue;
+		}
+		selected.unshift(message);
+		usedTokens += messageTokens;
+	}
+	return selected;
+}
+
+function estimateMessageTokens(message: LlmChatMessage): number {
+	return estimateTokens(message.role) + estimateTokens(message.content) + 4;
+}
+
+function estimateTokens(text: string): number {
+	return Math.ceil(text.length / ESTIMATED_CHARS_PER_TOKEN);
+}
+
+function truncateToEstimatedTokens(text: string, maxTokens: number): string {
+	if (estimateTokens(text) <= maxTokens) {
+		return text;
+	}
+	const maxChars = Math.max(0, maxTokens * ESTIMATED_CHARS_PER_TOKEN);
+	return `${text.slice(0, maxChars).trimEnd()}\n...[truncated]`;
 }
 
 function createFallbackAnswer(

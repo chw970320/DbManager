@@ -116,10 +116,58 @@ describe('API: /api/assistant/chat', () => {
 			expect.arrayContaining([
 				expect.objectContaining({
 					type: 'navigate',
-					href: '/browse'
+					href: '/browse?filename=vocabulary.json&q=%ED%9C%B4%EC%9D%BC&field=all&exact=false'
 				})
 			])
 		);
+	});
+
+	it('rejects the latest user input when it exceeds the assistant input budget', async () => {
+		const response = await POST(
+			createEvent({
+				bundleId: 'default-shared-file-mapping',
+				messages: [{ role: 'user', content: '가'.repeat(1201) }]
+			})
+		);
+		const result = await response.json();
+
+		expect(response.status).toBe(400);
+		expect(result.error).toBe('질문은 1200자 이하로 입력해 주세요.');
+	});
+
+	it('fits LLM requests to the configured context budget and reserves response tokens', async () => {
+		process.env.LLM_ENABLE_REAL_CALLS = 'true';
+		process.env.LLM_BASE_URL = 'http://llm.example/v1';
+		process.env.LLM_MODEL = 'qwen3.5-4b';
+		process.env.LLM_CONTEXT_TOKENS = '1024';
+		process.env.LLM_RESPONSE_RESERVE_TOKENS = '256';
+		const llmFetch = vi.fn(async () =>
+			jsonResponse({
+				choices: [{ message: { content: '요약 답변\n\n출처: 단어집 검색' } }]
+			})
+		) as typeof fetch;
+
+		await createAssistantChatResponse({
+			bundleId: 'default-shared-file-mapping',
+			messages: [
+				{ role: 'user', content: '이전 질문 '.repeat(100) },
+				{ role: 'assistant', content: '이전 답변 '.repeat(100) },
+				{ role: 'user', content: '방문자 관련 단어와 컬럼을 찾아줘' }
+			],
+			apiBaseUrl: 'http://localhost:5173',
+			fetchImpl: createFetch(),
+			llmFetchImpl: llmFetch,
+			env: process.env
+		});
+
+		const body = JSON.parse(
+			String((llmFetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0][1].body)
+		);
+		expect(body.max_tokens).toBe(256);
+		expect(JSON.stringify(body.messages)).toContain(
+			'[도구 결과 일부가 context budget에 맞춰 축약되었습니다.]'
+		);
+		expect(JSON.stringify(body.messages).length).toBeLessThan(1900);
 	});
 
 	it('rejects an unknown bundle id', async () => {

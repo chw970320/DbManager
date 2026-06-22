@@ -143,12 +143,17 @@ describe('AssistantDrawer', () => {
 		vi.restoreAllMocks();
 	});
 
-	it('opens from the left launcher as a compact floating assistant by default', async () => {
+	it('opens from the bottom-right circular launcher as a compact floating assistant by default', async () => {
 		render(AssistantDrawer);
 
 		const launcher = screen.getByRole('button', { name: 'AI Assistant 열기' });
-		expect(launcher.className).toContain('left-0');
-		expect(launcher.className).not.toContain('right-8');
+		expect(launcher.className).toContain('bottom-8');
+		expect(launcher.className).toContain('right-24');
+		expect(launcher.className).toContain('h-12');
+		expect(launcher.className).toContain('w-12');
+		expect(launcher.className).toContain('rounded-full');
+		expect(launcher.className).not.toContain('left-0');
+		expect(launcher.className).not.toContain('top-1/2');
 
 		await fireEvent.click(launcher);
 		const dialog = await screen.findByRole('dialog', { name: 'AI Assistant 플로팅 창' });

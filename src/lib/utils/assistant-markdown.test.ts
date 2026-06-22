@@ -21,6 +21,8 @@ describe('assistant markdown parser', () => {
 			[
 				'확인 결과입니다.',
 				'',
+				'### 1. 주요 단어 **Vocabulary**',
+				'',
 				'- 단어: 방문자',
 				'- 컬럼: 방문자수',
 				'',
@@ -36,10 +38,19 @@ describe('assistant markdown parser', () => {
 
 		expect(blocks.map((block) => block.type)).toEqual([
 			'paragraph',
+			'heading',
 			'unordered-list',
 			'table',
 			'code'
 		]);
+		expect(blocks[1]).toEqual({
+			type: 'heading',
+			level: 3,
+			segments: [
+				{ type: 'text', text: '1. 주요 단어 ' },
+				{ type: 'strong', text: 'Vocabulary' }
+			]
+		});
 	});
 
 	it('strips duplicated source and tool-result note boilerplate outside code blocks', () => {

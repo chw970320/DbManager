@@ -256,6 +256,49 @@ describe('AssistantDrawer', () => {
 		);
 	});
 
+	it('renders assistant markdown headings without showing raw hash markers', async () => {
+		mockFetchWithAssistantContent(
+			[
+				'biomimicry 번들에서 확인했습니다.',
+				'',
+				'### 1. 주요 단어 **Vocabulary** 검색 결과',
+				'',
+				'- 방문자',
+				'- 약어: `VSTR`'
+			].join('\n')
+		);
+		render(AssistantDrawer);
+
+		await fireEvent.click(screen.getByRole('button', { name: 'AI Assistant 열기' }));
+		await screen.findByLabelText('번들');
+		await fireEvent.input(screen.getByLabelText('Assistant 질문'), {
+			target: { value: '방문자 관련 단어와 컬럼을 찾아줘' }
+		});
+		await fireEvent.click(screen.getByRole('button', { name: '전송' }));
+
+		const heading = await screen.findByText(/1\. 주요 단어/);
+		expect(heading).toBeInTheDocument();
+		expect(screen.queryByText(/###/)).not.toBeInTheDocument();
+		expect(screen.getByText('Vocabulary').tagName).toBe('STRONG');
+		expect(screen.getByText('VSTR').tagName).toBe('CODE');
+	});
+
+	function mockFetchWithAssistantContent(content: string) {
+		mockFetch();
+		const baseFetch = global.fetch;
+		global.fetch = vi.fn(async (input, init) => {
+			const response = await baseFetch(input, init);
+			if (String(input) !== '/api/assistant/chat') {
+				return response;
+			}
+			const body = await response.json();
+			body.data.message.content = content;
+			return new Response(JSON.stringify(body), {
+				headers: { 'content-type': 'application/json' }
+			});
+		}) as typeof fetch;
+	}
+
 	it('limits assistant input length in the composer', async () => {
 		render(AssistantDrawer);
 

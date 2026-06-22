@@ -18,6 +18,11 @@ export type AssistantMarkdownBlock =
 			segments: AssistantMarkdownInlineSegment[];
 	  }
 	| {
+			type: 'heading';
+			level: 1 | 2 | 3 | 4 | 5 | 6;
+			segments: AssistantMarkdownInlineSegment[];
+	  }
+	| {
 			type: 'unordered-list' | 'ordered-list';
 			items: AssistantMarkdownInlineSegment[][];
 	  }
@@ -34,6 +39,7 @@ export type AssistantMarkdownBlock =
 
 const UNORDERED_LIST_PATTERN = /^\s*[-*]\s+(.+)$/;
 const ORDERED_LIST_PATTERN = /^\s*\d+[.)]\s+(.+)$/;
+const HEADING_PATTERN = /^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/;
 const TABLE_SEPARATOR_PATTERN = /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/;
 const SOURCE_LINE_PATTERN = /^\s*(?:[-*]\s*)?(?:#{1,6}\s*)?\*{0,2}출처\*{0,2}\s*[:：]\s*\*{0,2}.+$/;
 const SOURCE_HEADING_PATTERN =
@@ -114,6 +120,17 @@ export function parseAssistantMarkdown(markdown: string): AssistantMarkdownBlock
 			continue;
 		}
 
+		const headingMatch = line.match(HEADING_PATTERN);
+		if (headingMatch?.[1] && headingMatch[2]) {
+			blocks.push({
+				type: 'heading',
+				level: headingMatch[1].length as 1 | 2 | 3 | 4 | 5 | 6,
+				segments: parseInlineMarkdown(headingMatch[2])
+			});
+			index += 1;
+			continue;
+		}
+
 		if (isTableStart(lines, index)) {
 			const headers = splitTableCells(lines[index] ?? '').map(parseInlineMarkdown);
 			index += 2;
@@ -157,6 +174,7 @@ export function parseAssistantMarkdown(markdown: string): AssistantMarkdownBlock
 			index < lines.length &&
 			(lines[index] ?? '').trim() &&
 			!(lines[index] ?? '').trimStart().startsWith('```') &&
+			!HEADING_PATTERN.test(lines[index] ?? '') &&
 			!UNORDERED_LIST_PATTERN.test(lines[index] ?? '') &&
 			!ORDERED_LIST_PATTERN.test(lines[index] ?? '') &&
 			!isTableStart(lines, index)

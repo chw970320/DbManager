@@ -1,6 +1,7 @@
 <script lang="ts">
 	import AssistantMarkdownInline from './AssistantMarkdownInline.svelte';
 	import {
+		type AssistantMarkdownBlock,
 		parseAssistantMarkdown,
 		stripAssistantResponseBoilerplate
 	} from '$lib/utils/assistant-markdown';
@@ -8,6 +9,13 @@
 	let { content }: { content: string } = $props();
 
 	const blocks = $derived(parseAssistantMarkdown(stripAssistantResponseBoilerplate(content)));
+
+	function headingClass(block: Extract<AssistantMarkdownBlock, { type: 'heading' }>): string {
+		if (block.level <= 2) {
+			return 'text-sm font-semibold text-content';
+		}
+		return 'text-[13px] font-semibold text-content';
+	}
 </script>
 
 <div class="space-y-3 text-sm leading-6 text-content">
@@ -16,6 +24,10 @@
 			<p>
 				<AssistantMarkdownInline segments={block.segments} />
 			</p>
+		{:else if block.type === 'heading'}
+			<div class={headingClass(block)}>
+				<AssistantMarkdownInline segments={block.segments} />
+			</div>
 		{:else if block.type === 'unordered-list'}
 			<ul class="list-disc space-y-1 pl-5">
 				{#each block.items as item, itemIndex (`ul-${itemIndex}`)}

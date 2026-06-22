@@ -45,7 +45,7 @@ The assistant then returns a deterministic source summary from the collected DbM
 - Search-result route actions can also include `target` and `open=detail` so linked browse screens open the matched row detail when the row is present in the hydrated result page.
 - Linked browse screens hydrate those params into the search bar and existing table highlighting, then safely fall back to the search result view when the target row is not present.
 - Answers keep source/provenance in the dedicated source area and avoid duplicating `출처:` or tool-result note text in the answer body.
-- Assistant answers render safe markdown blocks for paragraphs, lists, tables, inline code, and code fences.
+- Assistant answers render safe markdown blocks for headings, paragraphs, lists, tables, inline code, and code fences.
 - The browser limits a single user question to 1200 characters.
 - The server trims recent history and tool context against `LLM_CONTEXT_TOKENS - LLM_RESPONSE_RESERVE_TOKENS`.
 

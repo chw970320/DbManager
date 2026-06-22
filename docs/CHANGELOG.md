@@ -14,7 +14,7 @@
 - AI Assistant의 설명 문구와 별도 관리 툴바를 압축해 채팅 답변 표시 영역을 넓혔습니다.
 - 기존 floating/좌측 탭 보기 전환, 번들 선택, 대화 기록 동작은 유지했습니다.
 - `LLM_CONTEXT_TOKENS`, `LLM_RESPONSE_RESERVE_TOKENS` 기준으로 LLM 요청 history/tool context를 축약합니다.
-- Assistant 답변의 markdown 문단, 목록, 표, inline code, code block을 안전 렌더링합니다.
+- Assistant 답변의 markdown 제목, 문단, 목록, 표, inline code, code block을 안전 렌더링합니다.
 - Assistant 답변 본문에서 중복 `출처:`와 도구 검색 결과 참고 문구를 제거하고, 출처는 별도 출처 영역으로만 표시합니다.
 - 화면 열기 action이 `filename`, `q`, `field`, `exact` URL params를 포함하고, browse 화면은 이를 초기 검색/하이라이트 상태로 반영합니다.
 - 검색 결과 기반 화면 열기 action에 `target`/`open=detail`을 추가해, 대상 row가 로드된 경우 기존 상세 팝업까지 자동으로 연결합니다.

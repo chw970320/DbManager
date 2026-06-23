@@ -19,6 +19,8 @@ LLM_RESPONSE_RESERVE_TOKENS=768
 
 Secrets are read only by server routes. The browser receives assistant messages, source metadata, and action buttons; it does not receive `LLM_API_KEY`.
 
+When running with `docker-compose.yml`, the Compose file passes these `.env` values into the `app` container. Without those explicit environment entries, Compose can read `.env` for variable substitution while the SvelteKit server still sees `LLM_ENABLE_REAL_CALLS` as unset and returns the deterministic fallback answer instead of calling the LLM.
+
 For local UI/testing without a live LLM, set:
 
 ```env
@@ -55,6 +57,7 @@ Chat history is stored in the browser, not on the server.
 
 - Primary storage: IndexedDB
 - Fallback storage: localStorage when IndexedDB is unavailable
+- Stored messages are normalized into plain JSON-compatible DTOs before IndexedDB writes so source/action arrays from the Svelte UI remain clone-safe.
 - Conversations are partitioned by bundle id, so switching bundles does not replay another bundle's transcript into the current request.
 - History survives normal reloads, hard reloads, and HTTP cache clearing.
 - Browser site-data deletion can still remove it.

@@ -12,6 +12,15 @@ services:
       - DATA_PATH=/app/static/data
       - ORIGIN=http://localhost:63000
       - BODY_SIZE_LIMIT=10000000
+      - LLM_PROVIDER=${LLM_PROVIDER:-}
+      - LLM_BASE_URL=${LLM_BASE_URL:-}
+      - LLM_MODEL=${LLM_MODEL:-}
+      - LLM_API_KEY=${LLM_API_KEY:-}
+      - LLM_TIMEOUT_MS=${LLM_TIMEOUT_MS:-60000}
+      - LLM_ENABLE_REAL_CALLS=${LLM_ENABLE_REAL_CALLS:-false}
+      - LLM_CONTEXT_TOKENS=${LLM_CONTEXT_TOKENS:-4096}
+      - LLM_RESPONSE_RESERVE_TOKENS=${LLM_RESPONSE_RESERVE_TOKENS:-768}
+      - LLM_INPUT_MAX_CHARS=${LLM_INPUT_MAX_CHARS:-1200}
     restart: unless-stopped
     networks:
       - dbmanager-network

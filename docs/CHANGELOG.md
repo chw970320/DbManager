@@ -1,5 +1,16 @@
 # 변경 이력
 
+## 2026-06-23
+
+### 요약
+
+- AI Assistant의 IndexedDB 대화 기록 저장과 Docker LLM 환경 변수 전달을 안정화했습니다.
+
+### 상세 변경
+
+- Assistant 대화 기록 저장 전에 메시지, 출처, 화면 열기 action을 plain DTO로 정규화해 IndexedDB structured clone 오류를 방지합니다.
+- Docker Compose 배포에서 `.env`의 `LLM_*` 설정을 `app` 컨테이너로 전달해 `LLM_ENABLE_REAL_CALLS=true`일 때 실제 LLM 서버를 호출합니다.
+
 ## 2026-06-22
 
 ### 요약

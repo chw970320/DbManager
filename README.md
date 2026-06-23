@@ -234,6 +234,7 @@ docker-compose up --build
   - remote client는 `Authorization: Bearer <MCP_API_KEY>`로 접근합니다.
 - AI Assistant
   - `.env`에 `LLM_PROVIDER`, `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`, `LLM_TIMEOUT_MS`, `LLM_ENABLE_REAL_CALLS`를 설정합니다.
+  - Docker 실행 시 `docker-compose.yml`이 `.env`의 LLM 설정을 컨테이너 환경 변수로 전달합니다.
   - Chat 기록은 서버가 아니라 브라우저 IndexedDB에 저장되며, drawer에서 내보내기/가져오기/삭제를 제공합니다.
 - `pnpm run format`
 - `pnpm run format:check`

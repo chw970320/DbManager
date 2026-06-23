@@ -117,4 +117,100 @@ describe('assistant history storage', () => {
 			})
 		]);
 	});
+
+	it('normalizes assistant metadata into IndexedDB-cloneable DTOs', () => {
+		const proxiedSources = new Proxy(
+			[
+				{
+					id: 'source-1',
+					tool: 'search_bundle',
+					title: '단어집 검색',
+					summary: '단어집 1건',
+					bundleId: 'bio',
+					bundleName: 'biomimicry',
+					type: 'vocabulary',
+					filename: 'vocabulary.json',
+					count: 1,
+					targetId: 'word-1',
+					targetLabel: '방문자',
+					transient: () => 'not cloneable'
+				}
+			],
+			{}
+		);
+		const proxiedActions = new Proxy(
+			[
+				{
+					id: 'open-vocabulary',
+					type: 'navigate',
+					label: '단어집 화면 열기',
+					href: '/browse?filename=vocabulary.json&q=방문자',
+					description: 'vocabulary.json 기준으로 확인',
+					handler: () => 'not cloneable'
+				}
+			],
+			{}
+		);
+
+		const state = normalizeAssistantState(
+			{
+				version: 1,
+				selectedBundleId: 'bio',
+				conversations: {
+					bio: {
+						bundleId: 'bio',
+						updatedAt: '2026-06-19T00:00:00.000Z',
+						messages: [
+							{
+								id: 'message-1',
+								role: 'assistant',
+								content: '방문자 정보입니다.',
+								createdAt: '2026-06-19T00:00:00.000Z',
+								bundleId: 'bio',
+								sources: proxiedSources,
+								actions: proxiedActions,
+								extra: [() => 'not cloneable']
+							}
+						]
+					}
+				},
+				updatedAt: '2026-06-19T00:00:00.000Z'
+			},
+			'bio'
+		);
+		const message = state.conversations.bio.messages[0];
+
+		expect(message).toEqual({
+			id: 'message-1',
+			role: 'assistant',
+			content: '방문자 정보입니다.',
+			createdAt: '2026-06-19T00:00:00.000Z',
+			bundleId: 'bio',
+			sources: [
+				{
+					id: 'source-1',
+					tool: 'search_bundle',
+					title: '단어집 검색',
+					summary: '단어집 1건',
+					bundleId: 'bio',
+					bundleName: 'biomimicry',
+					type: 'vocabulary',
+					filename: 'vocabulary.json',
+					count: 1,
+					targetId: 'word-1',
+					targetLabel: '방문자'
+				}
+			],
+			actions: [
+				{
+					id: 'open-vocabulary',
+					type: 'navigate',
+					label: '단어집 화면 열기',
+					href: '/browse?filename=vocabulary.json&q=방문자',
+					description: 'vocabulary.json 기준으로 확인'
+				}
+			]
+		});
+		expect(() => structuredClone(state)).not.toThrow();
+	});
 });

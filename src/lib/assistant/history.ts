@@ -1,4 +1,10 @@
-import type { AssistantChatMessage, AssistantPersistedState } from '$lib/types/assistant.js';
+import { isValidDataType } from '$lib/types/base.js';
+import type {
+	AssistantAction,
+	AssistantChatMessage,
+	AssistantPersistedState,
+	AssistantSource
+} from '$lib/types/assistant.js';
 
 const DB_NAME = 'dbmanager-assistant';
 const DB_VERSION = 1;
@@ -155,16 +161,139 @@ function isAssistantMessage(value: unknown): value is AssistantChatMessage {
 }
 
 function normalizeMessages(value: unknown, bundleId: string): AssistantChatMessage[] {
-	return Array.isArray(value)
-		? value
-				.filter(isAssistantMessage)
-				.filter((message) => !message.bundleId || message.bundleId === bundleId)
-				.slice(-100)
-				.map((message) => ({
-					...message,
-					bundleId: message.bundleId ?? bundleId
-				}))
-		: [];
+	if (!Array.isArray(value)) {
+		return [];
+	}
+
+	return value
+		.map((message) => normalizeMessage(message, bundleId))
+		.filter((message): message is AssistantChatMessage => Boolean(message))
+		.slice(-100);
+}
+
+function normalizeMessage(value: unknown, bundleId: string): AssistantChatMessage | null {
+	if (!isAssistantMessage(value)) {
+		return null;
+	}
+
+	const candidate = value;
+	const messageBundleId =
+		typeof candidate.bundleId === 'string' && candidate.bundleId.trim()
+			? candidate.bundleId.trim()
+			: bundleId;
+	if (messageBundleId !== bundleId) {
+		return null;
+	}
+
+	const message: AssistantChatMessage = {
+		id: candidate.id,
+		role: candidate.role,
+		content: candidate.content,
+		createdAt: candidate.createdAt,
+		bundleId: messageBundleId
+	};
+	const sources = normalizeSources(candidate.sources, messageBundleId);
+	const actions = normalizeActions(candidate.actions);
+	if (sources.length > 0) {
+		message.sources = sources;
+	}
+	if (actions.length > 0) {
+		message.actions = actions;
+	}
+
+	return message;
+}
+
+function normalizeSources(value: unknown, fallbackBundleId: string): AssistantSource[] {
+	if (!Array.isArray(value)) {
+		return [];
+	}
+
+	return value
+		.map((source) => normalizeSource(source, fallbackBundleId))
+		.filter((source): source is AssistantSource => Boolean(source));
+}
+
+function normalizeSource(value: unknown, fallbackBundleId: string): AssistantSource | null {
+	if (!value || typeof value !== 'object') {
+		return null;
+	}
+
+	const record = value as Partial<AssistantSource>;
+	const id = normalizeRequiredString(record.id);
+	const tool = normalizeRequiredString(record.tool);
+	const title = normalizeRequiredString(record.title);
+	const summary = normalizeRequiredString(record.summary);
+	const bundleName = normalizeRequiredString(record.bundleName);
+	if (!id || !tool || !title || !summary || !bundleName) {
+		return null;
+	}
+
+	const source: AssistantSource = {
+		id,
+		tool,
+		title,
+		summary,
+		bundleId: normalizeRequiredString(record.bundleId) ?? fallbackBundleId,
+		bundleName
+	};
+	if (typeof record.type === 'string' && isValidDataType(record.type)) {
+		source.type = record.type;
+	}
+	if (typeof record.filename === 'string' && record.filename.trim()) {
+		source.filename = record.filename.trim();
+	}
+	if (typeof record.count === 'number' && Number.isFinite(record.count)) {
+		source.count = record.count;
+	}
+	if (typeof record.targetId === 'string' && record.targetId.trim()) {
+		source.targetId = record.targetId.trim();
+	}
+	if (typeof record.targetLabel === 'string' && record.targetLabel.trim()) {
+		source.targetLabel = record.targetLabel.trim();
+	}
+
+	return source;
+}
+
+function normalizeActions(value: unknown): AssistantAction[] {
+	if (!Array.isArray(value)) {
+		return [];
+	}
+
+	return value
+		.map((action) => normalizeAction(action))
+		.filter((action): action is AssistantAction => Boolean(action));
+}
+
+function normalizeAction(value: unknown): AssistantAction | null {
+	if (!value || typeof value !== 'object') {
+		return null;
+	}
+
+	const record = value as Partial<AssistantAction>;
+	const id = normalizeRequiredString(record.id);
+	const label = normalizeRequiredString(record.label);
+	const href = normalizeRequiredString(record.href);
+	if (!id || record.type !== 'navigate' || !label || !href) {
+		return null;
+	}
+
+	const action: AssistantAction = {
+		id,
+		type: 'navigate',
+		label,
+		href
+	};
+	if (typeof record.description === 'string' && record.description.trim()) {
+		action.description = record.description.trim();
+	}
+
+	return action;
+}
+
+function normalizeRequiredString(value: unknown): string | null {
+	return typeof value === 'string' && value.trim() ? value.trim() : null;
 }
 
 function openAssistantDb(): Promise<IDBDatabase> {

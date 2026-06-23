@@ -18,6 +18,7 @@
 		AssistantPersistedState
 	} from '$lib/types/assistant.js';
 	import type { SharedFileMappingBundleEntry } from '$lib/types/shared-file-mapping.js';
+	import { generateUuid } from '$lib/utils/uuid.js';
 
 	type AssistantViewMode = 'floating' | 'tab';
 
@@ -206,7 +207,7 @@
 
 		sending = true;
 		const userMessage: AssistantChatMessage = {
-			id: crypto.randomUUID(),
+			id: generateUuid(),
 			role: 'user',
 			content: input.trim(),
 			createdAt: new Date().toISOString(),

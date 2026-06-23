@@ -4,6 +4,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import AssistantDrawer from './AssistantDrawer.svelte';
 import { goto } from '$app/navigation';
 
+const { mockUuidV4 } = vi.hoisted(() => ({
+	mockUuidV4: vi.fn(() => 'assistant-fallback-uuid')
+}));
+
+vi.mock('uuid', () => ({
+	v4: mockUuidV4
+}));
+
 vi.mock('$app/navigation', () => ({
 	goto: vi.fn()
 }));
@@ -298,6 +306,34 @@ describe('AssistantDrawer', () => {
 			});
 		}) as typeof fetch;
 	}
+
+	it('sends a message with uuid fallback when crypto.randomUUID is unavailable', async () => {
+		const originalCrypto = globalThis.crypto;
+		Object.defineProperty(globalThis, 'crypto', {
+			configurable: true,
+			value: {}
+		});
+
+		try {
+			render(AssistantDrawer);
+
+			await fireEvent.click(screen.getByRole('button', { name: 'AI Assistant 열기' }));
+			await screen.findByLabelText('번들');
+			await fireEvent.input(screen.getByLabelText('Assistant 질문'), {
+				target: { value: '방문자 찾아줘' }
+			});
+			await fireEvent.click(screen.getByRole('button', { name: '전송' }));
+
+			await waitFor(() => expect(chatRequests).toHaveLength(1));
+			expect(mockUuidV4).toHaveBeenCalled();
+			expect(await screen.findByText('방문자 찾아줘')).toBeInTheDocument();
+		} finally {
+			Object.defineProperty(globalThis, 'crypto', {
+				configurable: true,
+				value: originalCrypto
+			});
+		}
+	});
 
 	it('limits assistant input length in the composer', async () => {
 		render(AssistantDrawer);

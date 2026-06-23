@@ -26,6 +26,7 @@ import {
 } from '$lib/utils/cascade-update-rules.js';
 import { generateStandardDomainName } from '$lib/utils/validation.js';
 import { normalizeKey } from '$lib/utils/mapping-key.js';
+import { generateUuid } from '$lib/utils/uuid.js';
 
 type CascadeSourceType = 'vocabulary' | 'domain' | 'term';
 
@@ -433,7 +434,7 @@ function ensureVocabularyEntry(
 ): VocabularyEntry {
 	const base = current ? pickVocabularyEntry(current) : null;
 	return {
-		id: proposed.id || base?.id || crypto.randomUUID(),
+		id: proposed.id || base?.id || generateUuid(),
 		standardName: proposed.standardName?.trim() || base?.standardName || '',
 		abbreviation: proposed.abbreviation?.trim() || base?.abbreviation || '',
 		englishName: proposed.englishName?.trim() || base?.englishName || '',
@@ -457,7 +458,7 @@ function ensureTermEntry(
 ): TermEntry {
 	const base = current ? pickTermEntry(current) : null;
 	return {
-		id: proposed.id || base?.id || crypto.randomUUID(),
+		id: proposed.id || base?.id || generateUuid(),
 		termName: proposed.termName?.trim() || base?.termName || '',
 		columnName: proposed.columnName?.trim() || base?.columnName || '',
 		domainName: proposed.domainName?.trim() || base?.domainName || '',

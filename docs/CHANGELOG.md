@@ -13,7 +13,7 @@
 - 좌측 edge 탭 형태의 진입 버튼을 원형 floating button으로 변경했습니다.
 - AI Assistant의 설명 문구와 별도 관리 툴바를 압축해 채팅 답변 표시 영역을 넓혔습니다.
 - 기존 floating/좌측 탭 보기 전환, 번들 선택, 대화 기록 동작은 유지했습니다.
-- `crypto.randomUUID`가 없는 Docker/HTTP 브라우저 환경에서도 AI Assistant 메시지 전송이 동작합니다.
+- `crypto.randomUUID`가 없는 Docker/HTTP 브라우저 환경에서도 AI Assistant 메시지 전송과 클라이언트 UUID 생성이 동작합니다.
 - `LLM_CONTEXT_TOKENS`, `LLM_RESPONSE_RESERVE_TOKENS` 기준으로 LLM 요청 history/tool context를 축약합니다.
 - Assistant 답변의 markdown 제목, 문단, 목록, 표, inline code, code block을 안전 렌더링합니다.
 - Assistant 답변 본문에서 중복 `출처:`와 도구 검색 결과 참고 문구를 제거하고, 출처는 별도 출처 영역으로만 표시합니다.
@@ -603,7 +603,7 @@
   - `src/lib/components/TableDefEditor.svelte`
 - 변경:
   - 브라우저에서 네이티브 `crypto.randomUUID`를 우선 사용
-  - 지원되지 않는 환경에서는 `uuid` 패키지로 안전하게 fallback
+  - 지원되지 않는 환경에서는 브라우저 호환 v4 UUID 생성 로직으로 안전하게 fallback
   - 신규 등록 시 브라우저 호환성 문제로 저장이 중단되던 경로를 공통 유틸로 정리
 
 2. 회귀 테스트/문서 동기화

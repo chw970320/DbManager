@@ -3,14 +3,6 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/svelte';
 import VocabularyEditor from './VocabularyEditor.svelte';
 import type { VocabularyEntry } from '$lib/types/vocabulary';
 
-const { mockUuidV4 } = vi.hoisted(() => ({
-	mockUuidV4: vi.fn(() => 'fallback-uuid-5678')
-}));
-
-vi.mock('uuid', () => ({
-	v4: mockUuidV4
-}));
-
 const { mockShowConfirm } = vi.hoisted(() => ({
 	mockShowConfirm: vi.fn()
 }));
@@ -392,15 +384,15 @@ describe('VocabularyEditor', () => {
 				await waitFor(() => {
 					expect(handleSave).toHaveBeenCalledWith(
 						expect.objectContaining({
-							id: 'fallback-uuid-5678',
+							id: expect.stringMatching(
+								/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+							),
 							standardName: '테스트단어',
 							abbreviation: 'TEST_WORD',
 							englishName: 'TestWord'
 						})
 					);
 				});
-
-				expect(mockUuidV4).toHaveBeenCalledTimes(1);
 			} finally {
 				Object.defineProperty(global, 'crypto', {
 					configurable: true,

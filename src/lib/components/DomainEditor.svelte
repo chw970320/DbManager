@@ -7,7 +7,7 @@
 	import { debounce } from '$lib/utils/debounce';
 	import { requestEditorClose } from '$lib/utils/editor-close-guard';
 	import { generateStandardDomainName } from '$lib/utils/validation';
-	import { v4 as uuidv4 } from 'uuid';
+	import { generateUuid } from '$lib/utils/uuid';
 	import { addToast } from '$lib/stores/toast-store';
 	import { showConfirm } from '$lib/stores/confirm-store';
 	import EditorSaveImpactSummary from '$lib/components/EditorSaveImpactSummary.svelte';
@@ -370,7 +370,7 @@
 		}
 
 		const editedEntry: DomainEntry = {
-			id: entry.id || uuidv4(),
+			id: entry.id || generateUuid(),
 			domainGroup: formData.domainGroup.trim(),
 			domainCategory: formData.domainCategory.trim(),
 			standardDomainName: generatedDomainName, // 자동 생성된 도메인명 사용

@@ -5,6 +5,7 @@ dist
 .env
 .git
 .gitignore
+.omc/
 Dockerfile
 docker-compose.yml
 README.md

@@ -27,6 +27,8 @@ vite.config.ts.timestamp-*
 references
 .claude
 .omx
+.omc/*
+!.omc/skills/
 
 # static data
 /static/data

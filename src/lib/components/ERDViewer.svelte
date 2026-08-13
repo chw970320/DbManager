@@ -1,11 +1,28 @@
 <script lang="ts">
 	import { tick } from 'svelte';
 	import type { ERDData } from '../types/erd-mapping.js';
+	import type { TableEntry } from '../types/database-design.js';
 	import type { DesignRelationValidationResult } from '../types/design-relation.js';
 	import { isAllowedErdSvgRenderUrl, sanitizeErdSvgText } from '../utils/erd-svg-preview.js';
+	import { parseErdTableNodeId } from '../utils/erd-node-id.js';
+	import {
+		buildErdDefinitionLinks,
+		getErdTableDisplayDetail,
+		getErdTableDisplayName,
+		type ErdDefinitionFiles,
+		type ErdDefinitionLink
+	} from '../utils/erd-definition-links.js';
 
 	type ERDViewerData = ERDData & {
 		relationValidation?: DesignRelationValidationResult;
+	};
+
+	type ErdContextMenuState = {
+		x: number;
+		y: number;
+		title: string;
+		detail: string;
+		links: ErdDefinitionLink[];
 	};
 
 	type ERDViewerDownloadActions = {
@@ -19,10 +36,12 @@
 	let {
 		erdData,
 		renderUrl,
+		definitionFiles,
 		onDownloadActionsReady
 	}: {
 		erdData: ERDViewerData;
 		renderUrl: string;
+		definitionFiles?: ErdDefinitionFiles;
 		onDownloadActionsReady?: (actions: ERDViewerDownloadActions | null) => void;
 	} = $props();
 
@@ -45,6 +64,11 @@
 	const CROW_DEPTH = 13;
 	const CROW_HALF_WIDTH = 7;
 	const TEE_HALF_LENGTH = 7;
+	const CONTEXT_MENU_WIDTH = 248;
+	const CONTEXT_MENU_HEADER_HEIGHT = 52;
+	const CONTEXT_MENU_ITEM_HEIGHT = 46;
+	const CONTEXT_MENU_EDGE_GAP = 8;
+	const WHEEL_LINE_HEIGHT = 16;
 
 	let previewLoading = $state(true);
 	let previewError = $state<string | null>(null);
@@ -60,6 +84,7 @@
 	let layoutEditMode = $state(false);
 	let manualLayoutActive = $state(false);
 	let downloadError = $state<string | null>(null);
+	let contextMenu = $state<ErdContextMenuState | null>(null);
 
 	let requestSequence = 0;
 	let activeAbortController: AbortController | null = null;
@@ -81,6 +106,13 @@
 		erdData.metadata.totalRelationships ?? erdData.metadata.totalEdges
 	);
 	let relationValidationSummary = $derived(erdData.relationValidation?.totals ?? null);
+	let tableEntryById = $derived(
+		new Map<string, TableEntry>(
+			erdData.nodes
+				.filter((node) => node.type === 'table')
+				.map((node) => [node.id, node.data as TableEntry])
+		)
+	);
 	let zoomPercent = $derived(Math.round(scale * 100));
 	let canvasTransform = $derived(`translate(${translateX}px, ${translateY}px) scale(${scale})`);
 
@@ -560,7 +592,7 @@
 		svgElement.setAttribute('height', String(height));
 	}
 
-	function findManualNode(target: EventTarget | null): SVGGElement | null {
+	function findGraphNode(target: EventTarget | null): SVGGElement | null {
 		if (!(target instanceof Element)) return null;
 		const node = target.closest('g.node') as SVGGElement | null;
 		if (!node || node.namespaceURI !== SVG_NS || !canvasElement?.contains(node)) return null;
@@ -692,6 +724,7 @@
 		manualLayoutActive = false;
 		activeNodeDrag = null;
 		downloadError = null;
+		closeContextMenu();
 		cancelScheduledManualEdgeRebuild();
 
 		try {
@@ -732,10 +765,72 @@
 		}
 	}
 
+	function closeContextMenu() {
+		contextMenu = null;
+	}
+
+	function findTableEntry(target: EventTarget | null): TableEntry | null {
+		const node = findGraphNode(target);
+		const tableId = node ? parseErdTableNodeId(node.id) : null;
+		return tableId ? (tableEntryById.get(tableId) ?? null) : null;
+	}
+
+	function clampContextMenuPosition(x: number, y: number, linkCount: number) {
+		const { width, height } = getViewportSize();
+		const menuHeight = CONTEXT_MENU_HEADER_HEIGHT + linkCount * CONTEXT_MENU_ITEM_HEIGHT;
+		return {
+			x: clamp(
+				x,
+				CONTEXT_MENU_EDGE_GAP,
+				Math.max(width - CONTEXT_MENU_WIDTH, CONTEXT_MENU_EDGE_GAP)
+			),
+			y: clamp(y, CONTEXT_MENU_EDGE_GAP, Math.max(height - menuHeight, CONTEXT_MENU_EDGE_GAP))
+		};
+	}
+
+	function handleContextMenu(event: MouseEvent) {
+		// 배치 수정 모드에서는 기본 브라우저 메뉴를 그대로 둔다.
+		if (layoutEditMode || !svgMarkup) {
+			closeContextMenu();
+			return;
+		}
+
+		const table = findTableEntry(event.target);
+		if (!table) {
+			closeContextMenu();
+			return;
+		}
+
+		const links = buildErdDefinitionLinks(table, definitionFiles);
+		if (links.length === 0) {
+			closeContextMenu();
+			return;
+		}
+
+		event.preventDefault();
+		const viewportRect = viewportElement?.getBoundingClientRect();
+		const position = clampContextMenuPosition(
+			event.clientX - (viewportRect?.left ?? 0),
+			event.clientY - (viewportRect?.top ?? 0),
+			links.length
+		);
+		contextMenu = {
+			...position,
+			title: getErdTableDisplayName(table),
+			detail: getErdTableDisplayDetail(table),
+			links
+		};
+	}
+
+	function handleWindowKeyDown(event: KeyboardEvent) {
+		if (event.key === 'Escape') closeContextMenu();
+	}
+
 	function handlePointerDown(event: PointerEvent) {
+		closeContextMenu();
 		if (event.button !== 0 || !svgMarkup) return;
 		if (layoutEditMode) {
-			const node = findManualNode(event.target);
+			const node = findGraphNode(event.target);
 			if (!node) return;
 			const currentTranslate = getNodeTranslate(node);
 			activeNodeDrag = {
@@ -760,6 +855,7 @@
 		panStartY = event.clientY;
 		panStartTranslateX = translateX;
 		panStartTranslateY = translateY;
+		event.preventDefault();
 		if (event.currentTarget instanceof HTMLElement && 'setPointerCapture' in event.currentTarget) {
 			event.currentTarget.setPointerCapture(event.pointerId);
 		}
@@ -803,14 +899,44 @@
 		}
 	}
 
-	function handleWheel(event: WheelEvent) {
-		if (!svgMarkup || !viewportElement) return;
-		event.preventDefault();
-		const viewportRect = viewportElement.getBoundingClientRect();
-		const originX = event.clientX - viewportRect.left;
-		const originY = event.clientY - viewportRect.top;
+	/** 휠 delta를 픽셀 단위로 정규화한다. (line/page 스크롤 모드 대응) */
+	function toPixelDelta(delta: number, deltaMode: number): number {
+		if (deltaMode === 1) return delta * WHEEL_LINE_HEIGHT;
+		if (deltaMode === 2) return delta * getViewportSize().height;
+		return delta;
+	}
+
+	function zoomByWheel(event: WheelEvent) {
+		const viewportRect = viewportElement?.getBoundingClientRect();
+		const originX = event.clientX - (viewportRect?.left ?? 0);
+		const originY = event.clientY - (viewportRect?.top ?? 0);
 		const direction = event.deltaY > 0 ? 1 / ZOOM_STEP : ZOOM_STEP;
 		zoomAt(scale * direction, originX, originY);
+	}
+
+	function handleWheel(event: WheelEvent) {
+		closeContextMenu();
+		if (!svgMarkup || !viewportElement) return;
+		event.preventDefault();
+
+		// Ctrl(⌘) + 휠: 확대/축소
+		if (event.ctrlKey || event.metaKey) {
+			zoomByWheel(event);
+			return;
+		}
+
+		const deltaX = toPixelDelta(event.deltaX, event.deltaMode);
+		const deltaY = toPixelDelta(event.deltaY, event.deltaMode);
+
+		// Shift + 휠: 좌/우 이동 (브라우저가 축을 바꿔 보내는 경우까지 흡수)
+		if (event.shiftKey) {
+			translateX -= deltaX || deltaY;
+			return;
+		}
+
+		// 기본 휠: 위/아래 이동 (트랙패드의 가로 스크롤도 함께 반영)
+		translateX -= deltaX;
+		translateY -= deltaY;
 	}
 
 	$effect(() => {
@@ -853,6 +979,8 @@
 		return () => resizeObserver?.disconnect();
 	});
 </script>
+
+<svelte:window onkeydown={handleWindowKeyDown} onpointerdown={closeContextMenu} />
 
 <div class="flex h-full flex-col bg-white">
 	<div
@@ -908,7 +1036,10 @@
 			<button
 				type="button"
 				class={layoutEditMode ? ACTIVE_VIEWER_BUTTON_CLASS : VIEWER_BUTTON_CLASS}
-				onclick={() => (layoutEditMode = !layoutEditMode)}
+				onclick={() => {
+					layoutEditMode = !layoutEditMode;
+					closeContextMenu();
+				}}
 				disabled={!svgMarkup}
 				aria-pressed={layoutEditMode}
 				aria-label="테이블 배치 수정 모드"
@@ -954,11 +1085,14 @@
 		class="erd-svg-viewport relative flex-1 overflow-hidden bg-slate-50"
 		class:erd-layout-editing={layoutEditMode}
 		data-testid="erd-viewer-viewport"
+		role="application"
+		aria-label="ERD 다이어그램 보기 영역 (휠: 상하 이동, Shift+휠: 좌우 이동, Ctrl+휠: 확대/축소, 테이블 우클릭: 정의서 바로가기)"
 		onpointerdown={handlePointerDown}
 		onpointermove={handlePointerMove}
 		onpointerup={finishPanning}
 		onpointercancel={finishPanning}
 		onwheel={handleWheel}
+		oncontextmenu={handleContextMenu}
 	>
 		{#if previewLoading}
 			<div class="absolute inset-0 z-10 flex items-center justify-center bg-gray-50/80">
@@ -989,6 +1123,39 @@
 				{@html svgMarkup}
 			</div>
 		{/if}
+
+		{#if contextMenu}
+			<div
+				class="absolute z-20 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg"
+				style:left={`${contextMenu.x}px`}
+				style:top={`${contextMenu.y}px`}
+				style:width={`${CONTEXT_MENU_WIDTH}px`}
+				role="menu"
+				tabindex="-1"
+				aria-label="ERD 테이블 정의서 바로가기"
+				data-testid="erd-node-context-menu"
+				onpointerdown={(event) => event.stopPropagation()}
+				oncontextmenu={(event) => event.preventDefault()}
+			>
+				<div class="border-b border-gray-100 bg-gray-50 px-3 py-2">
+					<p class="truncate text-sm font-semibold text-gray-900">{contextMenu.title}</p>
+					{#if contextMenu.detail}
+						<p class="truncate text-xs text-gray-500">{contextMenu.detail}</p>
+					{/if}
+				</div>
+				{#each contextMenu.links as link (link.type)}
+					<a
+						href={link.href}
+						role="menuitem"
+						class="block px-3 py-2 text-left hover:bg-blue-50 focus:bg-blue-50 focus:outline-none"
+						onclick={closeContextMenu}
+					>
+						<span class="block text-sm font-medium text-gray-800">{link.label}</span>
+						<span class="block truncate text-xs text-gray-500">{link.description}</span>
+					</a>
+				{/each}
+			</div>
+		{/if}
 	</div>
 
 	<div class="border-t border-gray-200 bg-white px-4 py-2">
@@ -1007,6 +1174,8 @@
 	.erd-svg-viewport {
 		touch-action: none;
 		cursor: grab;
+		-webkit-user-select: none;
+		user-select: none;
 	}
 
 	.erd-svg-viewport:active {
@@ -1022,6 +1191,12 @@
 		display: block;
 		max-width: none;
 		height: auto;
+	}
+
+	:global(.erd-svg-canvas svg text),
+	:global(.erd-svg-canvas svg tspan) {
+		-webkit-user-select: none;
+		user-select: none;
 	}
 
 	:global(.erd-layout-editing .erd-manual-node) {

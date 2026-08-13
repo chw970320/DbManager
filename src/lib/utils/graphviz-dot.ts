@@ -8,6 +8,7 @@ import type {
 	GraphvizERDTable,
 	GraphvizERDColumn
 } from './erd-graphviz-model.js';
+import { createErdTableNodeId } from './erd-node-id.js';
 
 export interface GraphvizDotOptions {
 	mode?: GraphvizERDMode;
@@ -168,8 +169,11 @@ export function buildGraphvizDot(
 	for (const table of model.tables) {
 		const tooltip = getTableTooltip(table, mode);
 		const style = table.isExternal ? ', style="dashed"' : '';
+		// 뷰어가 SVG 노드에서 테이블 정의서 엔트리를 역추적할 수 있도록 id를 심는다.
+		const svgNodeId = createErdTableNodeId(table.id);
+		const idAttribute = svgNodeId ? `, id="${dotEscape(svgNodeId)}"` : '';
 		lines.push(
-			`  ${table.nodeId} [label=${buildTableLabel(table, mode)}, tooltip="${dotEscape(tooltip)}"${style}];`
+			`  ${table.nodeId} [label=${buildTableLabel(table, mode)}, tooltip="${dotEscape(tooltip)}"${idAttribute}${style}];`
 		);
 	}
 

@@ -8,6 +8,7 @@
 	import { settingsStore } from '$lib/stores/settings-store';
 	import { filterColumnFiles } from '$lib/utils/file-filter';
 	import { getNavigationBreadcrumbItems } from '$lib/utils/navigation';
+	import type { ErdDefinitionFiles } from '$lib/utils/erd-definition-links.js';
 	import type { DesignRelationValidationResult } from '$lib/types/design-relation.js';
 
 	interface ERDTableInfo {
@@ -155,6 +156,15 @@
 
 	function getErdRenderUrl(format: 'svg' | 'png', download = false): string {
 		return `/api/erd/render?${buildErdParams({ format, download }).toString()}`;
+	}
+
+	function erdDefinitionFiles(): ErdDefinitionFiles {
+		return {
+			table: mappedTableFile?.trim() || undefined,
+			column: selectedColumnFile.trim() || undefined,
+			entity: definitionMapping.entity?.trim() || undefined,
+			attribute: definitionMapping.attribute?.trim() || undefined
+		};
 	}
 
 	function handleErdDownloadActionsReady(actions: ERDViewerDownloadActions | null) {
@@ -742,6 +752,7 @@
 			<ERDViewer
 				{erdData}
 				renderUrl={getErdRenderUrl('svg')}
+				definitionFiles={erdDefinitionFiles()}
 				onDownloadActionsReady={handleErdDownloadActionsReady}
 			/>
 		{:else}

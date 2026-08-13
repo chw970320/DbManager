@@ -125,13 +125,15 @@ function createMockERDData(
 	return {
 		nodes: [
 			{
-				id: 'node-1',
+				id: 'table-1',
 				type: 'table',
 				layerType: 'physical',
 				label: 'users',
 				data: {
 					id: 'table-1',
 					tableEnglishName: 'users',
+					tableKoreanName: '사용자',
+					relatedEntityName: '사용자',
 					schemaName: 'public',
 					businessClassification: 'COMMON',
 					tableVolume: 'SMALL',
@@ -187,6 +189,22 @@ const layoutSvg = `
 			<title>table_b</title>
 			<polygon points="280,40 430,40 430,140 280,140" />
 			<text x="300" y="75">TABLE_B</text>
+		</g>
+	</g>
+</svg>`;
+
+const contextMenuSvg = `
+<svg width="500" height="260" viewBox="0 0 500 260">
+	<g class="graph">
+		<g class="node" id="erd-table-table-1">
+			<title>t_public_users</title>
+			<polygon points="20,20 140,20 140,120 20,120" />
+			<text x="35" y="55">users</text>
+		</g>
+		<g class="node" id="erd-table-unknown-table">
+			<title>t_public_orders</title>
+			<polygon points="280,40 430,40 430,140 280,140" />
+			<text x="300" y="75">orders</text>
 		</g>
 	</g>
 </svg>`;
@@ -656,6 +674,170 @@ describe('ERDViewer', () => {
 		expect(clickSpy).toHaveBeenCalled();
 		expect(revokeObjectUrl).toHaveBeenCalledWith('blob:source-svg');
 		expect(revokeObjectUrl).toHaveBeenCalledWith('blob:download-png');
+	});
+
+	it('휠은 상하 이동, Shift+휠은 좌우 이동으로 동작하고 확대 배율은 유지한다', async () => {
+		render(ERDViewer, { props: defaultProps });
+
+		const preview = await screen.findByTestId('erd-svg-preview');
+		const viewport = screen.getByTestId('erd-viewer-viewport');
+		const zoomLabel = () => screen.getByTestId('erd-zoom-percent').textContent;
+		const readTranslate = () => {
+			const matched = /translate\((-?[\d.]+)px, (-?[\d.]+)px\)/.exec(
+				preview.getAttribute('style') ?? ''
+			);
+			return { x: Number(matched?.[1]), y: Number(matched?.[2]) };
+		};
+		const initialZoom = zoomLabel();
+		const initialTranslate = readTranslate();
+
+		await fireEvent.wheel(viewport, { deltaY: 120, deltaX: 0, clientX: 100, clientY: 100 });
+		expect(readTranslate()).toEqual({
+			x: initialTranslate.x,
+			y: initialTranslate.y - 120
+		});
+
+		await fireEvent.wheel(viewport, {
+			deltaY: 120,
+			deltaX: 0,
+			shiftKey: true,
+			clientX: 100,
+			clientY: 100
+		});
+		expect(readTranslate()).toEqual({
+			x: initialTranslate.x - 120,
+			y: initialTranslate.y - 120
+		});
+
+		expect(zoomLabel()).toBe(initialZoom);
+	});
+
+	it('Ctrl+휠에서만 확대/축소한다', async () => {
+		render(ERDViewer, { props: defaultProps });
+
+		await screen.findByTestId('erd-svg-preview');
+		const viewport = screen.getByTestId('erd-viewer-viewport');
+		const zoomLabel = () => screen.getByTestId('erd-zoom-percent').textContent;
+
+		await fireEvent.click(screen.getByRole('button', { name: '다이어그램 100% 보기' }));
+		expect(zoomLabel()).toBe('100%');
+
+		await fireEvent.wheel(viewport, {
+			deltaY: -120,
+			ctrlKey: true,
+			clientX: 100,
+			clientY: 100
+		});
+		expect(zoomLabel()).toBe('120%');
+
+		await fireEvent.wheel(viewport, {
+			deltaY: 120,
+			ctrlKey: true,
+			clientX: 100,
+			clientY: 100
+		});
+		expect(zoomLabel()).toBe('100%');
+	});
+
+	it('line 단위 휠 delta도 픽셀 이동량으로 환산한다', async () => {
+		render(ERDViewer, { props: defaultProps });
+
+		const preview = await screen.findByTestId('erd-svg-preview');
+		const viewport = screen.getByTestId('erd-viewer-viewport');
+		const readTranslateY = () =>
+			Number(
+				/translate\(-?[\d.]+px, (-?[\d.]+)px\)/.exec(preview.getAttribute('style') ?? '')?.[1]
+			);
+		const initialY = readTranslateY();
+
+		await fireEvent.wheel(viewport, { deltaY: 3, deltaMode: 1, clientX: 100, clientY: 100 });
+
+		expect(readTranslateY()).toBe(initialY - 48);
+	});
+
+	it('배치 수정이 아닌 상태에서 테이블을 우클릭하면 정의서 바로가기 메뉴를 연다', async () => {
+		fetchMock.mockResolvedValueOnce(mockSvgResponse(contextMenuSvg));
+		const { container } = render(ERDViewer, {
+			props: {
+				...defaultProps,
+				definitionFiles: {
+					table: 'table.json',
+					column: 'column.json',
+					entity: 'entity.json',
+					attribute: 'attribute.json'
+				}
+			}
+		});
+
+		await screen.findByTestId('erd-svg-preview');
+		const tableNode = container.querySelector('#erd-table-table-1') as SVGGElement;
+		await fireEvent.contextMenu(tableNode, { clientX: 120, clientY: 90 });
+
+		const menu = await screen.findByTestId('erd-node-context-menu');
+		expect(menu).toBeInTheDocument();
+		expect(menu).toHaveTextContent('사용자');
+		expect(menu).toHaveTextContent('public · users');
+		expect(screen.getByRole('menuitem', { name: /테이블 정의서/ })).toHaveAttribute(
+			'href',
+			'/table/browse?filename=table.json&q=users&field=tableEnglishName&exact=true&target=table-1&open=detail'
+		);
+		expect(screen.getByRole('menuitem', { name: /컬럼 정의서/ })).toHaveAttribute(
+			'href',
+			'/column/browse?filename=column.json&q=users&field=tableEnglishName&exact=true'
+		);
+		expect(screen.getByRole('menuitem', { name: /엔터티 정의서/ })).toBeInTheDocument();
+		expect(screen.getByRole('menuitem', { name: /속성 정의서/ })).toBeInTheDocument();
+	});
+
+	it('정의서 엔트리를 찾을 수 없는 노드와 빈 영역 우클릭은 메뉴를 열지 않는다', async () => {
+		fetchMock.mockResolvedValueOnce(mockSvgResponse(contextMenuSvg));
+		const { container } = render(ERDViewer, { props: defaultProps });
+
+		await screen.findByTestId('erd-svg-preview');
+		const unknownNode = container.querySelector('#erd-table-unknown-table') as SVGGElement;
+		await fireEvent.contextMenu(unknownNode, { clientX: 300, clientY: 90 });
+		expect(screen.queryByTestId('erd-node-context-menu')).not.toBeInTheDocument();
+
+		await fireEvent.contextMenu(screen.getByTestId('erd-viewer-viewport'), {
+			clientX: 10,
+			clientY: 10
+		});
+		expect(screen.queryByTestId('erd-node-context-menu')).not.toBeInTheDocument();
+	});
+
+	it('배치 수정 모드에서는 우클릭 메뉴를 열지 않는다', async () => {
+		fetchMock.mockResolvedValueOnce(mockSvgResponse(contextMenuSvg));
+		const { container } = render(ERDViewer, { props: defaultProps });
+
+		await screen.findByTestId('erd-svg-preview');
+		await fireEvent.click(screen.getByRole('button', { name: '테이블 배치 수정 모드' }));
+		const tableNode = container.querySelector('#erd-table-table-1') as SVGGElement;
+		await fireEvent.contextMenu(tableNode, { clientX: 120, clientY: 90 });
+
+		expect(screen.queryByTestId('erd-node-context-menu')).not.toBeInTheDocument();
+	});
+
+	it('Escape와 화면 드래그로 우클릭 메뉴를 닫는다', async () => {
+		fetchMock.mockResolvedValueOnce(mockSvgResponse(contextMenuSvg));
+		const { container } = render(ERDViewer, { props: defaultProps });
+
+		await screen.findByTestId('erd-svg-preview');
+		const tableNode = container.querySelector('#erd-table-table-1') as SVGGElement;
+
+		await fireEvent.contextMenu(tableNode, { clientX: 120, clientY: 90 });
+		await screen.findByTestId('erd-node-context-menu');
+		await fireEvent.keyDown(window, { key: 'Escape' });
+		expect(screen.queryByTestId('erd-node-context-menu')).not.toBeInTheDocument();
+
+		await fireEvent.contextMenu(tableNode, { clientX: 120, clientY: 90 });
+		await screen.findByTestId('erd-node-context-menu');
+		await fireEvent.pointerDown(screen.getByTestId('erd-viewer-viewport'), {
+			button: 0,
+			pointerId: 7,
+			clientX: 100,
+			clientY: 100
+		});
+		expect(screen.queryByTestId('erd-node-context-menu')).not.toBeInTheDocument();
 	});
 
 	it('수동 배치 PNG가 브라우저 변환 한도를 넘으면 화면에 오류를 표시한다', async () => {

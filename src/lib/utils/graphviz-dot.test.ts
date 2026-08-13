@@ -262,6 +262,26 @@ describe('buildGraphvizDot', () => {
 		expect(dot).toContain('style="dashed"');
 	});
 
+	it('테이블 노드에 정의서 엔트리를 역추적할 수 있는 SVG id를 심는다', () => {
+		const dot = buildGraphvizDot(createModel(), { mode: 'logical' });
+
+		expect(dot).toContain('id="erd-table-table-1"');
+		expect(dot).toContain('id="erd-table-table-2"');
+	});
+
+	it('XML NAME으로 쓸 수 없는 엔트리 ID는 노드 id로 심지 않는다', () => {
+		const baseModel = createModel();
+		const dot = buildGraphvizDot(
+			{
+				...baseModel,
+				tables: baseModel.tables.map((table) => ({ ...table, id: '테이블 1' }))
+			},
+			{ mode: 'logical' }
+		);
+
+		expect(dot).not.toContain('id="erd-table-');
+	});
+
 	it('빈 모델도 유효한 digraph와 빈 상태 노드를 생성한다', () => {
 		const baseModel = createModel();
 		const emptyModel: GraphvizERDModel = {

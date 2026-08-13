@@ -361,10 +361,12 @@
 	}
 
 	function handleComposerKeydown(event: KeyboardEvent) {
-		if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
-			event.preventDefault();
-			void sendMessage();
-		}
+		if (event.key !== 'Enter') return;
+		// IME 조합 중 Enter는 한글 확정용이므로 전송하지 않는다.
+		if (event.isComposing || event.keyCode === 229) return;
+		if (event.shiftKey) return;
+		event.preventDefault();
+		void sendMessage();
 	}
 
 	function handlePanelKeydown(event: KeyboardEvent) {
@@ -597,7 +599,7 @@
 			<textarea
 				id="assistant-input"
 				class="input min-h-16 resize-none text-sm"
-				placeholder="선택한 번들에 대해 질문하세요."
+				placeholder="선택한 번들에 대해 질문하세요. (Enter 전송, Shift+Enter 줄바꿈)"
 				bind:value={input}
 				maxlength={MAX_ASSISTANT_INPUT_LENGTH}
 				onkeydown={handleComposerKeydown}

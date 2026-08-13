@@ -74,4 +74,16 @@ describe('assistant markdown parser', () => {
 			['확인 결과입니다.', '- 코드: `HLDY`', '', '```text', '출처: code sample', '```'].join('\n')
 		);
 	});
+
+	// provider 교체 후에도 유지되어야 하는 표기 변형. 영어 표기(`Sources:`)는 두 패턴이
+	// 리터럴 `출처`를 하드 요구하므로 이번 범위에서 제외한다 — 패턴 확장은 별도 작업.
+	it.each([
+		['**출처**: 표준용어집', '**출처**: 표준용어집'],
+		['## 출처', '## 출처'],
+		['- 출처: biomimicry 번들', '- 출처: biomimicry 번들']
+	])('strips the %s source notation', (_label, line) => {
+		const content = stripAssistantResponseBoilerplate(['확인 결과입니다.', line].join('\n'));
+
+		expect(content).toBe('확인 결과입니다.');
+	});
 });

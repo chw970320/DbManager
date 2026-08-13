@@ -1,5 +1,21 @@
 # 변경 이력
 
+## 2026-08-13
+
+### 요약
+
+- AI Assistant의 LLM provider를 내부 llama.cpp `qwen3.5-4b`에서 OpenAI `gpt-5.6-luna`로 완전 교체했습니다.
+
+### 상세 변경
+
+- `LLM_BASE_URL`/`LLM_MODEL` 기본 대상을 OpenAI Chat Completions(`https://api.openai.com/v1`, `gpt-5.6-luna`)로 전환하고 `LLM_PROVIDER` 설정을 제거했습니다.
+- 요청 파라미터를 `max_tokens`에서 `max_completion_tokens`로 교체했습니다.
+- **요청 계약 변경:** 기존에는 `temperature: 0.2`가 항상 전송됐으나, 이제 `LLM_TEMPERATURE`를 명시적으로 설정하지 않으면 전송하지 않습니다. 빈 문자열은 미설정과 동일하게 취급합니다.
+- `LLM_REASONING_EFFORT` 선택 파라미터를 추가했습니다(미설정 시 미전송).
+- `LLM_RESPONSE_RESERVE_TOKENS`를 제거하고 `LLM_MAX_OUTPUT_TOKENS`를 도입해 출력 상한과 프롬프트 예산의 결합을 끊었습니다. `LLM_CONTEXT_TOKENS`는 총 배정 예산이며 프롬프트 예산은 `LLM_CONTEXT_TOKENS - LLM_MAX_OUTPUT_TOKENS - 128`입니다.
+- 프롬프트 예산이 512 토큰 미만이 되는 설정 조합을 조용히 하한 처리하지 않고 503으로 거부합니다.
+- 토큰 예산 기본값을 reasoning 모델 기준으로 상향했습니다(`LLM_CONTEXT_TOKENS` 16384, `LLM_MAX_OUTPUT_TOKENS` 8192, `LLM_TIMEOUT_MS` 180000).
+
 ## 2026-06-23
 
 ### 요약

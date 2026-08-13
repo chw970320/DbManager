@@ -27,8 +27,9 @@ const bundle = {
 	updatedAt: '2026-06-01T00:00:00.000Z'
 };
 
-function jsonResponse(data: unknown): Response {
+function jsonResponse(data: unknown, status = 200): Response {
 	return new Response(JSON.stringify(data), {
+		status,
 		headers: { 'content-type': 'application/json' }
 	});
 }
@@ -81,6 +82,11 @@ function createInvalidJsonEvent(): RequestEvent {
 describe('API: /api/assistant/chat', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		for (const key of Object.keys(process.env)) {
+			if (key.startsWith('LLM_')) {
+				delete process.env[key];
+			}
+		}
 		process.env.LLM_ENABLE_REAL_CALLS = 'false';
 		vi.mocked(loadSharedFileMappingRegistryData).mockResolvedValue({
 			version: '2.0',
@@ -141,12 +147,12 @@ describe('API: /api/assistant/chat', () => {
 		expect(result.error).toBe('질문은 1200자 이하로 입력해 주세요.');
 	});
 
-	it('fits LLM requests to the configured context budget and reserves response tokens', async () => {
+	it('fits LLM requests to the configured context budget', async () => {
 		process.env.LLM_ENABLE_REAL_CALLS = 'true';
 		process.env.LLM_BASE_URL = 'http://llm.example/v1';
-		process.env.LLM_MODEL = 'qwen3.5-4b';
-		process.env.LLM_CONTEXT_TOKENS = '1024';
-		process.env.LLM_RESPONSE_RESERVE_TOKENS = '256';
+		process.env.LLM_MODEL = 'gpt-5.6-luna';
+		process.env.LLM_CONTEXT_TOKENS = '2048';
+		process.env.LLM_MAX_OUTPUT_TOKENS = '512';
 		const llmFetch = vi.fn(async () =>
 			jsonResponse({
 				choices: [
@@ -178,11 +184,22 @@ describe('API: /api/assistant/chat', () => {
 			String((llmFetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0][1].body)
 		);
 		expect(JSON.stringify(body.messages)).toContain('본문에 출처/참고 문구를 반복하지 마세요');
-		expect(body.max_tokens).toBe(256);
+		expect(body.max_completion_tokens).toBe(512);
+		expect('max_tokens' in body).toBe(false);
+		expect('temperature' in body).toBe(false);
+		expect('reasoning_effort' in body).toBe(false);
 		expect(JSON.stringify(body.messages)).toContain(
 			'[도구 결과 일부가 context budget에 맞춰 축약되었습니다.]'
 		);
-		expect(JSON.stringify(body.messages).length).toBeLessThan(1900);
+		// 1차 단언: 토큰 추정 불변식 (예산 2048 - 512 - 128 = 1408).
+		// 원시 길이보다 리팩터에 안정적이나 구조적 보장은 아니다 — red는 계약 위반이 아니라 재측정 신호.
+		const estTokens = (body.messages as { role: string; content: string }[]).reduce(
+			(total, message) =>
+				total + Math.ceil(message.role.length / 2) + Math.ceil(message.content.length / 2) + 4,
+			0
+		);
+		expect(estTokens).toBeLessThanOrEqual(1408);
+		expect(JSON.stringify(body.messages).length).toBeLessThan(3200); // 실측 3032
 	});
 
 	it('rejects an unknown bundle id', async () => {
@@ -236,7 +253,7 @@ describe('API: /api/assistant/chat', () => {
 	it('returns 502 when a real LLM response has no assistant content', async () => {
 		process.env.LLM_ENABLE_REAL_CALLS = 'true';
 		process.env.LLM_BASE_URL = 'http://llm.example/v1';
-		process.env.LLM_MODEL = 'qwen3.5-4b';
+		process.env.LLM_MODEL = 'gpt-5.6-luna';
 
 		await expect(
 			createAssistantChatResponse({
@@ -254,6 +271,97 @@ describe('API: /api/assistant/chat', () => {
 		).rejects.toMatchObject({
 			status: 502,
 			message: 'LLM 응답에 assistant content가 없습니다.'
+		});
+	});
+
+	it('omits optional parameters when the container injects empty strings', async () => {
+		// docker-compose의 `${VAR:-}`는 변수를 빈 문자열로 주입한다. 미설정 경로만 덮으면
+		// 컨테이너 경로가 검증되지 않으므로 여기서는 명시적으로 '' 를 주입한다.
+		process.env.LLM_ENABLE_REAL_CALLS = 'true';
+		process.env.LLM_BASE_URL = 'http://llm.example/v1';
+		process.env.LLM_MODEL = 'gpt-5.6-luna';
+		process.env.LLM_TEMPERATURE = '';
+		process.env.LLM_REASONING_EFFORT = '';
+		const llmFetch = vi.fn(async () =>
+			jsonResponse({ choices: [{ message: { content: '답변' } }] })
+		) as typeof fetch;
+
+		await createAssistantChatResponse({
+			bundleId: 'default-shared-file-mapping',
+			messages: [{ role: 'user', content: '휴일 알려줘' }],
+			apiBaseUrl: 'http://localhost:5173',
+			fetchImpl: createFetch(),
+			llmFetchImpl: llmFetch,
+			env: process.env
+		});
+
+		const body = JSON.parse(
+			String((llmFetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0][1].body)
+		);
+		expect('temperature' in body).toBe(false);
+		expect('reasoning_effort' in body).toBe(false);
+		expect(body.max_completion_tokens).toBe(8192);
+	});
+
+	it('keeps the kill switch working when the token budget is unusable', async () => {
+		// 킬 스위치(assistant.ts)가 buildLlmMessages보다 먼저 반환하므로 예산이 깨져도 fallback이 산다.
+		// 이 순서가 Rollback 경로의 전제이며, 재배치로 조용히 깨질 수 있어 고정한다.
+		process.env.LLM_ENABLE_REAL_CALLS = 'false';
+		process.env.LLM_CONTEXT_TOKENS = '1024';
+		process.env.LLM_MAX_OUTPUT_TOKENS = '8192';
+
+		const result = await createAssistantChatResponse({
+			bundleId: 'default-shared-file-mapping',
+			messages: [{ role: 'user', content: '휴일 알려줘' }],
+			apiBaseUrl: 'http://localhost:5173',
+			fetchImpl: createFetch(),
+			env: process.env
+		});
+
+		expect(result.message.content.length).toBeGreaterThan(0);
+	});
+
+	it('maps LLM 400 responses to 502 with the original provider message', async () => {
+		process.env.LLM_ENABLE_REAL_CALLS = 'true';
+		process.env.LLM_BASE_URL = 'http://llm.example/v1';
+		process.env.LLM_MODEL = 'gpt-5.6-luna';
+
+		await expect(
+			createAssistantChatResponse({
+				bundleId: 'default-shared-file-mapping',
+				messages: [{ role: 'user', content: '휴일 알려줘' }],
+				apiBaseUrl: 'http://localhost:5173',
+				fetchImpl: createFetch(),
+				llmFetchImpl: vi.fn(async () =>
+					jsonResponse({ error: { message: 'Unsupported parameter' } }, 400)
+				) as typeof fetch,
+				env: process.env
+			})
+		).rejects.toMatchObject({
+			status: 502,
+			message: expect.stringContaining('Unsupported parameter')
+		});
+	});
+
+	it('maps LLM 429 responses to 502 with the original provider message', async () => {
+		process.env.LLM_ENABLE_REAL_CALLS = 'true';
+		process.env.LLM_BASE_URL = 'http://llm.example/v1';
+		process.env.LLM_MODEL = 'gpt-5.6-luna';
+
+		await expect(
+			createAssistantChatResponse({
+				bundleId: 'default-shared-file-mapping',
+				messages: [{ role: 'user', content: '휴일 알려줘' }],
+				apiBaseUrl: 'http://localhost:5173',
+				fetchImpl: createFetch(),
+				llmFetchImpl: vi.fn(async () =>
+					jsonResponse({ error: { message: 'Rate limit reached' } }, 429)
+				) as typeof fetch,
+				env: process.env
+			})
+		).rejects.toMatchObject({
+			status: 502,
+			message: expect.stringContaining('Rate limit reached')
 		});
 	});
 });

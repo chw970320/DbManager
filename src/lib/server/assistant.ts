@@ -25,9 +25,11 @@ const DEFAULT_SHARED_FILE_MAPPING_ID = 'default-shared-file-mapping';
 const MAX_HISTORY_MESSAGES = 8;
 const MAX_ASSISTANT_INPUT_CHARS = 1200;
 const MAX_HISTORY_MESSAGE_CHARS = 2000;
-const DEFAULT_LLM_TIMEOUT_MS = 60000;
-const DEFAULT_LLM_CONTEXT_TOKENS = 4096;
-const DEFAULT_LLM_RESPONSE_RESERVE_TOKENS = 768;
+const DEFAULT_LLM_TIMEOUT_MS = 180000;
+const DEFAULT_LLM_CONTEXT_TOKENS = 16384;
+const DEFAULT_LLM_MAX_OUTPUT_TOKENS = 8192;
+const MAX_LLM_OUTPUT_TOKENS = 128000;
+const MIN_PROMPT_BUDGET_TOKENS = 512;
 const PROMPT_SAFETY_MARGIN_TOKENS = 128;
 const MIN_TOOL_CONTEXT_TOKENS = 256;
 const ESTIMATED_CHARS_PER_TOKEN = 2;
@@ -635,15 +637,7 @@ async function callLlm(options: {
 		const response = await options.fetchImpl(`${baseUrl.replace(/\/+$/, '')}/chat/completions`, {
 			method: 'POST',
 			headers,
-			body: JSON.stringify({
-				model,
-				messages: options.messages,
-				temperature: 0.2,
-				max_tokens: parsePositiveInteger(
-					options.env.LLM_RESPONSE_RESERVE_TOKENS,
-					DEFAULT_LLM_RESPONSE_RESERVE_TOKENS
-				)
-			}),
+			body: JSON.stringify(buildLlmRequestBody(options.env, model, options.messages)),
 			signal: controller.signal
 		});
 		const body = (await response.json().catch(() => null)) as unknown;
@@ -686,13 +680,64 @@ function getAssistantInputLimit(env: AssistantEnv): number {
 	return parsePositiveInteger(env.LLM_INPUT_MAX_CHARS, MAX_ASSISTANT_INPUT_CHARS);
 }
 
-function getLlmPromptBudget(env: AssistantEnv | undefined): number {
-	const contextTokens = parsePositiveInteger(env?.LLM_CONTEXT_TOKENS, DEFAULT_LLM_CONTEXT_TOKENS);
-	const responseReserveTokens = parsePositiveInteger(
-		env?.LLM_RESPONSE_RESERVE_TOKENS,
-		DEFAULT_LLM_RESPONSE_RESERVE_TOKENS
+const REASONING_EFFORTS = new Set(['minimal', 'low', 'medium', 'high']);
+
+function parseOptionalTemperature(value: string | undefined): number | undefined {
+	const raw = value?.trim();
+	if (!raw) {
+		return undefined;
+	}
+	const parsed = Number(raw);
+	if (!Number.isFinite(parsed) || parsed < 0 || parsed > 2) {
+		return undefined;
+	}
+	return parsed;
+}
+
+function parseOptionalReasoningEffort(value: string | undefined): string | undefined {
+	const raw = value?.trim().toLowerCase();
+	return raw && REASONING_EFFORTS.has(raw) ? raw : undefined;
+}
+
+function getLlmMaxOutputTokens(env: AssistantEnv | undefined): number {
+	return Math.min(
+		parsePositiveInteger(env?.LLM_MAX_OUTPUT_TOKENS, DEFAULT_LLM_MAX_OUTPUT_TOKENS),
+		MAX_LLM_OUTPUT_TOKENS
 	);
-	return Math.max(512, contextTokens - responseReserveTokens - PROMPT_SAFETY_MARGIN_TOKENS);
+}
+
+export function buildLlmRequestBody(
+	env: AssistantEnv,
+	model: string,
+	messages: LlmChatMessage[]
+): Record<string, unknown> {
+	const body: Record<string, unknown> = {
+		model,
+		messages,
+		max_completion_tokens: getLlmMaxOutputTokens(env)
+	};
+	const temperature = parseOptionalTemperature(env.LLM_TEMPERATURE);
+	if (temperature !== undefined) {
+		body.temperature = temperature;
+	}
+	const reasoningEffort = parseOptionalReasoningEffort(env.LLM_REASONING_EFFORT);
+	if (reasoningEffort !== undefined) {
+		body.reasoning_effort = reasoningEffort;
+	}
+	return body;
+}
+
+export function getLlmPromptBudget(env: AssistantEnv | undefined): number {
+	const contextTokens = parsePositiveInteger(env?.LLM_CONTEXT_TOKENS, DEFAULT_LLM_CONTEXT_TOKENS);
+	const outputTokens = getLlmMaxOutputTokens(env);
+	const budget = contextTokens - outputTokens - PROMPT_SAFETY_MARGIN_TOKENS;
+	if (budget < MIN_PROMPT_BUDGET_TOKENS) {
+		throw new AssistantError(
+			503,
+			`LLM 토큰 예산 설정이 올바르지 않습니다. LLM_CONTEXT_TOKENS=${contextTokens}, LLM_MAX_OUTPUT_TOKENS=${outputTokens}`
+		);
+	}
+	return budget;
 }
 
 function parsePositiveInteger(value: string | undefined, fallback: number): number {

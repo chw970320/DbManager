@@ -1,20 +1,28 @@
 # DbManager AI Assistant
 
-DbManager AI Assistant is an in-app chat surface for asking questions about the currently selected 8-file bundle. It uses the internal LLM server and DbManager read-only MCP/search tool surface, then shows source/provenance and user-clicked action buttons.
+DbManager AI Assistant is an in-app chat surface for asking questions about the currently selected 8-file bundle. It uses the OpenAI Chat Completions API and DbManager read-only MCP/search tool surface, then shows source/provenance and user-clicked action buttons.
 
 ## Setup
 
-Configure the internal OpenAI-compatible llama.cpp server in `.env`:
+Configure the OpenAI provider in `.env`:
 
 ```env
-LLM_PROVIDER=llama_cpp
-LLM_BASE_URL=http://ecobank-dev-was:58000/v1
-LLM_MODEL=qwen3.5-4b
+LLM_BASE_URL=https://api.openai.com/v1
+LLM_MODEL=gpt-5.6-luna
 LLM_API_KEY=<secret>
-LLM_TIMEOUT_MS=60000
+LLM_TIMEOUT_MS=180000
 LLM_ENABLE_REAL_CALLS=true
-LLM_CONTEXT_TOKENS=4096
-LLM_RESPONSE_RESERVE_TOKENS=768
+LLM_CONTEXT_TOKENS=16384
+LLM_MAX_OUTPUT_TOKENS=8192
+```
+
+`LLM_CONTEXT_TOKENS` is the **total token allowance**, not the model context window. `LLM_MAX_OUTPUT_TOKENS` is the output share, sent as `max_completion_tokens`, and is clamped to the model ceiling of 128000.
+
+Optional parameters are **not sent unless set**, and an empty string counts as unset (Compose injects `""` for unset variables):
+
+```env
+# LLM_TEMPERATURE=0.2        # 0-2. gpt-5.6-luna may reject any non-default value.
+# LLM_REASONING_EFFORT=low   # minimal | low | medium | high
 ```
 
 Secrets are read only by server routes. The browser receives assistant messages, source metadata, and action buttons; it does not receive `LLM_API_KEY`.
@@ -49,7 +57,8 @@ The assistant then returns a deterministic source summary from the collected DbM
 - Answers keep source/provenance in the dedicated source area and avoid duplicating `출처:` or tool-result note text in the answer body.
 - Assistant answers render safe markdown blocks for headings, paragraphs, lists, tables, inline code, and code fences.
 - The browser limits a single user question to 1200 characters.
-- The server trims recent history and tool context against `LLM_CONTEXT_TOKENS - LLM_RESPONSE_RESERVE_TOKENS`.
+- The server trims recent history and tool context against `LLM_CONTEXT_TOKENS - LLM_MAX_OUTPUT_TOKENS - 128`.
+- When that prompt budget falls below 512 tokens the request is rejected with 503 instead of being silently floored, so an unusable budget surfaces as a configuration error.
 
 ## Local History
 
@@ -74,7 +83,7 @@ Server-side user history, login/session identity, and recovery-key storage are i
   - Accepts `bundleId` and recent chat messages.
   - Resolves the selected bundle server-side.
   - Collects read-only DbManager context through MCP-equivalent search/generator tools.
-  - Calls the configured internal LLM when `LLM_ENABLE_REAL_CALLS=true`.
+  - Calls the configured LLM when `LLM_ENABLE_REAL_CALLS=true`.
   - Returns the assistant message, source metadata, and user-clicked actions.
 
 The first-pass assistant intentionally reuses the existing same-origin `/api/search`,

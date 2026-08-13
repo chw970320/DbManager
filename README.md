@@ -14,7 +14,7 @@ DbManager는 SvelteKit 기반의 표준 단어/도메인/용어/DB설계 데이�
 - 프로파일링(`profiling`) 메뉴에서 PostgreSQL 스키마/테이블 조회, 컬럼 프로파일링, 품질 규칙 평가 실행
 - 스냅샷(`snapshot`) 메뉴에서 8종 파일 번들 저장/복원
 - remote `/mcp` 및 optional stdio read-only MCP search server로 8종 번들 기반 검색/필터/용어 변환 조회
-- 전역 AI Assistant drawer에서 내부 llama.cpp LLM과 read-only MCP 검색 출처를 함께 사용한 번들 기준 질의응답
+- 전역 AI Assistant drawer에서 OpenAI `gpt-5.6-luna`와 read-only MCP 검색 출처를 함께 사용한 번들 기준 질의응답
 - Graphviz 기반 ERD SVG/PNG 생성/다운로드 API 및 컬럼-용어 동기화 API
 - 다중 파일 운영 및 파일 간 매핑 관리
 - 파일 업로드 단순 교체, 교체 이력 30일 보관, 파일별 JSON 본문 복원
@@ -233,7 +233,8 @@ docker-compose up --build
   - `MCP_API_KEY`를 설정하고 `pnpm run dev` 또는 `pnpm run dev -- --host 0.0.0.0`를 실행하면 SvelteKit 서버가 `/mcp`를 제공합니다.
   - remote client는 `Authorization: Bearer <MCP_API_KEY>`로 접근합니다.
 - AI Assistant
-  - `.env`에 `LLM_PROVIDER`, `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`, `LLM_TIMEOUT_MS`, `LLM_ENABLE_REAL_CALLS`를 설정합니다.
+  - `.env`에 `LLM_BASE_URL`, `LLM_MODEL`, `LLM_API_KEY`, `LLM_TIMEOUT_MS`, `LLM_ENABLE_REAL_CALLS`, `LLM_CONTEXT_TOKENS`, `LLM_MAX_OUTPUT_TOKENS`를 설정합니다.
+  - `LLM_TEMPERATURE`, `LLM_REASONING_EFFORT`는 선택 항목이며 설정하지 않으면 요청에 전송되지 않습니다.
   - Docker 실행 시 `docker-compose.yml`이 `.env`의 LLM 설정을 컨테이너 환경 변수로 전달합니다.
   - Chat 기록은 서버가 아니라 브라우저 IndexedDB에 저장되며, drawer에서 내보내기/가져오기/삭제를 제공합니다.
 - `pnpm run format`
